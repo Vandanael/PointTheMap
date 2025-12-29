@@ -12,6 +12,28 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
     <style>
+        /* Variables de thème Dark/Light */
+        :root {
+            --bg-primary: #020617;      /* slate-950 */
+            --bg-secondary: #0f172a;    /* slate-900 */
+            --bg-tertiary: #1e293b;     /* slate-800 */
+            --text-primary: #f8fafc;    /* slate-50 */
+            --text-secondary: #94a3b8;  /* slate-400 */
+            --text-tertiary: #64748b;   /* slate-500 */
+            --border-color: #1e293b;    /* slate-800 */
+            --accent: #facc15;          /* yellow-400 */
+        }
+
+        body.light-theme {
+            --bg-primary: #f8fafc;      /* slate-50 */
+            --bg-secondary: #f1f5f9;    /* slate-100 */
+            --bg-tertiary: #e2e8f0;     /* slate-200 */
+            --text-primary: #020617;    /* slate-950 */
+            --text-secondary: #475569;  /* slate-600 */
+            --text-tertiary: #64748b;   /* slate-500 */
+            --border-color: #cbd5e1;    /* slate-300 */
+        }
+
         * {
             -webkit-tap-highlight-color: transparent;
             -webkit-touch-callout: none;
@@ -54,36 +76,39 @@
             pointer-events: auto;
         }
 
+        /* Marqueur cible - Cercle plein jaune safran avec ripple */
         .marker-target {
             background-color: #facc15;
-            border: 3px solid #ffffff;
+            border: 4px solid #ffffff;
             border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            box-shadow: 0 0 20px #facc15, 0 0 40px #facc15;
+            width: 28px;
+            height: 28px;
             position: relative;
+            box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7);
+            animation: ripple 2s ease-out infinite;
         }
 
-        .marker-target::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 40px;
-            height: 40px;
-            border: 2px solid #facc15;
-            border-radius: 50%;
-            animation: pulse-ring 2s ease-out infinite;
+        @keyframes ripple {
+            0% {
+                box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 15px rgba(250, 204, 21, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(250, 204, 21, 0);
+            }
         }
 
+        /* Marqueur joueur - Cercle discret */
         .marker-player {
-            background-color: #60a5fa;
-            border: 3px solid #ffffff;
+            width: 16px;
+            height: 16px;
+            position: relative;
+            background-color: #ffffff;
+            border: 2px solid #000000;
             border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            box-shadow: 0 0 15px #60a5fa;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
         }
 
         @keyframes pulse-ring {
@@ -135,24 +160,23 @@
             transform: scale(0.95);
         }
 
-        /* Timer bar */
+        /* Timer bar - 4px pour visibilité mobile optimale */
         #timerBar {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 4px;
-            background-color: rgba(15, 23, 42, 0.8);
+            background-color: transparent;
             z-index: 1001;
             pointer-events: none;
         }
 
         #timerProgress {
             height: 100%;
-            background: linear-gradient(90deg, #facc15 0%, #fbbf24 50%, #fb923c 100%);
+            background: #facc15;
             width: 100%;
             transition: width linear;
-            box-shadow: 0 0 10px #facc15;
         }
 
         /* Masquer toute attribution Leaflet */
@@ -160,29 +184,111 @@
         .leaflet-bottom {
             display: none !important;
         }
+
+        /* Animation pulsation douce pour le bouton */
+        @keyframes pulse-button {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.02);
+            }
+        }
+
+        .pulse-button {
+            animation: pulse-button 2s ease-in-out infinite;
+        }
+
+        .pulse-button:hover {
+            animation: none;
+        }
+
+        /* Danger Zone - Timer rouge + tremblement */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+            20%, 40%, 60%, 80% { transform: translateX(2px); }
+        }
+
+        .timer-danger {
+            background: #dc2626 !important;
+            animation: shake 0.5s ease-in-out infinite;
+        }
+
+        /* Safe area padding pour iPhone notch */
+        .game-header > div {
+            padding-top: max(0.5rem, env(safe-area-inset-top));
+            padding-left: max(1.5rem, env(safe-area-inset-left));
+            padding-right: max(1.5rem, env(safe-area-inset-right));
+        }
+
+        /* Bouton toggle de thème */
+        .theme-toggle {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover {
+            background: var(--bg-secondary);
+        }
+
+        .theme-toggle:active {
+            transform: scale(0.95);
+        }
+
+        /* Classes utilitaires pour les modals */
+        .modal-bg {
+            background: var(--bg-primary);
+        }
+
+        .modal-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-section {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+        }
+
+        .text-primary {
+            color: var(--text-primary);
+        }
+
+        .text-secondary {
+            color: var(--text-secondary);
+        }
+
+        .text-tertiary {
+            color: var(--text-tertiary);
+        }
     </style>
 </head>
-<body class="bg-slate-900">
+<body style="background-color: var(--bg-primary);">
     <!-- Timer Bar -->
     <div id="timerBar">
         <div id="timerProgress"></div>
     </div>
 
-    <!-- Header du jeu -->
+    <!-- Header du jeu - Sobre et net -->
     <div class="game-header">
-        <div class="bg-slate-950/95 backdrop-blur-sm border-b-2 border-yellow-400 px-4 py-3 flex justify-between items-center">
-            <div class="text-white">
-                <div class="text-sm font-medium text-slate-400">Manche</div>
-                <div class="text-2xl font-bold" id="roundDisplay">1/5</div>
+        <div style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);" class="px-6 py-2 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Round</div>
+                <div class="text-lg font-black" style="color: var(--text-primary);" id="roundDisplay">1/5</div>
             </div>
-            <div class="text-center">
-                <div class="text-3xl font-black text-yellow-400">
-                    PointTheMap
-                </div>
-            </div>
-            <div class="text-white text-right">
-                <div class="text-sm font-medium text-slate-400">Score</div>
-                <div class="text-2xl font-bold text-yellow-400" id="scoreDisplay">0</div>
+            <div class="flex items-center gap-2">
+                <div class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">Score</div>
+                <div class="text-lg font-black text-yellow-400" id="scoreDisplay">0</div>
             </div>
         </div>
     </div>
@@ -190,96 +296,106 @@
     <!-- Carte -->
     <div id="map"></div>
 
-    <!-- Modal de démarrage -->
-    <div id="startModal" class="fixed inset-0 bg-slate-950/98 z-[2000] flex flex-col">
+    <!-- Modal de démarrage - Minimalisme Identitaire -->
+    <div id="startModal" class="fixed inset-0 modal-bg z-[2000] flex flex-col">
+        <!-- Bouton toggle thème en haut à droite -->
+        <div class="absolute top-4 right-4 md:top-6 md:right-6 z-10">
+            <button onclick="toggleTheme()" class="theme-toggle" title="Changer de thème" aria-label="Toggle theme">
+                <span id="themeIcon">🌙</span>
+            </button>
+        </div>
+
         <div class="flex-1 flex items-center justify-center p-4">
-            <div class="text-center modal-content max-w-md w-full">
-                <h1 class="text-7xl font-black text-yellow-400 mb-6 tracking-tight drop-shadow-lg">
-                    PointTheMap
+            <div class="text-center modal-content max-w-lg w-full">
+                <!-- Titre Hero - Signature visuelle sur deux lignes -->
+                <h1 class="text-primary mb-8 uppercase leading-none" style="font-weight: 900;">
+                    <div class="text-7xl md:text-8xl tracking-wide">POINT</div>
+                    <div class="text-7xl md:text-8xl tracking-wide">THE MAP</div>
                 </h1>
-                <div class="bg-slate-900/50 backdrop-blur-sm rounded-xl p-6 mb-6 border border-yellow-400/20">
-                    <p class="text-slate-300 text-xl mb-4 font-semibold">
+
+                <!-- Info Card sobre -->
+                <div class="modal-card rounded-2xl p-8 mb-6">
+                    <p class="text-primary text-2xl mb-3 font-black uppercase tracking-tight">
                         ⏱️ 5s Challenge
                     </p>
-                    <p class="text-slate-400 text-lg mb-2">
+                    <p class="text-secondary text-base mb-1">
                         5 capitales · 5 secondes par ville
                     </p>
-                    <p class="text-slate-500 text-sm">
-                        Clique sur la carte, gagne des points !
+                    <p class="text-tertiary text-sm">
+                        Clique sur la carte, gagne des points
                     </p>
                 </div>
-                <button onclick="startGame()" class="w-full bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black py-5 px-6 rounded-xl text-xl btn-scale shadow-lg shadow-yellow-400/30 mb-3">
+                <!-- Bouton focal sobre -->
+                <button onclick="startGame()" class="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black py-6 px-6 rounded-2xl text-2xl btn-scale pulse-button">
                     COMMENCER
                 </button>
-                <div class="text-slate-500 text-sm">
-                    Démarrage automatique dans 1.5s...
-                </div>
             </div>
         </div>
 
         <!-- Footer -->
-        <div class="w-full bg-slate-900/50 backdrop-blur-sm border-t border-yellow-400/20 py-4 px-6">
+        <div class="w-full py-4 px-6" style="background: var(--bg-secondary); border-top: 1px solid var(--border-color);">
             <div class="text-center">
-                <p class="text-slate-400 text-sm mb-1">
+                <p class="text-tertiary text-sm mb-1">
                     Made by
-                    <a href="https://github.com/Vandanael" target="_blank" rel="noopener noreferrer" class="text-yellow-400 hover:text-yellow-300 font-semibold transition-colors underline decoration-yellow-400/30 hover:decoration-yellow-300">
+                    <a href="https://github.com/Vandanael" target="_blank" rel="noopener noreferrer" class="text-yellow-400 hover:text-yellow-300 font-semibold transition-colors">
                         Vandanael
                     </a>
-                </p>
-                <p class="text-slate-600 text-xs">
-                    Open source on GitHub
                 </p>
             </div>
         </div>
     </div>
 
-    <!-- Modal question -->
-    <div id="questionModal" class="fixed inset-0 bg-slate-950/95 z-[2000] flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900/90 backdrop-blur-md rounded-2xl shadow-2xl max-w-md w-full p-8 border-2 border-yellow-400 pulse modal-content">
+    <!-- Modal question - Minimalisme sobre -->
+    <div id="questionModal" class="fixed inset-0 modal-bg z-[2000] flex items-center justify-center p-4 hidden" style="background: var(--bg-primary);">
+        <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
             <div class="text-center">
-                <div class="text-yellow-400 text-sm font-semibold mb-2">Trouvez :</div>
-                <h2 class="text-4xl font-black text-white mb-2" id="capitalName"></h2>
-                <div class="text-slate-400 text-lg mb-6" id="countryName"></div>
-                <div class="bg-slate-950/50 rounded-lg p-4 text-slate-300 text-sm">
+                <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-3">Trouvez</div>
+                <h2 class="text-5xl font-black text-primary mb-2" id="capitalName"></h2>
+                <div class="text-secondary text-base mb-6" id="countryName"></div>
+                <div class="modal-section rounded-xl p-4 text-secondary text-sm">
                     📍 Cliquez sur la carte
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal résultat -->
-    <div id="resultModal" class="fixed inset-0 bg-slate-950/95 z-[2000] flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900/90 backdrop-blur-md rounded-2xl shadow-2xl max-w-md w-full p-8 border-2 border-yellow-400 modal-content">
+    <!-- Modal résultat - Minimalisme sobre -->
+    <div id="resultModal" class="fixed inset-0 z-[2000] flex items-center justify-center p-4 hidden" style="background: var(--bg-primary);">
+        <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
             <div class="text-center mb-6">
                 <div id="resultIcon" class="text-6xl mb-4"></div>
-                <div class="text-slate-400 text-sm font-semibold mb-2">Distance</div>
-                <div class="text-3xl font-bold text-white mb-4" id="distanceDisplay"></div>
-                <div class="text-slate-400 text-sm font-semibold mb-2">Points gagnés</div>
-                <div class="text-5xl font-black text-yellow-400 mb-2" id="pointsDisplay"></div>
+                <div class="text-tertiary text-xs uppercase tracking-widest mb-2">Distance</div>
+                <div class="text-3xl font-black text-primary mb-6" id="distanceDisplay"></div>
+                <div class="text-tertiary text-xs uppercase tracking-widest mb-2">Points gagnés</div>
+                <div class="text-6xl font-black text-yellow-400 mb-2" id="pointsDisplay"></div>
             </div>
-            <button onclick="nextRound()" class="w-full bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-bold py-4 px-6 rounded-xl text-lg btn-scale shadow-lg shadow-yellow-400/20">
-                Continuer
+            <button onclick="nextRound()" class="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black py-5 px-6 rounded-xl text-lg btn-scale">
+                CONTINUER
             </button>
         </div>
     </div>
 
-    <!-- Modal score final -->
-    <div id="finalModal" class="fixed inset-0 bg-slate-950/98 z-[2000] flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900/90 backdrop-blur-md rounded-2xl shadow-2xl max-w-md w-full p-8 border-2 border-yellow-400 modal-content">
-            <h2 class="text-4xl font-black text-yellow-400 mb-8 text-center tracking-tight">
-                GAME OVER
+    <!-- Modal score final - Minimalisme sobre -->
+    <div id="finalModal" class="fixed inset-0 modal-bg z-[2000] flex items-center justify-center p-4 hidden">
+        <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
+            <h2 class="text-5xl font-black text-primary mb-8 text-center tracking-tight uppercase">
+                Game Over
             </h2>
             <div class="text-center mb-8">
-                <div class="text-slate-400 text-sm font-semibold mb-2">Score final</div>
-                <div class="text-7xl font-black text-yellow-400 mb-4" id="finalScoreDisplay"></div>
-                <div class="text-slate-300 text-xl mb-6" id="finalRating"></div>
-                <div class="text-slate-500 text-sm" id="finalSummary"></div>
+                <div class="text-tertiary text-xs uppercase tracking-widest mb-3">Score final</div>
+                <div class="text-8xl font-black text-primary mb-4" id="finalScoreDisplay"></div>
+                <div class="text-secondary text-xl mb-4" id="finalRating"></div>
+                <div class="text-tertiary text-sm mb-4" id="finalSummary"></div>
+                <!-- Résumé visuel Wordle -->
+                <div class="modal-section rounded-xl p-4 mb-4">
+                    <div class="text-3xl tracking-wider" id="wordleDisplay"></div>
+                </div>
             </div>
             <div class="space-y-3">
-                <button onclick="location.reload()" class="w-full bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-black py-5 px-6 rounded-xl text-xl btn-scale shadow-lg shadow-yellow-400/30">
+                <button onclick="resetGame()" class="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black py-6 px-6 rounded-xl text-xl btn-scale">
                     REJOUER
                 </button>
-                <button onclick="shareScore()" class="w-full bg-slate-800 hover:bg-slate-700 text-yellow-400 font-bold py-4 px-6 rounded-xl text-lg btn-scale border-2 border-yellow-400/30">
+                <button onclick="shareScore()" class="modal-section hover:opacity-80 text-yellow-400 font-black py-4 px-6 rounded-xl text-base btn-scale w-full">
                     PARTAGER
                 </button>
             </div>
@@ -293,40 +409,60 @@
     <script type="module">
         import { capitals } from './capitals.js';
 
-        // Variables globales
+        // ============================================
+        // CONSTANTES
+        // ============================================
+        const ROUNDS_PER_GAME = 5;
+        const TIMER_DURATION_MS = 5000;
+        const GRACE_PERIOD_MS = 500;
+        const DANGER_ZONE_MS = 1500;
+        const MODAL_DISPLAY_MS = 1000;
+        const SCORE_ANIMATION_MS = 800;
+        const RESULT_DELAY_MS = 1000;
+        const FLY_DURATION_S = 1.2;
+        const MAX_SCORE_PER_ROUND = 5000;
+
+        // ============================================
+        // VARIABLES GLOBALES
+        // ============================================
+        // Map & Game State
         let map;
+        let tileLayer = null;
         let currentRound = 0;
         let totalScore = 0;
         let currentCapital = null;
         let gameActive = false;
+        let gameStartTime = 0;
+
+        // Markers
         let targetMarker = null;
         let playerMarker = null;
         let lineMarker = null;
 
-        // Timer variables
-        let timerInterval = null;
+        // Timer
         let timerTimeout = null;
         let timerStartTime = null;
-        const TIMER_DURATION = 5000; // 5 secondes
-        const GRACE_PERIOD = 500; // 500ms de délai de grâce
 
-        // Initialisation de la carte
+        // Results tracking
+        let roundResults = [];
+
+        // Theme
+        let currentTheme = 'dark';
+
+        // ============================================
+        // INITIALISATION
+        // ============================================
         function initMap() {
             map = L.map('map', {
                 zoomControl: false,
                 attributionControl: false
             }).setView([20, 0], 2);
 
-            // Fond de carte CartoDB Positron No Labels
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-                maxZoom: 19,
-                attribution: '' // Pas d'attribution pour un look app
-            }).addTo(map);
+            // Charger les tuiles selon le thème
+            updateMapTiles();
 
-            // Empêcher le zoom par double-clic
             map.doubleClickZoom.disable();
 
-            // Gestionnaire de clic sur la carte
             map.on('click', function(e) {
                 if (gameActive && currentCapital) {
                     handleMapClick(e.latlng);
@@ -334,44 +470,160 @@
             });
         }
 
-        // Fonctions du Timer
+        /**
+         * Met à jour les tuiles de la carte selon le thème actuel
+         */
+        function updateMapTiles() {
+            // Supprimer l'ancien layer si existant
+            if (tileLayer) {
+                map.removeLayer(tileLayer);
+            }
+
+            // Choisir les tuiles selon le thème
+            const tileUrl = currentTheme === 'light'
+                ? 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
+                : 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
+
+            // Créer et ajouter le nouveau layer
+            tileLayer = L.tileLayer(tileUrl, {
+                maxZoom: 19,
+                attribution: ''
+            }).addTo(map);
+        }
+
+        /**
+         * Bascule entre dark et light mode
+         */
+        window.toggleTheme = function() {
+            // Inverser le thème
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+            // Mettre à jour le body
+            if (currentTheme === 'light') {
+                document.body.classList.add('light-theme');
+                document.getElementById('themeIcon').textContent = '☀️';
+            } else {
+                document.body.classList.remove('light-theme');
+                document.getElementById('themeIcon').textContent = '🌙';
+            }
+
+            // Mettre à jour les tuiles de la carte
+            updateMapTiles();
+
+            // Sauvegarder dans localStorage
+            localStorage.setItem('ptm-theme', currentTheme);
+        }
+
+        /**
+         * Initialise le thème depuis localStorage
+         */
+        function initTheme() {
+            const savedTheme = localStorage.getItem('ptm-theme');
+            if (savedTheme === 'light') {
+                currentTheme = 'light';
+                document.body.classList.add('light-theme');
+                document.getElementById('themeIcon').textContent = '☀️';
+            }
+        }
+
+        // ============================================
+        // FONCTIONS PURES (Calculs)
+        // ============================================
+
+        /**
+         * Calcule le score basé sur la distance (formule exponentielle)
+         * Plus la distance est faible, plus le score est élevé
+         * @param {number} distanceKm - Distance en kilomètres
+         * @returns {number} Points (0 à 5000)
+         */
+        function calculateScore(distanceKm) {
+            if (distanceKm < 1) {
+                return MAX_SCORE_PER_ROUND;
+            } else if (distanceKm < 25) {
+                return Math.round(5000 - Math.pow(distanceKm, 1.3));
+            } else if (distanceKm < 100) {
+                return Math.round(4500 - Math.pow(distanceKm - 25, 1.5) * 2);
+            } else if (distanceKm < 500) {
+                return Math.round(3000 - Math.pow(distanceKm - 100, 1.2) * 1.2);
+            } else if (distanceKm < 1500) {
+                return Math.round(1000 - Math.pow(distanceKm - 500, 0.9) * 0.8);
+            } else {
+                return Math.max(0, Math.round(200 - (distanceKm - 1500) * 0.1));
+            }
+        }
+
+        /**
+         * Détermine la couleur de la ligne selon la distance (style sobre)
+         * @param {number} distanceKm - Distance en kilomètres
+         * @returns {string} Code couleur hexadécimal
+         */
+        function getLineColor(distanceKm) {
+            if (distanceKm < 100) return '#22c55e';      // Vert - Excellent
+            if (distanceKm < 500) return '#facc15';      // Jaune safran - Bon
+            return '#94a3b8';                             // Gris slate - Faible
+        }
+
+        /**
+         * Détermine le carré coloré de résultat (style Wordle)
+         * @param {number} distanceKm - Distance en kilomètres
+         * @returns {string} Carré coloré
+         */
+        function getResultEmoji(distanceKm) {
+            if (distanceKm < 100) return '🟩';    // Carré vert - Excellent
+            if (distanceKm < 500) return '🟨';    // Carré jaune - Bon
+            return '⬜';                            // Carré gris - Faible
+        }
+
+        /**
+         * Détermine le niveau de zoom selon la distance
+         * @param {number} distanceKm - Distance en kilomètres
+         * @returns {number} Niveau de zoom (4 à 10)
+         */
+        function getZoomLevel(distanceKm) {
+            if (distanceKm < 50) return 10;
+            if (distanceKm < 200) return 8;
+            if (distanceKm < 500) return 6;
+            if (distanceKm < 1000) return 5;
+            return 4;
+        }
+
+        // ============================================
+        // TIMER
+        // ============================================
         function startTimer() {
-            // Réinitialiser la barre à 100%
             const timerProgress = document.getElementById('timerProgress');
+
+            // Reset à 100%
             timerProgress.style.transition = 'none';
             timerProgress.style.width = '100%';
+            timerProgress.classList.remove('timer-danger');
+            timerProgress.offsetHeight; // Force reflow
 
-            // Forcer le reflow pour que la transition fonctionne
-            timerProgress.offsetHeight;
-
-            // Attendre le délai de grâce avant de démarrer
+            // Délai de grâce puis démarrage
             timerTimeout = setTimeout(() => {
                 timerStartTime = performance.now();
-                timerProgress.style.transition = `width ${TIMER_DURATION}ms linear`;
+                timerProgress.style.transition = `width ${TIMER_DURATION_MS}ms linear`;
                 timerProgress.style.width = '0%';
 
-                // Déclencher le timeout après 5 secondes
+                // Danger Zone à 1.5s restantes
+                setTimeout(() => {
+                    if (gameActive) timerProgress.classList.add('timer-danger');
+                }, TIMER_DURATION_MS - DANGER_ZONE_MS);
+
+                // Timeout à la fin
                 timerTimeout = setTimeout(() => {
-                    if (gameActive) {
-                        handleTimeout();
-                    }
-                }, TIMER_DURATION);
-            }, GRACE_PERIOD);
+                    if (gameActive) handleTimeout();
+                }, TIMER_DURATION_MS);
+            }, GRACE_PERIOD_MS);
         }
 
         function stopTimer() {
-            // Nettoyer tous les timers
-            if (timerInterval) {
-                clearInterval(timerInterval);
-                timerInterval = null;
-            }
             if (timerTimeout) {
                 clearTimeout(timerTimeout);
                 timerTimeout = null;
             }
             timerStartTime = null;
 
-            // Arrêter la barre de progression
             const timerProgress = document.getElementById('timerProgress');
             timerProgress.style.transition = 'none';
         }
@@ -389,7 +641,8 @@
             targetMarker = L.marker([currentCapital.lat, currentCapital.lng], {
                 icon: L.divIcon({
                     className: 'marker-target',
-                    iconSize: [20, 20]
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]  // Centre le marqueur sur la capitale
                 })
             }).addTo(map);
 
@@ -401,59 +654,88 @@
             document.getElementById('pointsDisplay').textContent = '+0';
             document.getElementById('resultIcon').textContent = '⏱️';
 
+            // Tracker le timeout comme un échec (carré gris)
+            roundResults.push('⬜');
+
             setTimeout(() => {
                 document.getElementById('resultModal').classList.remove('hidden');
-            }, 1000);
+            }, RESULT_DELAY_MS);
         }
 
-        // Démarrer le jeu
-        window.startGame = function() {
-            document.getElementById('startModal').classList.add('hidden');
-            currentRound = 0;
-            totalScore = 0;
-            nextRound();
-        }
-
-        // Manche suivante
-        window.nextRound = function() {
-            // Nettoyer les marqueurs précédents
+        // Réinitialiser le jeu (SPA pattern - sans rechargement)
+        function resetGame() {
+            // Nettoyer tous les marqueurs et éléments de la carte
             if (targetMarker) map.removeLayer(targetMarker);
             if (playerMarker) map.removeLayer(playerMarker);
             if (lineMarker) map.removeLayer(lineMarker);
 
-            // Nettoyer le timer
+            // Arrêter tous les timers
+            stopTimer();
+
+            // Réinitialiser toutes les variables
+            currentRound = 0;
+            totalScore = 0;
+            roundResults = [];
+            gameActive = false;
+            currentCapital = null;
+
+            // Masquer tous les modals
+            document.getElementById('finalModal').classList.add('hidden');
+            document.getElementById('resultModal').classList.add('hidden');
+            document.getElementById('questionModal').classList.add('hidden');
+
+            // Réinitialiser la vue de la carte
+            map.setView([20, 0], 2);
+
+            // Afficher l'écran de démarrage
+            document.getElementById('startModal').classList.remove('hidden');
+        }
+
+        window.startGame = function() {
+            document.getElementById('startModal').classList.add('hidden');
+            currentRound = 0;
+            totalScore = 0;
+            roundResults = [];
+            gameStartTime = Date.now();
+            nextRound();
+        }
+
+        // ============================================
+        // GAME FLOW
+        // ============================================
+        window.nextRound = function() {
+            // Cleanup
+            if (targetMarker) map.removeLayer(targetMarker);
+            if (playerMarker) map.removeLayer(playerMarker);
+            if (lineMarker) map.removeLayer(lineMarker);
             stopTimer();
 
             document.getElementById('resultModal').classList.add('hidden');
 
             currentRound++;
-
-            if (currentRound > 5) {
+            if (currentRound > ROUNDS_PER_GAME) {
                 endGame();
                 return;
             }
 
-            // Tirer une capitale au hasard
+            // Nouvelle capitale aléatoire
             currentCapital = capitals[Math.floor(Math.random() * capitals.length)];
-
-            // Réinitialiser la vue de la carte
             map.setView([20, 0], 2);
 
             // Afficher la question
-            document.getElementById('roundDisplay').textContent = `${currentRound}/5`;
+            document.getElementById('roundDisplay').textContent = `${currentRound}/${ROUNDS_PER_GAME}`;
             document.getElementById('capitalName').textContent = currentCapital.name;
             document.getElementById('countryName').textContent = currentCapital.country;
             document.getElementById('questionModal').classList.remove('hidden');
 
-            gameActive = true;
+            gameActive = false;
 
-            // Démarrer le timer
-            startTimer();
-
-            // Cacher automatiquement le modal après 2 secondes
+            // Fermer le modal après 1s et démarrer immédiatement
             setTimeout(() => {
                 document.getElementById('questionModal').classList.add('hidden');
-            }, 2000);
+                gameActive = true;
+                startTimer();
+            }, MODAL_DISPLAY_MS);
         }
 
         // Gérer le clic sur la carte
@@ -469,28 +751,8 @@
             const targetLatLng = L.latLng(currentCapital.lat, currentCapital.lng);
             const distance = clickLatLng.distanceTo(targetLatLng) / 1000; // en km
 
-            // Calculer le score (max 5000 points) - Formule exponentielle
-            // Récompense TRÈS fortement la précision extrême
-            let points = 0;
-            if (distance < 1) {
-                // Moins de 1km = score parfait
-                points = 5000;
-            } else if (distance < 25) {
-                // Moins de 25km = excellent (4500-5000 pts)
-                points = Math.round(5000 - Math.pow(distance, 1.3));
-            } else if (distance < 100) {
-                // Moins de 100km = très bon (3000-4500 pts)
-                points = Math.round(4500 - Math.pow(distance - 25, 1.5) * 2);
-            } else if (distance < 500) {
-                // Moins de 500km = bon (1000-3000 pts)
-                points = Math.round(3000 - Math.pow(distance - 100, 1.2) * 1.2);
-            } else if (distance < 1500) {
-                // Moins de 1500km = moyen (200-1000 pts)
-                points = Math.round(1000 - Math.pow(distance - 500, 0.9) * 0.8);
-            } else {
-                // Plus de 1500km = faible (0-200 pts)
-                points = Math.max(0, Math.round(200 - (distance - 1500) * 0.1));
-            }
+            // Calculer le score avec la formule exponentielle
+            const points = calculateScore(distance);
 
             const oldScore = totalScore;
             totalScore += points;
@@ -499,52 +761,63 @@
             targetMarker = L.marker([currentCapital.lat, currentCapital.lng], {
                 icon: L.divIcon({
                     className: 'marker-target',
-                    iconSize: [20, 20]
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14]  // Centre le marqueur sur la capitale
                 })
             }).addTo(map);
 
             playerMarker = L.marker([clickLatLng.lat, clickLatLng.lng], {
                 icon: L.divIcon({
                     className: 'marker-player',
-                    iconSize: [20, 20]
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]  // Centre le marqueur sur le point de clic
                 })
             }).addTo(map);
 
-            // Calculer la couleur de la ligne selon la distance
-            let lineColor;
-            if (distance < 100) {
-                lineColor = '#facc15'; // Jaune néon si très proche
-            } else if (distance < 300) {
-                lineColor = '#fbbf24'; // Jaune-orange
-            } else if (distance < 600) {
-                lineColor = '#fb923c'; // Orange
-            } else if (distance < 1000) {
-                lineColor = '#f87171'; // Rouge-orange
-            } else {
-                lineColor = '#dc2626'; // Rouge désaturé si éloigné
-            }
+            // Déterminer la couleur de la ligne selon la performance
+            const lineColor = getLineColor(distance);
 
-            // Tracer une ligne entre les deux points
-            lineMarker = L.polyline([
+            // Tracer une ligne avec effet stroke-outline (ligne noire en dessous + ligne colorée au-dessus)
+            const coords = [
                 [clickLatLng.lat, clickLatLng.lng],
                 [currentCapital.lat, currentCapital.lng]
-            ], {
-                color: lineColor,
-                weight: 3,
-                dashArray: '10, 10',
-                opacity: 0.9
-            }).addTo(map);
+            ];
 
-            // Zoom sur la zone pour montrer l'écart
-            const bounds = L.latLngBounds([clickLatLng, targetLatLng]);
-            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
+            // Ligne de fond (outline noire)
+            const outlineLine = L.polyline(coords, {
+                color: '#000000',
+                weight: 4,
+                dashArray: '5, 10',
+                opacity: 0.6
+            });
+
+            // Ligne principale (colorée)
+            const mainLine = L.polyline(coords, {
+                color: lineColor,
+                weight: 1.5,
+                dashArray: '5, 10',
+                opacity: 1
+            });
+
+            // Grouper les deux lignes
+            lineMarker = L.layerGroup([outlineLine, mainLine]).addTo(map);
+
+            // Calculer le point médian et le niveau de zoom approprié
+            const midLat = (clickLatLng.lat + currentCapital.lat) / 2;
+            const midLng = (clickLatLng.lng + currentCapital.lng) / 2;
+            const zoomLevel = getZoomLevel(distance);
+
+            // Zoom fluide avec flyTo (easing ease-out)
+            map.flyTo([midLat, midLng], zoomLevel, {
+                duration: FLY_DURATION_S,
+                easeLinearity: 0.25
+            });
 
             // Animation de count-up pour le score
-            const duration = 800;
             const startTime = performance.now();
             const animateScore = (currentTime) => {
                 const elapsed = currentTime - startTime;
-                const progress = Math.min(elapsed / duration, 1);
+                const progress = Math.min(elapsed / SCORE_ANIMATION_MS, 1);
                 const currentScore = Math.floor(oldScore + (points * progress));
                 document.getElementById('scoreDisplay').textContent = currentScore;
                 if (progress < 1) {
@@ -573,38 +846,52 @@
 
             document.getElementById('resultIcon').textContent = icon;
 
+            // Tracker le résultat pour le partage
+            const resultEmoji = getResultEmoji(distance);
+            roundResults.push(resultEmoji);
+
             setTimeout(() => {
                 document.getElementById('resultModal').classList.remove('hidden');
-            }, 1000);
+            }, RESULT_DELAY_MS);
         }
 
-        // Terminer le jeu
         function endGame() {
-            // Arrêter le timer
             stopTimer();
 
             document.getElementById('finalScoreDisplay').textContent = totalScore;
 
+            // Rating basé sur le score (sobre, sans emojis excessifs)
             let rating = '';
-            if (totalScore >= 23000) rating = '🏆 Champion absolu !';
-            else if (totalScore >= 20000) rating = '⭐ Expert géographique !';
-            else if (totalScore >= 17000) rating = '🎯 Excellent score !';
-            else if (totalScore >= 13000) rating = '👍 Bien joué !';
-            else if (totalScore >= 8000) rating = '👌 Pas mal !';
-            else rating = '📚 Continue à t\'entraîner !';
+            if (totalScore >= 23000) rating = 'Champion absolu';
+            else if (totalScore >= 20000) rating = 'Expert géographique';
+            else if (totalScore >= 17000) rating = 'Excellent score';
+            else if (totalScore >= 13000) rating = 'Bien joué';
+            else if (totalScore >= 8000) rating = 'Pas mal';
+            else rating = 'Continue à t\'entraîner';
 
             document.getElementById('finalRating').textContent = rating;
-            document.getElementById('finalSummary').textContent = `5 capitales en ${Math.floor(performance.now() / 1000)}s`;
+
+            // Temps total réel depuis le début du jeu
+            const totalTimeS = Math.floor((Date.now() - gameStartTime) / 1000);
+            document.getElementById('finalSummary').textContent = `${ROUNDS_PER_GAME} capitales en ${totalTimeS}s`;
+
+            // Afficher le résumé visuel Wordle
+            const wordleDisplay = roundResults.join(' ');
+            document.getElementById('wordleDisplay').textContent = wordleDisplay;
+
             document.getElementById('finalModal').classList.remove('hidden');
         }
 
-        // Fonction de partage
+        // Fonction de partage avec résumé Wordle
         window.shareScore = function() {
+            // Créer le résumé visuel avec carrés Wordle
+            const wordleSummary = roundResults.join(' ');
+
             const text = `📍 PointTheMap
-🌍 Score: ${totalScore}/25000
-⏱️ 5s Challenge
-🗺️ 5 capitales, 1 run
-🚀 À battre ici : https://github.com/YourUsername/PointTheMap`;
+Score: ${totalScore}/25000
+${wordleSummary}
+
+https://github.com/Vandanael/PointTheMap`;
 
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(text).then(() => {
@@ -620,13 +907,9 @@
         }
 
         // Initialiser au chargement
+        initTheme();
         initMap();
         window.capitals = capitals;
-
-        // Auto-démarrage après 1.5 secondes
-        setTimeout(() => {
-            startGame();
-        }, 1500);
     </script>
 </body>
 </html>
