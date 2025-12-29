@@ -2,14 +2,27 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>PointTheMap - Jeu de Géographie</title>
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS - Using Play CDN for auto-purge and smaller bundle -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
+    <script>
+        // Tailwind config for optimization
+        tailwind.config = {
+            corePlugins: {
+                preflight: false, // Disable base styles we don't need
+            }
+        }
+    </script>
 
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Google Fonts - Inter (sans-serif) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <style>
         /* Variables de thème Dark/Light */
@@ -35,29 +48,33 @@
         }
 
         * {
-            -webkit-tap-highlight-color: transparent;
-            -webkit-touch-callout: none;
+            /* Keep some tap highlight for accessibility */
+            -webkit-tap-highlight-color: rgba(250, 204, 21, 0.3);
         }
 
         html, body {
+            /* Allow natural scrolling on modals, but prevent on map */
             overflow: hidden;
-            position: fixed;
             width: 100%;
             height: 100%;
-            touch-action: none;
+            margin: 0;
+            padding: 0;
             overscroll-behavior: none;
+            /* Don't use position: fixed or touch-action: none globally */
         }
 
         body {
             margin: 0;
             padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
 
         #map {
             height: 100vh;
             width: 100vw;
             cursor: crosshair;
-            touch-action: none;
+            /* Only restrict panning on the map itself, allow tap */
+            touch-action: pan-x pan-y;
             position: fixed;
             top: 0;
             left: 0;
@@ -100,15 +117,15 @@
             }
         }
 
-        /* Marqueur joueur - Cercle discret */
+        /* Marqueur joueur - Cercle discret, exactement sur le clic */
         .marker-player {
             width: 16px;
             height: 16px;
-            position: relative;
             background-color: #ffffff;
             border: 2px solid #000000;
             border-radius: 50%;
             box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+            /* Pas de position relative - le centrage est fait par iconAnchor */
         }
 
         @keyframes pulse-ring {
@@ -154,10 +171,17 @@
 
         .btn-scale {
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            outline: none;
         }
 
         .btn-scale:active {
             transform: scale(0.95);
+        }
+
+        .btn-scale:focus {
+            outline: none;
+            border: none;
         }
 
         /* Timer bar - 4px pour visibilité mobile optimale */
@@ -296,6 +320,26 @@
     <!-- Carte -->
     <div id="map"></div>
 
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="fixed inset-0 bg-black bg-opacity-50 z-[3000] flex items-center justify-center hidden">
+        <div class="modal-card rounded-2xl p-8 text-center">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-yellow-400 border-t-transparent mb-4"></div>
+            <p class="text-primary text-lg font-semibold">Chargement...</p>
+        </div>
+    </div>
+
+    <!-- Error Message -->
+    <div id="errorMessage" class="fixed inset-0 bg-black bg-opacity-50 z-[3000] flex items-center justify-center hidden">
+        <div class="modal-card rounded-2xl p-8 max-w-md mx-4">
+            <div class="text-6xl mb-4 text-center">⚠️</div>
+            <h3 class="text-primary text-xl font-black mb-3 text-center">Erreur</h3>
+            <p id="errorText" class="text-secondary text-base mb-6 text-center"></p>
+            <button onclick="hideError()" class="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black py-4 px-6 rounded-xl btn-scale">
+                OK
+            </button>
+        </div>
+    </div>
+
     <!-- Modal de démarrage - Minimalisme Identitaire -->
     <div id="startModal" class="fixed inset-0 modal-bg z-[2000] flex flex-col">
         <!-- Bouton toggle thème en haut à droite -->
@@ -305,12 +349,12 @@
             </button>
         </div>
 
-        <div class="flex-1 flex items-center justify-center p-4">
-            <div class="text-center modal-content max-w-lg w-full">
-                <!-- Titre Hero - Signature visuelle sur deux lignes -->
+        <div class="flex-1 flex items-center justify-center p-4 md:p-8">
+            <div class="text-left modal-content max-w-3xl w-full">
+                <!-- Titre Hero - Signature visuelle sur deux lignes, plus grand et ferré à gauche -->
                 <h1 class="text-primary mb-8 uppercase leading-none" style="font-weight: 900;">
-                    <div class="text-7xl md:text-8xl tracking-wide">POINT</div>
-                    <div class="text-7xl md:text-8xl tracking-wide">THE MAP</div>
+                    <div class="text-8xl md:text-9xl tracking-wide">POINT</div>
+                    <div class="text-8xl md:text-9xl tracking-wide">THE MAP</div>
                 </h1>
 
                 <!-- Info Card sobre -->
@@ -326,22 +370,18 @@
                     </p>
                 </div>
                 <!-- Bouton focal sobre -->
-                <button onclick="startGame()" class="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black py-6 px-6 rounded-2xl text-2xl btn-scale pulse-button">
+                <button id="startButton" onclick="startGame()" class="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black py-6 px-6 rounded-2xl text-2xl btn-scale pulse-button">
                     COMMENCER
                 </button>
             </div>
         </div>
 
         <!-- Footer -->
-        <div class="w-full py-4 px-6" style="background: var(--bg-secondary); border-top: 1px solid var(--border-color);">
-            <div class="text-center">
-                <p class="text-tertiary text-sm mb-1">
-                    Made by
-                    <a href="https://github.com/Vandanael" target="_blank" rel="noopener noreferrer" class="text-yellow-400 hover:text-yellow-300 font-semibold transition-colors">
-                        Vandanael
-                    </a>
-                </p>
-            </div>
+        <div class="w-full py-4 text-center text-tertiary text-sm" style="background: var(--bg-secondary); border-top: 1px solid var(--border-color);">
+            Made by
+            <a href="https://github.com/Vandanael" target="_blank" rel="noopener noreferrer" class="text-yellow-400 hover:text-yellow-300 font-semibold transition-colors no-underline hover:underline">
+                Vandanael
+            </a>
         </div>
     </div>
 
@@ -369,7 +409,7 @@
                 <div class="text-tertiary text-xs uppercase tracking-widest mb-2">Points gagnés</div>
                 <div class="text-6xl font-black text-yellow-400 mb-2" id="pointsDisplay"></div>
             </div>
-            <button onclick="nextRound()" class="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black py-5 px-6 rounded-xl text-lg btn-scale">
+            <button id="nextButton" onclick="nextRound()" class="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black py-5 px-6 rounded-xl text-lg btn-scale">
                 CONTINUER
             </button>
         </div>
@@ -392,10 +432,10 @@
                 </div>
             </div>
             <div class="space-y-3">
-                <button onclick="resetGame()" class="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black py-6 px-6 rounded-xl text-xl btn-scale">
+                <button id="replayButton" onclick="resetGame()" class="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black py-6 px-6 rounded-xl text-xl btn-scale">
                     REJOUER
                 </button>
-                <button onclick="shareScore()" class="modal-section hover:opacity-80 text-yellow-400 font-black py-4 px-6 rounded-xl text-base btn-scale w-full">
+                <button id="shareButton" onclick="shareScore()" class="modal-section hover:opacity-80 text-yellow-400 font-black py-4 px-6 rounded-xl text-base btn-scale w-full">
                     PARTAGER
                 </button>
             </div>
@@ -407,7 +447,7 @@
 
     <!-- Capitales data -->
     <script type="module">
-        import { capitals } from './capitals.js';
+        import { capitals, selectBalancedCapitals } from './capitals.js';
 
         // ============================================
         // CONSTANTES
@@ -419,7 +459,7 @@
         const MODAL_DISPLAY_MS = 1000;
         const SCORE_ANIMATION_MS = 800;
         const RESULT_DELAY_MS = 1000;
-        const FLY_DURATION_S = 2.5;
+        const FLY_DURATION_S = 4.0;  // Zoom plus lent et fluide
         const MAX_SCORE_PER_ROUND = 5000;
 
         // ============================================
@@ -433,6 +473,9 @@
         let currentCapital = null;
         let gameActive = false;
         let gameStartTime = 0;
+
+        // Session capitals - 5 capitales sélectionnées pour cette partie (2 populaires + 3 difficiles)
+        let sessionCapitals = [];
 
         // Markers
         let targetMarker = null;
@@ -449,46 +492,120 @@
         // Theme
         let currentTheme = 'dark';
 
+        // Animation frame ID for cleanup
+        let scoreAnimationFrame = null;
+
+        // ============================================
+        // UTILITY FUNCTIONS - Loading & Error Handling
+        // ============================================
+        function showLoading() {
+            const spinner = document.getElementById('loadingSpinner');
+            if (spinner) spinner.classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            const spinner = document.getElementById('loadingSpinner');
+            if (spinner) spinner.classList.add('hidden');
+        }
+
+        function showError(message) {
+            hideLoading();
+            const errorModal = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            if (errorModal && errorText) {
+                errorText.textContent = message;
+                errorModal.classList.remove('hidden');
+            }
+        }
+
+        window.hideError = function() {
+            const errorModal = document.getElementById('errorMessage');
+            if (errorModal) errorModal.classList.add('hidden');
+        }
+
+        function disableButton(buttonId) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.disabled = true;
+                button.style.opacity = '0.5';
+                button.style.cursor = 'not-allowed';
+            }
+        }
+
+        function enableButton(buttonId) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.disabled = false;
+                button.style.opacity = '1';
+                button.style.cursor = 'pointer';
+            }
+        }
+
         // ============================================
         // INITIALISATION
         // ============================================
         function initMap() {
-            map = L.map('map', {
-                zoomControl: false,
-                attributionControl: false
-            }).setView([20, 0], 2);
+            try {
+                showLoading();
 
-            // Charger les tuiles selon le thème
-            updateMapTiles();
-
-            map.doubleClickZoom.disable();
-
-            map.on('click', function(e) {
-                if (gameActive && currentCapital) {
-                    handleMapClick(e.latlng);
+                if (typeof L === 'undefined') {
+                    throw new Error('Leaflet library failed to load. Please check your internet connection.');
                 }
-            });
+
+                map = L.map('map', {
+                    zoomControl: false,
+                    attributionControl: false
+                }).setView([20, 0], 2);
+
+                // Charger les tuiles selon le thème
+                updateMapTiles();
+
+                map.doubleClickZoom.disable();
+
+                map.on('click', function(e) {
+                    if (gameActive && currentCapital) {
+                        handleMapClick(e.latlng);
+                    }
+                });
+
+                hideLoading();
+            } catch (error) {
+                console.error('Map initialization error:', error);
+                showError('Impossible de charger la carte. Vérifiez votre connexion internet et rechargez la page.');
+            }
         }
 
         /**
          * Met à jour les tuiles de la carte selon le thème actuel
          */
         function updateMapTiles() {
-            // Supprimer l'ancien layer si existant
-            if (tileLayer) {
-                map.removeLayer(tileLayer);
+            try {
+                // Supprimer l'ancien layer si existant
+                if (tileLayer) {
+                    map.removeLayer(tileLayer);
+                }
+
+                // Choisir les tuiles selon le thème
+                const tileUrl = currentTheme === 'light'
+                    ? 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
+                    : 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
+
+                // Créer et ajouter le nouveau layer
+                tileLayer = L.tileLayer(tileUrl, {
+                    maxZoom: 19,
+                    attribution: ''
+                }).addTo(map);
+
+                // Error handling for tile loading
+                tileLayer.on('tileerror', function(error) {
+                    console.warn('Tile loading error:', error);
+                    // Don't show error for individual tiles, only if all fail
+                });
+
+            } catch (error) {
+                console.error('Tile update error:', error);
+                showError('Erreur lors du chargement des tuiles de la carte.');
             }
-
-            // Choisir les tuiles selon le thème
-            const tileUrl = currentTheme === 'light'
-                ? 'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png'
-                : 'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png';
-
-            // Créer et ajouter le nouveau layer
-            tileLayer = L.tileLayer(tileUrl, {
-                maxZoom: 19,
-                attribution: ''
-            }).addTo(map);
         }
 
         /**
@@ -664,84 +781,160 @@
 
         // Réinitialiser le jeu (SPA pattern - sans rechargement)
         function resetGame() {
-            // Nettoyer tous les marqueurs et éléments de la carte
-            if (targetMarker) map.removeLayer(targetMarker);
-            if (playerMarker) map.removeLayer(playerMarker);
-            if (lineMarker) map.removeLayer(lineMarker);
+            // Prevent double-click
+            const btn = document.getElementById('replayButton');
+            if (btn && btn.disabled) return;
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+            }
 
-            // Arrêter tous les timers
-            stopTimer();
+            try {
+                // Nettoyer tous les marqueurs et éléments de la carte
+                if (targetMarker) map.removeLayer(targetMarker);
+                if (playerMarker) map.removeLayer(playerMarker);
+                if (lineMarker) map.removeLayer(lineMarker);
 
-            // Réinitialiser toutes les variables
-            currentRound = 0;
-            totalScore = 0;
-            roundResults = [];
-            gameActive = false;
-            currentCapital = null;
+                // Arrêter tous les timers et animations
+                stopTimer();
+                if (scoreAnimationFrame) {
+                    cancelAnimationFrame(scoreAnimationFrame);
+                    scoreAnimationFrame = null;
+                }
 
-            // Réinitialiser l'affichage du score et du round
-            document.getElementById('scoreDisplay').textContent = '0';
-            document.getElementById('roundDisplay').textContent = '1/5';
+                // Réinitialiser toutes les variables
+                currentRound = 0;
+                totalScore = 0;
+                roundResults = [];
+                sessionCapitals = []; // Vider la session pour forcer nouvelle sélection
+                gameActive = false;
+                currentCapital = null;
 
-            // Masquer tous les modals
-            document.getElementById('finalModal').classList.add('hidden');
-            document.getElementById('resultModal').classList.add('hidden');
-            document.getElementById('questionModal').classList.add('hidden');
+                // Réinitialiser l'affichage du score et du round
+                document.getElementById('scoreDisplay').textContent = '0';
+                document.getElementById('roundDisplay').textContent = '1/5';
 
-            // Réinitialiser la vue de la carte - afficher le monde entier
-            map.fitWorld({ animate: false });
+                // Masquer tous les modals
+                document.getElementById('finalModal').classList.add('hidden');
+                document.getElementById('resultModal').classList.add('hidden');
+                document.getElementById('questionModal').classList.add('hidden');
 
-            // Afficher l'écran de démarrage
-            document.getElementById('startModal').classList.remove('hidden');
+                // Réinitialiser la vue de la carte - afficher le monde entier
+                map.fitWorld({ animate: false });
+
+                // Afficher l'écran de démarrage
+                document.getElementById('startModal').classList.remove('hidden');
+
+                // Re-enable start button for next game
+                const startBtn = document.getElementById('startButton');
+                if (startBtn) {
+                    startBtn.disabled = false;
+                    startBtn.style.opacity = '1';
+                }
+            } catch (error) {
+                console.error('Error resetting game:', error);
+                showError('Erreur lors de la réinitialisation du jeu.');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }
+            }
         }
 
         window.startGame = function() {
-            document.getElementById('startModal').classList.add('hidden');
-            currentRound = 0;
-            totalScore = 0;
-            roundResults = [];
-            gameStartTime = Date.now();
-            nextRound();
+            // Prevent double-click
+            const btn = document.getElementById('startButton');
+            if (btn && btn.disabled) return;
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+            }
+
+            try {
+                document.getElementById('startModal').classList.add('hidden');
+                currentRound = 0;
+                totalScore = 0;
+                roundResults = [];
+                gameStartTime = Date.now();
+
+                // 🎲 Algorithme 'Balanced Challenge'
+                // Sélectionne 5 capitales : 2 populaires + 3 difficiles, mélangées
+                sessionCapitals = selectBalancedCapitals(capitals);
+
+                console.log('🎯 Session Capitals:', sessionCapitals.map(c => `${c.name} (${c.popular ? 'Popular' : 'Obscure'})`));
+
+                nextRound();
+            } catch (error) {
+                console.error('Error starting game:', error);
+                showError('Erreur lors du démarrage du jeu.');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }
+            }
         }
 
         // ============================================
         // GAME FLOW
         // ============================================
         window.nextRound = function() {
-            // Cleanup
-            if (targetMarker) map.removeLayer(targetMarker);
-            if (playerMarker) map.removeLayer(playerMarker);
-            if (lineMarker) map.removeLayer(lineMarker);
-            stopTimer();
-
-            document.getElementById('resultModal').classList.add('hidden');
-
-            currentRound++;
-            if (currentRound > ROUNDS_PER_GAME) {
-                endGame();
-                return;
+            // Prevent double-click
+            const btn = document.getElementById('nextButton');
+            if (btn && btn.disabled) return;
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
             }
 
-            // Nouvelle capitale aléatoire
-            currentCapital = capitals[Math.floor(Math.random() * capitals.length)];
+            try {
+                // Cleanup
+                if (targetMarker) map.removeLayer(targetMarker);
+                if (playerMarker) map.removeLayer(playerMarker);
+                if (lineMarker) map.removeLayer(lineMarker);
+                stopTimer();
 
-            // Afficher le monde entier immédiatement
-            map.fitWorld({ animate: false });
+                document.getElementById('resultModal').classList.add('hidden');
 
-            // Afficher la question
-            document.getElementById('roundDisplay').textContent = `${currentRound}/${ROUNDS_PER_GAME}`;
-            document.getElementById('capitalName').textContent = currentCapital.name;
-            document.getElementById('countryName').textContent = currentCapital.country;
-            document.getElementById('questionModal').classList.remove('hidden');
+                currentRound++;
+                if (currentRound > ROUNDS_PER_GAME) {
+                    endGame();
+                    return;
+                }
 
-            gameActive = false;
+                // Sélectionner la capitale suivante depuis la session pré-générée
+                currentCapital = sessionCapitals[currentRound - 1];
 
-            // Fermer le modal après 1s et démarrer immédiatement
-            setTimeout(() => {
-                document.getElementById('questionModal').classList.add('hidden');
-                gameActive = true;
-                startTimer();
-            }, MODAL_DISPLAY_MS);
+                // Afficher le monde entier immédiatement
+                map.fitWorld({ animate: false });
+
+                // Afficher la question
+                document.getElementById('roundDisplay').textContent = `${currentRound}/${ROUNDS_PER_GAME}`;
+                document.getElementById('capitalName').textContent = currentCapital.name;
+                document.getElementById('countryName').textContent = currentCapital.country;
+                document.getElementById('questionModal').classList.remove('hidden');
+
+                gameActive = false;
+
+                // Re-enable button (modal will close anyway)
+                if (btn) {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }
+
+                // Fermer le modal après 1s et démarrer immédiatement
+                setTimeout(() => {
+                    document.getElementById('questionModal').classList.add('hidden');
+                    gameActive = true;
+                    startTimer();
+                }, MODAL_DISPLAY_MS);
+            } catch (error) {
+                console.error('Error in nextRound:', error);
+                showError('Erreur lors du passage au round suivant.');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }
+            }
         }
 
         // Gérer le clic sur la carte
@@ -776,7 +969,7 @@
                 icon: L.divIcon({
                     className: 'marker-player',
                     iconSize: [16, 16],
-                    iconAnchor: [8, 8]  // Centre le marqueur sur le point de clic
+                    iconAnchor: [10, 10]  // Centrage parfait (16px + 2px border de chaque côté = 20px total, donc anchor à 10,10)
                 })
             }).addTo(map);
 
@@ -789,20 +982,22 @@
                 [currentCapital.lat, currentCapital.lng]
             ];
 
-            // Ligne de fond (outline noire)
+            // Ligne de fond (outline noire) - Plus nette
             const outlineLine = L.polyline(coords, {
                 color: '#000000',
-                weight: 4,
-                dashArray: '5, 10',
-                opacity: 0.6
+                weight: 5,
+                dashArray: '8, 12',  // Traits plus longs et nets
+                opacity: 0.9,  // Plus opaque = moins flou
+                lineCap: 'round'
             });
 
-            // Ligne principale (colorée)
+            // Ligne principale (colorée) - Plus épaisse et nette
             const mainLine = L.polyline(coords, {
                 color: lineColor,
-                weight: 1.5,
-                dashArray: '5, 10',
-                opacity: 1
+                weight: 3,  // Plus épaisse = plus nette
+                dashArray: '8, 12',  // Traits plus longs et nets
+                opacity: 1,
+                lineCap: 'round'
             });
 
             // Grouper les deux lignes
@@ -820,6 +1015,12 @@
             });
 
             // Animation de count-up pour le score
+            // Cancel any existing animation first
+            if (scoreAnimationFrame) {
+                cancelAnimationFrame(scoreAnimationFrame);
+                scoreAnimationFrame = null;
+            }
+
             const startTime = performance.now();
             const animateScore = (currentTime) => {
                 const elapsed = currentTime - startTime;
@@ -827,12 +1028,13 @@
                 const currentScore = Math.floor(oldScore + (points * progress));
                 document.getElementById('scoreDisplay').textContent = currentScore;
                 if (progress < 1) {
-                    requestAnimationFrame(animateScore);
+                    scoreAnimationFrame = requestAnimationFrame(animateScore);
                 } else {
                     document.getElementById('scoreDisplay').textContent = totalScore;
+                    scoreAnimationFrame = null;
                 }
             };
-            requestAnimationFrame(animateScore);
+            scoreAnimationFrame = requestAnimationFrame(animateScore);
 
             // Afficher le résultat
             const distanceText = distance < 1
@@ -890,25 +1092,55 @@
 
         // Fonction de partage avec résumé Wordle
         window.shareScore = function() {
-            // Créer le résumé visuel avec carrés Wordle
-            const wordleSummary = roundResults.join(' ');
+            // Prevent double-click
+            const btn = document.getElementById('shareButton');
+            if (btn && btn.disabled) return;
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.5';
+            }
 
-            const text = `📍 PointTheMap
+            try {
+                // Créer le résumé visuel avec carrés Wordle
+                const wordleSummary = roundResults.join(' ');
+
+                const text = `📍 PointTheMap
 Score: ${totalScore}/25000
 ${wordleSummary}
 
 https://github.com/Vandanael/PointTheMap`;
 
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text).then(() => {
-                    alert('Score copié ! Partage-le avec tes potes.');
-                }).catch(() => {
-                    // Fallback
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(() => {
+                        alert('Score copié ! Partage-le avec tes potes.');
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                        }
+                    }).catch((err) => {
+                        console.error('Clipboard error:', err);
+                        // Fallback
+                        prompt('Copie ce texte pour partager ton score:', text);
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                        }
+                    });
+                } else {
+                    // Fallback pour navigateurs plus anciens
                     prompt('Copie ce texte pour partager ton score:', text);
-                });
-            } else {
-                // Fallback pour navigateurs plus anciens
-                prompt('Copie ce texte pour partager ton score:', text);
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                    }
+                }
+            } catch (error) {
+                console.error('Error sharing score:', error);
+                showError('Erreur lors du partage du score.');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }
             }
         }
 
