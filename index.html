@@ -435,9 +435,6 @@
                 <button id="replayButton" onclick="resetGame()" class="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black py-6 px-6 rounded-xl text-xl btn-scale">
                     REJOUER
                 </button>
-                <button id="shareButton" onclick="shareScore()" class="modal-section hover:opacity-80 text-yellow-400 font-black py-4 px-6 rounded-xl text-base btn-scale w-full">
-                    PARTAGER
-                </button>
             </div>
         </div>
     </div>
@@ -458,8 +455,8 @@
         const DANGER_ZONE_MS = 1500;
         const MODAL_DISPLAY_MS = 1000;
         const SCORE_ANIMATION_MS = 800;
-        const RESULT_DELAY_MS = 1000;
-        const FLY_DURATION_S = 4.0;  // Zoom plus lent et fluide
+        const RESULT_DELAY_MS = 3500;
+        const FLY_DURATION_S = 3.0;  // Zoom plus lent et fluide
         const MAX_SCORE_PER_ROUND = 5000;
 
         // ============================================
@@ -982,22 +979,22 @@
                 [currentCapital.lat, currentCapital.lng]
             ];
 
-            // Ligne de fond (outline noire) - Plus nette
+            // Ligne de fond (outline noire) - Sans flou
             const outlineLine = L.polyline(coords, {
                 color: '#000000',
                 weight: 5,
-                dashArray: '8, 12',  // Traits plus longs et nets
-                opacity: 0.9,  // Plus opaque = moins flou
-                lineCap: 'round'
+                dashArray: '8, 12',
+                opacity: 1,  // Opacité maximale
+                lineCap: 'butt'  // Bords nets (pas de round)
             });
 
-            // Ligne principale (colorée) - Plus épaisse et nette
+            // Ligne principale (colorée) - Sans flou
             const mainLine = L.polyline(coords, {
                 color: lineColor,
-                weight: 3,  // Plus épaisse = plus nette
-                dashArray: '8, 12',  // Traits plus longs et nets
+                weight: 3,
+                dashArray: '8, 12',
                 opacity: 1,
-                lineCap: 'round'
+                lineCap: 'butt'  // Bords nets (pas de round)
             });
 
             // Grouper les deux lignes
@@ -1088,60 +1085,6 @@
             document.getElementById('wordleDisplay').textContent = wordleDisplay;
 
             document.getElementById('finalModal').classList.remove('hidden');
-        }
-
-        // Fonction de partage avec résumé Wordle
-        window.shareScore = function() {
-            // Prevent double-click
-            const btn = document.getElementById('shareButton');
-            if (btn && btn.disabled) return;
-            if (btn) {
-                btn.disabled = true;
-                btn.style.opacity = '0.5';
-            }
-
-            try {
-                // Créer le résumé visuel avec carrés Wordle
-                const wordleSummary = roundResults.join(' ');
-
-                const text = `📍 PointTheMap
-Score: ${totalScore}/25000
-${wordleSummary}
-
-https://github.com/Vandanael/PointTheMap`;
-
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(text).then(() => {
-                        alert('Score copié ! Partage-le avec tes potes.');
-                        if (btn) {
-                            btn.disabled = false;
-                            btn.style.opacity = '1';
-                        }
-                    }).catch((err) => {
-                        console.error('Clipboard error:', err);
-                        // Fallback
-                        prompt('Copie ce texte pour partager ton score:', text);
-                        if (btn) {
-                            btn.disabled = false;
-                            btn.style.opacity = '1';
-                        }
-                    });
-                } else {
-                    // Fallback pour navigateurs plus anciens
-                    prompt('Copie ce texte pour partager ton score:', text);
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.style.opacity = '1';
-                    }
-                }
-            } catch (error) {
-                console.error('Error sharing score:', error);
-                showError('Erreur lors du partage du score.');
-                if (btn) {
-                    btn.disabled = false;
-                    btn.style.opacity = '1';
-                }
-            }
         }
 
         // Initialiser au chargement
