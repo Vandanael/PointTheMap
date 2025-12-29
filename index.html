@@ -419,7 +419,7 @@
         const MODAL_DISPLAY_MS = 1000;
         const SCORE_ANIMATION_MS = 800;
         const RESULT_DELAY_MS = 1000;
-        const FLY_DURATION_S = 1.2;
+        const FLY_DURATION_S = 2.5;
         const MAX_SCORE_PER_ROUND = 5000;
 
         // ============================================
@@ -679,13 +679,17 @@
             gameActive = false;
             currentCapital = null;
 
+            // Réinitialiser l'affichage du score et du round
+            document.getElementById('scoreDisplay').textContent = '0';
+            document.getElementById('roundDisplay').textContent = '1/5';
+
             // Masquer tous les modals
             document.getElementById('finalModal').classList.add('hidden');
             document.getElementById('resultModal').classList.add('hidden');
             document.getElementById('questionModal').classList.add('hidden');
 
-            // Réinitialiser la vue de la carte
-            map.setView([20, 0], 2);
+            // Réinitialiser la vue de la carte - afficher le monde entier
+            map.fitWorld({ animate: false });
 
             // Afficher l'écran de démarrage
             document.getElementById('startModal').classList.remove('hidden');
@@ -720,7 +724,9 @@
 
             // Nouvelle capitale aléatoire
             currentCapital = capitals[Math.floor(Math.random() * capitals.length)];
-            map.setView([20, 0], 2);
+
+            // Afficher le monde entier immédiatement
+            map.fitWorld({ animate: false });
 
             // Afficher la question
             document.getElementById('roundDisplay').textContent = `${currentRound}/${ROUNDS_PER_GAME}`;
