@@ -455,8 +455,8 @@
         const DANGER_ZONE_MS = 1500;
         const MODAL_DISPLAY_MS = 1000;
         const SCORE_ANIMATION_MS = 800;
-        const RESULT_DELAY_MS = 3500;
-        const FLY_DURATION_S = 3.0;  // Zoom plus lent et fluide
+        const RESULT_DELAY_MS = 2500;
+        const FLY_DURATION_S = 2.0;  // Zoom plus lent et fluide
         const MAX_SCORE_PER_ROUND = 5000;
 
         // ============================================
@@ -552,7 +552,13 @@
                 map = L.map('map', {
                     zoomControl: false,
                     attributionControl: false
-                }).setView([20, 0], 2);
+                });
+
+                // Zoom pour remplir l'écran de haut en bas (edge-to-edge)
+                map.fitBounds([[-85, -180], [85, 180]], {
+                    animate: false,
+                    padding: [0, 0]  // Aucun padding pour coller aux bords
+                });
 
                 // Charger les tuiles selon le thème
                 updateMapTiles();
@@ -816,8 +822,11 @@
                 document.getElementById('resultModal').classList.add('hidden');
                 document.getElementById('questionModal').classList.add('hidden');
 
-                // Réinitialiser la vue de la carte - afficher le monde entier
-                map.fitWorld({ animate: false });
+                // Réinitialiser la vue de la carte - bord à bord
+                map.fitBounds([[-85, -180], [85, 180]], {
+                    animate: false,
+                    padding: [0, 0]
+                });
 
                 // Afficher l'écran de démarrage
                 document.getElementById('startModal').classList.remove('hidden');
@@ -901,8 +910,11 @@
                 // Sélectionner la capitale suivante depuis la session pré-générée
                 currentCapital = sessionCapitals[currentRound - 1];
 
-                // Afficher le monde entier immédiatement
-                map.fitWorld({ animate: false });
+                // Afficher le monde entier bord à bord
+                map.fitBounds([[-85, -180], [85, 180]], {
+                    animate: false,
+                    padding: [0, 0]
+                });
 
                 // Afficher la question
                 document.getElementById('roundDisplay').textContent = `${currentRound}/${ROUNDS_PER_GAME}`;
