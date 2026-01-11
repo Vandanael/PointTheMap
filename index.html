@@ -626,8 +626,8 @@
         let currentLanguage = 'fr';
 
         // Supabase Configuration
-        const SUPABASE_URL = 'https://qfmpnvhkfqjravlzymtc.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmbXBudmhrZnFqcmF2bHp5bXRjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ1NzY0MDAsImV4cCI6MjA1MDE1MjQwMH0.YoYg6GWhl2gLTLwD68aDQQ__0cOrp2L';
+        const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+        const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
         let supabaseClient = null;
 
         // Leaderboard
@@ -1547,10 +1547,10 @@
                     const safeWordle = entry.wordle || ''; // Emojis, pas besoin d'échapper
                     
                     return `
-                        <div class="leaderboard-entry ${isCurrentPlayer ? 'highlight' : ''} rounded-lg p-3 flex items-center gap-3" style="background: ${isCurrentPlayer ? 'var(--bg-secondary)' : 'transparent'}; ${!isLast ? 'border-bottom: 1px solid var(--border-color);' : ''}">
+                        <div class="leaderboard-entry ${isCurrentPlayer ? 'highlight' : ''} rounded-lg p-3 flex items-center gap-3 min-w-0" style="background: ${isCurrentPlayer ? 'var(--bg-secondary)' : 'transparent'}; ${!isLast ? 'border-bottom: 1px solid var(--border-color);' : ''}">
                             <div class="text-primary text-2xl font-black w-10 text-center flex-shrink-0">${rank}</div>
-                            <div class="text-primary text-lg font-black uppercase flex-shrink-0">${safePseudo}</div>
-                            <div class="flex-1"></div>
+                            <div class="text-primary text-lg font-black uppercase flex-shrink-0 overflow-hidden text-ellipsis whitespace-nowrap max-w-[120px]">${safePseudo}</div>
+                            <div class="flex-1 min-w-0"></div>
                             <div class="text-primary font-black text-xl flex-shrink-0">${safeScore}</div>
                             <div class="text-secondary text-sm flex items-center gap-2 flex-shrink-0">
                                 <span>${safeWordle}</span>
