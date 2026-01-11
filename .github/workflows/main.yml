@@ -10,23 +10,19 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install and Run Butler
-      env:
-        BUTLER_API_KEY: ${{ secrets.BUTLER_CREDENTIALS }}
+    - name: Deploy with Butler (Docker)
       run: |
-        # 1. On télécharge Butler depuis GitHub (plus fiable que le serveur OVH)
-        curl -L -o butler.zip https://github.com/itchio/butler/releases/download/v15.21.0/butler-linux-amd64.zip
-        unzip butler.zip
-        chmod +x butler
-
-        # 2. Petite vérification (Debug)
-        ./butler -V
+        # On utilise directement l'image officielle de Itch.io
+        # -v $(pwd):/src  -> On donne l'accès au dossier actuel
+        # push /src       -> On envoie le contenu de ce dossier
         
-        if [ -z "$BUTLER_API_KEY" ]; then
-          echo "❌ ERREUR : La clé API n'est toujours pas vue."
-          exit 1
-        fi
-
-        # 3. Envoi du jeu
-        echo "🚀 Envoi en cours..."
-        ./butler push . vandanael/point-the-map:web --userversion-file VERSION || ./butler push . vandanael/point-the-map:web
+        docker run --rm \
+          -e BUTLER_API_KEY=${{ secrets.BUTLER_CREDENTIALS }} \
+          -v $(pwd):/src \
+          itchio/butler:latest \
+          push /src vandanael/point-the-map:web --userversion-file VERSION || \
+          docker run --rm \
+          -e BUTLER_API_KEY=${{ secrets.BUTLER_CREDENTIALS }} \
+          -v $(pwd):/src \
+          itchio/butler:latest \
+          push /src vandanael/point-the-map:web
