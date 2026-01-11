@@ -1227,15 +1227,20 @@
 
         /**
          * Récupère le top 100 des scores (un seul score par pseudo - le meilleur)
+         * Combine les scores locaux (localStorage, visibles uniquement sur cet ordinateur) 
+         * et les scores Supabase (globaux)
          */
         async function getTopScores(limit = 100) {
+            // Toujours récupérer les scores locaux (localStorage - spécifique à cet ordinateur)
+            const localScores = getLocalLeaderboard();
+            
             if (!supabaseClient) {
-                const localScores = getLocalLeaderboard();
+                // Pas de Supabase, retourner uniquement les scores locaux
                 return getBestScorePerPseudo(localScores, limit);
             }
 
             try {
-                // Récupérer tous les scores (on va filtrer côté client pour avoir le meilleur par pseudo)
+                // Récupérer les scores Supabase (globaux)
                 const { data, error } = await supabaseClient
                     .from('leaderboard')
                     .select('*')
@@ -1246,15 +1251,18 @@
 
                 if (error) {
                     console.error('Error fetching leaderboard:', error);
-                    const localScores = getLocalLeaderboard();
+                    // En cas d'erreur, retourner uniquement les scores locaux
                     return getBestScorePerPseudo(localScores, limit);
                 }
 
-                // Filtrer pour garder uniquement le meilleur score par pseudo
-                return getBestScorePerPseudo(data || [], limit);
+                // COMBINER les scores locaux (cet ordinateur) ET Supabase (globaux)
+                const allScores = [...localScores, ...(data || [])];
+                
+                // Filtrer pour garder uniquement le meilleur score par pseudo parmi tous
+                return getBestScorePerPseudo(allScores, limit);
             } catch (error) {
                 console.error('Error in getTopScores:', error);
-                const localScores = getLocalLeaderboard();
+                // En cas d'erreur, retourner uniquement les scores locaux
                 return getBestScorePerPseudo(localScores, limit);
             }
         }
