@@ -2491,11 +2491,51 @@
             }
         }
 
+        /**
+         * Initialise le leaderboard avec un score de démo
+         */
+        function initDemoScore() {
+            try {
+                const leaderboard = getLocalLeaderboard();
+                // Vérifier si le score de démo existe déjà
+                const demoExists = leaderboard.some(entry => 
+                    entry.pseudo === 'SAMZR' && entry.score === 21016
+                );
+                
+                if (!demoExists) {
+                    const demoEntry = {
+                        pseudo: 'SAMZR',
+                        score: 21016,
+                        time: 34,
+                        wordle: '🟩 🟩 🟩 🟩 🟨', // 4 verts + 1 jaune (21016 = 4×5000 + 1016)
+                        date: new Date().toISOString().split('T')[0],
+                        timestamp: Date.now() - 86400000, // Il y a 1 jour
+                        sessionId: 'demo-samzr'
+                    };
+                    saveToLocalLeaderboard(demoEntry);
+                    
+                    // Aussi envoyer à Supabase si disponible
+                    if (supabaseClient) {
+                        submitToSupabase('SAMZR', 21016, 34, ['🟩', '🟩', '🟩', '🟩', '🟨']).catch(() => {
+                            // Ignorer les erreurs, c'est juste un score de démo
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error initializing demo score:', error);
+            }
+        }
+
         // Initialiser au chargement
         initTheme();
         initLanguage();
         initSupabase();
         initMap();
+        
+        // Initialiser le score de démo après un court délai
+        setTimeout(() => {
+            initDemoScore();
+        }, 1000);
         
         // Traiter la queue de retry au chargement
         if (typeof processRetryQueue === 'function') {
