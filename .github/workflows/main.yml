@@ -3,15 +3,32 @@ on:
   push:
     branches:
       - main
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - uses: josephbmanley/butler-publish-itchio-action@master
+
+    - name: Download and Run Butler
       env:
+        # On récupère votre secret ici
         BUTLER_API_KEY: ${{ secrets.BUTLER_CREDENTIALS }}
-        ITCH_GAME: point-the-map
-        ITCH_USER: vandanael
-        CHANNEL: web
-        PACKAGE: .
+      run: |
+        # 1. Téléchargement de l'outil Butler officiel
+        curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+        unzip butler.zip
+        chmod +x butler
+
+        # 2. Vérification de sécurité (Debug)
+        # Cela nous dira si le secret est bien lu SANS l'afficher
+        if [ -z "$BUTLER_API_KEY" ]; then
+          echo "❌ ERREUR CRITIQUE : La clé API n'est pas détectée !"
+          echo "Vérifiez dans Settings > Secrets and variables > Actions"
+          exit 1
+        else
+          echo "✅ SUCCÈS : La clé API a été trouvée. Lancement de l'upload..."
+        fi
+
+        # 3. Envoi du jeu
+        ./butler push . vandanael/point-the-map:web --userversion-file VERSION || ./butler push . vandanael/point-the-map:web
