@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co;">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <title id="pageTitle">PointTheMap - Jeu de Géographie</title>
 
     <!-- Tailwind CSS - Using Play CDN for auto-purge and smaller bundle -->
@@ -1420,7 +1421,7 @@
             
             // Rate limiting : permettre si c'est un meilleur score, sinon appliquer le délai
             if (!isBetterScore && !canSubmitScore()) {
-                showError('Veuillez attendre avant de soumettre à nouveau');
+                showError(t('waitBeforeSubmit'));
                 return;
             }
 
@@ -1494,10 +1495,11 @@
             const escapeHandler = function(e) {
                 if (e.key === 'Escape') {
                     hideLeaderboard();
-                    document.removeEventListener('keydown', escapeHandler);
                 }
             };
             document.addEventListener('keydown', escapeHandler);
+            // Stocker la référence pour nettoyage
+            modal._escapeHandler = escapeHandler;
             
             const listEl = document.getElementById('leaderboardList');
             
@@ -1536,6 +1538,7 @@
                 listEl.innerHTML = scores.map((entry, index) => {
                     const isCurrentPlayer = entry.session_id === currentSessionId;
                     const rank = index + 1;
+                    const isLast = index === scores.length - 1;
                     
                     // Échapper toutes les données utilisateur pour sécurité XSS
                     const safePseudo = escapeHtml(entry.pseudo || '');
@@ -1544,7 +1547,7 @@
                     const safeWordle = entry.wordle || ''; // Emojis, pas besoin d'échapper
                     
                     return `
-                        <div class="leaderboard-entry ${isCurrentPlayer ? 'highlight' : ''} rounded-lg p-3 flex items-center gap-3" style="background: ${isCurrentPlayer ? 'var(--bg-secondary)' : 'transparent'}; border-bottom: 1px solid var(--border-color);">
+                        <div class="leaderboard-entry ${isCurrentPlayer ? 'highlight' : ''} rounded-lg p-3 flex items-center gap-3" style="background: ${isCurrentPlayer ? 'var(--bg-secondary)' : 'transparent'}; ${!isLast ? 'border-bottom: 1px solid var(--border-color);' : ''}">
                             <div class="text-primary text-2xl font-black w-10 text-center flex-shrink-0">${rank}</div>
                             <div class="text-primary text-lg font-black uppercase flex-shrink-0">${safePseudo}</div>
                             <div class="flex-1"></div>
@@ -1567,7 +1570,17 @@
          * Cache le leaderboard
          */
         function hideLeaderboard() {
-            document.getElementById('leaderboardModal').classList.add('hidden');
+            const modal = document.getElementById('leaderboardModal');
+            modal.classList.add('hidden');
+            
+            // Nettoyer l'event listener Escape
+            if (modal._escapeHandler) {
+                document.removeEventListener('keydown', modal._escapeHandler);
+                delete modal._escapeHandler;
+            }
+            
+            // Retirer le tab trap
+            removeFocusTrap(modal);
         }
 
         // Exposer les fonctions globalement
@@ -1623,7 +1636,8 @@
                 noScores: 'Aucun score enregistré',
                 loadingLeaderboard: 'Chargement...',
                 errorLoading: 'Erreur de chargement',
-                rank: 'Rang'
+                rank: 'Rang',
+                waitBeforeSubmit: 'Veuillez attendre avant de soumettre à nouveau'
             },
             en: {
                 round: 'Round',
@@ -1668,7 +1682,8 @@
                 noScores: 'No scores recorded',
                 loadingLeaderboard: 'Loading...',
                 errorLoading: 'Loading error',
-                rank: 'Rank'
+                rank: 'Rank',
+                waitBeforeSubmit: 'Please wait before submitting again'
             }
         };
 

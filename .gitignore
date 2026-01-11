@@ -1,5 +1,5 @@
 # Dossier personnel Claude
 .claude/
 
-# Documentation consolidée
-INSTRUCTIONS.md
+# Documentation (tous les .md sauf README.md)
+docs/
