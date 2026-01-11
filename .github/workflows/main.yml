@@ -10,25 +10,23 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Download and Run Butler
+    - name: Install and Run Butler
       env:
-        # On récupère votre secret ici
         BUTLER_API_KEY: ${{ secrets.BUTLER_CREDENTIALS }}
       run: |
-        # 1. Téléchargement de l'outil Butler officiel
-        curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+        # 1. On télécharge Butler depuis GitHub (plus fiable que le serveur OVH)
+        curl -L -o butler.zip https://github.com/itchio/butler/releases/download/v15.21.0/butler-linux-amd64.zip
         unzip butler.zip
         chmod +x butler
 
-        # 2. Vérification de sécurité (Debug)
-        # Cela nous dira si le secret est bien lu SANS l'afficher
+        # 2. Petite vérification (Debug)
+        ./butler -V
+        
         if [ -z "$BUTLER_API_KEY" ]; then
-          echo "❌ ERREUR CRITIQUE : La clé API n'est pas détectée !"
-          echo "Vérifiez dans Settings > Secrets and variables > Actions"
+          echo "❌ ERREUR : La clé API n'est toujours pas vue."
           exit 1
-        else
-          echo "✅ SUCCÈS : La clé API a été trouvée. Lancement de l'upload..."
         fi
 
         # 3. Envoi du jeu
+        echo "🚀 Envoi en cours..."
         ./butler push . vandanael/point-the-map:web --userversion-file VERSION || ./butler push . vandanael/point-the-map:web
