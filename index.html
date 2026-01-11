@@ -647,7 +647,7 @@
         
         // Rate limiting
         const LAST_SUBMISSION_KEY = 'ptm-last-submission';
-        const MIN_SUBMISSION_INTERVAL = 60000; // 1 minute
+        const MIN_SUBMISSION_INTERVAL = 20000; // 20 secondes (une partie dure ~25s)
         
         // Retry queue Supabase
         const RETRY_QUEUE_KEY = 'ptm-retry-queue';
@@ -1408,8 +1408,18 @@
                 return;
             }
             
-            // Rate limiting
-            if (!canSubmitScore()) {
+            // Calculer le temps total
+            const totalTimeS = Math.floor((Date.now() - gameStartTime) / 1000);
+            
+            // Vérifier si c'est un meilleur score pour ce pseudo
+            const allScores = await getTopScores(500); // Récupérer plus de scores pour vérifier
+            const existingBestScore = allScores.find(s => s.pseudo === pseudo);
+            const isBetterScore = !existingBestScore || 
+                                 totalScore > existingBestScore.score || 
+                                 (totalScore === existingBestScore.score && totalTimeS < existingBestScore.time);
+            
+            // Rate limiting : permettre si c'est un meilleur score, sinon appliquer le délai
+            if (!isBetterScore && !canSubmitScore()) {
                 showError('Veuillez attendre avant de soumettre à nouveau');
                 return;
             }
@@ -1420,8 +1430,6 @@
             btn.textContent = t('registering');
 
             try {
-                const totalTimeS = Math.floor((Date.now() - gameStartTime) / 1000);
-                
                 // Sauvegarder localement
                 saveToLocalLeaderboard({
                     pseudo,
@@ -1433,8 +1441,10 @@
                     sessionId: getOrCreateSessionId()
                 });
 
-                // Enregistrer la soumission (rate limiting)
-                recordSubmission();
+                // Enregistrer la soumission (rate limiting) seulement si ce n'est pas un meilleur score
+                if (!isBetterScore) {
+                    recordSubmission();
+                }
 
                 // Soumettre à Supabase avec retry (async, ne bloque pas)
                 const result = await submitToSupabaseWithRetry(pseudo, totalScore, totalTimeS, roundResults);
