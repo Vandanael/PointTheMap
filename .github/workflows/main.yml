@@ -1,0 +1,17 @@
+name: Deploy to itch.io
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: josephbmanley/butler-publish-itchio-action@master
+      env:
+        BUTLER_CREDENTIALS: ${{ secrets.BUTLER_API_KEY }}
+        CHANNEL: web
+        ITCH_GAME: point-the-map
+        ITCH_USER: vandanael
+        PACKAGE: .
