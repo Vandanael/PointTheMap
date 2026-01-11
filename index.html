@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net https://unpkg.com;">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <title id="pageTitle">PointTheMap - Jeu de Géographie</title>
 
@@ -565,6 +565,16 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+    <!-- Configuration Supabase pour GitHub Pages -->
+    <script>
+        // Configuration Supabase - Compatible avec GitHub Pages
+        // Remplacez ces valeurs par vos vraies clés Supabase
+        window.SUPABASE_CONFIG = {
+            url: 'https://your-project.supabase.co', // Remplacez par votre URL Supabase
+            anonKey: 'your-anon-key-here' // Remplacez par votre clé anonyme Supabase
+        };
+    </script>
+
     <!-- Capitales data -->
     <script type="module">
         import { capitals, selectBalancedCapitals } from './capitals.js';
@@ -626,8 +636,13 @@
         let currentLanguage = 'fr';
 
         // Supabase Configuration
-        const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-        const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        // Compatible avec Vite (dev) et GitHub Pages (prod)
+        const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) 
+            ? import.meta.env.VITE_SUPABASE_URL 
+            : (window.SUPABASE_CONFIG?.url || '');
+        const SUPABASE_ANON_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) 
+            ? import.meta.env.VITE_SUPABASE_ANON_KEY 
+            : (window.SUPABASE_CONFIG?.anonKey || '');
         let supabaseClient = null;
 
         // Leaderboard
@@ -1039,11 +1054,15 @@
          */
         function initSupabase() {
             try {
-                if (typeof supabase !== 'undefined') {
+                if (typeof supabase !== 'undefined' && SUPABASE_URL && SUPABASE_ANON_KEY) {
                     supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                     // Supabase initialized successfully
                 } else {
-                    console.warn('Supabase CDN not loaded, using localStorage only');
+                    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+                        console.warn('Supabase credentials not configured, using localStorage only');
+                    } else {
+                        console.warn('Supabase CDN not loaded, using localStorage only');
+                    }
                 }
             } catch (error) {
                 console.warn('Supabase initialization error:', error);
