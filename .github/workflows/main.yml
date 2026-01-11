@@ -10,19 +10,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Deploy with Butler (Docker)
+    # 1. On utilise l'action recommandée pour installer Butler proprement
+    - name: Setup Butler
+      uses: remarkablegames/setup-butler@v2
+      with:
+        # Cette action va chercher la dernière version stable automatiquement
+        version: latest
+
+    # 2. On lance la commande push standard
+    - name: Push to itch.io
+      env:
+        BUTLER_API_KEY: ${{ secrets.BUTLER_CREDENTIALS }}
       run: |
-        # On utilise directement l'image officielle de Itch.io
-        # -v $(pwd):/src  -> On donne l'accès au dossier actuel
-        # push /src       -> On envoie le contenu de ce dossier
-        
-        docker run --rm \
-          -e BUTLER_API_KEY=${{ secrets.BUTLER_CREDENTIALS }} \
-          -v $(pwd):/src \
-          itchio/butler:latest \
-          push /src vandanael/point-the-map:web --userversion-file VERSION || \
-          docker run --rm \
-          -e BUTLER_API_KEY=${{ secrets.BUTLER_CREDENTIALS }} \
-          -v $(pwd):/src \
-          itchio/butler:latest \
-          push /src vandanael/point-the-map:web
+        # La commande est simple : butler push <dossier> <user>/<jeu>:<canal>
+        butler push . vandanael/point-the-map:web --userversion-file VERSION || butler push . vandanael/point-the-map:web
