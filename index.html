@@ -539,19 +539,19 @@
     </div>
 
     <!-- Modal Leaderboard -->
-    <div id="leaderboardModal" class="fixed inset-0 modal-bg flex items-center justify-center p-4 hidden" style="z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="leaderboardTitle">
-        <div class="modal-card rounded-2xl max-w-2xl w-full p-8 modal-content max-h-[80vh] overflow-y-auto">
-            <h2 class="text-4xl font-black text-primary mb-6 text-center tracking-tight uppercase" id="leaderboardTitle">
+    <div id="leaderboardModal" class="fixed inset-0 modal-bg flex items-center justify-center p-2 md:p-4 hidden" style="z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="leaderboardTitle">
+        <div class="modal-card rounded-2xl max-w-full md:max-w-2xl w-full p-4 md:p-8 modal-content max-h-[85vh] md:max-h-[80vh] overflow-y-auto">
+            <h2 class="text-2xl md:text-4xl font-black text-primary mb-4 md:mb-6 text-center tracking-tight uppercase" id="leaderboardTitle">
                 LEADERBOARD
             </h2>
-            <div id="leaderboardList" class="space-y-2">
+            <div id="leaderboardList" class="space-y-1 md:space-y-2">
                 <div class="text-center text-secondary py-8">
                     Chargement...
                 </div>
             </div>
             <button 
                 onclick="hideLeaderboard()" 
-                class="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black py-4 px-6 rounded-xl text-lg btn-scale mt-6"
+                class="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black py-3 md:py-4 px-4 md:px-6 rounded-xl text-base md:text-lg btn-scale mt-4 md:mt-6"
                 id="closeLeaderboardButton"
             >
                 FERMER
@@ -1546,13 +1546,14 @@
             
             // Skeleton loading
             listEl.innerHTML = `
-                <div class="space-y-2">
+                <div class="space-y-1 md:space-y-2">
                     ${Array(5).fill(0).map(() => `
-                        <div class="animate-pulse flex items-center justify-between p-3 rounded-lg" style="background: var(--bg-tertiary);">
-                            <div class="h-6 w-10 rounded" style="background: var(--text-tertiary);"></div>
-                            <div class="h-5 w-20 rounded" style="background: var(--text-tertiary);"></div>
-                            <div class="h-6 w-16 rounded" style="background: var(--text-tertiary);"></div>
-                            <div class="h-5 w-24 rounded" style="background: var(--text-tertiary);"></div>
+                        <div class="animate-pulse flex items-center gap-2 md:gap-3 p-2 md:p-3 rounded-lg" style="background: var(--bg-tertiary);">
+                            <div class="h-5 md:h-6 w-8 md:w-10 rounded" style="background: var(--text-tertiary);"></div>
+                            <div class="h-4 md:h-5 w-16 md:w-20 rounded" style="background: var(--text-tertiary);"></div>
+                            <div class="flex-1"></div>
+                            <div class="h-4 md:h-6 w-12 md:w-16 rounded" style="background: var(--text-tertiary);"></div>
+                            <div class="h-3 md:h-5 w-8 md:w-12 rounded" style="background: var(--text-tertiary);"></div>
                         </div>
                     `).join('')}
                 </div>
@@ -1588,13 +1589,13 @@
                     const safeWordle = entry.wordle || ''; // Emojis, pas besoin d'échapper
                     
                     return `
-                        <div class="leaderboard-entry ${isCurrentPlayer ? 'highlight' : ''} rounded-lg p-3 flex items-center gap-3 min-w-0" style="background: ${isCurrentPlayer ? 'var(--bg-secondary)' : 'transparent'}; ${!isLast ? 'border-bottom: 1px solid var(--border-color);' : ''}">
-                            <div class="text-primary text-2xl font-black w-10 text-center flex-shrink-0">${rank}</div>
-                            <div class="text-primary text-lg font-black uppercase flex-shrink-0 overflow-hidden text-ellipsis whitespace-nowrap max-w-[120px]">${safePseudo}</div>
+                        <div class="leaderboard-entry ${isCurrentPlayer ? 'highlight' : ''} rounded-lg p-2 md:p-3 flex items-center gap-2 md:gap-3 min-w-0" style="background: ${isCurrentPlayer ? 'var(--bg-secondary)' : 'transparent'}; ${!isLast ? 'border-bottom: 1px solid var(--border-color);' : ''}">
+                            <div class="text-primary text-lg md:text-2xl font-black w-8 md:w-10 text-center flex-shrink-0">${rank}</div>
+                            <div class="text-primary text-sm md:text-lg font-black uppercase flex-shrink-0 overflow-hidden text-ellipsis whitespace-nowrap max-w-[80px] md:max-w-[120px]">${safePseudo}</div>
                             <div class="flex-1 min-w-0"></div>
-                            <div class="text-primary font-black text-xl flex-shrink-0">${safeScore}</div>
-                            <div class="text-secondary text-sm flex items-center gap-2 flex-shrink-0">
-                                <span>${safeWordle}</span>
+                            <div class="text-primary font-black text-base md:text-xl flex-shrink-0">${safeScore}</div>
+                            <div class="text-secondary text-xs md:text-sm flex items-center gap-1 md:gap-2 flex-shrink-0">
+                                <span class="hidden sm:inline">${safeWordle}</span>
                                 <span class="text-tertiary">${safeTime}s</span>
                             </div>
                         </div>
