@@ -568,10 +568,9 @@
     <!-- Configuration Supabase pour GitHub Pages -->
     <script>
         // Configuration Supabase - Compatible avec GitHub Pages
-        // Remplacez ces valeurs par vos vraies clés Supabase
         window.SUPABASE_CONFIG = {
-            url: 'https://your-project.supabase.co', // Remplacez par votre URL Supabase
-            anonKey: 'your-anon-key-here' // Remplacez par votre clé anonyme Supabase
+            url: 'https://qfmpnvhkfqjravlzymtc.supabase.co',
+            anonKey: 'sb_publishable_YoYg6GWhl2gLTLwD68aDQQ__0cOrp2L'
         };
     </script>
 
@@ -637,12 +636,29 @@
 
         // Supabase Configuration
         // Compatible avec Vite (dev) et GitHub Pages (prod)
-        const SUPABASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) 
-            ? import.meta.env.VITE_SUPABASE_URL 
-            : (window.SUPABASE_CONFIG?.url || '');
-        const SUPABASE_ANON_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) 
-            ? import.meta.env.VITE_SUPABASE_ANON_KEY 
-            : (window.SUPABASE_CONFIG?.anonKey || '');
+        function getSupabaseConfig() {
+            // Priorité 1: Variables d'environnement Vite (développement)
+            if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) {
+                return {
+                    url: import.meta.env.VITE_SUPABASE_URL,
+                    anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+                };
+            }
+            // Priorité 2: Configuration globale (GitHub Pages)
+            if (window.SUPABASE_CONFIG?.url && window.SUPABASE_CONFIG?.anonKey) {
+                const url = window.SUPABASE_CONFIG.url.trim();
+                const key = window.SUPABASE_CONFIG.anonKey.trim();
+                // Vérifier que ce ne sont pas des placeholders
+                if (url && url !== 'https://your-project.supabase.co' && 
+                    key && key !== 'your-anon-key-here') {
+                    return { url, anonKey: key };
+                }
+            }
+            // Pas de configuration valide
+            return { url: '', anonKey: '' };
+        }
+        
+        const { url: SUPABASE_URL, anonKey: SUPABASE_ANON_KEY } = getSupabaseConfig();
         let supabaseClient = null;
 
         // Leaderboard
@@ -1054,17 +1070,23 @@
          */
         function initSupabase() {
             try {
-                if (typeof supabase !== 'undefined' && SUPABASE_URL && SUPABASE_ANON_KEY) {
-                    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                    // Supabase initialized successfully
-                } else {
-                    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-                        console.warn('Supabase credentials not configured, using localStorage only');
-                    } else {
-                        console.warn('Supabase CDN not loaded, using localStorage only');
-                    }
+                // Vérifier que Supabase CDN est chargé
+                if (typeof supabase === 'undefined') {
+                    // Mode silencieux en production - pas de warning si c'est intentionnel
+                    return;
                 }
+                
+                // Vérifier que les credentials sont valides
+                if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+                    // Mode silencieux - le jeu fonctionne avec localStorage uniquement
+                    return;
+                }
+                
+                // Initialiser le client Supabase
+                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                
             } catch (error) {
+                // Erreur silencieuse - le jeu continue avec localStorage
                 console.warn('Supabase initialization error:', error);
             }
         }
