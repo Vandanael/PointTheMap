@@ -680,10 +680,19 @@
         // Rate limiting
         const LAST_SUBMISSION_KEY = 'ptm-last-submission';
         const MIN_SUBMISSION_INTERVAL = 20000; // 20 secondes (une partie dure ~25s)
+        const MAX_SUBMISSIONS_PER_HOUR = 10; // Limite de soumissions par heure
+        const SUBMISSIONS_COUNT_KEY = 'ptm-submissions-count';
+        const SUBMISSIONS_WINDOW_KEY = 'ptm-submissions-window';
         
         // Retry queue Supabase
         const RETRY_QUEUE_KEY = 'ptm-retry-queue';
         const MAX_RETRIES = 3;
+        
+        // Validation des scores
+        const MAX_SCORE_TOTAL = 30000; // Score maximum théorique (5 rounds × 5000 + marge)
+        const MIN_SCORE_TOTAL = 0;
+        const MAX_TIME_TOTAL = 300; // 5 minutes max
+        const MIN_TIME_TOTAL = 5; // Minimum 5 secondes
 
         // ============================================
         // UTILITY FUNCTIONS - Loading & Error Handling
@@ -1207,7 +1216,7 @@
         }
         
         /**
-         * Soumet un score à Supabase
+         * Soumet un score à Supabase avec validation renforcée
          */
         async function submitToSupabase(pseudo, score, time, wordle) {
             if (!supabaseClient) {
@@ -1215,16 +1224,46 @@
                 return null;
             }
 
+            // Validation finale avant envoi
+            const validation = validateScoreData(pseudo, score, time);
+            if (!validation.valid) {
+                console.error('Validation failed before Supabase submission:', validation.error);
+                return null;
+            }
+
             try {
+                // Normaliser et valider les données
+                const normalizedPseudo = pseudo.toUpperCase().trim();
+                const normalizedScore = Math.round(score);
+                const normalizedTime = Math.round(time);
+                const currentDate = new Date().toISOString().split('T')[0];
+                const currentTimestamp = Date.now();
+                
+                // Validation supplémentaire des wordle (doit être un tableau)
+                let wordleString = '';
+                if (Array.isArray(wordle)) {
+                    wordleString = wordle.join(' ').substring(0, 100); // Limiter la longueur
+                } else if (typeof wordle === 'string') {
+                    wordleString = wordle.substring(0, 100);
+                }
+
                 const entry = {
-                    pseudo: pseudo.toUpperCase().trim(),
-                    score: score,
-                    time: time,
-                    wordle: wordle.join(' '),
-                    date: new Date().toISOString().split('T')[0],
-                    timestamp: Date.now(),
+                    pseudo: normalizedPseudo,
+                    score: normalizedScore,
+                    time: normalizedTime,
+                    wordle: wordleString,
+                    date: currentDate,
+                    timestamp: currentTimestamp,
                     session_id: getOrCreateSessionId()
                 };
+
+                // Vérification finale des valeurs
+                if (entry.score < MIN_SCORE_TOTAL || entry.score > MAX_SCORE_TOTAL ||
+                    entry.time < MIN_TIME_TOTAL || entry.time > MAX_TIME_TOTAL ||
+                    entry.pseudo.length < 3 || entry.pseudo.length > 5) {
+                    console.error('Invalid entry data after normalization');
+                    return null;
+                }
 
                 const { data, error } = await supabaseClient
                     .from('leaderboard')
@@ -1232,7 +1271,13 @@
                     .select();
 
                 if (error) {
-                    console.error('Error submitting to Supabase:', error);
+                    // Ne pas exposer les détails d'erreur à l'utilisateur (sécurité)
+                    console.error('Error submitting to Supabase:', error.message);
+                    return null;
+                }
+
+                if (!data || data.length === 0) {
+                    console.error('No data returned from Supabase');
                     return null;
                 }
 
@@ -1240,6 +1285,7 @@
                 const rank = await getPlayerRank(score);
                 return { success: true, rank, data: data[0] };
             } catch (error) {
+                // Ne pas exposer les détails d'erreur (sécurité)
                 console.error('Error in submitToSupabase:', error);
                 return null;
             }
@@ -1421,39 +1467,109 @@
         }
 
         /**
-         * Vérifie si on peut soumettre un score (rate limiting)
+         * Vérifie si on peut soumettre un score (rate limiting renforcé)
          */
         function canSubmitScore() {
             const lastSubmission = localStorage.getItem(LAST_SUBMISSION_KEY);
             if (!lastSubmission) return true;
             const elapsed = Date.now() - parseInt(lastSubmission, 10);
-            return elapsed >= MIN_SUBMISSION_INTERVAL;
+            
+            // Vérifier l'intervalle minimum entre soumissions
+            if (elapsed < MIN_SUBMISSION_INTERVAL) {
+                return false;
+            }
+            
+            // Vérifier le nombre de soumissions par heure
+            const windowStart = parseInt(localStorage.getItem(SUBMISSIONS_WINDOW_KEY) || '0', 10);
+            const now = Date.now();
+            const oneHour = 60 * 60 * 1000;
+            
+            // Si la fenêtre d'une heure est passée, réinitialiser
+            if (now - windowStart > oneHour) {
+                localStorage.setItem(SUBMISSIONS_COUNT_KEY, '0');
+                localStorage.setItem(SUBMISSIONS_WINDOW_KEY, now.toString());
+                return true;
+            }
+            
+            // Vérifier le nombre de soumissions dans la fenêtre
+            const count = parseInt(localStorage.getItem(SUBMISSIONS_COUNT_KEY) || '0', 10);
+            return count < MAX_SUBMISSIONS_PER_HOUR;
         }
         
         /**
          * Enregistre la soumission (rate limiting)
          */
         function recordSubmission() {
-            localStorage.setItem(LAST_SUBMISSION_KEY, Date.now().toString());
+            const now = Date.now();
+            localStorage.setItem(LAST_SUBMISSION_KEY, now.toString());
+            
+            // Gérer le compteur par heure
+            const windowStart = parseInt(localStorage.getItem(SUBMISSIONS_WINDOW_KEY) || '0', 10);
+            const oneHour = 60 * 60 * 1000;
+            
+            if (now - windowStart > oneHour) {
+                // Nouvelle fenêtre d'une heure
+                localStorage.setItem(SUBMISSIONS_COUNT_KEY, '1');
+                localStorage.setItem(SUBMISSIONS_WINDOW_KEY, now.toString());
+            } else {
+                // Incrémenter le compteur
+                const count = parseInt(localStorage.getItem(SUBMISSIONS_COUNT_KEY) || '0', 10);
+                localStorage.setItem(SUBMISSIONS_COUNT_KEY, (count + 1).toString());
+            }
+        }
+        
+        /**
+         * Valide les données avant soumission (sécurité renforcée)
+         */
+        function validateScoreData(pseudo, score, time) {
+            // Validation du pseudo
+            if (!pseudo || typeof pseudo !== 'string') {
+                return { valid: false, error: 'Pseudo invalide' };
+            }
+            
+            const trimmedPseudo = pseudo.trim().toUpperCase();
+            if (trimmedPseudo.length < 3 || trimmedPseudo.length > 5) {
+                return { valid: false, error: 'Le pseudo doit contenir entre 3 et 5 lettres' };
+            }
+            
+            if (!/^[A-Z]+$/.test(trimmedPseudo)) {
+                return { valid: false, error: 'Le pseudo ne doit contenir que des lettres majuscules' };
+            }
+            
+            // Validation du score
+            if (typeof score !== 'number' || isNaN(score) || !isFinite(score)) {
+                return { valid: false, error: 'Score invalide' };
+            }
+            
+            if (score < MIN_SCORE_TOTAL || score > MAX_SCORE_TOTAL) {
+                return { valid: false, error: `Score invalide: doit être entre ${MIN_SCORE_TOTAL} et ${MAX_SCORE_TOTAL}` };
+            }
+            
+            // Validation du temps
+            if (typeof time !== 'number' || isNaN(time) || !isFinite(time)) {
+                return { valid: false, error: 'Temps invalide' };
+            }
+            
+            if (time < MIN_TIME_TOTAL || time > MAX_TIME_TOTAL) {
+                return { valid: false, error: `Temps invalide: doit être entre ${MIN_TIME_TOTAL} et ${MAX_TIME_TOTAL} secondes` };
+            }
+            
+            return { valid: true };
         }
         
         async function submitScore() {
             const pseudoInput = document.getElementById('pseudoInput');
             const pseudo = pseudoInput.value.trim().toUpperCase();
 
-            // Validation
-            if (pseudo.length < 3 || pseudo.length > 5) {
-                showError('Le pseudo doit contenir entre 3 et 5 lettres');
-                return;
-            }
-
-            if (!/^[A-Z]+$/.test(pseudo)) {
-                showError('Le pseudo ne doit contenir que des lettres');
-                return;
-            }
-            
             // Calculer le temps total
             const totalTimeS = Math.floor((Date.now() - gameStartTime) / 1000);
+            
+            // Validation renforcée des données
+            const validation = validateScoreData(pseudo, totalScore, totalTimeS);
+            if (!validation.valid) {
+                showError(validation.error);
+                return;
+            }
             
             // Vérifier si c'est un meilleur score pour ce pseudo
             const allScores = await getTopScores(500); // Récupérer plus de scores pour vérifier
@@ -1464,7 +1580,22 @@
             
             // Rate limiting : permettre si c'est un meilleur score, sinon appliquer le délai
             if (!isBetterScore && !canSubmitScore()) {
-                showError(t('waitBeforeSubmit'));
+                const windowStart = parseInt(localStorage.getItem(SUBMISSIONS_WINDOW_KEY) || '0', 10);
+                const now = Date.now();
+                const oneHour = 60 * 60 * 1000;
+                const count = parseInt(localStorage.getItem(SUBMISSIONS_COUNT_KEY) || '0', 10);
+                
+                if (now - windowStart <= oneHour && count >= MAX_SUBMISSIONS_PER_HOUR) {
+                    const remaining = Math.ceil((oneHour - (now - windowStart)) / 1000 / 60);
+                    showError(`Limite atteinte: maximum ${MAX_SUBMISSIONS_PER_HOUR} soumissions par heure. Réessayez dans ${remaining} minutes.`);
+                } else {
+                    const lastSubmission = localStorage.getItem(LAST_SUBMISSION_KEY);
+                    if (lastSubmission) {
+                        const elapsed = Date.now() - parseInt(lastSubmission, 10);
+                        const remaining = Math.ceil((MIN_SUBMISSION_INTERVAL - elapsed) / 1000);
+                        showError(`Attendez ${remaining} secondes avant de soumettre à nouveau.`);
+                    }
+                }
                 return;
             }
 
