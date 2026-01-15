@@ -7,13 +7,18 @@ Ce dossier contient toute la configuration et la documentation liée à Supabase
 ```
 supabase/
 ├── sql/
-│   ├── security.sql              # ⭐ Script principal de sécurité (à utiliser)
-│   ├── security-complete.sql      # Version complète (alternative)
-│   └── security-old.sql           # Ancienne version (archive)
+│   ├── security.sql              # ⭐ Script principal de sécurité
+│   ├── anti-hack-simple.sql      # ⭐ Renforce le trigger (anti-hack)
+│   ├── reactiver-insert-anonymes.sql  # Réactiver les INSERT si bloqués
+│   ├── block-direct-api.sql      # Bloquer INSERT directs (avancé)
+│   ├── security-enhanced.sql     # Version renforcée (alternative)
+│   └── security-old.sql           # Archive
 ├── docs/
-│   ├── SECURITY.md                # Documentation complète de sécurité
-│   └── INSTALL-SECURITY.md        # Guide d'installation rapide
-└── edge-function.ts               # Fonction Edge optionnelle
+│   ├── INSTALL-SECURITY.md       # ⭐ Installation en 5 minutes
+│   ├── SECURITY.md               # Documentation complète
+│   ├── TROUBLESHOOTING.md        # ⭐ Dépannage et solutions
+│   └── DEPLOY-EDGE-FUNCTION.md   # Déployer Edge Function
+└── edge-function.ts              # Fonction Edge optionnelle
 ```
 
 ## 🚀 Installation rapide
@@ -30,12 +35,14 @@ Pour plus de détails, consultez [`docs/INSTALL-SECURITY.md`](docs/INSTALL-SECUR
 
 Si quelqu'un contourne votre code JavaScript :
 1. Exécutez `sql/anti-hack-simple.sql` (renforce le trigger)
-2. Ou consultez [`docs/SOLUTION-RAPIDE.md`](docs/SOLUTION-RAPIDE.md) pour la solution complète
+2. Ou consultez [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) pour les solutions
 
 ## 📚 Documentation
 
 - **[INSTALL-SECURITY.md](docs/INSTALL-SECURITY.md)** : Guide d'installation en 5 minutes
 - **[SECURITY.md](docs/SECURITY.md)** : Documentation complète de sécurité
+- **[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** : Dépannage et solutions rapides
+- **[DEPLOY-EDGE-FUNCTION.md](docs/DEPLOY-EDGE-FUNCTION.md)** : Déployer la Edge Function
 
 ## 🔧 Fichiers
 

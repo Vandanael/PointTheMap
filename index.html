@@ -541,21 +541,24 @@
     <!-- Modal Leaderboard -->
     <div id="leaderboardModal" class="fixed inset-0 modal-bg flex items-center justify-center p-2 md:p-4 hidden" style="z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="leaderboardTitle">
         <div class="modal-card rounded-2xl max-w-full md:max-w-2xl w-full p-4 md:p-8 modal-content max-h-[85vh] md:max-h-[80vh] overflow-y-auto">
-            <h2 class="text-2xl md:text-4xl font-black text-primary mb-4 md:mb-6 text-center tracking-tight uppercase" id="leaderboardTitle">
-                LEADERBOARD
-            </h2>
+            <div class="flex items-center justify-between mb-4 md:mb-6">
+                <h2 class="text-2xl md:text-4xl font-black text-primary tracking-tight uppercase flex-1" id="leaderboardTitle">
+                    LEADERBOARD
+                </h2>
+                <button 
+                    onclick="hideLeaderboard()" 
+                    class="bg-yellow-400 hover:bg-yellow-300 text-black font-black py-2 md:py-3 px-4 md:px-6 rounded-xl text-sm md:text-base btn-scale ml-4 flex-shrink-0"
+                    id="closeLeaderboardButton"
+                    aria-label="Fermer le leaderboard"
+                >
+                    FERMER
+                </button>
+            </div>
             <div id="leaderboardList" class="space-y-1 md:space-y-2">
                 <div class="text-center text-secondary py-8">
                     Chargement...
                 </div>
             </div>
-            <button 
-                onclick="hideLeaderboard()" 
-                class="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black py-3 md:py-4 px-4 md:px-6 rounded-xl text-base md:text-lg btn-scale mt-4 md:mt-6"
-                id="closeLeaderboardButton"
-            >
-                FERMER
-            </button>
         </div>
     </div>
 
@@ -1265,8 +1268,17 @@
                     return null;
                 }
 
-                // Utiliser Edge Function (plus sécurisé - bloque les hacks CORS)
-                // Si la Edge Function n'est pas déployée, décommentez l'insertion directe ci-dessous
+                // Insertion directe avec validation par trigger PostgreSQL
+                // Le trigger bloque toujours les hacks, même avec INSERT anonymes
+                // Pour utiliser Edge Function, décommentez le code ci-dessous après l'avoir configurée
+                const { data, error } = await supabaseClient
+                    .from('leaderboard')
+                    .insert([entry])
+                    .select();
+                
+                // OPTION: Utiliser Edge Function (plus sécurisé - nécessite configuration)
+                // Décommentez ce code et commentez l'insertion directe ci-dessus pour activer
+                /*
                 let data, error;
                 
                 try {
@@ -1308,10 +1320,7 @@
                     data = directResult.data;
                     error = directResult.error;
                 }
-                
-                // Alternative: Insertion directe (moins sécurisé - peut être contourné via CORS)
-                // Décommentez cette ligne et commentez le code ci-dessus si vous ne voulez pas utiliser Edge Function
-                // const { data, error } = await supabaseClient.from('leaderboard').insert([entry]).select();
+                */
 
                 if (error) {
                     // Ne pas exposer les détails d'erreur à l'utilisateur (sécurité)
