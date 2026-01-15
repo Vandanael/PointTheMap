@@ -214,7 +214,7 @@
         /* Masquer toute attribution Leaflet */
         .leaflet-control-attribution,
         .leaflet-bottom {
-            display: none !important;
+            display: none;
         }
 
         /* Améliorer le rendu des lignes pointillées (anti-flou) */
@@ -252,7 +252,7 @@
         }
 
         .timer-danger {
-            background: #dc2626 !important;
+            background: #dc2626;
             animation: shake 0.5s ease-in-out infinite;
         }
 
@@ -317,20 +317,20 @@
         
         /* Pas de contour sur l'input pseudo */
         #pseudoInput {
-            outline: none !important;
-            box-shadow: none !important;
-            border: 2px solid var(--accent) !important;
+            outline: none;
+            box-shadow: none;
+            border: 2px solid var(--accent);
         }
         
         #pseudoInput:focus {
-            outline: none !important;
-            box-shadow: none !important;
-            border: 2px solid var(--accent) !important;
+            outline: none;
+            box-shadow: none;
+            border: 2px solid var(--accent);
         }
         
         #pseudoInput:active {
-            outline: none !important;
-            box-shadow: none !important;
+            outline: none;
+            box-shadow: none;
         }
     </style>
 </head>
@@ -620,7 +620,7 @@
 
         // Timer
         let timerTimeout = null;
-        let timerStartTime = null;
+        let _timerStartTime = null;
 
         // Results tracking
         let roundResults = [];
@@ -704,7 +704,7 @@
         function updateLoadingPercent(percent) {
             const progressBar = document.getElementById('loadingProgressBar');
             if (progressBar) {
-                progressBar.style.width = percent + '%';
+                progressBar.style.width = `${percent}%`;
             }
         }
 
@@ -718,12 +718,12 @@
             }
         }
 
-        window.hideError = function() {
+        window.hideError = () => {
             const errorModal = document.getElementById('errorMessage');
             if (errorModal) errorModal.classList.add('hidden');
         }
 
-        function disableButton(buttonId) {
+        function _disableButton(buttonId) {
             const button = document.getElementById(buttonId);
             if (button) {
                 button.disabled = true;
@@ -732,7 +732,7 @@
             }
         }
 
-        function enableButton(buttonId) {
+        function _enableButton(buttonId) {
             const button = document.getElementById(buttonId);
             if (button) {
                 button.disabled = false;
@@ -775,7 +775,7 @@
                 map.doubleClickZoom.disable();
 
                 // Stocker la référence pour pouvoir nettoyer
-                mapClickHandler = function(e) {
+                mapClickHandler = (e) => {
                     if (gameActive && currentCapital) {
                         handleMapClick(e.latlng);
                     }
@@ -785,7 +785,7 @@
                 // Leaflet gère automatiquement le préchargement avec updateWhenZooming: true
 
                 // Attendre que la carte soit prête avant de cacher le spinner
-                map.whenReady(function() {
+                map.whenReady(() => {
                     // Attendre que les tuiles initiales soient chargées
                     waitForInitialTiles();
                 });
@@ -827,7 +827,7 @@
                 }).addTo(map);
 
                 // Error handling for tile loading
-                tileLayer.on('tileerror', function(error) {
+                tileLayer.on('tileerror', (error) => {
                     console.warn('Tile loading error:', error);
                     // Don't show error for individual tiles, only if all fail
                 });
@@ -899,7 +899,7 @@
                     }, 100);
                     
                     // Écouter les événements de chargement des tuiles
-                    const tileLoadHandler = function() {
+                    const tileLoadHandler = () => {
                         tilesLoadedCount++;
                         
                         // Mettre à jour la barre avec la progression réelle (max 95% jusqu'à la fin)
@@ -939,7 +939,7 @@
                                 hideLoading();
                                 mapReady = true;
                             }, 200);
-                            console.warn('⚠️ Map loading timeout - continuing anyway (' + tilesLoadedCount + '/' + tilesToLoad + ' tiles)');
+                            console.warn(`⚠️ Map loading timeout - continuing anyway (${tilesLoadedCount}/${tilesToLoad} tiles)`);
                         }
                     }, 3000);
                 } catch (error) {
@@ -1033,7 +1033,7 @@
         /**
          * Bascule entre dark et light mode
          */
-        window.toggleTheme = function() {
+        window.toggleTheme = () => {
             // Inverser le thème
             currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
 
@@ -1097,7 +1097,11 @@
         function getOrCreateSessionId() {
             let sessionId = localStorage.getItem('ptm-session-id');
             if (!sessionId) {
-                sessionId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+                // Utilisation de crypto.getRandomValues() pour générer un ID sécurisé
+                const randomBytes = new Uint8Array(9);
+                crypto.getRandomValues(randomBytes);
+                const randomPart = Array.from(randomBytes, byte => byte.toString(36)).join('').substr(0, 11);
+                sessionId = Date.now().toString(36) + randomPart;
                 localStorage.setItem('ptm-session-id', sessionId);
             }
             return sessionId;
@@ -1176,8 +1180,6 @@
                 const result = await submitToSupabase(entry.pseudo, entry.score, entry.time, entry.wordle.split(' '));
                 
                 if (result) {
-                    // Succès, on retire de la queue
-                    continue;
                 } else {
                     // Échec, on incrémente les tentatives
                     entry.attempts++;
@@ -1367,7 +1369,7 @@
             const firstElement = focusableElements[0];
             const lastElement = focusableElements[focusableElements.length - 1];
             
-            const keydownHandler = function(e) {
+            const keydownHandler = (e) => {
                 if (e.key === 'Tab') {
                     if (e.shiftKey && document.activeElement === firstElement) {
                         e.preventDefault();
@@ -1409,7 +1411,7 @@
             trapFocus(modal);
             
             // Navigation clavier : Escape pour fermer
-            const escapeHandler = function(e) {
+            const escapeHandler = (e) => {
                 if (e.key === 'Escape') {
                     skipLeaderboard();
                     document.removeEventListener('keydown', escapeHandler);
@@ -1424,7 +1426,7 @@
         function canSubmitScore() {
             const lastSubmission = localStorage.getItem(LAST_SUBMISSION_KEY);
             if (!lastSubmission) return true;
-            const elapsed = Date.now() - parseInt(lastSubmission);
+            const elapsed = Date.now() - parseInt(lastSubmission, 10);
             return elapsed >= MIN_SUBMISSION_INTERVAL;
         }
         
@@ -1495,7 +1497,7 @@
                 document.getElementById('pseudoModal').classList.add('hidden');
                 
                 // Afficher le modal final avec le rang si disponible
-                if (result && result.rank) {
+                if (result?.rank) {
                     const summary = document.getElementById('finalSummary');
                     summary.textContent += ` | ${t('rank')} #${result.rank}`;
                 }
@@ -1533,7 +1535,7 @@
             trapFocus(modal);
             
             // Navigation clavier : Escape pour fermer
-            const escapeHandler = function(e) {
+            const escapeHandler = (e) => {
                 if (e.key === 'Escape') {
                     hideLeaderboard();
                 }
@@ -1739,7 +1741,7 @@
         /**
          * Bascule entre français et anglais
          */
-        window.toggleLanguage = function() {
+        window.toggleLanguage = () => {
             currentLanguage = currentLanguage === 'fr' ? 'en' : 'fr';
             document.getElementById('langIcon').textContent = currentLanguage.toUpperCase();
             localStorage.setItem('ptm-language', currentLanguage);
@@ -1789,7 +1791,7 @@
             if (findLabel) findLabel.textContent = t('find');
             
             const clickMapLabel = document.getElementById('clickMapLabel');
-            if (clickMapLabel) clickMapLabel.textContent = '📍 ' + t('clickMap');
+            if (clickMapLabel) clickMapLabel.textContent = `📍 ${t('clickMap')}`;
             
             // Result modal
             const distanceLabel = document.getElementById('distanceLabel');
@@ -1942,7 +1944,7 @@
 
             // Délai de grâce puis démarrage
             timerTimeout = setTimeout(() => {
-                timerStartTime = performance.now();
+                _timerStartTime = performance.now();
                 timerProgress.style.transition = `width ${TIMER_DURATION_MS}ms linear`;
                 timerProgress.style.width = '0%';
 
@@ -1963,7 +1965,7 @@
                 clearTimeout(timerTimeout);
                 timerTimeout = null;
             }
-            timerStartTime = null;
+            _timerStartTime = null;
 
             const timerProgress = document.getElementById('timerProgress');
             timerProgress.style.transition = 'none';
@@ -1976,7 +1978,7 @@
             stopTimer();
 
             // Simuler un clic au centre de la capitale avec 0 points
-            const targetLatLng = L.latLng(currentCapital.lat, currentCapital.lng);
+            const _targetLatLng = L.latLng(currentCapital.lat, currentCapital.lng);
 
             // Placer uniquement le marqueur target (pas de player marker car pas de clic)
             targetMarker = L.marker([currentCapital.lat, currentCapital.lng], {
@@ -2016,7 +2018,7 @@
         function resetGame() {
             // Prevent double-click
             const btn = document.getElementById('replayButton');
-            if (btn && btn.disabled) return;
+            if (btn?.disabled) return;
             if (btn) {
                 btn.disabled = true;
                 btn.style.opacity = '0.5';
@@ -2039,7 +2041,7 @@
                 if (targetMarker) {
                     try {
                         map.removeLayer(targetMarker);
-                    } catch (e) {
+                    } catch (_e) {
                         // Ignore si déjà retiré
                     }
                     targetMarker = null;
@@ -2047,7 +2049,7 @@
                 if (playerMarker) {
                     try {
                         map.removeLayer(playerMarker);
-                    } catch (e) {
+                    } catch (_e) {
                         // Ignore si déjà retiré
                     }
                     playerMarker = null;
@@ -2055,7 +2057,7 @@
                 if (lineMarker) {
                     try {
                         map.removeLayer(lineMarker);
-                    } catch (e) {
+                    } catch (_e) {
                         // Ignore si déjà retiré
                     }
                     lineMarker = null;
@@ -2136,10 +2138,10 @@
 
         window.resetGame = resetGame;
 
-        window.startGame = function() {
+        window.startGame = () => {
             // Prevent double-click
             const btn = document.getElementById('startButton');
-            if (btn && btn.disabled) return;
+            if (btn?.disabled) return;
             if (btn) {
                 btn.disabled = true;
                 btn.style.opacity = '0.5';
@@ -2161,7 +2163,7 @@
                 // car après un reset, on veut s'assurer que tout est OK
                 if (!mapReady || !map || !tileLayer) {
                     showLoading();
-                    let checkReadyInterval = setInterval(() => {
+                    const checkReadyInterval = setInterval(() => {
                         if (mapReady && map && tileLayer) {
                             clearInterval(checkReadyInterval);
                             // Retirer de la liste
@@ -2261,7 +2263,7 @@
                     capitalsLength: capitals?.length,
                     selectBalancedCapitals: typeof selectBalancedCapitals
                 });
-                showError(t('errorStart') + ' (' + error.message + ')');
+                showError(`${t('errorStart')} (${error.message})`);
                 if (btn) {
                     btn.disabled = false;
                     btn.style.opacity = '1';
@@ -2272,14 +2274,14 @@
         // ============================================
         // GAME FLOW
         // ============================================
-        window.nextRound = function(btnParam) {
+        window.nextRound = (btnParam) => {
             // btnParam === null : appel depuis proceedWithGameStart() (démarrage)
             // btnParam === undefined : appel depuis bouton CONTINUER (round suivant)
             
             const btn = (btnParam === undefined) ? document.getElementById('nextButton') : null;
             
             // Si appel depuis bouton, vérifier qu'il n'est pas déjà disabled (protection double-clic)
-            if (btn && btn.disabled) {
+            if (btn?.disabled) {
                 return;
             }
             
@@ -2294,7 +2296,7 @@
                 if (targetMarker) {
                     try {
                         map.removeLayer(targetMarker);
-                    } catch (e) {
+                    } catch (_e) {
                         // Ignore si le marqueur n'existe plus
                     }
                     targetMarker = null;
@@ -2302,7 +2304,7 @@
                 if (playerMarker) {
                     try {
                         map.removeLayer(playerMarker);
-                    } catch (e) {
+                    } catch (_e) {
                         // Ignore si le marqueur n'existe plus
                     }
                     playerMarker = null;
@@ -2310,7 +2312,7 @@
                 if (lineMarker) {
                     try {
                         map.removeLayer(lineMarker);
-                    } catch (e) {
+                    } catch (_e) {
                         // Ignore si le marqueur n'existe plus
                     }
                     lineMarker = null;
@@ -2365,7 +2367,7 @@
                 // Stocker le timeout pour pouvoir le nettoyer si nécessaire
                 const modalTimeout = setTimeout(() => {
                     // Vérifier que le round n'a pas changé (protection contre appels multiples)
-                    const displayedRound = parseInt(document.getElementById('roundDisplay').textContent.split('/')[0]);
+                    const displayedRound = parseInt(document.getElementById('roundDisplay').textContent.split('/')[0], 10);
                     if (currentRound === displayedRound && !gameActive) {
                         document.getElementById('questionModal').classList.add('hidden');
                         gameActive = true;
