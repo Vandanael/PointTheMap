@@ -44,14 +44,7 @@ npm install
 
 3. Configure Supabase:
    - Create a Supabase project
-   - Create a `leaderboard` table with the following columns:
-     - `pseudo` (text)
-     - `score` (integer)
-     - `time` (text)
-     - `wordle` (text)
-     - `date` (text)
-     - `timestamp` (timestamp)
-     - `session_id` (text)
+   - Execute the security script: `supabase/sql/security.sql` (see [`supabase/docs/INSTALL-SECURITY.md`](supabase/docs/INSTALL-SECURITY.md))
    - Update `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `index.html`
 
 ### Development
