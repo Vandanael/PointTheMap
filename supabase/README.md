@@ -20,10 +20,17 @@ supabase/
 
 1. Ouvrez votre [Dashboard Supabase](https://app.supabase.com)
 2. Allez dans **SQL Editor**
-3. Copiez-collez le contenu de `sql/security.sql`
-4. Exécutez le script
+3. **Première fois** : Copiez-collez le contenu de `sql/security.sql`
+4. **Anti-hack** : Copiez-collez le contenu de `sql/anti-hack-simple.sql`
+5. Exécutez les scripts
 
 Pour plus de détails, consultez [`docs/INSTALL-SECURITY.md`](docs/INSTALL-SECURITY.md)
+
+## 🛡️ Bloquer les hacks CORS/API directe
+
+Si quelqu'un contourne votre code JavaScript :
+1. Exécutez `sql/anti-hack-simple.sql` (renforce le trigger)
+2. Ou consultez [`docs/SOLUTION-RAPIDE.md`](docs/SOLUTION-RAPIDE.md) pour la solution complète
 
 ## 📚 Documentation
 

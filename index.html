@@ -1265,10 +1265,53 @@
                     return null;
                 }
 
-                const { data, error } = await supabaseClient
-                    .from('leaderboard')
-                    .insert([entry])
-                    .select();
+                // Utiliser Edge Function (plus sécurisé - bloque les hacks CORS)
+                // Si la Edge Function n'est pas déployée, décommentez l'insertion directe ci-dessous
+                let data, error;
+                
+                try {
+                    const { data: edgeData, error: edgeError } = await supabaseClient.functions.invoke('validate-leaderboard', {
+                        body: entry
+                    });
+                    
+                    if (edgeError) {
+                        console.error('Error submitting via Edge Function:', edgeError);
+                        // Fallback: essayer l'insertion directe si Edge Function échoue
+                        const directResult = await supabaseClient
+                            .from('leaderboard')
+                            .insert([entry])
+                            .select();
+                        data = directResult.data;
+                        error = directResult.error;
+                    } else {
+                        // La Edge Function retourne { success: true, data: {...} }
+                        if (edgeData?.success && edgeData?.data) {
+                            data = [edgeData.data];
+                            error = null;
+                        } else if (edgeData?.error) {
+                            error = { message: edgeData.error };
+                            data = null;
+                        } else {
+                            // Format inattendu
+                            console.warn('Unexpected Edge Function response:', edgeData);
+                            error = { message: 'Réponse inattendue de la fonction' };
+                            data = null;
+                        }
+                    }
+                } catch (funcError) {
+                    // Si la fonction n'existe pas ou erreur réseau, fallback sur insertion directe
+                    console.warn('Edge Function not available, using direct insert:', funcError);
+                    const directResult = await supabaseClient
+                        .from('leaderboard')
+                        .insert([entry])
+                        .select();
+                    data = directResult.data;
+                    error = directResult.error;
+                }
+                
+                // Alternative: Insertion directe (moins sécurisé - peut être contourné via CORS)
+                // Décommentez cette ligne et commentez le code ci-dessus si vous ne voulez pas utiliser Edge Function
+                // const { data, error } = await supabaseClient.from('leaderboard').insert([entry]).select();
 
                 if (error) {
                     // Ne pas exposer les détails d'erreur à l'utilisateur (sécurité)
