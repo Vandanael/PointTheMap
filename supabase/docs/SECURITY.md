@@ -19,7 +19,6 @@ PointTheMap utilise une approche de sécurité en plusieurs couches :
 - **Validations côté client** (JavaScript)
 - **Validations côté serveur** (Triggers PostgreSQL)
 - **Rate limiting** (limitation du nombre de requêtes)
-- **Fonction Edge** optionnelle pour validation supplémentaire
 
 ## 🗄️ Configuration Supabase
 
@@ -100,17 +99,6 @@ Ce trigger :
 - Normalise le pseudo (majuscules, trim)
 - Rejette les entrées invalides avec des messages d'erreur clairs
 
-### Fonction Edge (optionnelle)
-
-Pour une sécurité maximale, vous pouvez déployer la fonction Edge `supabase/edge-function.ts` :
-
-1. Dans Supabase Dashboard, allez dans **Edge Functions**
-2. Créez une nouvelle fonction nommée `validate-leaderboard`
-3. Copiez le code de `supabase/edge-function.ts`
-4. Déployez la fonction
-
-**Note** : La fonction Edge n'est pas nécessaire si le trigger PostgreSQL est actif, mais elle offre une couche supplémentaire de validation.
-
 ## ⏱️ Rate Limiting
 
 ### Côté client (localStorage)
@@ -160,7 +148,7 @@ Surveillez régulièrement :
 1. **Vérifiez les logs Supabase** : Dashboard → Logs → Postgres Logs
 2. **Vérifiez les politiques RLS** : Dashboard → Authentication → Policies
 3. **Renforcez les limites** : Modifiez les constantes dans `supabase/sql/security.sql`
-4. **Activez la fonction Edge** : Pour une validation supplémentaire
+4. **Exécutez `anti-hack-simple.sql`** : Pour renforcer les protections
 
 ### Si la table est compromise
 
@@ -207,7 +195,7 @@ Avant de déployer en production, vérifiez :
 
 Pour toute question de sécurité, consultez :
 - [Documentation Supabase RLS](https://supabase.com/docs/guides/auth/row-level-security)
-- [Documentation Supabase Edge Functions](https://supabase.com/docs/guides/functions)
+- [Documentation Supabase RLS](https://supabase.com/docs/guides/auth/row-level-security)
 
 ---
 

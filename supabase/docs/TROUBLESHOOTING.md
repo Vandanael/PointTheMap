@@ -2,39 +2,9 @@
 
 ## 📋 Table des matières
 
-1. [Erreur 401 - Edge Function](#erreur-401)
-2. [Les joueurs ne peuvent pas soumettre](#joueurs-ne-peuvent-pas-soumettre)
-3. [Bloquer les hacks CORS](#bloquer-les-hacks-cors)
-4. [Renforcer la sécurité](#renforcer-la-sécurité)
-
----
-
-## 🚨 Erreur 401 - Edge Function {#erreur-401}
-
-### Problème
-
-Vous voyez `401 Unauthorized` lors de l'appel à la Edge Function.
-
-### Solution Rapide
-
-**Réactiver les INSERT anonymes** (le trigger bloque toujours les hacks) :
-
-```sql
--- Dans Supabase SQL Editor
-DROP POLICY IF EXISTS "Only authenticated inserts" ON leaderboard;
-
-CREATE POLICY "Public insert access"
-ON leaderboard
-FOR INSERT
-TO anon
-WITH CHECK (true);
-```
-
-**Pourquoi c'est sûr ?**
-- ✅ Le trigger PostgreSQL valide toujours les données
-- ✅ Les scores invalides sont bloqués
-- ✅ Le rate limiting fonctionne
-- ✅ Les hacks sont impossibles
+1. [Les joueurs ne peuvent pas soumettre](#joueurs-ne-peuvent-pas-soumettre)
+2. [Bloquer les hacks CORS](#bloquer-les-hacks-cors)
+3. [Renforcer la sécurité](#renforcer-la-sécurité)
 
 ---
 
@@ -83,30 +53,14 @@ Ce script ajoute :
 - ✅ Rate limiting global (50/heure)
 - ✅ Validations renforcées
 
-### Solution Avancée : Edge Function
-
-1. Déployez la Edge Function (voir [`DEPLOY-EDGE-FUNCTION.md`](DEPLOY-EDGE-FUNCTION.md))
-2. Bloquez les INSERT directs avec `sql/block-direct-api.sql`
-3. Modifiez le code JS pour utiliser la fonction
-
 ---
 
 ## 🔒 Renforcer la sécurité {#renforcer-la-sécurité}
-
-### Option 1 : Trigger Renforcé (Recommandé)
 
 Exécutez `sql/anti-hack-simple.sql` :
 - ✅ Simple et efficace
 - ✅ Bloque les hacks
 - ✅ Pas de modification de code nécessaire
-
-### Option 2 : Edge Function (Maximum)
-
-1. Déployez la Edge Function
-2. Bloquez les INSERT directs
-3. Utilisez la fonction dans votre code
-
-Voir [`DEPLOY-EDGE-FUNCTION.md`](DEPLOY-EDGE-FUNCTION.md) pour les détails.
 
 ---
 
@@ -150,7 +104,7 @@ fetch('https://votre-projet.supabase.co/rest/v1/leaderboard', {
 
 - **[INSTALL-SECURITY.md](INSTALL-SECURITY.md)** : Installation en 5 minutes
 - **[SECURITY.md](SECURITY.md)** : Documentation complète
-- **[DEPLOY-EDGE-FUNCTION.md](DEPLOY-EDGE-FUNCTION.md)** : Déployer la Edge Function
+- **[VERIFIER-SECURITE.md](VERIFIER-SECURITE.md)** : Guide de vérification
 
 ---
 

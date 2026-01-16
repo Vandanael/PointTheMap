@@ -2,9 +2,8 @@
 .claude/
 
 # Documentation (tous les .md sauf README.md)
-# Exception: supabase/docs/ doit être tracké
 docs/
-!supabase/docs/
+supabase/
 
 # Environment variables
 .env
@@ -42,6 +41,4 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Fichiers SQL d'archive (garder seulement security.sql)
-supabase/sql/security-old.sql
-supabase/sql/security-complete.sql
+# Documentation Supabase (déjà ignorée par supabase/)

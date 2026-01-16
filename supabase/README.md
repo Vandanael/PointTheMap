@@ -7,18 +7,16 @@ Ce dossier contient toute la configuration et la documentation liée à Supabase
 ```
 supabase/
 ├── sql/
-│   ├── security.sql              # ⭐ Script principal de sécurité
-│   ├── anti-hack-simple.sql      # ⭐ Renforce le trigger (anti-hack)
-│   ├── reactiver-insert-anonymes.sql  # Réactiver les INSERT si bloqués
-│   ├── block-direct-api.sql      # Bloquer INSERT directs (avancé)
-│   ├── security-enhanced.sql     # Version renforcée (alternative)
-│   └── security-old.sql           # Archive
-├── docs/
-│   ├── INSTALL-SECURITY.md       # ⭐ Installation en 5 minutes
-│   ├── SECURITY.md               # Documentation complète
-│   ├── TROUBLESHOOTING.md        # ⭐ Dépannage et solutions
-│   └── DEPLOY-EDGE-FUNCTION.md   # Déployer Edge Function
-└── edge-function.ts              # Fonction Edge optionnelle
+│   ├── security.sql                    # ⭐ Script principal de sécurité
+│   ├── anti-hack-simple.sql            # ⭐ Renforce le trigger (anti-hack)
+│   ├── fix-leaderboard-read-access.sql # ⭐ Corrige l'erreur 401 (lecture publique)
+│   ├── reactiver-insert-anonymes.sql   # Réactiver les INSERT si bloqués
+│   └── verifier-securite.sql           # Script de vérification
+└── docs/
+    ├── INSTALL-SECURITY.md       # ⭐ Installation en 5 minutes
+    ├── SECURITY.md               # Documentation complète
+    ├── TROUBLESHOOTING.md        # ⭐ Dépannage et solutions
+    └── VERIFIER-SECURITE.md      # Guide de vérification
 ```
 
 ## 🚀 Installation rapide
@@ -42,18 +40,15 @@ Si quelqu'un contourne votre code JavaScript :
 - **[INSTALL-SECURITY.md](docs/INSTALL-SECURITY.md)** : Guide d'installation en 5 minutes
 - **[SECURITY.md](docs/SECURITY.md)** : Documentation complète de sécurité
 - **[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** : Dépannage et solutions rapides
-- **[DEPLOY-EDGE-FUNCTION.md](docs/DEPLOY-EDGE-FUNCTION.md)** : Déployer la Edge Function
+- **[VERIFIER-SECURITE.md](docs/VERIFIER-SECURITE.md)** : Guide de vérification
 
 ## 🔧 Fichiers
 
 ### `sql/security.sql` ⭐
 **Script principal à utiliser** - Version sécurisée avec vérifications avant suppression.
 
-### `sql/security-complete.sql`
-Version alternative avec DROP IF EXISTS (peut générer des avertissements dans Supabase).
-
-### `edge-function.ts`
-Fonction Edge Supabase optionnelle pour validation serveur supplémentaire.
+### `sql/anti-hack-simple.sql` ⭐
+**Script anti-hack** - Renforce le trigger avec validations basées sur la logique du jeu.
 
 ## ✅ Checklist de sécurité
 

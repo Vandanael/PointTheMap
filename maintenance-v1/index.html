@@ -46,13 +46,13 @@
         }
 
         body.light-theme {
-            --bg-primary: #f0f9ff;      /* sky-50 - bleu très léger pour contraste avec dark mode */
-            --bg-secondary: #e0f2fe;    /* sky-100 - bleu léger pour les cartes */
-            --bg-tertiary: #bae6fd;     /* sky-200 - bleu doux pour les éléments tertiaires */
+            --bg-primary: #f8fafc;      /* slate-50 */
+            --bg-secondary: #f1f5f9;    /* slate-100 */
+            --bg-tertiary: #e2e8f0;     /* slate-200 */
             --text-primary: #020617;    /* slate-950 */
             --text-secondary: #475569;  /* slate-600 */
             --text-tertiary: #475569;   /* slate-600 - Corrigé pour WCAG AA (était slate-500 trop clair) */
-            --border-color: #bae6fd;    /* sky-200 - bordures bleues douces */
+            --border-color: #cbd5e1;    /* slate-300 */
         }
 
         * {
@@ -263,8 +263,8 @@
             padding-right: max(1.5rem, env(safe-area-inset-right));
         }
 
-        /* Bouton toggle de thème, langue et leaderboard */
-        .theme-toggle, .lang-toggle, .leaderboard-toggle {
+        /* Bouton toggle de thème et langue */
+        .theme-toggle, .lang-toggle {
             background: var(--bg-tertiary);
             border: 1px solid var(--border-color);
             color: var(--text-primary);
@@ -280,11 +280,11 @@
             font-weight: 600;
         }
 
-        .theme-toggle:hover, .lang-toggle:hover, .leaderboard-toggle:hover {
+        .theme-toggle:hover, .lang-toggle:hover {
             background: var(--bg-secondary);
         }
 
-        .theme-toggle:active, .lang-toggle:active, .leaderboard-toggle:active {
+        .theme-toggle:active, .lang-toggle:active {
             transform: scale(0.95);
         }
 
@@ -383,12 +383,10 @@
     </div>
 
     <!-- Modal de démarrage - Minimalisme Identitaire -->
-    <div id="startModal" class="fixed inset-0 modal-bg flex flex-col" style="z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="challengeText">
-        <!-- Boutons toggle thème, langue et leaderboard en haut à droite -->
-        <div class="absolute top-4 right-4 md:top-6 md:right-6 z-10 flex gap-2">
-            <button onclick="showLeaderboard()" class="leaderboard-toggle" title="Leaderboard" aria-label="Show leaderboard">
-                <span>🏆</span>
-            </button>
+    <!-- Page de Maintenance -->
+    <div id="startModal" class="fixed inset-0 flex flex-col" style="z-index: var(--z-modal); background: transparent;" role="dialog" aria-modal="true">
+        <!-- Boutons toggle thème et langue en haut à droite -->
+        <div class="absolute top-4 right-4 md:top-6 md:right-6 z-20 flex gap-2">
             <button onclick="toggleLanguage()" class="lang-toggle" title="Changer de langue" aria-label="Toggle language">
                 <span id="langIcon">FR</span>
             </button>
@@ -396,40 +394,35 @@
                 <span id="themeIcon">🌙</span>
             </button>
         </div>
-
-        <!-- Contenu centré verticalement -->
-        <div class="flex-1 flex items-center justify-center px-4 md:px-8" style="padding-top: 3rem; padding-bottom: 1rem;">
-            <div class="text-left modal-content max-w-3xl w-full">
-                <!-- Titre Hero - Signature visuelle sur deux lignes, plus grand et ferré à gauche -->
-                <h1 class="text-primary mb-2 md:mb-3 uppercase leading-none -mt-1" style="font-weight: 900;">
-                    <div class="text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide break-words">POINT</div>
-                    <div class="text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide break-words">THE MAP</div>
+        
+        <!-- Overlay semi-transparent pour améliorer la lisibilité -->
+        <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(2, 6, 23, 0.7), rgba(2, 6, 23, 0.9));"></div>
+        
+        <!-- Contenu centré -->
+        <div class="relative z-10 flex-1 flex items-center justify-center px-4 md:px-8">
+            <div class="text-center w-full max-w-4xl">
+                <!-- Titre Hero -->
+                <h1 class="mb-8 md:mb-12 uppercase leading-none" style="font-weight: 900; color: var(--text-primary);">
+                    <div class="text-6xl sm:text-7xl md:text-8xl lg:text-9xl tracking-wide break-words drop-shadow-2xl">POINT</div>
+                    <div class="text-6xl sm:text-7xl md:text-8xl lg:text-9xl tracking-wide break-words drop-shadow-2xl">THE MAP</div>
                 </h1>
 
-                <!-- Info Card sobre -->
-                <div class="modal-card rounded-2xl p-6 md:p-8 mb-3 md:mb-4">
-                    <p class="text-primary text-3xl mb-3 font-black uppercase tracking-tight" id="challengeText">
-                        5s Challenge
+                <!-- Message de maintenance -->
+                <div class="inline-block px-8 py-6 md:px-12 md:py-8 rounded-2xl backdrop-blur-sm" style="background: rgba(15, 23, 42, 0.8);">
+                    <p class="text-6xl md:text-7xl lg:text-8xl font-black uppercase tracking-tight mb-4" style="color: var(--accent);">
+                        V1
                     </p>
-                    <p class="text-secondary text-base mb-1" id="capitalsText">
-                        5 capitales · 5 secondes par ville
-                    </p>
-                    <p class="text-tertiary text-sm" id="clickGainText">
-                        Clique sur la carte, gagne des points
+                    <p class="text-2xl md:text-3xl lg:text-4xl font-black uppercase tracking-tight" style="color: var(--text-primary);" id="maintenanceText">
+                        INCOMING
                     </p>
                 </div>
-                
-                <!-- Bouton focal sobre -->
-                <button id="startButton" onclick="startGame()" class="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black py-6 px-6 rounded-2xl text-2xl btn-scale pulse-button">
-                    <span id="startButtonText">COMMENCER</span>
-                </button>
             </div>
         </div>
 
-        <!-- Footer collé en bas -->
-        <div class="w-full py-4 text-center text-tertiary text-sm mt-auto" style="background: var(--bg-secondary); border-top: 1px solid var(--border-color);">
+        <!-- Footer -->
+        <div class="relative z-10 w-full py-4 text-center text-sm mt-auto" style="color: var(--text-tertiary);">
             Made by
-            <a href="https://github.com/Vandanael" target="_blank" rel="noopener noreferrer" class="text-yellow-400 hover:text-yellow-300 font-semibold transition-colors no-underline hover:underline">
+            <a href="https://github.com/Vandanael" target="_blank" rel="noopener noreferrer" class="font-semibold transition-colors no-underline hover:underline" style="color: var(--accent);">
                 Vandanael
             </a>
         </div>
@@ -574,7 +567,7 @@
         // Configuration Supabase - Compatible avec GitHub Pages
         window.SUPABASE_CONFIG = {
             url: 'https://qfmpnvhkfqjravlzymtc.supabase.co',
-            anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmbXBudmhrZnFqcmF2bHp5bXRjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwOTE0MDIsImV4cCI6MjA4MzY2NzQwMn0.b4cJbx4p53Fd6giuTg9vBNghQX2Ce-BPwB9k4uPmKe8'
+            anonKey: 'sb_publishable_YoYg6GWhl2gLTLwD68aDQQ__0cOrp2L'
         };
     </script>
 
@@ -655,10 +648,6 @@
                 // Vérifier que ce ne sont pas des placeholders
                 if (url && url !== 'https://your-project.supabase.co' && 
                     key && key !== 'your-anon-key-here') {
-                    // Vérifier que la clé est valide (JWT commence par eyJ)
-                    if (!key.startsWith('eyJ')) {
-                        return { url: '', anonKey: '' };
-                    }
                     return { url, anonKey: key };
                 }
             }
@@ -740,6 +729,23 @@
             if (errorModal) errorModal.classList.add('hidden');
         }
 
+        function _disableButton(buttonId) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.disabled = true;
+                button.style.opacity = '0.5';
+                button.style.cursor = 'not-allowed';
+            }
+        }
+
+        function _enableButton(buttonId) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.disabled = false;
+                button.style.opacity = '1';
+                button.style.cursor = 'pointer';
+            }
+        }
 
         // ============================================
         // INITIALISATION
@@ -1073,16 +1079,13 @@
             try {
                 // Vérifier que Supabase CDN est chargé
                 if (typeof supabase === 'undefined') {
+                    // Mode silencieux en production - pas de warning si c'est intentionnel
                     return;
                 }
                 
                 // Vérifier que les credentials sont valides
                 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-                    return;
-                }
-                
-                // Vérifier la longueur de la clé (JWT complet fait ~200+ caractères)
-                if (SUPABASE_ANON_KEY.length < 100) {
+                    // Mode silencieux - le jeu fonctionne avec localStorage uniquement
                     return;
                 }
                 
@@ -1091,7 +1094,7 @@
                 
             } catch (error) {
                 // Erreur silencieuse - le jeu continue avec localStorage
-                console.error('Error initializing Supabase:', error);
+                console.warn('Supabase initialization error:', error);
             }
         }
 
@@ -1262,10 +1265,57 @@
 
                 // Insertion directe avec validation par trigger PostgreSQL
                 // Le trigger bloque toujours les hacks, même avec INSERT anonymes
+                // Pour utiliser Edge Function, décommentez le code ci-dessous après l'avoir configurée
                 const { data, error } = await supabaseClient
                     .from('leaderboard')
                     .insert([entry])
                     .select();
+                
+                // OPTION: Utiliser Edge Function (plus sécurisé - nécessite configuration)
+                // Décommentez ce code et commentez l'insertion directe ci-dessus pour activer
+                /*
+                let data, error;
+                
+                try {
+                    const { data: edgeData, error: edgeError } = await supabaseClient.functions.invoke('validate-leaderboard', {
+                        body: entry
+                    });
+                    
+                    if (edgeError) {
+                        console.error('Error submitting via Edge Function:', edgeError);
+                        // Fallback: essayer l'insertion directe si Edge Function échoue
+                        const directResult = await supabaseClient
+                            .from('leaderboard')
+                            .insert([entry])
+                            .select();
+                        data = directResult.data;
+                        error = directResult.error;
+                    } else {
+                        // La Edge Function retourne { success: true, data: {...} }
+                        if (edgeData?.success && edgeData?.data) {
+                            data = [edgeData.data];
+                            error = null;
+                        } else if (edgeData?.error) {
+                            error = { message: edgeData.error };
+                            data = null;
+                        } else {
+                            // Format inattendu
+                            console.warn('Unexpected Edge Function response:', edgeData);
+                            error = { message: 'Réponse inattendue de la fonction' };
+                            data = null;
+                        }
+                    }
+                } catch (funcError) {
+                    // Si la fonction n'existe pas ou erreur réseau, fallback sur insertion directe
+                    console.warn('Edge Function not available, using direct insert:', funcError);
+                    const directResult = await supabaseClient
+                        .from('leaderboard')
+                        .insert([entry])
+                        .select();
+                    data = directResult.data;
+                    error = directResult.error;
+                }
+                */
 
                 if (error) {
                     // Ne pas exposer les détails d'erreur à l'utilisateur (sécurité)
@@ -1337,7 +1387,8 @@
                     .limit(500); // Récupérer plus pour avoir assez de pseudos uniques
 
                 if (error) {
-                    // Utiliser uniquement les scores locaux en cas d'erreur
+                    console.error('Error fetching leaderboard:', error);
+                    // En cas d'erreur, retourner uniquement les scores locaux
                     return getBestScorePerPseudo(localScores, limit);
                 }
 
@@ -1347,7 +1398,8 @@
                 // Filtrer pour garder uniquement le meilleur score par pseudo parmi tous
                 return getBestScorePerPseudo(allScores, limit);
             } catch (error) {
-                // Erreur silencieuse - utiliser uniquement les scores locaux
+                console.error('Error in getTopScores:', error);
+                // En cas d'erreur, retourner uniquement les scores locaux
                 return getBestScorePerPseudo(localScores, limit);
             }
         }
@@ -1903,10 +1955,10 @@
             const challengeText = document.getElementById('challengeText');
             if (challengeText) challengeText.textContent = t('challenge');
             
-            const capitalsText = document.getElementById('capitalsText');
+            const capitalsText = document.querySelector('#startModal .text-base');
             if (capitalsText) capitalsText.textContent = t('capitals');
             
-            const clickGainText = document.getElementById('clickGainText');
+            const clickGainText = document.querySelector('#startModal .text-sm');
             if (clickGainText) clickGainText.textContent = t('clickGain');
             
             // Header
@@ -1965,6 +2017,10 @@
             
             const closeLeaderboardButton = document.getElementById('closeLeaderboardButton');
             if (closeLeaderboardButton) closeLeaderboardButton.textContent = t('close');
+            
+            // Maintenance text
+            const maintenanceText = document.getElementById('maintenanceText');
+            if (maintenanceText) maintenanceText.textContent = t('incoming');
             
             // Page title
             const pageTitle = document.getElementById('pageTitle');
@@ -2711,6 +2767,9 @@
             }, 2000); // Attendre 2s après le chargement
         }
         
+        // Exposer capitals globalement pour debug
+        window.capitals = capitals;
+        window.selectBalancedCapitals = selectBalancedCapitals;
         
     </script>
 </body>

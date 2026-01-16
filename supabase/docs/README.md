@@ -33,12 +33,12 @@ Guide complet pour configurer et sécuriser Supabase pour PointTheMap.
   - Joueurs ne peuvent pas soumettre
   - Bloquer les hacks
 
-### Fonctions Avancées
+### Vérification
 
-- **[DEPLOY-EDGE-FUNCTION.md](DEPLOY-EDGE-FUNCTION.md)**
-  - Déployer la Edge Function
-  - Configuration complète
-  - Dépannage
+- **[VERIFIER-SECURITE.md](VERIFIER-SECURITE.md)**
+  - Guide de vérification
+  - Tests de sécurité
+  - Checklist
 
 ## 🎯 Par Où Commencer ?
 
@@ -54,9 +54,9 @@ Guide complet pour configurer et sécuriser Supabase pour PointTheMap.
 
 → **[SECURITY.md](SECURITY.md)**
 
-### Je veux déployer la Edge Function
+### Je veux vérifier que tout est OK
 
-→ **[DEPLOY-EDGE-FUNCTION.md](DEPLOY-EDGE-FUNCTION.md)**
+→ **[VERIFIER-SECURITE.md](VERIFIER-SECURITE.md)**
 
 ## 📂 Structure des Fichiers
 
@@ -65,13 +65,13 @@ supabase/
 ├── sql/
 │   ├── security.sql              # ⭐ Script principal
 │   ├── anti-hack-simple.sql      # ⭐ Anti-hack
-│   └── ...
-├── docs/
-│   ├── INSTALL-SECURITY.md       # ⭐ Installation
-│   ├── TROUBLESHOOTING.md        # ⭐ Dépannage
-│   ├── SECURITY.md               # Documentation
-│   └── DEPLOY-EDGE-FUNCTION.md   # Edge Function
-└── edge-function.ts              # Code Edge Function
+│   ├── reactiver-insert-anonymes.sql  # Réactiver INSERT si bloqués
+│   └── verifier-securite.sql     # Script de vérification
+└── docs/
+    ├── INSTALL-SECURITY.md       # ⭐ Installation
+    ├── TROUBLESHOOTING.md        # ⭐ Dépannage
+    ├── SECURITY.md               # Documentation complète
+    └── VERIFIER-SECURITE.md      # Guide de vérification
 ```
 
 ## ✅ Checklist Rapide

@@ -32,14 +32,33 @@ BEGIN
         RAISE EXCEPTION 'Score invalide: doit être entre % et %', min_score, max_score;
     END IF;
     
-    -- 🛡️ DÉTECTION DE HACK: Score très élevé avec temps très court
-    IF NEW.score > 24000 AND NEW.time < 15 THEN
-        RAISE EXCEPTION 'Score suspect détecté: score très élevé avec temps irréaliste';
-    END IF;
-    
     -- Validation du temps
     IF NEW.time IS NULL OR NEW.time < min_time OR NEW.time > max_time THEN
         RAISE EXCEPTION 'Temps invalide: doit être entre % et % secondes', min_time, max_time;
+    END IF;
+    
+    -- ============================================
+    -- 🛡️ PROTECTION SIMPLE CONTRE LES HACKS
+    -- ============================================
+    
+    -- Règle simple : Temps minimum de 40 secondes pour une partie complète
+    -- (5 rounds × 5s + transitions + résultats = minimum ~42s)
+    IF NEW.time < 40 THEN
+        RAISE EXCEPTION 'Temps irréaliste: minimum 40 secondes requis pour une partie complète (hack détecté)';
+    END IF;
+    
+    -- Score élevé nécessite plus de temps
+    IF NEW.score > 25000 AND NEW.time < 35 THEN
+        RAISE EXCEPTION 'Score très élevé suspect: score > 25000 nécessite au minimum 35 secondes (hack détecté)';
+    END IF;
+    
+    IF NEW.score > 20000 AND NEW.time < 30 THEN
+        RAISE EXCEPTION 'Score élevé suspect: score > 20000 nécessite au minimum 30 secondes (hack détecté)';
+    END IF;
+    
+    -- 🛡️ DÉTECTION DE HACK: Score très élevé avec temps très court
+    IF NEW.score > 24000 AND NEW.time < 15 THEN
+        RAISE EXCEPTION 'Score suspect détecté: score très élevé avec temps irréaliste';
     END IF;
     
     -- Validation de la date
@@ -102,6 +121,9 @@ DO $$
 BEGIN
     RAISE NOTICE '✅ Anti-hack activé !';
     RAISE NOTICE '🛡️ Protections:';
+    RAISE NOTICE '   - Temps minimum 40 secondes pour toute partie';
+    RAISE NOTICE '   - Score > 25000 → minimum 35 secondes';
+    RAISE NOTICE '   - Score > 20000 → minimum 30 secondes';
     RAISE NOTICE '   - Détection de scores suspects';
     RAISE NOTICE '   - Rate limiting global (50/heure)';
     RAISE NOTICE '   - Validation renforcée';
