@@ -1,8 +1,6 @@
 // Point The Map - Utilitaires
 // Fonctions pures et helpers
 
-import { VALIDATION } from "./config.js";
-
 // Conversion degrés → radians
 const toRad = (deg) => (deg * Math.PI) / 180;
 
@@ -15,20 +13,11 @@ export const haversine = ([lat1, lon1], [lat2, lon2]) => {
   return 6371 * 2 * Math.asin(Math.sqrt(a));
 };
 
-// Validation pseudo (3-5 lettres capitales)
-export const validatePseudo = (pseudo) => VALIDATION.PSEUDO_REGEX.test(pseudo);
-
-// Clamp une valeur entre min et max
-export const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
-
 // Sélection aléatoire de n éléments d'un array
 export const randomSelect = (array, n) => {
   const shuffled = [...array].sort(() => 0.5 - Math.random());
   return shuffled.slice(0, n);
 };
-
-// Formater le temps en secondes avec décimale
-export const formatTime = (ms) => (ms / 1000).toFixed(1);
 
 // Formater le score avec séparateur de milliers
 export const formatScore = (score) => Math.round(score).toLocaleString("fr-FR");

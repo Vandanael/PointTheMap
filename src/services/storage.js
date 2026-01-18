@@ -1,6 +1,8 @@
 // Point The Map - Storage Service
 // Wrapper localStorage avec JSON parse/stringify
 
+import { logger } from "../utils/logger.js";
+
 const PREFIX = "ptm_";
 
 export const storage = {
@@ -43,24 +45,6 @@ export const setTheme = (theme) => storage.set("theme", theme);
 // SUBMISSION TIMING (Anti-spam logique)
 // ============================================
 const SUBMISSION_WINDOW_KEY = "submission_window";
-const MIN_SUBMISSION_INTERVAL = 20000; // 20s (une partie dure ~25s)
-
-export const canSubmitScore = () => {
-  const lastSubmission = localStorage.getItem(SUBMISSION_WINDOW_KEY);
-  if (!lastSubmission) return true;
-
-  const elapsed = Date.now() - parseInt(lastSubmission, 10);
-  return elapsed >= MIN_SUBMISSION_INTERVAL;
-};
-
-export const getRemainingWaitTime = () => {
-  const lastSubmission = localStorage.getItem(SUBMISSION_WINDOW_KEY);
-  if (!lastSubmission) return 0;
-
-  const elapsed = Date.now() - parseInt(lastSubmission, 10);
-  const remaining = MIN_SUBMISSION_INTERVAL - elapsed;
-  return Math.max(0, remaining);
-};
 
 export const recordSubmissionTime = () => {
   localStorage.setItem(SUBMISSION_WINDOW_KEY, String(Date.now()));
@@ -78,7 +62,7 @@ export const getRetryQueue = () => {
     if (!queue) return [];
     return JSON.parse(queue);
   } catch (error) {
-    console.error("Erreur parsing retry queue:", error);
+    logger.error("Erreur parsing retry queue:", error);
     localStorage.removeItem(RETRY_QUEUE_KEY); // Nettoyer la valeur corrompue
     return [];
   }
@@ -105,9 +89,4 @@ export const removeFromRetryQueue = (index) => {
   const queue = getRetryQueue();
   queue.splice(index, 1);
   saveRetryQueue(queue);
-};
-
-export const getRetryQueueStats = () => {
-  const queue = getRetryQueue();
-  return { count: queue.length, maxRetries: MAX_RETRIES };
 };

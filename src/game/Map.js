@@ -200,6 +200,3 @@ export const resetView = () => {
     easeLinearity: 0.25,
   });
 };
-
-// Obtenir l'instance de la carte
-export const getMap = () => map;

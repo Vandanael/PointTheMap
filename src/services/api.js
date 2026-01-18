@@ -3,6 +3,7 @@
 
 import { capitals, GAME } from "../config.js";
 import { randomSelect, generateId } from "../utils.js";
+import { logger } from "../utils/logger.js";
 import {
   getRetryQueue,
   removeFromRetryQueue,
@@ -86,7 +87,7 @@ const formatRoundsForSubmit = (rounds) =>
 export const api = {
   start: async () => {
     if (USE_MOCK) {
-      console.log("[API] Mode mock activé");
+      logger.log("[API] Mode mock activé");
       return mockStart();
     }
     return fetchApi("start", { method: "POST" });
@@ -192,6 +193,3 @@ export const processRetryQueue = async () => {
 
   return { successful, failed };
 };
-
-// Pour debug
-export const isUsingMock = () => USE_MOCK;

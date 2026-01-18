@@ -8,12 +8,6 @@ export const Modal = (id, content, fullScreen = true) => `
   </div>
 `;
 
-export const ModalCard = (content, maxWidth = "max-w-md") => `
-  <div class="modal-card rounded-2xl p-8 ${maxWidth} mx-4 modal-content">
-    ${content}
-  </div>
-`;
-
 export const Button = (id, text, variant = "primary", fullWidth = true, pulse = false) => {
   const variants = {
     primary: "bg-yellow-400 hover:bg-yellow-300 text-black",

@@ -2,6 +2,7 @@ import "./styles.css";
 import { GAME, TIMING } from "./config.js";
 import { setLastPseudo } from "./services/storage.js";
 import { formatScore } from "./utils.js";
+import { logger } from "./utils/logger.js";
 import {
   initMap,
   disableClicks,
@@ -44,7 +45,7 @@ const init = async () => {
       initMap("map");
       UI.updateLoader(50);
     } catch (error) {
-      console.error("Erreur initialisation carte:", error);
+      logger.error("Erreur initialisation carte:", error);
       UI.showError("Erreur lors du chargement de la carte");
       // Continuer l'initialisation malgré l'erreur
     }
@@ -54,13 +55,13 @@ const init = async () => {
       UI.updateLoader(80);
 
       if (retryResult.successful > 0) {
-        console.log(`✅ ${retryResult.successful} score(s) synchronisé(s)`);
+        logger.log(`✅ ${retryResult.successful} score(s) synchronisé(s)`);
       }
       if (retryResult.failed > 0) {
-        console.log(`⚠️ ${retryResult.failed} score(s) en attente`);
+        logger.warn(`⚠️ ${retryResult.failed} score(s) en attente`);
       }
     } catch (error) {
-      console.error("Erreur retry queue:", error);
+      logger.error("Erreur retry queue:", error);
       // Continuer l'initialisation
     }
 
@@ -69,7 +70,7 @@ const init = async () => {
     UI.hideLoader();
     UI.showStart(handleStart);
   } catch (error) {
-    console.error("Erreur fatale init:", error);
+    logger.error("Erreur fatale init:", error);
     UI.showError("Erreur lors de l'initialisation");
   }
 };
@@ -288,7 +289,7 @@ const handleSubmit = async (pseudo) => {
 
     UI.showFinalResults(result.score, pseudo, result, handleReplay, isNewBest);
   } catch (error) {
-    console.error("Submit error:", error);
+    logger.error("Submit error:", error);
     UI.showError(error.message || "Erreur lors de la soumission");
   } finally {
     UI.hideLoader();
@@ -303,6 +304,6 @@ const handleReplay = () => {
 
 document.addEventListener("DOMContentLoaded", () => {
   init().catch((e) => {
-    console.error("Erreur fatale dans init():", e);
+    logger.error("Erreur fatale dans init():", e);
   });
 });

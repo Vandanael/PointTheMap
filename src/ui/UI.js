@@ -3,7 +3,8 @@
 
 import { api } from "../services/api.js";
 import { getLastPseudo, getTheme, setTheme } from "../services/storage.js";
-import { toggleLang, getLang, t } from "../i18n.js";
+import { toggleLang, t } from "../i18n.js";
+import { logger } from "../utils/logger.js";
 import {
   Modal,
   TimerBar,
@@ -22,7 +23,7 @@ import {
 const app = () => {
   const el = document.getElementById("app");
   if (!el) {
-    console.error("Element #app introuvable");
+    logger.error("Element #app introuvable");
     return document.body; // Fallback
   }
   return el;
@@ -71,7 +72,7 @@ const loadLeaderboard = async (type) => {
     const scores = await api.getLeaderboard(type);
     return deduplicateLeaderboard(scores);
   } catch (e) {
-    console.error("Erreur leaderboard:", e);
+    logger.error("Erreur leaderboard:", e);
     return [];
   }
 };
