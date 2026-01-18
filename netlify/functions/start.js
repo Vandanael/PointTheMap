@@ -85,7 +85,7 @@ export default async (req, context) => {
       used: false,
     };
 
-    const store = getStore("sessions");
+    const store = getStore("sessions", { context });
     await store.setJSON(token, session);
 
     // Retourner au client (SANS les coordonnées exactes pour anti-triche)

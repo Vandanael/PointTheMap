@@ -103,8 +103,8 @@ const checkPlausibility = (rounds, gameDuration) => {
 // ============================================
 // RATE LIMITING
 // ============================================
-const checkRateLimit = async (ip) => {
-  const store = getStore("rate-limits");
+const checkRateLimit = async (ip, context) => {
+  const store = getStore("rate-limits", { context });
   const hourKey = `${ip}-${Math.floor(Date.now() / 3600000)}`;
 
   try {
@@ -172,7 +172,7 @@ export default async (req, context) => {
   const ip = context.ip || req.headers.get("x-forwarded-for") || "unknown";
 
   // Vérifier rate limit
-  const rateLimit = await checkRateLimit(ip);
+  const rateLimit = await checkRateLimit(ip, context);
   if (!rateLimit.allowed) {
     return jsonResponse(
       { error: "Rate limit exceeded. Try again later." },
@@ -199,7 +199,7 @@ export default async (req, context) => {
     }
 
     // Récupérer la session
-    const sessionsStore = getStore("sessions");
+    const sessionsStore = getStore("sessions", { context });
     const session = await sessionsStore.getJSON(token);
 
     if (!session) {
@@ -285,7 +285,7 @@ export default async (req, context) => {
     await sessionsStore.setJSON(token, session);
 
     // Enregistrer le score dans le leaderboard
-    const leaderboardStore = getStore("leaderboard");
+    const leaderboardStore = getStore("leaderboard", { context });
     const entry = {
       pseudo,
       score: totalScore,

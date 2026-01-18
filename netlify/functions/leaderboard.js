@@ -46,7 +46,7 @@ export default async (req, context) => {
     const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
     const type = url.searchParams.get("type") || "classic";
     
-    const store = getStore("leaderboard");
+    const store = getStore("leaderboard", { context });
     const allEntries = await store.list();
 
     // Récupérer tous les scores
