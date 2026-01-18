@@ -174,7 +174,7 @@ export const StartScreen = () => `
         </div>
         
         <!-- Boutons classic / daily -->
-        <div class="flex gap-3">
+        <div class="flex flex-col md:flex-row gap-3">
           <button id="btn-start-classic" class="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black font-black py-6 px-6 rounded-2xl text-xl btn-scale pulse-button">
             ${t("classic")}
           </button>
