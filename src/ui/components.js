@@ -15,7 +15,7 @@ export const Button = (id, text, variant = "primary", fullWidth = true, pulse = 
   };
 
   return `
-    <button id="${id}" class="${fullWidth ? "w-full" : "px-6"} py-5 ${variants[variant]} font-black rounded-xl text-lg btn-scale ${pulse ? "pulse-button" : ""}">
+    <button id="${id}" class="${fullWidth ? "w-full" : "px-6"} py-5 ${variants[variant]} font-black rounded-xl text-lg btn-scale ${pulse ? "pulse-button" : ""}" style="text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
       ${text}
     </button>
   `;
@@ -169,10 +169,10 @@ export const StartScreen = () => `
         
         <!-- Boutons classic / daily -->
         <div class="flex flex-col md:flex-row gap-3">
-          <button id="btn-start-classic" class="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black font-black py-6 px-6 rounded-2xl text-xl btn-scale pulse-button">
+          <button id="btn-start-classic" class="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black font-black py-5 px-6 rounded-xl text-lg btn-scale pulse-button" style="text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
             ${t("classic")}
           </button>
-          <button id="btn-start-daily" class="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black font-black py-6 px-6 rounded-2xl text-xl btn-scale pulse-button">
+          <button id="btn-start-daily" class="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black font-black py-5 px-6 rounded-xl text-lg btn-scale pulse-button" style="text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
             ${t("daily")}
           </button>
         </div>
