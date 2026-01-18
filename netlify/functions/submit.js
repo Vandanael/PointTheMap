@@ -9,7 +9,7 @@ import { getStore } from "@netlify/blobs";
 const MAX_SCORE_PER_ROUND = 5000;
 const ROUNDS = 5;
 const SESSION_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
-const RATE_LIMIT_PER_HOUR = 10;
+const RATE_LIMIT_PER_HOUR = 50; // 50 parties par heure
 const MIN_GAME_DURATION_MS = 5000; // 5 secondes minimum (impossible de jouer plus vite)
 const MAX_GAME_DURATION_MS = 10 * 60 * 1000; // 10 minutes max
 const MAX_DISTANCE_KM = 20015; // Demi-circonférence de la Terre
