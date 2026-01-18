@@ -1,0 +1,242 @@
+@import "tailwindcss";
+
+/* Variables de thème Dark/Light */
+:root {
+  --bg-primary: #020617;
+  --bg-secondary: #0f172a;
+  --bg-tertiary: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --border-color: #1e293b;
+  --accent: #facc15;
+  
+  /* Z-index constants */
+  --z-base: 1000;
+  --z-modal: 2000;
+  --z-overlay: 3000;
+}
+
+body.light-theme {
+  /* Light mode classique - tons chauds et doux, reprend la structure du dark mode */
+  --bg-primary: #f5f3f0;      /* Beige/gris chaud - fond principal doux */
+  --bg-secondary: #ebe8e3;    /* Beige/gris moyen - cartes et éléments secondaires */
+  --bg-tertiary: #ddd9d2;     /* Beige/gris foncé - éléments tertiaires */
+  --text-primary: #1a1816;    /* Presque noir mais légèrement adouci */
+  --text-secondary: #4a4844;  /* Gris moyen pour texte secondaire */
+  --text-tertiary: #6b6863;   /* Gris plus clair pour texte tertiaire */
+  --border-color: #c9c5be;    /* Bordure visible mais douce */
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: rgba(250, 204, 21, 0.3);
+}
+
+html, body {
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overscroll-behavior: none;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+#map {
+  height: 100vh;
+  width: 100vw;
+  cursor: crosshair;
+  touch-action: pan-x pan-y;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.game-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.game-header > * {
+  pointer-events: auto;
+}
+
+/* Marqueur cible - Cercle jaune avec ripple */
+.marker-target {
+  background-color: #facc15;
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7);
+  animation: ripple 2s ease-out infinite;
+}
+
+body.light-theme .marker-target {
+  border-color: #1a1816;
+  box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.8), 0 0 8px rgba(0, 0, 0, 0.3);
+  animation: ripple-light 2s ease-out infinite;
+}
+
+@keyframes ripple {
+  0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); }
+  50% { box-shadow: 0 0 0 15px rgba(250, 204, 21, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+}
+
+@keyframes ripple-light {
+  0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.8), 0 0 8px rgba(0, 0, 0, 0.3); }
+  50% { box-shadow: 0 0 0 15px rgba(250, 204, 21, 0), 0 0 8px rgba(0, 0, 0, 0.1); }
+  100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0), 0 0 8px rgba(0, 0, 0, 0.3); }
+}
+
+/* Marqueur joueur - Cercle blanc/noir */
+.marker-player {
+  width: 16px;
+  height: 16px;
+  background-color: #ffffff;
+  border: 2px solid #000000;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+}
+
+body.light-theme .marker-player {
+  background-color: #1a1816;
+  border-color: #ffffff;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Timer bar - 8px */
+#timer-bar {
+  height: 8px !important;
+}
+
+#timer-progress {
+  transition: width linear;
+}
+
+/* Danger shake animation */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+  20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
+.timer-danger {
+  background: #dc2626 !important;
+  animation: shake 0.5s ease-in-out infinite;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.modal-content {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes pulse-button {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.pulse-button {
+  animation: pulse-button 2s ease-in-out infinite;
+}
+
+.pulse-button:hover {
+  animation: none;
+}
+
+/* Boutons */
+.btn-scale {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-scale:active {
+  transform: scale(0.95);
+}
+
+/* Toggle buttons */
+.toggle-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.toggle-btn:hover {
+  background: var(--bg-secondary);
+}
+
+.toggle-btn:active {
+  transform: scale(0.95);
+}
+
+/* Modal styles */
+.modal-bg {
+  background: var(--bg-primary);
+}
+
+.modal-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+/* Classes utilitaires pour les couleurs */
+.text-primary {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-tertiary {
+  color: var(--text-tertiary);
+}
+
+.modal-section {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+}
+
+/* Masquer attribution Leaflet */
+.leaflet-control-attribution {
+  display: none !important;
+}
+
+/* Input pseudo */
+input:focus {
+  outline: none;
+}
+
+/* Safe area padding pour iPhone notch */
+.game-header > div {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+  padding-left: max(1.5rem, env(safe-area-inset-left));
+  padding-right: max(1.5rem, env(safe-area-inset-right));
+}

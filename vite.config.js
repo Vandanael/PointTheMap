@@ -1,5 +1,8 @@
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  // config options
+  publicDir: "public",
+  build: {
+    outDir: "dist",
+  },
 });

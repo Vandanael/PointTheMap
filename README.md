@@ -10,7 +10,7 @@ PointTheMap is an interactive geography quiz game that challenges players to ide
 
 - Interactive map using Leaflet.js
 - Time-limited gameplay (5 seconds per capital)
-- Global leaderboard powered by Supabase
+- Global leaderboard powered by Netlify Blobs
 - Modern, responsive UI with Tailwind CSS
 - Dark/Light theme support
 
@@ -19,7 +19,8 @@ PointTheMap is an interactive geography quiz game that challenges players to ide
 - **Leaflet.js** - Interactive map library
 - **Tailwind CSS** - Utility-first CSS framework
 - **Vanilla JavaScript** - No framework dependencies
-- **Supabase** - Backend for global leaderboard
+- **Netlify Blobs** - Backend storage for leaderboard and sessions
+- **Netlify Functions** - Serverless functions for game logic
 - **Vite** - Build tool and development server
 
 ## Getting Started
@@ -27,13 +28,13 @@ PointTheMap is an interactive geography quiz game that challenges players to ide
 ### Prerequisites
 
 - Node.js (for development)
-- A Supabase project (for leaderboard functionality)
+- Netlify account (for deployment)
 
 ### Installation
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/PointTheMap.git
+git clone https://github.com/Vandanael/PointTheMap.git
 cd PointTheMap
 ```
 
@@ -42,17 +43,14 @@ cd PointTheMap
 npm install
 ```
 
-3. Configure Supabase:
-   - Create a Supabase project
-   - Set up the database table and security policies (see Supabase documentation)
-   - Update `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `index.html`
-
 ### Development
 
 Run the development server:
 ```bash
 npm run dev
 ```
+
+The app runs in mock mode locally (no API calls needed).
 
 ### Build
 
@@ -68,9 +66,14 @@ npm run preview
 
 ## Deployment
 
-The project is static and compatible with GitHub Pages. Push the code to the `main` branch and enable GitHub Pages in the repository settings.
+The project is designed for Netlify deployment:
 
-Alternatively, the project can be deployed to any static hosting service (Netlify, Vercel, etc.).
+1. Push your code to a Git repository
+2. Connect your repository to Netlify
+3. Netlify will automatically detect and deploy the site
+4. Netlify Functions will handle the API endpoints automatically
+
+The leaderboard and game sessions are stored in Netlify Blobs (no database setup required).
 
 ## License
 
