@@ -55,20 +55,14 @@ const jsonResponse = (data, status = 200) =>
 
 // Plausibility check
 const checkPlausibility = (rounds, gameDuration) => {
-  // Durée totale : 20-60s (5 rounds × ~4-8s chacun + latences)
-  if (gameDuration < 20000 || gameDuration > 60000) {
+  // Durée totale : minimum 15s (même en allant très vite), maximum = SESSION_EXPIRY_MS
+  const MIN_PLAUSIBLE_DURATION = 15000; // 15 secondes
+  if (gameDuration < MIN_PLAUSIBLE_DURATION || gameDuration > MAX_GAME_DURATION_MS) {
     return { valid: false, reason: "Session duration implausible" };
   }
 
-  // Distances : 0-20000km max
-  const distancesValid = rounds.every((r) => {
-    if (!r.click || !r.distance) return true; // Timeout is OK
-    return r.distance >= 0 && r.distance <= 20000;
-  });
-
-  if (!distancesValid) {
-    return { valid: false, reason: "Distance implausible" };
-  }
+  // Note: les distances sont recalculées côté serveur, pas besoin de les vérifier ici
+  // Les coordonnées sont déjà validées dans validateRounds()
 
   return { valid: true };
 };
@@ -110,10 +104,9 @@ const checkRateLimit = async (ip, context) => {
       return { allowed: true, remaining: RATE_LIMIT_PER_HOUR - 1 };
     }
   } catch (e) {
-    // En cas d'erreur, on laisse passer (fail open pour UX)
+    // Fail-closed: bloquer si le rate limiting échoue (sécurité > UX)
     console.error("Rate limit error:", e);
-    // Fail open: permettre la requête si le rate limiting échoue
-    return { allowed: true, remaining: RATE_LIMIT_PER_HOUR };
+    return { allowed: false, remaining: 0 };
   }
 };
 
@@ -214,7 +207,18 @@ export default async (req, context) => {
     }
 
     const now = Date.now();
+    
+    // Vérification des timestamps: le timestamp de session ne doit pas être dans le futur
+    if (session.startTime > now) {
+      return jsonResponse({ error: "Invalid session timestamp" }, 400);
+    }
+    
     const gameDuration = now - session.startTime;
+    
+    // Vérifier que la durée n'est pas négative (double vérification)
+    if (gameDuration < 0) {
+      return jsonResponse({ error: "Invalid game duration" }, 400);
+    }
 
     if (gameDuration > SESSION_EXPIRY_MS) {
       await sql`DELETE FROM sessions WHERE token = ${token}`;

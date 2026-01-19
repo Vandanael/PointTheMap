@@ -58,13 +58,12 @@ const fetchApi = async (endpoint, options = {}) => {
 };
 
 // Formatter les rounds pour le serveur
+// Note: distance et score sont supprimés - recalculés côté serveur pour sécurité
 const formatRoundsForSubmit = (rounds) =>
   rounds.map((r) => ({
     capital: r.capital.name,
-    click: r.click,
-    distance: r.distance,
-    score: r.score,
-    status: r.status,
+    click: r.click, // Seulement les coordonnées
+    status: r.status, // Pour info (timeout vs completed)
   }));
 
 export const api = {
