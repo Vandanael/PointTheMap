@@ -4,7 +4,35 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <title>Point The Map</title>
-  <link rel="icon" href="/assets/favicon.svg">
+  <link rel="icon" href="/favicon.svg">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Point The Map">
+  <meta property="og:description" content="5 capitales · 5 secondes par ville. Cliquez sur la carte, gagnez des points !">
+  <meta property="og:image" content="/og-image.png" id="og-image">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Point The Map">
+  <meta name="twitter:description" content="5 capitales · 5 secondes par ville. Cliquez sur la carte, gagnez des points !">
+  <meta name="twitter:image" content="/og-image.png" id="twitter-image">
+  
+  <script>
+    // Détecter la langue du navigateur et mettre à jour l'image OG
+    (function() {
+      const lang = navigator.language?.startsWith('fr') ? 'fr' : 'en';
+      const ogImage = document.getElementById('og-image');
+      const twitterImage = document.getElementById('twitter-image');
+      if (ogImage && twitterImage) {
+        const imagePath = `/og-image-${lang}.png`;
+        ogImage.setAttribute('content', imagePath);
+        twitterImage.setAttribute('content', imagePath);
+      }
+    })();
+  </script>
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>

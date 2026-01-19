@@ -64,6 +64,13 @@ Preview the production build:
 npm run preview
 ```
 
+## Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run generate:og-image` - Generate Open Graph image for social sharing
+
 ## Deployment
 
 The project is designed for Netlify deployment:
@@ -75,6 +82,13 @@ The project is designed for Netlify deployment:
 
 The leaderboard and game sessions are stored in Neon Database (PostgreSQL). A database must be configured in your Netlify project.
 
+### Database Setup
+
+1. Create a Neon PostgreSQL database
+2. Run the schema migration: `netlify/database/schema.sql`
+3. Run additional migrations if needed (e.g., `migration_add_ip_index.sql`)
+4. Configure `NETLIFY_DATABASE_URL` in your Netlify environment variables
+
 ## License
 
-MIT License - Copyright (c) 2024 Vandanael
+MIT License - Copyright (c) 2026 Vandanael
