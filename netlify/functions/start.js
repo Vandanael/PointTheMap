@@ -126,7 +126,28 @@ export default async (req, context) => {
     );
   } catch (error) {
     console.error("Start error:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      code: error.code,
+      env: {
+        hasContextEnv: !!context?.env,
+        hasNetlifyDbUrl: !!(context?.env?.NETLIFY_DATABASE_URL || process.env.NETLIFY_DATABASE_URL),
+        contextKeys: context?.env ? Object.keys(context.env) : []
+      }
+    });
+    
+    // Détecter l'erreur de colonne manquante
+    const isMissingColumnError = error.code === '42703' && 
+                                  error.message?.includes('does not exist');
+    
+    return new Response(JSON.stringify({ 
+      error: isMissingColumnError 
+        ? "Database schema error: missing column. Please run the migration script."
+        : "Internal server error",
+      details: process.env.NODE_ENV === "development" ? error.message : undefined
+    }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
