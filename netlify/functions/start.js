@@ -1,5 +1,6 @@
 // POST /.netlify/functions/start
 // Génère un token unique + sélectionne 5 capitales aléatoires
+// Pour le mode "daily", utilise un seed déterministe basé sur la date
 
 import { getStore } from "@netlify/blobs";
 import { randomUUID } from "crypto";
@@ -58,9 +59,45 @@ const CAPITALS = [
   { name: "Bratislava", country: "Slovaquie", lat: 48.1486, lng: 17.1077 },
 ];
 
+// Générateur pseudo-aléatoire déterministe (seed-based)
+class SeededRandom {
+  constructor(seed) {
+    this.seed = seed;
+  }
+
+  next() {
+    this.seed = (this.seed * 9301 + 49297) % 233280;
+    return this.seed / 233280;
+  }
+}
+
+// Sélection déterministe basée sur un seed
+const selectCapitalsDeterministic = (capitals, n, seed) => {
+  const rng = new SeededRandom(seed);
+  const shuffled = [...capitals];
+  
+  // Fisher-Yates shuffle avec seed
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rng.next() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  
+  return shuffled.slice(0, n);
+};
+
+// Sélection aléatoire classique
 const selectCapitals = (n = 5) => {
   const shuffled = [...CAPITALS].sort(() => 0.5 - Math.random());
   return shuffled.slice(0, n);
+};
+
+// Obtenir le seed pour le mode daily (basé sur la date)
+const getDailySeed = () => {
+  const today = new Date();
+  // Format: YYYYMMDD (ex: 20241225)
+  const dateString = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+  // Convertir en nombre pour le seed
+  return parseInt(dateString, 10);
 };
 
 export default async (req, context) => {
@@ -73,23 +110,38 @@ export default async (req, context) => {
   }
 
   try {
+    // Récupérer le gameType depuis le body
+    const body = await req.json().catch(() => ({}));
+    const gameType = body.gameType || "classic";
+    
     const token = randomUUID();
-    const capitals = selectCapitals(5);
+    
+    // Pour le mode daily, utiliser un seed déterministe basé sur la date
+    // Pour le mode classic, sélection aléatoire
+    let selectedCapitals;
+    if (gameType === "daily") {
+      const dailySeed = getDailySeed();
+      selectedCapitals = selectCapitalsDeterministic(CAPITALS, 5, dailySeed);
+    } else {
+      selectedCapitals = selectCapitals(5);
+    }
+    
     const startTime = Date.now();
 
     // Stocker la session (avec coordonnées secrètes)
     const session = {
       token,
-      capitals, // Coordonnées incluses (secrètes côté serveur)
+      capitals: selectedCapitals, // Coordonnées incluses (secrètes côté serveur)
       startTime,
       used: false,
+      gameType, // Stocker le type de jeu pour validation
     };
 
     const store = getStore("sessions", { context });
     await store.setJSON(token, session);
 
     // Retourner au client (SANS les coordonnées exactes pour anti-triche)
-    const clientCapitals = capitals.map((c) => ({
+    const clientCapitals = selectedCapitals.map((c) => ({
       name: c.name,
       country: c.country,
       // On envoie quand même lat/lng car le client en a besoin pour l'affichage

@@ -1,7 +1,7 @@
 // GET /.netlify/functions/leaderboard
 // Retourne le Top 50 avec cache
 
-import { getStore } from "@netlify/blobs";
+import { getDatabase } from "./db.js";
 
 const TOP_LIMIT = 50;
 
@@ -46,52 +46,41 @@ export default async (req, context) => {
     const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
     const type = url.searchParams.get("type") || "classic";
     
-    const store = getStore("leaderboard", { context });
-    const allEntries = await store.list();
+    const sql = getDatabase(context);
 
-    // Récupérer tous les scores
-    const scores = await Promise.all(
-      allEntries.blobs.map(async (b) => {
-        try {
-          const data = await store.getJSON(b.key);
-          return data;
-        } catch (e) {
-          return null;
-        }
-      })
-    );
-
-    // Filtrer les entrées invalides
-    let validScores = scores.filter((s) => s && typeof s.score === "number");
-
-    // Filtrer par type de jeu
+    // Construire la requête selon le type
+    let query;
     if (type === "daily") {
-      // Daily : scores du jour uniquement (basé sur timestamp)
+      // Daily : scores du jour uniquement
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todayTimestamp = today.getTime();
+      const tomorrowTimestamp = todayTimestamp + 86400000; // +24h
       
-      validScores = validScores.filter((s) => {
-        if (!s.timestamp) return false;
-        const scoreDate = new Date(s.timestamp);
-        scoreDate.setHours(0, 0, 0, 0);
-        return scoreDate.getTime() === todayTimestamp;
-      });
+      query = sql`
+        SELECT pseudo, score, time, timestamp
+        FROM scores
+        WHERE game_type = 'daily'
+          AND timestamp >= ${todayTimestamp}
+          AND timestamp < ${tomorrowTimestamp}
+        ORDER BY score DESC, time ASC
+        LIMIT 100
+      `;
     } else {
-      // Classic : tous les scores (pas de filtre par date)
-      // On peut aussi filtrer par gameType si présent pour une séparation plus claire
-      // Pour compatibilité, on garde tous les scores sans gameType ou avec gameType="classic"
-      validScores = validScores.filter((s) => {
-        // Si gameType existe, ne garder que "classic", sinon garder (anciennes entrées)
-        return !s.gameType || s.gameType === "classic";
-      });
+      // Classic : tous les scores classiques
+      query = sql`
+        SELECT pseudo, score, time, timestamp
+        FROM scores
+        WHERE game_type = 'classic'
+        ORDER BY score DESC, time ASC
+        LIMIT 100
+      `;
     }
 
-    // Trier
-    validScores.sort((a, b) => b.score - a.score || a.time - b.time);
+    const scores = await query;
 
     // Dédupliquer et Top 50
-    const top50 = deduplicateScores(validScores).map((s, i) => ({
+    const top50 = deduplicateScores(scores).slice(0, TOP_LIMIT).map((s, i) => ({
       rank: i + 1,
       pseudo: s.pseudo,
       score: s.score,

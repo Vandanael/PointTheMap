@@ -85,12 +85,15 @@ const formatRoundsForSubmit = (rounds) =>
 // EXPORTS
 // ============================================
 export const api = {
-  start: async () => {
+  start: async (gameType = "classic") => {
     if (USE_MOCK) {
       logger.log("[API] Mode mock activé");
       return mockStart();
     }
-    return fetchApi("start", { method: "POST" });
+    return fetchApi("start", { 
+      method: "POST",
+      body: JSON.stringify({ gameType }),
+    });
   },
 
   submit: async (token, rounds, pseudo, gameType = "classic") => {

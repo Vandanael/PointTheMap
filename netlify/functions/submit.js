@@ -2,6 +2,7 @@
 // Valide la partie + calcule le score côté serveur + anti-triche
 
 import { getStore } from "@netlify/blobs";
+import { getDatabase } from "./db.js";
 
 // ============================================
 // CONSTANTES
@@ -104,23 +105,57 @@ const checkPlausibility = (rounds, gameDuration) => {
 // RATE LIMITING
 // ============================================
 const checkRateLimit = async (ip, context) => {
-  const store = getStore("rate-limits", { context });
-  const hourKey = `${ip}-${Math.floor(Date.now() / 3600000)}`;
-
+  // Utiliser PostgreSQL pour le rate limiting (plus fiable)
   try {
-    const current = await store.get(hourKey);
-    const count = current ? parseInt(current, 10) : 0;
-
-    if (count >= RATE_LIMIT_PER_HOUR) {
-      return { allowed: false, remaining: 0 };
+    const sql = getDatabase(context);
+    const hourKey = `${ip}-${Math.floor(Date.now() / 3600000)}`;
+    const expiresAt = new Date(Date.now() + 3600000); // 1 heure
+    
+    // Nettoyer les anciennes entrées
+    await sql`DELETE FROM rate_limits WHERE expires_at < NOW()`;
+    
+    // Récupérer ou créer l'entrée
+    const existing = await sql`
+      SELECT count FROM rate_limits WHERE key = ${hourKey}
+    `;
+    
+    if (existing.length > 0) {
+      const count = existing[0].count;
+      if (count >= RATE_LIMIT_PER_HOUR) {
+        return { allowed: false, remaining: 0 };
+      }
+      // Incrémenter
+      await sql`
+        UPDATE rate_limits 
+        SET count = count + 1 
+        WHERE key = ${hourKey}
+      `;
+      return { allowed: true, remaining: RATE_LIMIT_PER_HOUR - count - 1 };
+    } else {
+      // Créer nouvelle entrée
+      await sql`
+        INSERT INTO rate_limits (key, count, expires_at)
+        VALUES (${hourKey}, 1, ${expiresAt})
+      `;
+      return { allowed: true, remaining: RATE_LIMIT_PER_HOUR - 1 };
     }
-
-    await store.set(hourKey, String(count + 1));
-    return { allowed: true, remaining: RATE_LIMIT_PER_HOUR - count - 1 };
   } catch (e) {
     // En cas d'erreur, on laisse passer (fail open pour UX)
     console.error("Rate limit error:", e);
-    return { allowed: true, remaining: RATE_LIMIT_PER_HOUR };
+    // Fallback sur Blobs si la DB n'est pas disponible
+    try {
+      const store = getStore("rate-limits", { context });
+      const hourKey = `${ip}-${Math.floor(Date.now() / 3600000)}`;
+      const current = await store.get(hourKey);
+      const count = current ? parseInt(current, 10) : 0;
+      if (count >= RATE_LIMIT_PER_HOUR) {
+        return { allowed: false, remaining: 0 };
+      }
+      await store.set(hourKey, String(count + 1));
+      return { allowed: true, remaining: RATE_LIMIT_PER_HOUR - count - 1 };
+    } catch (fallbackError) {
+      return { allowed: true, remaining: RATE_LIMIT_PER_HOUR };
+    }
   }
 };
 
@@ -211,6 +246,11 @@ export default async (req, context) => {
       return jsonResponse({ error: "Session already used" }, 401);
     }
 
+    // Vérifier que le gameType correspond à la session
+    if (session.gameType && session.gameType !== gameType) {
+      return jsonResponse({ error: "Game type mismatch" }, 400);
+    }
+
     // Vérifier expiration
     const now = Date.now();
     const gameDuration = now - session.startTime;
@@ -284,34 +324,28 @@ export default async (req, context) => {
     session.used = true;
     await sessionsStore.setJSON(token, session);
 
-    // Enregistrer le score dans le leaderboard
-    const leaderboardStore = getStore("leaderboard", { context });
-    const entry = {
-      pseudo,
-      score: totalScore,
-      time: gameDuration,
-      rounds: validatedRounds,
-      timestamp: now,
-      gameType, // "classic" ou "daily"
-      ip: ip.split(",")[0].trim(), // Première IP si plusieurs
-    };
+    // Enregistrer le score dans la base de données PostgreSQL
+    const sql = getDatabase(context);
+    const clientIp = ip.split(",")[0].trim();
+    
+    // Insérer le score dans la base de données
+    const result = await sql`
+      INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, ip)
+      VALUES (${pseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}, ${now}, ${gameType}, ${clientIp})
+      RETURNING id
+    `;
+    
+    const scoreId = result[0].id;
 
-    const entryKey = `${now}-${token.slice(0, 8)}`;
-    await leaderboardStore.setJSON(entryKey, entry);
-
-    // Calculer le rang
-    const allEntries = await leaderboardStore.list();
-    const scores = await Promise.all(
-      allEntries.blobs.map(async (b) => {
-        const data = await leaderboardStore.getJSON(b.key);
-        return data;
-      })
-    );
-
-    // Trier par score DESC, puis temps ASC
-    scores.sort((a, b) => b.score - a.score || a.time - b.time);
-
-    const rank = scores.findIndex((s) => s.timestamp === now) + 1;
+    // Calculer le rang en comptant les scores meilleurs
+    const rankResult = await sql`
+      SELECT COUNT(*) + 1 as rank
+      FROM scores
+      WHERE game_type = ${gameType}
+        AND (score > ${totalScore} OR (score = ${totalScore} AND time < ${gameDuration}))
+    `;
+    
+    const rank = parseInt(rankResult[0].rank, 10);
     const isTopFifty = rank <= 50;
 
     // Supprimer la session après succès

@@ -29,7 +29,7 @@ export const createGameState = () => ({
 
 export const startGame = async (state, gameType = "classic") => {
   try {
-    const session = await api.start();
+    const session = await api.start(gameType);
     if (!session?.capitals || session.capitals.length === 0) {
       return {
         ...state,

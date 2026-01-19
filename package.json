@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@netlify/blobs": "^8.1.0",
-    "@netlify/functions": "^3.0.0"
+    "@netlify/functions": "^3.0.0",
+    "@netlify/neon": "^0.1.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.11",

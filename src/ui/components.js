@@ -169,10 +169,10 @@ export const StartScreen = () => `
         
         <!-- Boutons classic / daily -->
         <div class="flex flex-col md:flex-row gap-3">
-          <button id="btn-start-classic" class="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black font-black py-5 px-6 rounded-xl text-lg btn-scale pulse-button" style="text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+          <button id="btn-start-classic" class="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black font-black py-5 px-6 rounded-xl text-lg" style="text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
             ${t("classic")}
           </button>
-          <button id="btn-start-daily" class="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black font-black py-5 px-6 rounded-xl text-lg btn-scale pulse-button" style="text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+          <button id="btn-start-daily" class="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black font-black py-5 px-6 rounded-xl text-lg" style="text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
             ${t("daily")}
           </button>
         </div>
