@@ -277,7 +277,7 @@ export const LeaderboardModal = (scores, currentType = "classic") => {
   const isDaily = currentType === "daily";
 
   return `
-    <div id="leaderboard-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-modal);" role="dialog" aria-modal="true">
+    <div id="leaderboard-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: calc(var(--z-modal) + 1);" role="dialog" aria-modal="true">
       <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
         <h2 class="text-3xl font-black text-primary mb-6 text-center tracking-tight uppercase" id="leaderboardTitle">
           ${t("leaderboard")}

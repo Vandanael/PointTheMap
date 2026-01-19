@@ -132,6 +132,10 @@ const stopTimer = () => {
 const handleStart = async (gameType = "classic") => {
   UI.hideStart();
   UI.showLoader();
+  
+  // Réinitialiser la carte à la vue par défaut
+  clearMap();
+  resetView();
 
   state = await startGame(state, gameType);
   UI.hideLoader();
