@@ -1,4 +1,4 @@
-// Script pour générer og-image.png (FR et EN) à partir des templates SVG
+// Script pour générer og-image.png à partir de la favicon
 // Usage: node scripts/generate-og-image.js
 
 import { readFileSync, writeFileSync } from 'fs';
@@ -21,30 +21,15 @@ const generatePNG = async (svgPath, outputPath) => {
   writeFileSync(outputPath, pngBuffer);
 };
 
-// Générer les deux versions (FR et EN)
+// Générer l'image de partage
 const publicDir = join(rootDir, 'public');
 
 try {
-  // Version française
   await generatePNG(
-    join(publicDir, 'og-image-fr.svg'),
-    join(publicDir, 'og-image-fr.png')
-  );
-  console.log('✅ og-image-fr.png créé');
-
-  // Version anglaise
-  await generatePNG(
-    join(publicDir, 'og-image-en.svg'),
-    join(publicDir, 'og-image-en.png')
-  );
-  console.log('✅ og-image-en.png créé');
-
-  // Version par défaut (FR)
-  await generatePNG(
-    join(publicDir, 'og-image-fr.svg'),
+    join(publicDir, 'og-image.svg'),
     join(publicDir, 'og-image.png')
   );
-  console.log('✅ og-image.png créé (version FR par défaut)');
+  console.log('✅ og-image.png créé');
 } catch (error) {
   console.error('❌ Erreur lors de la génération:', error.message);
   process.exit(1);
