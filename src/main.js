@@ -45,7 +45,6 @@ const init = async () => {
     } catch (error) {
       logger.error("Erreur initialisation carte:", error);
       UI.showError("Erreur lors du chargement de la carte");
-      // Continuer l'initialisation malgré l'erreur
     }
 
     try {
@@ -60,7 +59,6 @@ const init = async () => {
       }
     } catch (error) {
       logger.error("Erreur retry queue:", error);
-      // Continuer l'initialisation
     }
 
     UI.updateLoader(100);
@@ -86,7 +84,6 @@ const startTimer = () => {
     timerProgress.style.transition = `width ${GAME.TIMER_MS}ms linear`;
     timerProgress.style.width = "0%";
 
-    // Danger Zone à 1.5s restantes
     setTimeout(() => {
       if (state.status === GameStatus.PLAYING && state.currentRound) {
         const progress = document.getElementById("timer-progress");
@@ -94,7 +91,6 @@ const startTimer = () => {
       }
     }, GAME.TIMER_MS - GAME.DANGER_ZONE_MS);
 
-    // Timeout à la fin
     timerTimeout = setTimeout(() => {
       if (state.status === GameStatus.PLAYING && state.currentRound) {
         state = handleTimeout(state);
@@ -102,7 +98,6 @@ const startTimer = () => {
       }
     }, GAME.TIMER_MS);
 
-    // Vérification périodique du timeout
     timerInterval = setInterval(() => {
       if (state.status !== GameStatus.PLAYING || !state.currentRound) {
         stopTimer();
@@ -132,8 +127,6 @@ const stopTimer = () => {
 const handleStart = async (gameType = "classic") => {
   UI.hideStart();
   UI.showLoader();
-  
-  // Réinitialiser la carte à la vue par défaut
   clearMap();
   resetView();
 

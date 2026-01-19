@@ -1,5 +1,4 @@
 // Point The Map - Map Wrapper
-// Gestion de Leaflet (style original)
 
 import { MAP } from "../config.js";
 import { getTheme } from "../services/storage.js";
@@ -25,25 +24,17 @@ const updateMapTiles = () => {
     ? MAP.TILE_URL_LIGHT
     : MAP.TILE_URL_DARK;
 
-  // Créer et ajouter le nouveau layer avec options optimisées
   tileLayer = L.tileLayer(tileUrl, {
     maxZoom: MAP.MAX_ZOOM,
     attribution: MAP.ATTRIBUTION,
-    // Buffer augmenté pour smooth animations (4 écrans)
     keepBuffer: 4,
-    // Précharger les tuiles pendant le zoom pour animations fluides
     updateWhenZooming: true,
-    // Précharger aussi en idle pour garantir que tout est en cache
     updateWhenIdle: true,
-    // Réduire la latence
     crossOrigin: false,
-    // Pas de limite de zoom pour éviter les problèmes
     minZoom: MAP.MIN_ZOOM
   }).addTo(map);
 
-  tileLayer.on("tileerror", () => {
-    // Ignore tile loading errors (graceful degradation)
-  });
+  tileLayer.on("tileerror", () => {});
 };
 
 export const initMap = (containerId) => {
@@ -74,15 +65,12 @@ export const initMap = (containerId) => {
   return map;
 };
 
-// Exporter la fonction pour mettre à jour les tuiles quand le thème change
 export const refreshMapTiles = updateMapTiles;
 
-// Exposer globalement pour le toggle de thème
 if (typeof window !== 'undefined') {
   window.refreshMapTiles = updateMapTiles;
 }
 
-// Définir le handler de clic (privé)
 const onMapClick = (callback) => {
   if (clickHandler) {
     map.off("click", clickHandler);

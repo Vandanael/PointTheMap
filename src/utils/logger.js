@@ -16,8 +16,4 @@ export const logger = {
     // Les erreurs sont toujours loggées, même en production
     console.error(...args);
   },
-
-  info: (...args) => {
-    if (isDev) console.info(...args);
-  },
 };

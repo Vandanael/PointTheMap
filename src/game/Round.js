@@ -15,8 +15,8 @@ export const createRound = (capital, roundNumber) => ({
 export const recordClick = (round, clickCoords) => {
   const endTime = Date.now();
   const elapsed = endTime - round.startTime;
-
-  if (elapsed > GAME.TIMER_MS) {
+  const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
+  if (elapsed > totalTimeAllowed) {
     return {
       ...round,
       endTime,
@@ -58,19 +58,20 @@ export const calculateScore = (distanceKm) => {
   if (distanceKm < 100) {
     return Math.round(5000 * Math.exp(-distanceKm / 280));
   }
-
+  
   if (distanceKm < 500) {
     const scoreAt100 = 5000 * Math.exp(-100 / 280);
     const scoreAt500 = 1000;
     const progress = (distanceKm - 100) / 400;
     return Math.round(scoreAt100 + (scoreAt500 - scoreAt100) * progress);
   }
-
+  
   const excess = distanceKm - 500;
   return Math.max(0, Math.round(1000 * Math.exp(-excess / 800)));
 };
 
 export const getRemainingTime = (round) => {
   const elapsed = Date.now() - round.startTime;
-  return Math.max(0, GAME.TIMER_MS - elapsed);
+  const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
+  return Math.max(0, totalTimeAllowed - elapsed);
 };

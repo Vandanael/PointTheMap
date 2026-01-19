@@ -44,7 +44,10 @@ export const TimerBar = () => `
   </div>
 `;
 
-export const GameHeader = (roundNum, totalRounds, capitalName, country, totalScore) => `
+export const GameHeader = (roundNum, totalRounds, capitalName, country, totalScore) => {
+  const escapedCapital = escapeHtml(capitalName);
+  const escapedCountry = escapeHtml(country);
+  return `
   <div id="game-header" class="game-header fixed top-0 left-0 right-0" style="z-index: var(--z-base);">
     <div class="px-6 py-2 flex justify-between items-center" style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
       <div class="flex items-center gap-2">
@@ -58,14 +61,18 @@ export const GameHeader = (roundNum, totalRounds, capitalName, country, totalSco
     </div>
   </div>
 `;
+};
 
-export const QuestionModal = (capitalName, country) => `
+export const QuestionModal = (capitalName, country) => {
+  const escapedCapital = escapeHtml(capitalName);
+  const escapedCountry = escapeHtml(country);
+  return `
   <div id="question-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="background: var(--bg-primary); z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="capitalName">
     <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
       <div class="text-center">
         <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-3" id="findLabel">${t("find")}</div>
-        <h2 class="text-5xl font-black text-primary mb-2" id="capitalName">${capitalName}</h2>
-        <div class="text-secondary text-base mb-6" id="countryName">${country}</div>
+        <h2 class="text-5xl font-black text-primary mb-2" id="capitalName">${escapedCapital}</h2>
+        <div class="text-secondary text-base mb-6" id="countryName">${escapedCountry}</div>
         <div class="modal-section rounded-xl p-4 text-secondary text-sm" id="clickMapLabel">
           ${t("clickOnMap")}
         </div>
@@ -73,14 +80,18 @@ export const QuestionModal = (capitalName, country) => `
     </div>
   </div>
 `;
+};
 
-export const QuestionModalWithButton = (capitalName, country) => `
+export const QuestionModalWithButton = (capitalName, country) => {
+  const escapedCapital = escapeHtml(capitalName);
+  const escapedCountry = escapeHtml(country);
+  return `
   <div id="question-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="background: var(--bg-primary); z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="capitalName">
     <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
       <div class="text-center">
         <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-3" id="findLabel">${t("find")}</div>
-        <h2 class="text-5xl font-black text-primary mb-2" id="capitalName">${capitalName}</h2>
-        <div class="text-secondary text-base mb-6" id="countryName">${country}</div>
+        <h2 class="text-5xl font-black text-primary mb-2" id="capitalName">${escapedCapital}</h2>
+        <div class="text-secondary text-base mb-6" id="countryName">${escapedCountry}</div>
         <div class="modal-section rounded-xl p-4 text-secondary text-sm mb-6" id="clickMapLabel">
           ${t("clickOnMap")}
         </div>
@@ -89,6 +100,7 @@ export const QuestionModalWithButton = (capitalName, country) => `
     </div>
   </div>
 `;
+};
 
 export const RoundResult = (distance, score, isTimeout, isLast) => {
   const formatDistance = (distanceKm) => {
@@ -195,7 +207,9 @@ export const StartScreen = () => `
   </div>
 `;
 
-export const GameOverScreen = (totalScore, lastPseudo = "") => `
+export const GameOverScreen = (totalScore, lastPseudo = "") => {
+  const escapedPseudo = escapeHtml(lastPseudo);
+  return `
   <div id="result-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="gameOverLabel">
     <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
       <h2 class="text-5xl font-black text-primary mb-8 text-center tracking-tight uppercase" id="gameOverLabel">
@@ -217,7 +231,7 @@ export const GameOverScreen = (totalScore, lastPseudo = "") => `
             type="text"
             maxlength="5"
             minlength="3"
-            value="${lastPseudo}"
+            value="${escapedPseudo}"
             placeholder="ABC"
             autocomplete="off"
             class="bg-transparent border-2 border-yellow-400 text-primary text-xl font-black uppercase tracking-widest py-4 px-4 rounded-xl text-center"
@@ -235,8 +249,11 @@ export const GameOverScreen = (totalScore, lastPseudo = "") => `
     </div>
   </div>
 `;
+};
 
-export const FinalResults = (totalScore, pseudo, rank, isTopFifty, isNewSessionBest = false) => `
+export const FinalResults = (totalScore, pseudo, rank, isTopFifty, isNewSessionBest = false) => {
+  const escapedPseudo = escapeHtml(pseudo);
+  return `
   <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
     ${isNewSessionBest ? `<div class="text-center mb-4 text-4xl animate-bounce">🏆</div>` : ""}
     <h2 class="text-4xl font-black text-primary mb-6 text-center tracking-tight uppercase" id="newRecordLabel">
@@ -245,22 +262,24 @@ export const FinalResults = (totalScore, pseudo, rank, isTopFifty, isNewSessionB
     <div class="text-center mb-6">
       <div class="text-8xl font-black text-yellow-400 mb-2">${formatScore(totalScore)}</div>
       <div class="text-secondary text-xl">
-        <span class="font-mono font-bold text-primary">${pseudo}</span> · ${t("rank")} #${rank}
+        <span class="font-mono font-bold text-primary">${escapedPseudo}</span> · ${t("rank")} #${rank}
       </div>
     </div>
     ${Button("btn-replay", t("replay"), "primary", true, true)}
   </div>
 `;
+};
 
 export const LeaderboardRow = (rank, pseudo, score, time, isHighlighted = false) => {
   const medals = ["🥇", "🥈", "🥉"];
   const rankDisplay = rank <= 3 ? medals[rank - 1] : `#${rank}`;
+  const escapedPseudo = escapeHtml(pseudo);
 
   return `
     <div class="flex items-center justify-between py-3 px-4 ${isHighlighted ? "rounded-xl" : ""}" style="${isHighlighted ? "background: rgba(250, 204, 21, 0.1); border: 1px solid rgba(250, 204, 21, 0.3);" : "border-bottom: 1px solid var(--border-color);"}">
       <div class="flex items-center gap-3">
         <span class="w-8 text-center font-bold ${rank <= 3 ? "text-yellow-400" : ""}" style="${rank > 3 ? "color: var(--text-tertiary);" : ""}">${rankDisplay}</span>
-        <span class="font-mono font-bold ${isHighlighted ? "text-yellow-400" : ""}" style="${!isHighlighted ? "color: var(--text-primary);" : ""}">${pseudo}</span>
+        <span class="font-mono font-bold ${isHighlighted ? "text-yellow-400" : ""}" style="${!isHighlighted ? "color: var(--text-primary);" : ""}">${escapedPseudo}</span>
       </div>
       <div class="text-right">
         <span class="font-bold ${isHighlighted ? "text-yellow-400" : ""}" style="${!isHighlighted ? "color: var(--text-primary);" : ""}">${formatScore(score)}</span>

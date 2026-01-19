@@ -1,5 +1,4 @@
 // Point The Map - Storage Service
-// Wrapper localStorage avec JSON parse/stringify
 
 import { logger } from "../utils/logger.js";
 
@@ -26,13 +25,11 @@ export const storage = {
 
 };
 
-// Raccourcis pour données fréquentes
 export const getLastPseudo = () => storage.get("lastPseudo");
 export const setLastPseudo = (pseudo) => storage.set("lastPseudo", pseudo);
 export const getTheme = () => storage.get("theme") || "dark";
 export const setTheme = (theme) => storage.set("theme", theme);
 
-// Retry queue (offline resilience)
 const RETRY_QUEUE_KEY = "retry_queue";
 
 export const getRetryQueue = () => {

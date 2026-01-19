@@ -148,7 +148,12 @@ export const UI = {
     render(QuestionModal(capitalName, country));
     const close = () => {
       remove("question-modal");
-      onClose?.();
+      // Attendre que le DOM soit mis à jour avant d'activer les clics
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          onClose?.();
+        });
+      });
     };
     document.getElementById("question-modal")?.addEventListener("click", close);
     setTimeout(close, 1000);
@@ -158,7 +163,12 @@ export const UI = {
     render(QuestionModalWithButton(capitalName, country));
     bindClick("btn-ready", () => {
       remove("question-modal");
-      onReady?.();
+      // Attendre que le DOM soit mis à jour avant d'activer les clics
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          onReady?.();
+        });
+      });
     });
   },
 

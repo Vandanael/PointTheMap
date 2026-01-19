@@ -1,16 +1,14 @@
 // POST /.netlify/functions/submit
-// Valide la partie + calcule le score côté serveur + anti-triche
 
 import { getDatabase } from "./db.js";
 
-// Constantes
 const MAX_SCORE_PER_ROUND = 5000;
 const ROUNDS = 5;
-const SESSION_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
-const RATE_LIMIT_PER_HOUR = 50; // 50 parties par heure
-const MIN_GAME_DURATION_MS = 5000; // 5 secondes minimum (impossible de jouer plus vite)
-const MAX_GAME_DURATION_MS = 10 * 60 * 1000; // 10 minutes max
-const MAX_DISTANCE_KM = 20015; // Demi-circonférence de la Terre
+const SESSION_EXPIRY_MS = 10 * 60 * 1000;
+const RATE_LIMIT_PER_HOUR = 50;
+const MIN_GAME_DURATION_MS = 5000;
+const MAX_GAME_DURATION_MS = 10 * 60 * 1000;
+const MAX_DISTANCE_KM = 20015;
 const toRad = (deg) => (deg * Math.PI) / 180;
 
 const haversine = ([lat1, lon1], [lat2, lon2]) => {
@@ -21,25 +19,21 @@ const haversine = ([lat1, lon1], [lat2, lon2]) => {
   return 6371 * 2 * Math.asin(Math.sqrt(a));
 };
 
-// Calcul du score (formule exponentielle lissée, identique au client)
 const calculateScore = (distanceKm) => {
   if (distanceKm < 1) {
     return MAX_SCORE_PER_ROUND;
   }
   
   if (distanceKm < 100) {
-    // Décroissance exponentielle : 5000 * e^(-distance/280)
     return Math.round(5000 * Math.exp(-distanceKm / 280));
   } 
   else if (distanceKm < 500) {
-    // Interpolation linéaire entre 100km et 500km
     const scoreAt100 = 5000 * Math.exp(-100 / 280);
     const scoreAt500 = 1000;
     const progress = (distanceKm - 100) / 400;
     return Math.round(scoreAt100 + (scoreAt500 - scoreAt100) * progress);
   } 
   else {
-    // Décroissance exponentielle depuis 500km
     const excess = distanceKm - 500;
     return Math.max(0, Math.round(1000 * Math.exp(-excess / 800)));
   }
@@ -53,32 +47,23 @@ const jsonResponse = (data, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
-// Plausibility check
-const checkPlausibility = (rounds, gameDuration) => {
-  // Durée totale : minimum 15s (même en allant très vite), maximum = SESSION_EXPIRY_MS
-  const MIN_PLAUSIBLE_DURATION = 15000; // 15 secondes
-  if (gameDuration < MIN_PLAUSIBLE_DURATION || gameDuration > MAX_GAME_DURATION_MS) {
+const MIN_PLAUSIBLE_DURATION_MS = 15000;
+
+const checkPlausibility = (gameDuration) => {
+  if (gameDuration < MIN_PLAUSIBLE_DURATION_MS || gameDuration > MAX_GAME_DURATION_MS) {
     return { valid: false, reason: "Session duration implausible" };
   }
-
-  // Note: les distances sont recalculées côté serveur, pas besoin de les vérifier ici
-  // Les coordonnées sont déjà validées dans validateRounds()
-
   return { valid: true };
 };
 
-// Rate limiting
 const checkRateLimit = async (ip, context) => {
-  // Utiliser PostgreSQL pour le rate limiting (plus fiable)
   try {
     const sql = getDatabase(context);
     const hourKey = `${ip}-${Math.floor(Date.now() / 3600000)}`;
-    const expiresAt = new Date(Date.now() + 3600000); // 1 heure
+    const expiresAt = new Date(Date.now() + 3600000);
     
-    // Nettoyer les anciennes entrées
     await sql`DELETE FROM rate_limits WHERE expires_at < NOW()`;
     
-    // Récupérer ou créer l'entrée
     const existing = await sql`
       SELECT count FROM rate_limits WHERE key = ${hourKey}
     `;
@@ -88,7 +73,6 @@ const checkRateLimit = async (ip, context) => {
       if (count >= RATE_LIMIT_PER_HOUR) {
         return { allowed: false, remaining: 0 };
       }
-      // Incrémenter
       await sql`
         UPDATE rate_limits 
         SET count = count + 1 
@@ -96,7 +80,6 @@ const checkRateLimit = async (ip, context) => {
       `;
       return { allowed: true, remaining: RATE_LIMIT_PER_HOUR - count - 1 };
     } else {
-      // Créer nouvelle entrée
       await sql`
         INSERT INTO rate_limits (key, count, expires_at)
         VALUES (${hourKey}, 1, ${expiresAt})
@@ -104,13 +87,13 @@ const checkRateLimit = async (ip, context) => {
       return { allowed: true, remaining: RATE_LIMIT_PER_HOUR - 1 };
     }
   } catch (e) {
-    // Fail-closed: bloquer si le rate limiting échoue (sécurité > UX)
-    console.error("Rate limit error:", e);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Rate limit error:", e.message);
+    }
     return { allowed: false, remaining: 0 };
   }
 };
 
-// Validation
 const validateRounds = (rounds, sessionCapitals) => {
   if (!Array.isArray(rounds) || rounds.length !== ROUNDS) {
     return { valid: false, error: "Invalid rounds count" };
@@ -128,7 +111,6 @@ const validateRounds = (rounds, sessionCapitals) => {
       return { valid: false, error: `Capital mismatch at round ${i + 1}` };
     }
 
-    // Vérifier que le clic est valide (ou null si timeout)
     if (round.click) {
       const { lat, lng } = round.click;
       if (typeof lat !== "number" || typeof lng !== "number") {
@@ -144,15 +126,11 @@ const validateRounds = (rounds, sessionCapitals) => {
 };
 
 export default async (req, context) => {
-  // Seulement POST
   if (req.method !== "POST") {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  // Récupérer IP pour rate limiting
   const ip = context.ip || req.headers.get("x-forwarded-for") || "unknown";
-
-  // Vérifier rate limit
   const rateLimit = await checkRateLimit(ip, context);
   if (!rateLimit.allowed) {
     return jsonResponse(
@@ -173,7 +151,7 @@ export default async (req, context) => {
     }
 
     if (!token || typeof token !== "string") {
-      return jsonResponse({ error: "Invalid token" }, 400      );
+      return jsonResponse({ error: "Invalid token" }, 400);
     }
 
     const sql = getDatabase(context);
@@ -208,14 +186,12 @@ export default async (req, context) => {
 
     const now = Date.now();
     
-    // Vérification des timestamps: le timestamp de session ne doit pas être dans le futur
     if (session.startTime > now) {
       return jsonResponse({ error: "Invalid session timestamp" }, 400);
     }
     
     const gameDuration = now - session.startTime;
     
-    // Vérifier que la durée n'est pas négative (double vérification)
     if (gameDuration < 0) {
       return jsonResponse({ error: "Invalid game duration" }, 400);
     }
@@ -234,7 +210,7 @@ export default async (req, context) => {
       return jsonResponse({ error: validation.error }, 400);
     }
 
-    const plausibility = checkPlausibility(rounds, gameDuration);
+    const plausibility = checkPlausibility(gameDuration);
     if (!plausibility.valid) {
       return jsonResponse({ error: plausibility.reason }, 400);
     }
@@ -244,7 +220,6 @@ export default async (req, context) => {
       const capitalCoords = [serverCapital.lat, serverCapital.lng];
 
       if (!round.click) {
-        // Timeout
         return {
           capital: round.capital,
           click: null,
@@ -281,7 +256,6 @@ export default async (req, context) => {
     const totalScore = validatedRounds.reduce((sum, r) => sum + r.score, 0);
     const clientIp = ip.split(",")[0].trim();
 
-    // Rejeter si IP est "unknown" (sécurité : éviter que tous les utilisateurs sans IP partagent le même pseudo)
     if (clientIp === "unknown") {
       return jsonResponse(
         { error: "Unable to verify player identity" },
@@ -289,9 +263,6 @@ export default async (req, context) => {
       );
     }
 
-    // Vérifier si cette IP est déjà associée à un pseudo différent
-    // Note: Cette vérification se fait AVANT la transaction pour performance,
-    // mais la vérification est répétée dans la transaction pour éviter les race conditions
     const existingPseudoResult = await sql`
       SELECT pseudo
       FROM scores
@@ -314,15 +285,12 @@ export default async (req, context) => {
       }
     }
 
-    // Utiliser une transaction pour garantir l'atomicité des opérations
-    // Note: @netlify/neon utilise le driver neon-js qui supporte les transactions
     let rank = 1;
     let isTopFifty = false;
     
     try {
       if (sql.begin) {
         await sql.begin(async (tx) => {
-          // Double vérification dans la transaction pour éviter race condition
           const doubleCheckResult = await tx`
             SELECT pseudo
             FROM scores
@@ -345,7 +313,6 @@ export default async (req, context) => {
           await tx`DELETE FROM sessions WHERE token = ${token}`;
         });
       } else {
-        // Fallback sans transaction (déjà vérifié plus haut)
         await sql`UPDATE sessions SET used = true WHERE token = ${token}`;
         await sql`
           INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, ip)
@@ -382,17 +349,11 @@ export default async (req, context) => {
           409
         );
       }
-      console.error("Database error:", dbError);
-      console.error("Error details:", {
-        message: dbError.message,
-        stack: dbError.stack,
-        name: dbError.name,
-        env: {
-          hasContextEnv: !!context?.env,
-          hasNetlifyDbUrl: !!(context?.env?.NETLIFY_DATABASE_URL || process.env.NETLIFY_DATABASE_URL),
-          contextKeys: context?.env ? Object.keys(context.env) : []
-        }
-      });
+      if (process.env.NODE_ENV === "development") {
+        console.error("Database error:", dbError.message);
+      } else {
+        console.error("Database error occurred");
+      }
       return jsonResponse({ 
         error: "Database error. Please try again later.",
         score: totalScore,
@@ -402,7 +363,11 @@ export default async (req, context) => {
       }, 500);
     }
   } catch (error) {
-    console.error("Submit error:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Submit error:", error.message);
+    } else {
+      console.error("Submit error occurred");
+    }
     return jsonResponse({ error: "Internal server error" }, 500);
   }
 };

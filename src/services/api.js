@@ -1,5 +1,4 @@
 // Point The Map - API Service
-// Wrapper Netlify Functions avec mode mock pour dev local
 
 import { capitals, GAME } from "../config.js";
 import { generateId } from "../utils.js";
@@ -13,11 +12,8 @@ import {
 } from "./storage.js";
 
 const API_BASE = "/.netlify/functions";
-
-// Mode mock activé en dev local (Vite), désactivé en production
 const USE_MOCK = import.meta.env.DEV && !import.meta.env.VITE_USE_API;
 
-// Mock (dev local uniquement)
 const mockStart = () => {
   const selected = selectBalancedCapitals(capitals);
   return {
@@ -41,7 +37,6 @@ const mockSubmit = (token, rounds, pseudo) => {
   };
 };
 
-// API réelle
 const fetchApi = async (endpoint, options = {}) => {
   const res = await fetch(`${API_BASE}/${endpoint}`, {
     headers: { "Content-Type": "application/json" },
@@ -60,13 +55,11 @@ const fetchApi = async (endpoint, options = {}) => {
   return data;
 };
 
-// Formatter les rounds pour le serveur
-// Note: distance et score sont supprimés - recalculés côté serveur pour sécurité
 const formatRoundsForSubmit = (rounds) =>
   rounds.map((r) => ({
     capital: r.capital.name,
-    click: r.click, // Seulement les coordonnées
-    status: r.status, // Pour info (timeout vs completed)
+    click: r.click,
+    status: r.status,
   }));
 
 export const api = {
@@ -104,7 +97,6 @@ export const api = {
   },
 };
 
-// Retry logic (offline resilience)
 export const submitWithRetry = async (token, rounds, pseudo, gameType = "classic") => {
   try {
     const result = await api.submit(token, rounds, pseudo, gameType);
@@ -117,7 +109,6 @@ export const submitWithRetry = async (token, rounds, pseudo, gameType = "classic
     }
     return result;
   } catch (error) {
-    // Ne pas retry les erreurs 409 (pseudo déjà enregistré) ou 400 (validation)
     if (error.status === 409 || error.status === 400) {
       throw error;
     }
@@ -144,9 +135,7 @@ export const processRetryQueue = async () => {
   let successful = 0;
   let failed = 0;
   const MAX_RETRIES = 3;
-  const MAX_AGE_MS = 86400000; // 24h
-
-  // Itération en sens inverse pour éviter les problèmes d'index lors de la suppression
+  const MAX_AGE_MS = 86400000;
   for (let i = queue.length - 1; i >= 0; i--) {
     const entry = queue[i];
 

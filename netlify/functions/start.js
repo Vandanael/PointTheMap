@@ -1,12 +1,9 @@
 // POST /.netlify/functions/start
-// Génère un token unique + sélectionne 5 capitales avec l'algorithme Balanced Challenge
-// Pour le mode "daily", utilise un seed déterministe basé sur la date
 
 import { getDatabase } from "./db.js";
 import { randomUUID } from "crypto";
 import { capitals, selectBalancedCapitals } from "../../capitals.js";
 
-// Générateur pseudo-aléatoire déterministe (seed-based)
 class SeededRandom {
   constructor(seed) {
     this.seed = seed;
@@ -18,18 +15,13 @@ class SeededRandom {
   }
 }
 
-// Sélection déterministe basée sur un seed pour le mode daily
-// Utilise l'algorithme Balanced Challenge (2 populaires + 3 non-populaires)
 const selectBalancedCapitalsDeterministic = (allCapitals, seed) => {
   const rng = new SeededRandom(seed);
   
-  // Séparer les capitales par popularité
   const popularCities = allCapitals.filter((city) => city.popular === true);
   const obscureCities = allCapitals.filter((city) => city.popular === false);
 
-  // Validation
   if (popularCities.length < 2 || obscureCities.length < 3) {
-    // Fallback: sélection simple
     const shuffled = [...allCapitals];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(rng.next() * (i + 1));
@@ -38,7 +30,6 @@ const selectBalancedCapitalsDeterministic = (allCapitals, seed) => {
     return shuffled.slice(0, 5);
   }
 
-  // Sélectionner 2 populaires avec seed
   const selectedPopular = [];
   const tempPopular = [...popularCities];
   for (let i = 0; i < 2 && tempPopular.length > 0; i++) {
@@ -47,7 +38,6 @@ const selectBalancedCapitalsDeterministic = (allCapitals, seed) => {
     tempPopular.splice(randomIndex, 1);
   }
 
-  // Sélectionner 3 non-populaires avec seed
   const selectedObscure = [];
   const tempObscure = [...obscureCities];
   for (let i = 0; i < 3 && tempObscure.length > 0; i++) {
@@ -56,7 +46,6 @@ const selectBalancedCapitalsDeterministic = (allCapitals, seed) => {
     tempObscure.splice(randomIndex, 1);
   }
 
-  // Combiner et mélanger avec seed
   const sessionCapitals = [...selectedPopular, ...selectedObscure];
   for (let i = sessionCapitals.length - 1; i > 0; i--) {
     const j = Math.floor(rng.next() * (i + 1));
@@ -67,7 +56,6 @@ const selectBalancedCapitalsDeterministic = (allCapitals, seed) => {
 };
 
 export default async (req, context) => {
-  // Seulement POST
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
@@ -76,14 +64,10 @@ export default async (req, context) => {
   }
 
   try {
-    // Récupérer le gameType depuis le body
     const body = await req.json().catch(() => ({}));
     const gameType = body.gameType || "classic";
-    
     const token = randomUUID();
     
-    // Pour le mode daily, utiliser un seed déterministe basé sur la date
-    // Pour le mode classic, sélection aléatoire avec Balanced Challenge
     let selectedCapitals;
     if (gameType === "daily") {
       const today = new Date();
@@ -95,17 +79,13 @@ export default async (req, context) => {
     }
     
     const startTime = Date.now();
-    const expiresAt = new Date(startTime + 10 * 60 * 1000); // 10 minutes
-
-    // Stocker la session dans PostgreSQL
+    const expiresAt = new Date(startTime + 10 * 60 * 1000);
     const sql = getDatabase(context);
     await sql`
       INSERT INTO sessions (token, capitals, start_time, used, game_type, expires_at)
       VALUES (${token}, ${JSON.stringify(selectedCapitals)}::jsonb, ${startTime}, false, ${gameType}, ${expiresAt})
     `;
 
-    // Retourner au client (coordonnées nécessaires pour l'affichage)
-    // La protection anti-triche est assurée par le recalcul côté serveur
     const clientCapitals = selectedCapitals.map((c) => ({
       name: c.name,
       country: c.country,
@@ -125,20 +105,12 @@ export default async (req, context) => {
       }
     );
   } catch (error) {
-    console.error("Start error:", error);
-    console.error("Error details:", {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-      code: error.code,
-      env: {
-        hasContextEnv: !!context?.env,
-        hasNetlifyDbUrl: !!(context?.env?.NETLIFY_DATABASE_URL || process.env.NETLIFY_DATABASE_URL),
-        contextKeys: context?.env ? Object.keys(context.env) : []
-      }
-    });
+    if (process.env.NODE_ENV === "development") {
+      console.error("Start error:", error.message, error.code);
+    } else {
+      console.error("Start error occurred");
+    }
     
-    // Détecter l'erreur de colonne manquante
     const isMissingColumnError = error.code === '42703' && 
                                   error.message?.includes('does not exist');
     

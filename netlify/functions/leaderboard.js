@@ -1,22 +1,18 @@
 // GET /.netlify/functions/leaderboard
-// Retourne le Top 50 avec cache
 
 import { getDatabase } from "./db.js";
 
 const TOP_LIMIT = 50;
 
-// Déduplication (garder le meilleur score par pseudo)
 const deduplicateScores = (scores) => {
   const pseudoMap = new Map();
 
-  // Garder seulement le meilleur score par pseudo
   scores.forEach((entry) => {
     const existing = pseudoMap.get(entry.pseudo);
 
     if (!existing) {
       pseudoMap.set(entry.pseudo, entry);
     } else {
-      // Comparer : meilleur score, puis meilleur temps en cas d'égalité
       const isBetter =
         entry.score > existing.score ||
         (entry.score === existing.score && entry.time < existing.time);
@@ -43,17 +39,13 @@ export default async (req, context) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
     const type = url.searchParams.get("type") || "classic";
-    
     const sql = getDatabase(context);
-
-    // Construire la requête selon le type
     let query;
     if (type === "daily") {
-      // Daily : scores du jour uniquement
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todayTimestamp = today.getTime();
-      const tomorrowTimestamp = todayTimestamp + 86400000; // +24h
+      const tomorrowTimestamp = todayTimestamp + 86400000;
       
       query = sql`
         SELECT pseudo, score, time, timestamp
@@ -65,7 +57,6 @@ export default async (req, context) => {
         LIMIT 100
       `;
     } else {
-      // Classic : tous les scores classiques
       query = sql`
         SELECT pseudo, score, time, timestamp
         FROM scores
@@ -76,8 +67,6 @@ export default async (req, context) => {
     }
 
     const scores = await query;
-
-    // Dédupliquer et Top 50
     const top50 = deduplicateScores(scores).slice(0, TOP_LIMIT).map((s, i) => ({
       rank: i + 1,
       pseudo: s.pseudo,
@@ -89,12 +78,15 @@ export default async (req, context) => {
       status: 200,
       headers: {
         "Content-Type": "application/json",
-        // Cache 30 secondes côté CDN
         "Cache-Control": "public, max-age=30, s-maxage=30",
       },
     });
   } catch (error) {
-    console.error("Leaderboard error:", error);
+    if (process.env.NODE_ENV === "development") {
+      console.error("Leaderboard error:", error.message);
+    } else {
+      console.error("Leaderboard error occurred");
+    }
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
