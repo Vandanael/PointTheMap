@@ -18,6 +18,7 @@ import {
   LeaderboardModal,
   deduplicateLeaderboard,
   LoadingSpinner,
+  PseudoLockedDialog,
 } from "./components.js";
 
 const app = () => {
@@ -247,5 +248,12 @@ export const UI = {
     errorEl.textContent = message;
     container.appendChild(errorEl);
     setTimeout(() => errorEl.remove(), 4000);
+  },
+
+  showPseudoLockedDialog(pseudo) {
+    render(PseudoLockedDialog(pseudo));
+    bindClick("btn-pseudo-locked-ok", () => {
+      remove("pseudo-locked-modal");
+    });
   },
 };

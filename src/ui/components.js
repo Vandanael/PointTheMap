@@ -2,6 +2,12 @@ import { GAME } from "../config.js";
 import { formatScore } from "../utils.js";
 import { t, getLang } from "../i18n.js";
 
+const escapeHtml = (text) => {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+};
+
 export const Modal = (id, content, fullScreen = true) => `
   <div id="${id}" class="fixed ${fullScreen ? "inset-0 modal-bg" : "bottom-8 left-1/2 -translate-x-1/2"} ${fullScreen ? "flex items-center justify-center" : ""}" style="z-index: var(--z-modal);">
     ${content}
@@ -338,4 +344,41 @@ export const deduplicateLeaderboard = (scores) => {
   return Array.from(pseudoMap.values()).sort(
     (a, b) => b.score - a.score || a.time - b.time
   );
+};
+
+const getPseudoLockedTexts = () => {
+  const lang = getLang();
+  if (lang === "fr") {
+    return {
+      title: "Déjà enregistré !",
+      message: "Cette machine joue sous le nom {{pseudo}}.",
+      rule: "Règle du leaderboard : un pseudo par joueur.",
+      button: "OK",
+    };
+  }
+  return {
+    title: "Already registered!",
+    message: "This machine plays under the name {{pseudo}}.",
+    rule: "Leaderboard rule: one nickname per player.",
+    button: "OK",
+  };
+};
+
+export const PseudoLockedDialog = (pseudo) => {
+  const texts = getPseudoLockedTexts();
+  const escapedPseudo = escapeHtml(pseudo);
+  const message = texts.message.replace("{{pseudo}}", escapedPseudo);
+
+  return `
+    <div id="pseudo-locked-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-modal);" role="dialog" aria-modal="true">
+      <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
+        <div class="text-center mb-6">
+          <div class="text-5xl font-black text-primary mb-4">${texts.title}</div>
+          <div class="text-secondary text-lg mb-2">${message}</div>
+          <div class="text-tertiary text-sm">${texts.rule}</div>
+        </div>
+        ${Button("btn-pseudo-locked-ok", texts.button, "primary")}
+      </div>
+    </div>
+  `;
 };

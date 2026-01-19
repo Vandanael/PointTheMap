@@ -281,6 +281,39 @@ export default async (req, context) => {
     const totalScore = validatedRounds.reduce((sum, r) => sum + r.score, 0);
     const clientIp = ip.split(",")[0].trim();
 
+    // Rejeter si IP est "unknown" (sécurité : éviter que tous les utilisateurs sans IP partagent le même pseudo)
+    if (clientIp === "unknown") {
+      return jsonResponse(
+        { error: "Unable to verify player identity" },
+        400
+      );
+    }
+
+    // Vérifier si cette IP est déjà associée à un pseudo différent
+    // Note: Cette vérification se fait AVANT la transaction pour performance,
+    // mais la vérification est répétée dans la transaction pour éviter les race conditions
+    const existingPseudoResult = await sql`
+      SELECT pseudo
+      FROM scores
+      WHERE ip = ${clientIp}
+      ORDER BY timestamp DESC
+      LIMIT 1
+    `;
+
+    let existingPseudo = null;
+    if (existingPseudoResult.length > 0) {
+      existingPseudo = existingPseudoResult[0].pseudo;
+      if (existingPseudo !== pseudo) {
+        return jsonResponse(
+          {
+            error: "pseudo_already_set_for_this_ip",
+            pseudo: existingPseudo,
+          },
+          409
+        );
+      }
+    }
+
     // Utiliser une transaction pour garantir l'atomicité des opérations
     // Note: @netlify/neon utilise le driver neon-js qui supporte les transactions
     let rank = 1;
@@ -289,6 +322,19 @@ export default async (req, context) => {
     try {
       if (sql.begin) {
         await sql.begin(async (tx) => {
+          // Double vérification dans la transaction pour éviter race condition
+          const doubleCheckResult = await tx`
+            SELECT pseudo
+            FROM scores
+            WHERE ip = ${clientIp}
+            ORDER BY timestamp DESC
+            LIMIT 1
+          `;
+
+          if (doubleCheckResult.length > 0 && doubleCheckResult[0].pseudo !== pseudo) {
+            throw new Error(`PSEUDO_MISMATCH:${doubleCheckResult[0].pseudo}`);
+          }
+
           await tx`UPDATE sessions SET used = true WHERE token = ${token}`;
           
           await tx`
@@ -299,6 +345,7 @@ export default async (req, context) => {
           await tx`DELETE FROM sessions WHERE token = ${token}`;
         });
       } else {
+        // Fallback sans transaction (déjà vérifié plus haut)
         await sql`UPDATE sessions SET used = true WHERE token = ${token}`;
         await sql`
           INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, ip)
@@ -324,6 +371,17 @@ export default async (req, context) => {
         rounds: validatedRounds,
       });
     } catch (dbError) {
+      // Gérer l'erreur de pseudo mismatch dans la transaction
+      if (dbError.message?.startsWith("PSEUDO_MISMATCH:")) {
+        const mismatchPseudo = dbError.message.split(":")[1];
+        return jsonResponse(
+          {
+            error: "pseudo_already_set_for_this_ip",
+            pseudo: mismatchPseudo,
+          },
+          409
+        );
+      }
       console.error("Database error:", dbError);
       console.error("Error details:", {
         message: dbError.message,

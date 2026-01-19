@@ -26,6 +26,9 @@ CREATE INDEX IF NOT EXISTS idx_scores_rank ON scores(game_type, score DESC, time
 -- Index composite pour le leaderboard
 CREATE INDEX IF NOT EXISTS idx_scores_leaderboard ON scores(game_type, score DESC, time ASC);
 
+-- Index pour la vérification IP (pseudo lock)
+CREATE INDEX IF NOT EXISTS idx_scores_ip ON scores(ip);
+
 -- Table des sessions
 CREATE TABLE IF NOT EXISTS sessions (
   token VARCHAR(36) PRIMARY KEY,

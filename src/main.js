@@ -287,6 +287,13 @@ const handleSubmit = async (pseudo) => {
     UI.showFinalResults(result.score, pseudo, result, handleReplay, isNewBest);
   } catch (error) {
     logger.error("Submit error:", error);
+    
+    if (error.status === 409 && error.data?.error === "pseudo_already_set_for_this_ip") {
+      UI.hideLoader();
+      UI.showPseudoLockedDialog(error.data.pseudo);
+      return;
+    }
+    
     UI.showError(error.message || "Erreur lors de la soumission");
   } finally {
     UI.hideLoader();

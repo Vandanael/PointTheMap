@@ -51,7 +51,10 @@ const fetchApi = async (endpoint, options = {}) => {
   const data = await res.json().catch(() => ({ error: "Invalid response" }));
 
   if (!res.ok) {
-    throw new Error(data.error || `HTTP ${res.status}`);
+    const error = new Error(data.error || `HTTP ${res.status}`);
+    error.status = res.status;
+    error.data = data;
+    throw error;
   }
 
   return data;
@@ -114,6 +117,11 @@ export const submitWithRetry = async (token, rounds, pseudo, gameType = "classic
     }
     return result;
   } catch (error) {
+    // Ne pas retry les erreurs 409 (pseudo déjà enregistré) ou 400 (validation)
+    if (error.status === 409 || error.status === 400) {
+      throw error;
+    }
+    
     if (
       error.message.includes("Failed to fetch") ||
       error.message.includes("500") ||
