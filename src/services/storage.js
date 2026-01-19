@@ -24,15 +24,6 @@ export const storage = {
     }
   },
 
-  remove: (key) => {
-    localStorage.removeItem(PREFIX + key);
-  },
-
-  clear: () => {
-    Object.keys(localStorage)
-      .filter((k) => k.startsWith(PREFIX))
-      .forEach((k) => localStorage.removeItem(k));
-  },
 };
 
 // Raccourcis pour données fréquentes
@@ -41,20 +32,8 @@ export const setLastPseudo = (pseudo) => storage.set("lastPseudo", pseudo);
 export const getTheme = () => storage.get("theme") || "dark";
 export const setTheme = (theme) => storage.set("theme", theme);
 
-// ============================================
-// SUBMISSION TIMING (Anti-spam logique)
-// ============================================
-const SUBMISSION_WINDOW_KEY = "submission_window";
-
-export const recordSubmissionTime = () => {
-  localStorage.setItem(SUBMISSION_WINDOW_KEY, String(Date.now()));
-};
-
-// ============================================
-// RETRY QUEUE (Offline resilience)
-// ============================================
+// Retry queue (offline resilience)
 const RETRY_QUEUE_KEY = "retry_queue";
-const MAX_RETRIES = 3;
 
 export const getRetryQueue = () => {
   try {

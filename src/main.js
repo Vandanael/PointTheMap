@@ -29,9 +29,7 @@ import { getRemainingTime } from "./game/Round.js";
 import { UI } from "./ui/UI.js";
 import { processRetryQueue, submitWithRetry } from "./services/api.js";
 
-// ============================================
-// STATE
-// ============================================
+// State
 let state = createGameState();
 let timerInterval = null;
 
@@ -76,7 +74,6 @@ const init = async () => {
 };
 
 let timerTimeout = null;
-let timerStartTime = null;
 
 const startTimer = () => {
   stopTimer();
@@ -86,13 +83,10 @@ const startTimer = () => {
     const timerProgress = document.getElementById("timer-progress");
     if (!timerProgress) return;
 
-    timerStartTime = performance.now();
-
-    // La transition CSS dure TIMER_MS (5000ms) comme dans la version monolithique
     timerProgress.style.transition = `width ${GAME.TIMER_MS}ms linear`;
     timerProgress.style.width = "0%";
 
-    // Danger Zone à 1.5s restantes (TIMER_MS - DANGER_ZONE_MS)
+    // Danger Zone à 1.5s restantes
     setTimeout(() => {
       if (state.status === GameStatus.PLAYING && state.currentRound) {
         const progress = document.getElementById("timer-progress");
@@ -100,7 +94,7 @@ const startTimer = () => {
       }
     }, GAME.TIMER_MS - GAME.DANGER_ZONE_MS);
 
-    // Timeout à la fin (TIMER_MS après le début de l'animation)
+    // Timeout à la fin
     timerTimeout = setTimeout(() => {
       if (state.status === GameStatus.PLAYING && state.currentRound) {
         state = handleTimeout(state);
@@ -108,7 +102,7 @@ const startTimer = () => {
       }
     }, GAME.TIMER_MS);
 
-    // Vérification périodique du timeout (la transition CSS gère l'animation visuelle)
+    // Vérification périodique du timeout
     timerInterval = setInterval(() => {
       if (state.status !== GameStatus.PLAYING || !state.currentRound) {
         stopTimer();
@@ -133,7 +127,6 @@ const stopTimer = () => {
     clearTimeout(timerTimeout);
     timerTimeout = null;
   }
-  timerStartTime = null;
 };
 
 const handleStart = async (gameType = "classic") => {

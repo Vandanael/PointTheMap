@@ -42,7 +42,7 @@ const updateMapTiles = () => {
   }).addTo(map);
 
   tileLayer.on("tileerror", () => {
-    // Silently handle tile loading errors
+    // Ignore tile loading errors (graceful degradation)
   });
 };
 
@@ -82,8 +82,8 @@ if (typeof window !== 'undefined') {
   window.refreshMapTiles = updateMapTiles;
 }
 
-// Définir le handler de clic
-export const onMapClick = (callback) => {
+// Définir le handler de clic (privé)
+const onMapClick = (callback) => {
   if (clickHandler) {
     map.off("click", clickHandler);
   }

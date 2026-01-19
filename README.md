@@ -10,7 +10,7 @@ PointTheMap is an interactive geography quiz game that challenges players to ide
 
 - Interactive map using Leaflet.js
 - Time-limited gameplay (5 seconds per capital)
-- Global leaderboard powered by Netlify Blobs
+- Global leaderboard powered by Neon Database (PostgreSQL)
 - Modern, responsive UI with Tailwind CSS
 - Dark/Light theme support
 
@@ -19,7 +19,7 @@ PointTheMap is an interactive geography quiz game that challenges players to ide
 - **Leaflet.js** - Interactive map library
 - **Tailwind CSS** - Utility-first CSS framework
 - **Vanilla JavaScript** - No framework dependencies
-- **Netlify Blobs** - Backend storage for leaderboard and sessions
+- **Neon Database** - PostgreSQL database for leaderboard, sessions and game data
 - **Netlify Functions** - Serverless functions for game logic
 - **Vite** - Build tool and development server
 
@@ -73,7 +73,7 @@ The project is designed for Netlify deployment:
 3. Netlify will automatically detect and deploy the site
 4. Netlify Functions will handle the API endpoints automatically
 
-The leaderboard and game sessions are stored in Netlify Blobs (no database setup required).
+The leaderboard and game sessions are stored in Neon Database (PostgreSQL). A database must be configured in your Netlify project.
 
 ## License
 

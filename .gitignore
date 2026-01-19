@@ -58,3 +58,10 @@ yarn-error.log*
 *~
 
 # Documentation Supabase (déjà ignorée par supabase/)
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

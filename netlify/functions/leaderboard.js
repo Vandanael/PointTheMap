@@ -5,9 +5,7 @@ import { getDatabase } from "./db.js";
 
 const TOP_LIMIT = 50;
 
-// ============================================
-// DEDUPLICATION (Keep best score per pseudo)
-// ============================================
+// Déduplication (garder le meilleur score par pseudo)
 const deduplicateScores = (scores) => {
   const pseudoMap = new Map();
 

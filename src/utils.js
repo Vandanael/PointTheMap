@@ -13,12 +13,6 @@ export const haversine = ([lat1, lon1], [lat2, lon2]) => {
   return 6371 * 2 * Math.asin(Math.sqrt(a));
 };
 
-// Sélection aléatoire de n éléments d'un array
-export const randomSelect = (array, n) => {
-  const shuffled = [...array].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, n);
-};
-
 // Formater le score avec séparateur de milliers
 export const formatScore = (score) => Math.round(score).toLocaleString("fr-FR");
 

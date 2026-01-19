@@ -8,8 +8,6 @@ export const GameStatus = {
   PLAYING: "playing",
   ROUND_RESULT: "round_result",
   GAME_OVER: "game_over",
-  SUBMITTING: "submitting",
-  RESULTS: "results",
 };
 
 export const createGameState = () => ({
@@ -112,7 +110,6 @@ export const isLastRound = (state) =>
 export const getProgress = (state) => ({
   current: state.currentRoundIndex + 1,
   total: GAME.ROUNDS,
-  percentage: ((state.currentRoundIndex + 1) / GAME.ROUNDS) * 100,
 });
 
 export const checkIfNewSessionBest = (state, score) =>

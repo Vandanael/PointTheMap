@@ -7,24 +7,13 @@ export const GAME = {
   GRACE_PERIOD_MS: 500,
   DANGER_ZONE_MS: 1500,
   MAX_SCORE_PER_ROUND: 5000,
-  MAX_TOTAL_SCORE: 25000,
 };
 
 export const TIMING = {
-  MODAL_DISPLAY_MS: 1000,
   SCORE_ANIMATION_MS: 800,
   RESULT_DELAY_MS: 2500,
 };
 
-export const VALIDATION = {
-  PSEUDO_REGEX: /^[A-Z]{3,5}$/,
-  MIN_PSEUDO_LENGTH: 3,
-  MAX_PSEUDO_LENGTH: 5,
-};
-
-export const LEADERBOARD = {
-  TOP_LIMIT: 50,
-};
 
 export const MAP = {
   CENTER: [30, 10],

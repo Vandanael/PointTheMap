@@ -101,7 +101,7 @@ export const t = (key) => translations[currentLang][key] || key;
 
 export const getLang = () => currentLang;
 
-export const setLang = (lang) => {
+const setLang = (lang) => {
   if (translations[lang]) {
     currentLang = lang;
     storage.set("lang", lang);

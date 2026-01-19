@@ -1,12 +1,9 @@
 // POST /.netlify/functions/submit
 // Valide la partie + calcule le score côté serveur + anti-triche
 
-import { getStore } from "@netlify/blobs";
 import { getDatabase } from "./db.js";
 
-// ============================================
-// CONSTANTES
-// ============================================
+// Constantes
 const MAX_SCORE_PER_ROUND = 5000;
 const ROUNDS = 5;
 const SESSION_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
@@ -14,10 +11,6 @@ const RATE_LIMIT_PER_HOUR = 50; // 50 parties par heure
 const MIN_GAME_DURATION_MS = 5000; // 5 secondes minimum (impossible de jouer plus vite)
 const MAX_GAME_DURATION_MS = 10 * 60 * 1000; // 10 minutes max
 const MAX_DISTANCE_KM = 20015; // Demi-circonférence de la Terre
-
-// ============================================
-// HELPERS
-// ============================================
 const toRad = (deg) => (deg * Math.PI) / 180;
 
 const haversine = ([lat1, lon1], [lat2, lon2]) => {
@@ -30,33 +23,24 @@ const haversine = ([lat1, lon1], [lat2, lon2]) => {
 
 // Calcul du score (formule exponentielle lissée, identique au client)
 const calculateScore = (distanceKm) => {
-  // Score parfait pour très proche (< 1km)
   if (distanceKm < 1) {
     return MAX_SCORE_PER_ROUND;
   }
   
-  // Formule exponentielle continue et lisse
-  // Zone excellente (< 100km) : 5000 à 3500 points
   if (distanceKm < 100) {
-    // Décroissance douce : 5000 * e^(-distance/280)
-    // À 100km : 5000 * e^(-100/280) = 5000 * e^(-0.357) ≈ 3500 points
+    // Décroissance exponentielle : 5000 * e^(-distance/280)
     return Math.round(5000 * Math.exp(-distanceKm / 280));
   } 
-  // Zone bonne (100-500km) : 3500 à 1000 points
   else if (distanceKm < 500) {
-    // Formule continue depuis 100km (lissée, sans discontinuité)
-    // Utiliser la même formule que la zone < 100km pour continuité parfaite
-    const scoreAt100 = 5000 * Math.exp(-100 / 280); // ~3498 (cohérent avec zone < 100km)
-    const scoreAt500 = 1000; // Seuil visuel jaune
-    const progress = (distanceKm - 100) / 400; // 0 à 1
-    // Interpolation linéaire entre 3498 et 1000
+    // Interpolation linéaire entre 100km et 500km
+    const scoreAt100 = 5000 * Math.exp(-100 / 280);
+    const scoreAt500 = 1000;
+    const progress = (distanceKm - 100) / 400;
     return Math.round(scoreAt100 + (scoreAt500 - scoreAt100) * progress);
   } 
-  // Zone faible (> 500km) : 1000 à 0 points
   else {
     // Décroissance exponentielle depuis 500km
     const excess = distanceKm - 500;
-    // 1000 * e^(-excess/800) - décroissance douce
     return Math.max(0, Math.round(1000 * Math.exp(-excess / 800)));
   }
 };
@@ -69,23 +53,11 @@ const jsonResponse = (data, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 
-// ============================================
-// PLAUSIBILITY CHECK
-// ============================================
+// Plausibility check
 const checkPlausibility = (rounds, gameDuration) => {
   // Durée totale : 20-60s (5 rounds × ~4-8s chacun + latences)
   if (gameDuration < 20000 || gameDuration > 60000) {
     return { valid: false, reason: "Session duration implausible" };
-  }
-
-  // Vérifier timing de chaque round (2-8s par round)
-  const timingValid = rounds.every((r) => {
-    if (!r.roundTime) return true; // Can be missing
-    return r.roundTime >= 2000 && r.roundTime <= 8000;
-  });
-
-  if (!timingValid) {
-    return { valid: false, reason: "Round timing implausible" };
   }
 
   // Distances : 0-20000km max
@@ -101,9 +73,7 @@ const checkPlausibility = (rounds, gameDuration) => {
   return { valid: true };
 };
 
-// ============================================
-// RATE LIMITING
-// ============================================
+// Rate limiting
 const checkRateLimit = async (ip, context) => {
   // Utiliser PostgreSQL pour le rate limiting (plus fiable)
   try {
@@ -142,26 +112,12 @@ const checkRateLimit = async (ip, context) => {
   } catch (e) {
     // En cas d'erreur, on laisse passer (fail open pour UX)
     console.error("Rate limit error:", e);
-    // Fallback sur Blobs si la DB n'est pas disponible
-    try {
-      const store = getStore("rate-limits", { context });
-      const hourKey = `${ip}-${Math.floor(Date.now() / 3600000)}`;
-      const current = await store.get(hourKey);
-      const count = current ? parseInt(current, 10) : 0;
-      if (count >= RATE_LIMIT_PER_HOUR) {
-        return { allowed: false, remaining: 0 };
-      }
-      await store.set(hourKey, String(count + 1));
-      return { allowed: true, remaining: RATE_LIMIT_PER_HOUR - count - 1 };
-    } catch (fallbackError) {
-      return { allowed: true, remaining: RATE_LIMIT_PER_HOUR };
-    }
+    // Fail open: permettre la requête si le rate limiting échoue
+    return { allowed: true, remaining: RATE_LIMIT_PER_HOUR };
   }
 };
 
-// ============================================
-// VALIDATION
-// ============================================
+// Validation
 const validateRounds = (rounds, sessionCapitals) => {
   if (!Array.isArray(rounds) || rounds.length !== ROUNDS) {
     return { valid: false, error: "Invalid rounds count" };
@@ -194,9 +150,6 @@ const validateRounds = (rounds, sessionCapitals) => {
   return { valid: true };
 };
 
-// ============================================
-// MAIN HANDLER
-// ============================================
 export default async (req, context) => {
   // Seulement POST
   if (req.method !== "POST") {
@@ -216,11 +169,9 @@ export default async (req, context) => {
   }
 
   try {
-    // Parser le body
     const body = await req.json();
     const { token, rounds, pseudo, gameType = "classic" } = body;
 
-    // Valider pseudo
     if (!pseudo || !validatePseudo(pseudo)) {
       return jsonResponse(
         { error: "Invalid pseudo (3-5 uppercase letters required)" },
@@ -228,56 +179,62 @@ export default async (req, context) => {
       );
     }
 
-    // Valider token
     if (!token || typeof token !== "string") {
-      return jsonResponse({ error: "Invalid token" }, 400);
+      return jsonResponse({ error: "Invalid token" }, 400      );
     }
 
-    // Récupérer la session
-    const sessionsStore = getStore("sessions", { context });
-    const session = await sessionsStore.getJSON(token);
+    const sql = getDatabase(context);
+    
+    const sessionResult = await sql`
+      SELECT token, capitals, start_time, used, game_type, expires_at
+      FROM sessions
+      WHERE token = ${token}
+        AND expires_at > NOW()
+    `;
 
-    if (!session) {
+    if (sessionResult.length === 0) {
       return jsonResponse({ error: "Session not found or expired" }, 401);
     }
 
-    // Vérifier si déjà utilisée
+    const sessionRow = sessionResult[0];
+    const session = {
+      token: sessionRow.token,
+      capitals: sessionRow.capitals,
+      startTime: parseInt(sessionRow.start_time, 10),
+      used: sessionRow.used,
+      gameType: sessionRow.game_type,
+    };
+
     if (session.used) {
       return jsonResponse({ error: "Session already used" }, 401);
     }
 
-    // Vérifier que le gameType correspond à la session
     if (session.gameType && session.gameType !== gameType) {
       return jsonResponse({ error: "Game type mismatch" }, 400);
     }
 
-    // Vérifier expiration
     const now = Date.now();
     const gameDuration = now - session.startTime;
 
     if (gameDuration > SESSION_EXPIRY_MS) {
-      await sessionsStore.delete(token);
+      await sql`DELETE FROM sessions WHERE token = ${token}`;
       return jsonResponse({ error: "Session expired" }, 401);
     }
 
-    // Vérifier durée plausible
     if (gameDuration < MIN_GAME_DURATION_MS) {
       return jsonResponse({ error: "Suspicious activity: too fast" }, 400);
     }
 
-    // Valider les rounds
     const validation = validateRounds(rounds, session.capitals);
     if (!validation.valid) {
       return jsonResponse({ error: validation.error }, 400);
     }
 
-    // Vérifier plausibilité timing et distances
     const plausibility = checkPlausibility(rounds, gameDuration);
     if (!plausibility.valid) {
       return jsonResponse({ error: plausibility.reason }, 400);
     }
 
-    // Recalculer les scores côté serveur
     const validatedRounds = rounds.map((round, i) => {
       const serverCapital = session.capitals[i];
       const capitalCoords = [serverCapital.lat, serverCapital.lng];
@@ -296,7 +253,6 @@ export default async (req, context) => {
       const clickCoords = [round.click.lat, round.click.lng];
       const distance = haversine(clickCoords, capitalCoords);
 
-      // Vérifier distance plausible
       if (distance > MAX_DISTANCE_KM) {
         return {
           capital: round.capital,
@@ -319,44 +275,70 @@ export default async (req, context) => {
     });
 
     const totalScore = validatedRounds.reduce((sum, r) => sum + r.score, 0);
-
-    // Marquer la session comme utilisée
-    session.used = true;
-    await sessionsStore.setJSON(token, session);
-
-    // Enregistrer le score dans la base de données PostgreSQL
-    const sql = getDatabase(context);
     const clientIp = ip.split(",")[0].trim();
-    
-    // Insérer le score dans la base de données
-    const result = await sql`
-      INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, ip)
-      VALUES (${pseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}, ${now}, ${gameType}, ${clientIp})
-      RETURNING id
-    `;
-    
-    const scoreId = result[0].id;
 
-    // Calculer le rang en comptant les scores meilleurs
-    const rankResult = await sql`
-      SELECT COUNT(*) + 1 as rank
-      FROM scores
-      WHERE game_type = ${gameType}
-        AND (score > ${totalScore} OR (score = ${totalScore} AND time < ${gameDuration}))
-    `;
+    // Utiliser une transaction pour garantir l'atomicité des opérations
+    // Note: @netlify/neon utilise le driver neon-js qui supporte les transactions
+    let rank = 1;
+    let isTopFifty = false;
     
-    const rank = parseInt(rankResult[0].rank, 10);
-    const isTopFifty = rank <= 50;
+    try {
+      if (sql.begin) {
+        await sql.begin(async (tx) => {
+          await tx`UPDATE sessions SET used = true WHERE token = ${token}`;
+          
+          await tx`
+            INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, ip)
+            VALUES (${pseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}::jsonb, ${now}, ${gameType}, ${clientIp})
+          `;
+          
+          await tx`DELETE FROM sessions WHERE token = ${token}`;
+        });
+      } else {
+        await sql`UPDATE sessions SET used = true WHERE token = ${token}`;
+        await sql`
+          INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, ip)
+          VALUES (${pseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}::jsonb, ${now}, ${gameType}, ${clientIp})
+        `;
+        await sql`DELETE FROM sessions WHERE token = ${token}`;
+      }
 
-    // Supprimer la session après succès
-    await sessionsStore.delete(token);
+      const rankResult = await sql`
+        SELECT COUNT(*) + 1 as rank
+        FROM scores
+        WHERE game_type = ${gameType}
+          AND (score > ${totalScore} OR (score = ${totalScore} AND time < ${gameDuration}))
+      `;
+      
+      rank = parseInt(rankResult[0]?.rank || "1", 10);
+      isTopFifty = rank <= 50;
 
-    return jsonResponse({
-      score: totalScore,
-      rank,
-      isTopFifty,
-      rounds: validatedRounds,
-    });
+      return jsonResponse({
+        score: totalScore,
+        rank,
+        isTopFifty,
+        rounds: validatedRounds,
+      });
+    } catch (dbError) {
+      console.error("Database error:", dbError);
+      console.error("Error details:", {
+        message: dbError.message,
+        stack: dbError.stack,
+        name: dbError.name,
+        env: {
+          hasContextEnv: !!context?.env,
+          hasNetlifyDbUrl: !!(context?.env?.NETLIFY_DATABASE_URL || process.env.NETLIFY_DATABASE_URL),
+          contextKeys: context?.env ? Object.keys(context.env) : []
+        }
+      });
+      return jsonResponse({ 
+        error: "Database error. Please try again later.",
+        score: totalScore,
+        rank: 0,
+        isTopFifty: false,
+        rounds: validatedRounds,
+      }, 500);
+    }
   } catch (error) {
     console.error("Submit error:", error);
     return jsonResponse({ error: "Internal server error" }, 500);

@@ -293,12 +293,8 @@ export const capitals = [
 ];
 
 /**
- * Algorithme de Sélection 'Balanced Challenge'
- * =============================================
- * Sélectionne 5 capitales pour une session :
- * - 2 populaires (popular: true) - Niveau facile
- * - 3 non-populaires (popular: false) - Niveau difficile
- * - Mélange aléatoire pour imprévisibilité
+ * Algorithme de sélection 'Balanced Challenge'
+ * Sélectionne 5 capitales pour une session : 2 populaires + 3 non-populaires, puis mélange
  *
  * @param {Array} allCapitals - Liste complète des capitales
  * @returns {Array} - 5 capitales mélangées pour la session
@@ -330,7 +326,6 @@ export function selectBalancedCapitals(allCapitals) {
 
 /**
  * Sélectionne N éléments aléatoires d'un array sans doublons
- * Utilise algorithme de sélection réservoir pour performance O(n)
  *
  * @param {Array} array - Array source
  * @param {number} n - Nombre d'éléments à sélectionner

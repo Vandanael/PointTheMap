@@ -2,14 +2,14 @@
 // Wrapper Netlify Functions avec mode mock pour dev local
 
 import { capitals, GAME } from "../config.js";
-import { randomSelect, generateId } from "../utils.js";
+import { generateId } from "../utils.js";
 import { logger } from "../utils/logger.js";
+import { selectBalancedCapitals } from "../../capitals.js";
 import {
   getRetryQueue,
   removeFromRetryQueue,
   addToRetryQueue,
   saveRetryQueue,
-  recordSubmissionTime,
 } from "./storage.js";
 
 const API_BASE = "/.netlify/functions";
@@ -17,11 +17,9 @@ const API_BASE = "/.netlify/functions";
 // Mode mock activé en dev local (Vite), désactivé en production
 const USE_MOCK = import.meta.env.DEV && !import.meta.env.VITE_USE_API;
 
-// ============================================
-// MOCK (dev local uniquement)
-// ============================================
+// Mock (dev local uniquement)
 const mockStart = () => {
-  const selected = randomSelect(capitals, GAME.ROUNDS);
+  const selected = selectBalancedCapitals(capitals);
   return {
     token: generateId(),
     capitals: selected.map((c) => ({
@@ -43,19 +41,7 @@ const mockSubmit = (token, rounds, pseudo) => {
   };
 };
 
-const mockLeaderboard = () => {
-  const names = ["MAX", "PRO", "ACE", "ZOE", "LEO", "KIM", "SAM", "JOE", "LUC", "EVA"];
-  return Array.from({ length: 10 }, (_, i) => ({
-    rank: i + 1,
-    pseudo: names[i],
-    score: 25000 - i * 1500 - Math.floor(Math.random() * 500),
-    time: 25000 + i * 2000,
-  }));
-};
-
-// ============================================
-// API RÉELLE
-// ============================================
+// API réelle
 const fetchApi = async (endpoint, options = {}) => {
   const res = await fetch(`${API_BASE}/${endpoint}`, {
     headers: { "Content-Type": "application/json" },
@@ -81,9 +67,6 @@ const formatRoundsForSubmit = (rounds) =>
     status: r.status,
   }));
 
-// ============================================
-// EXPORTS
-// ============================================
 export const api = {
   start: async (gameType = "classic") => {
     if (USE_MOCK) {
@@ -119,13 +102,10 @@ export const api = {
   },
 };
 
-// ============================================
-// RETRY LOGIC (Offline resilience)
-// ============================================
+// Retry logic (offline resilience)
 export const submitWithRetry = async (token, rounds, pseudo, gameType = "classic") => {
   try {
     const result = await api.submit(token, rounds, pseudo, gameType);
-    // Succès → enlever du retry queue si y'était
     const queue = getRetryQueue();
     const index = queue.findIndex(
       (e) => e.token === token && e.pseudo === pseudo
@@ -133,10 +113,8 @@ export const submitWithRetry = async (token, rounds, pseudo, gameType = "classic
     if (index !== -1) {
       removeFromRetryQueue(index);
     }
-    recordSubmissionTime();
     return result;
   } catch (error) {
-    // Erreur réseau ou serveur 5xx → ajouter à queue
     if (
       error.message.includes("Failed to fetch") ||
       error.message.includes("500") ||
@@ -148,8 +126,6 @@ export const submitWithRetry = async (token, rounds, pseudo, gameType = "classic
         "Score en attente de synchronisation (connexion perdue). Réessai automatique..."
       );
     }
-    // Erreur client (validation) → pas de retry
-    recordSubmissionTime();
     throw error;
   }
 };
@@ -164,8 +140,6 @@ export const processRetryQueue = async () => {
   const MAX_AGE_MS = 86400000; // 24h
 
   // Itération en sens inverse pour éviter les problèmes d'index lors de la suppression
-  // Quand on supprime un élément avec removeFromRetryQueue(i), les indices suivants
-  // ne sont pas affectés car on itère de la fin vers le début
   for (let i = queue.length - 1; i >= 0; i--) {
     const entry = queue[i];
 
@@ -186,7 +160,6 @@ export const processRetryQueue = async () => {
       successful++;
     } catch (error) {
       entry.attempts++;
-      // Note: getRetryQueue() retourne une copie, modification locale puis sauvegarde
       const updatedQueue = getRetryQueue();
       updatedQueue[i] = entry;
       saveRetryQueue(updatedQueue);

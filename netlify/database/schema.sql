@@ -20,12 +20,19 @@ CREATE INDEX IF NOT EXISTS idx_scores_timestamp ON scores(timestamp);
 CREATE INDEX IF NOT EXISTS idx_scores_game_type ON scores(game_type);
 CREATE INDEX IF NOT EXISTS idx_scores_pseudo ON scores(pseudo);
 
--- Table des sessions (peut aussi être migrée depuis Blobs)
+-- Index composite pour le calcul de rank (optimisation critique)
+CREATE INDEX IF NOT EXISTS idx_scores_rank ON scores(game_type, score DESC, time ASC);
+
+-- Index composite pour le leaderboard
+CREATE INDEX IF NOT EXISTS idx_scores_leaderboard ON scores(game_type, score DESC, time ASC);
+
+-- Table des sessions
 CREATE TABLE IF NOT EXISTS sessions (
   token VARCHAR(36) PRIMARY KEY,
   capitals JSONB NOT NULL,
   start_time BIGINT NOT NULL,
   used BOOLEAN DEFAULT FALSE,
+  game_type VARCHAR(10) DEFAULT 'classic',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   expires_at TIMESTAMP NOT NULL
 );

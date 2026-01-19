@@ -161,12 +161,6 @@ export const UI = {
     });
   },
 
-  updateTimer(percentage) {
-    const progress = document.getElementById("timer-progress");
-    if (progress) {
-      progress.style.width = `${percentage}%`;
-    }
-  },
   resetTimer() {
     const p = document.getElementById("timer-progress");
     if (!p) return;
