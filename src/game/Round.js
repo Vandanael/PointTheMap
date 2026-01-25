@@ -12,15 +12,33 @@ export const createRound = (capital, roundNumber) => ({
   status: "playing",
 });
 
+// Normalize longitude to -180 to 180 range
+const normalizeLng = (lng) => {
+  while (lng > 180) lng -= 360;
+  while (lng < -180) lng += 360;
+  return lng;
+};
+
+// Normalize latitude to -90 to 90 range (clamp)
+const normalizeLat = (lat) => {
+  return Math.max(-90, Math.min(90, lat));
+};
+
 export const recordClick = (round, clickCoords) => {
   const endTime = Date.now();
   const elapsed = endTime - round.startTime;
   const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
+
+  // Normalize coordinates to valid ranges
+  const normalizedLat = normalizeLat(clickCoords[0]);
+  const normalizedLng = normalizeLng(clickCoords[1]);
+  const normalizedCoords = [normalizedLat, normalizedLng];
+
   if (elapsed > totalTimeAllowed) {
     return {
       ...round,
       endTime,
-      click: clickCoords,
+      click: { lat: normalizedLat, lng: normalizedLng },
       distance: null,
       score: 0,
       status: "timeout",
@@ -28,13 +46,13 @@ export const recordClick = (round, clickCoords) => {
   }
 
   const capitalCoords = [round.capital.lat, round.capital.lng];
-  const distance = haversine(clickCoords, capitalCoords);
+  const distance = haversine(normalizedCoords, capitalCoords);
   const score = calculateScore(distance);
 
   return {
     ...round,
     endTime,
-    click: { lat: clickCoords[0], lng: clickCoords[1] },
+    click: { lat: normalizedLat, lng: normalizedLng },
     distance: Math.round(distance),
     score: Math.round(score),
     status: "completed",
