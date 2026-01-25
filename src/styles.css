@@ -10,11 +10,14 @@
   --text-tertiary: #64748b;
   --border-color: #1e293b;
   --accent: #facc15;
-  
+
   /* Z-index constants */
   --z-base: 1000;
   --z-modal: 2000;
   --z-overlay: 3000;
+
+  /* iOS Safari viewport height fix - sera mise à jour dynamiquement via JS sur iOS */
+  --app-height: 100vh;
 }
 
 body.light-theme {
@@ -51,13 +54,22 @@ body {
 }
 
 #map {
-  height: 100vh;
+  /* iOS: Utilise --app-height au lieu de 100vh pour éviter les problèmes avec la barre d'adresse Safari */
+  height: var(--app-height);
   width: 100vw;
   cursor: crosshair;
-  touch-action: pan-x pan-y;
+  touch-action: manipulation; /* iOS: Améliore la réactivité des taps et désactive le double-tap zoom */
   position: fixed;
   top: 0;
   left: 0;
+}
+
+/* iOS: Désactiver le callout de sélection lors des appuis longs sur la carte */
+#map,
+#map * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .game-header {

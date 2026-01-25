@@ -1,7 +1,7 @@
 import "./styles.css";
 import { GAME, TIMING } from "./config.js";
 import { setLastPseudo } from "./services/storage.js";
-import { formatScore } from "./utils.js";
+import { formatScore, isIOS } from "./utils.js";
 import { logger } from "./utils/logger.js";
 import {
   initMap,
@@ -33,8 +33,40 @@ import { processRetryQueue, submitWithRetry } from "./services/api.js";
 let state = createGameState();
 let timerInterval = null;
 
+// iOS: Fix viewport height dynamique pour gérer la barre d'adresse Safari
+const setIOSViewportHeight = () => {
+  if (!isIOS()) return;
+
+  const setHeight = () => {
+    const vh = window.innerHeight * 0.01;
+    document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+  };
+
+  // Définir la hauteur initiale
+  setHeight();
+
+  // Mettre à jour lors du redimensionnement (rotation, apparition/disparition de la barre d'adresse)
+  window.addEventListener('resize', setHeight);
+  window.addEventListener('orientationchange', setHeight);
+
+  // iOS: Mettre à jour également lors du scroll (barre d'adresse Safari)
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      window.requestAnimationFrame(() => {
+        setHeight();
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, { passive: true });
+};
+
 const init = async () => {
   try {
+    // iOS: Configurer le viewport height dynamique en premier
+    setIOSViewportHeight();
+
     UI.init();
     UI.showLoader();
     UI.updateLoader(20);

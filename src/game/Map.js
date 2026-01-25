@@ -2,6 +2,7 @@
 
 import { MAP } from "../config.js";
 import { getTheme } from "../services/storage.js";
+import { isIOS } from "../utils.js";
 
 let map = null;
 let tileLayer = null;
@@ -74,15 +75,28 @@ if (typeof window !== 'undefined') {
 const onMapClick = (callback) => {
   if (clickHandler) {
     map.off("click", clickHandler);
+    // iOS: Nettoyer aussi les événements tap
+    if (isIOS()) {
+      map.off("tap", clickHandler);
+    }
   }
   clickHandler = (e) => callback([e.latlng.lat, e.latlng.lng]);
   map.on("click", clickHandler);
+
+  // iOS: Ajouter le support des événements tap pour une meilleure réactivité
+  if (isIOS()) {
+    map.on("tap", clickHandler);
+  }
 };
 
 // Désactiver les clics
 export const disableClicks = () => {
   if (clickHandler) {
     map.off("click", clickHandler);
+    // iOS: Désactiver aussi les événements tap
+    if (isIOS()) {
+      map.off("tap", clickHandler);
+    }
     clickHandler = null;
   }
 };

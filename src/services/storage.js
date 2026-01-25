@@ -39,13 +39,24 @@ export const getRetryQueue = () => {
     return JSON.parse(queue);
   } catch (error) {
     logger.error("Erreur parsing retry queue:", error);
-    localStorage.removeItem(RETRY_QUEUE_KEY); // Nettoyer la valeur corrompue
+    try {
+      localStorage.removeItem(RETRY_QUEUE_KEY); // Nettoyer la valeur corrompue
+    } catch {
+      // iOS Private Mode: localStorage.removeItem peut aussi échouer
+    }
     return [];
   }
 };
 
 export const saveRetryQueue = (queue) => {
-  localStorage.setItem(RETRY_QUEUE_KEY, JSON.stringify(queue));
+  try {
+    localStorage.setItem(RETRY_QUEUE_KEY, JSON.stringify(queue));
+    return true;
+  } catch (error) {
+    // iOS Private Mode: localStorage.setItem échoue complètement
+    logger.warn("Impossible de sauvegarder la retry queue (iOS Private Mode?)", error);
+    return false;
+  }
 };
 
 export const addToRetryQueue = (token, rounds, pseudo, gameType = "classic") => {
@@ -58,11 +69,15 @@ export const addToRetryQueue = (token, rounds, pseudo, gameType = "classic") => 
     attempts: 0,
     addedAt: Date.now(),
   });
-  saveRetryQueue(queue);
+  const saved = saveRetryQueue(queue);
+  if (!saved) {
+    logger.warn("⚠️ Retry queue non sauvegardée (mode privé iOS?)");
+  }
+  return saved;
 };
 
 export const removeFromRetryQueue = (index) => {
   const queue = getRetryQueue();
   queue.splice(index, 1);
-  saveRetryQueue(queue);
+  return saveRetryQueue(queue);
 };

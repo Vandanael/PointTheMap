@@ -19,3 +19,10 @@ export const formatScore = (score) => Math.round(score).toLocaleString("fr-FR");
 // Générer un ID unique simple
 export const generateId = () =>
   Date.now().toString(36) + Math.random().toString(36).slice(2);
+
+// Détecter iOS (iPhone, iPad, iPod) - utilisé pour les fixes spécifiques iOS
+export const isIOS = () => {
+  if (typeof window === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPad avec iPadOS 13+
+};
