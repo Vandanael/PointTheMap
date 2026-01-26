@@ -1,6 +1,13 @@
 import { GAME } from "../config.js";
 import { haversine } from "../utils.js";
+import { calculateScore as calculateScoreLib, normalizeLat as normalizeLatLib, normalizeLng as normalizeLngLib } from '@lib/game-math/index.js';
 
+/**
+ * Create a new round
+ * @param {import('./Game.js').Capital} capital - Capital to find
+ * @param {number} roundNumber - Round number (0-indexed)
+ * @returns {import('./Game.js').Round}
+ */
 export const createRound = (capital, roundNumber) => ({
   capital,
   roundNumber,
@@ -12,18 +19,16 @@ export const createRound = (capital, roundNumber) => ({
   status: "playing",
 });
 
-// Normalize longitude to -180 to 180 range
-const normalizeLng = (lng) => {
-  while (lng > 180) lng -= 360;
-  while (lng < -180) lng += 360;
-  return lng;
-};
+// Use normalize functions from shared library
+const normalizeLng = normalizeLngLib;
+const normalizeLat = normalizeLatLib;
 
-// Normalize latitude to -90 to 90 range (clamp)
-const normalizeLat = (lat) => {
-  return Math.max(-90, Math.min(90, lat));
-};
-
+/**
+ * Record user click and calculate score
+ * @param {import('./Game.js').Round} round - Current round
+ * @param {[number, number]} clickCoords - [lat, lng] of user click
+ * @returns {import('./Game.js').Round}
+ */
 export const recordClick = (round, clickCoords) => {
   const endTime = Date.now();
   const elapsed = endTime - round.startTime;
@@ -59,6 +64,11 @@ export const recordClick = (round, clickCoords) => {
   };
 };
 
+/**
+ * Mark round as timed out
+ * @param {import('./Game.js').Round} round - Current round
+ * @returns {import('./Game.js').Round}
+ */
 export const timeoutRound = (round) => ({
   ...round,
   endTime: Date.now(),
@@ -68,26 +78,19 @@ export const timeoutRound = (round) => ({
   status: "timeout",
 });
 
-export const calculateScore = (distanceKm) => {
-  if (distanceKm < 1) {
-    return GAME.MAX_SCORE_PER_ROUND;
-  }
+/**
+ * Calculate score based on distance
+ * @param {number} distanceKm - Distance in kilometers
+ * @returns {number} Score (0-5000)
+ */
+// Use calculateScore from shared library
+export const calculateScore = calculateScoreLib;
 
-  if (distanceKm < 100) {
-    return Math.round(5000 * Math.exp(-distanceKm / 280));
-  }
-  
-  if (distanceKm < 500) {
-    const scoreAt100 = 5000 * Math.exp(-100 / 280);
-    const scoreAt500 = 1000;
-    const progress = (distanceKm - 100) / 400;
-    return Math.round(scoreAt100 + (scoreAt500 - scoreAt100) * progress);
-  }
-  
-  const excess = distanceKm - 500;
-  return Math.max(0, Math.round(1000 * Math.exp(-excess / 800)));
-};
-
+/**
+ * Get remaining time for current round
+ * @param {import('./Game.js').Round} round - Current round
+ * @returns {number} Remaining time in milliseconds
+ */
 export const getRemainingTime = (round) => {
   const elapsed = Date.now() - round.startTime;
   const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;

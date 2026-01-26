@@ -1,5 +1,30 @@
 // Point The Map - API Service
 
+/**
+ * @typedef {Object} StartSessionResponse
+ * @property {string} token
+ * @property {import('../game/Game.js').Capital[]} capitals
+ * @property {number} startTime
+ */
+
+/**
+ * @typedef {Object} LeaderboardEntry
+ * @property {string} pseudo
+ * @property {number} score
+ * @property {string} createdAt
+ * @property {number} rank
+ */
+
+/**
+ * @typedef {Object} RetryQueueEntry
+ * @property {string} token
+ * @property {import('../game/Game.js').Round[]} rounds
+ * @property {string} pseudo
+ * @property {string} gameType
+ * @property {number} addedAt
+ * @property {number} attempts
+ */
+
 import { capitals, GAME } from "../config.js";
 import { generateId } from "../utils.js";
 import { logger } from "../utils/logger.js";
@@ -14,6 +39,10 @@ import {
 const API_BASE = "/.netlify/functions";
 const USE_MOCK = import.meta.env.DEV && !import.meta.env.VITE_USE_API;
 
+/**
+ * Mock implementation of start API
+ * @returns {StartSessionResponse}
+ */
 const mockStart = () => {
   const selected = selectBalancedCapitals(capitals);
   return {
@@ -28,6 +57,13 @@ const mockStart = () => {
   };
 };
 
+/**
+ * Mock implementation of submit API
+ * @param {string} token
+ * @param {import('../game/Game.js').Round[]} rounds
+ * @param {string} pseudo
+ * @returns {import('../game/Game.js').SubmitResult}
+ */
 const mockSubmit = (token, rounds, pseudo) => {
   const totalScore = rounds.reduce((sum, r) => sum + (r.score || 0), 0);
   return {
@@ -37,6 +73,12 @@ const mockSubmit = (token, rounds, pseudo) => {
   };
 };
 
+/**
+ * Fetch API endpoint
+ * @param {string} endpoint - API endpoint name
+ * @param {RequestInit} [options] - Fetch options
+ * @returns {Promise<any>}
+ */
 const fetchApi = async (endpoint, options = {}) => {
   const res = await fetch(`${API_BASE}/${endpoint}`, {
     headers: { "Content-Type": "application/json" },
@@ -55,6 +97,11 @@ const fetchApi = async (endpoint, options = {}) => {
   return data;
 };
 
+/**
+ * Format rounds for API submission
+ * @param {import('../game/Game.js').Round[]} rounds
+ * @returns {Array<{capital: string, click: {lat: number, lng: number} | null, status: string}>}
+ */
 const formatRoundsForSubmit = (rounds) =>
   rounds.map((r) => ({
     capital: r.capital.name,
@@ -97,6 +144,14 @@ export const api = {
   },
 };
 
+/**
+ * Submit score with retry queue fallback on network error
+ * @param {string} token - Session token
+ * @param {import('../game/Game.js').Round[]} rounds - Completed rounds
+ * @param {string} pseudo - Player pseudo
+ * @param {'classic' | 'daily'} [gameType='classic'] - Game type
+ * @returns {Promise<import('../game/Game.js').SubmitResult>}
+ */
 export const submitWithRetry = async (token, rounds, pseudo, gameType = "classic") => {
   try {
     const result = await api.submit(token, rounds, pseudo, gameType);
@@ -128,6 +183,10 @@ export const submitWithRetry = async (token, rounds, pseudo, gameType = "classic
   }
 };
 
+/**
+ * Process pending scores in retry queue
+ * @returns {Promise<{successful: number, failed: number}>}
+ */
 export const processRetryQueue = async () => {
   const queue = getRetryQueue();
   if (queue.length === 0) return { successful: 0, failed: 0 };

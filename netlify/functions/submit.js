@@ -1,6 +1,8 @@
 // POST /.netlify/functions/submit
 
 import { getDatabase } from "./db.js";
+// Import shared game logic from lib (same functions used by client)
+import { haversine, calculateScore } from "../../lib/game-math/index.js";
 
 const MAX_SCORE_PER_ROUND = 5000;
 const ROUNDS = 5;
@@ -9,35 +11,6 @@ const RATE_LIMIT_PER_HOUR = 50;
 const MIN_GAME_DURATION_MS = 5000;
 const MAX_GAME_DURATION_MS = 10 * 60 * 1000;
 const MAX_DISTANCE_KM = 20015;
-const toRad = (deg) => (deg * Math.PI) / 180;
-
-const haversine = ([lat1, lon1], [lat2, lon2]) => {
-  const [dLat, dLon] = [lat2 - lat1, lon2 - lon1].map(toRad);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return 6371 * 2 * Math.asin(Math.sqrt(a));
-};
-
-const calculateScore = (distanceKm) => {
-  if (distanceKm < 1) {
-    return MAX_SCORE_PER_ROUND;
-  }
-  
-  if (distanceKm < 100) {
-    return Math.round(5000 * Math.exp(-distanceKm / 280));
-  } 
-  else if (distanceKm < 500) {
-    const scoreAt100 = 5000 * Math.exp(-100 / 280);
-    const scoreAt500 = 1000;
-    const progress = (distanceKm - 100) / 400;
-    return Math.round(scoreAt100 + (scoreAt500 - scoreAt100) * progress);
-  } 
-  else {
-    const excess = distanceKm - 500;
-    return Math.max(0, Math.round(1000 * Math.exp(-excess / 800)));
-  }
-};
 
 const validatePseudo = (pseudo) => /^[A-Z]{3,5}$/.test(pseudo);
 

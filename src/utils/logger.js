@@ -1,19 +1,80 @@
-// Point The Map - Logger minimaliste
-// Désactivé en production, actif en développement
+// Point The Map - Enhanced Logger
+// Désactivé en production (sauf errors/fatal), actif en développement
+
+/**
+ * @typedef {'debug' | 'info' | 'log' | 'warn' | 'error' | 'fatal'} LogLevel
+ */
+
+const LOG_LEVELS = {
+  debug: 0,
+  info: 1,
+  log: 2,
+  warn: 3,
+  error: 4,
+  fatal: 5,
+};
 
 const isDev = import.meta.env.DEV;
+const minLevel = isDev ? LOG_LEVELS.debug : LOG_LEVELS.warn;
 
-export const logger = {
-  log: (...args) => {
-    if (isDev) console.log(...args);
-  },
+/**
+ * Format log message with timestamp and level
+ * @param {LogLevel} level
+ * @param {any[]} args
+ * @returns {any[]}
+ */
+const formatMessage = (level, args) => {
+  if (!isDev) return args; // No formatting in production
 
-  warn: (...args) => {
-    if (isDev) console.warn(...args);
-  },
-
-  error: (...args) => {
-    // Les erreurs sont toujours loggées, même en production
-    console.error(...args);
-  },
+  const timestamp = new Date().toISOString().substring(11, 23); // HH:MM:SS.mmm
+  const prefix = `[${timestamp}] [${level.toUpperCase()}]`;
+  return [prefix, ...args];
 };
+
+/**
+ * Create a logger instance
+ * @param {string} [category] - Optional category for this logger
+ * @returns {Logger}
+ */
+const createLogger = (category = 'app') => {
+  const log = (level, ...args) => {
+    if (LOG_LEVELS[level] < minLevel) return;
+
+    const formatted = formatMessage(level, args);
+    const method = level === 'fatal' ? 'error' : level;
+
+    if (category !== 'app' && isDev) {
+      console[method](`[${category}]`, ...formatted);
+    } else {
+      console[method](...formatted);
+    }
+  };
+
+  return {
+    debug: (...args) => log('debug', ...args),
+    info: (...args) => log('info', ...args),
+    log: (...args) => log('log', ...args),
+    warn: (...args) => log('warn', ...args),
+    error: (...args) => log('error', ...args),
+    fatal: (...args) => log('fatal', ...args),
+  };
+};
+
+export const logger = createLogger();
+
+/**
+ * Create a logger for a specific component
+ * @param {string} component - Component name
+ * @returns {Logger}
+ */
+export const createComponentLogger = (component) => createLogger(component);
+
+/**
+ * @typedef {Object} Logger
+ * @property {(...args: any[]) => void} debug
+ * @property {(...args: any[]) => void} info
+ * @property {(...args: any[]) => void} log
+ * @property {(...args: any[]) => void} warn
+ * @property {(...args: any[]) => void} error
+ * @property {(...args: any[]) => void} fatal
+ */
