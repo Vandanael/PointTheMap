@@ -28,10 +28,12 @@ import {
 import { getRemainingTime } from "./game/Round.js";
 import { UI } from "./ui/UI.js";
 import { processRetryQueue, submitWithRetry } from "./services/api.js";
+import { timerSystem } from "./systems/TimerSystem.js";
+import { animateValue } from "./systems/AnimationController.js";
 
 // State
 let state = createGameState();
-let timerInterval = null;
+let scoreAnimationController = null;
 
 // iOS: Fix viewport height dynamique pour gérer la barre d'adresse Safari
 const setIOSViewportHeight = () => {
@@ -103,36 +105,36 @@ const init = async () => {
   }
 };
 
-let timerTimeout = null;
-
 const startTimer = () => {
-  stopTimer();
   UI.resetTimer();
 
-  timerTimeout = setTimeout(() => {
-    const timerProgress = document.getElementById("timer-progress");
-    if (!timerProgress) return;
+  timerSystem.start({
+    onStart: () => {
+      const timerProgress = document.getElementById("timer-progress");
+      if (!timerProgress) return;
 
-    timerProgress.style.transition = `width ${GAME.TIMER_MS}ms linear`;
-    timerProgress.style.width = "0%";
+      timerProgress.style.transition = `width ${GAME.TIMER_MS}ms linear`;
+      timerProgress.style.width = "0%";
+    },
 
-    setTimeout(() => {
+    onDangerZone: () => {
       if (state.status === GameStatus.PLAYING && state.currentRound) {
         const progress = document.getElementById("timer-progress");
         if (progress) progress.classList.add("timer-danger");
       }
-    }, GAME.TIMER_MS - GAME.DANGER_ZONE_MS);
+    },
 
-    timerTimeout = setTimeout(() => {
+    onTimeout: () => {
       if (state.status === GameStatus.PLAYING && state.currentRound) {
         state = handleTimeout(state);
         onRoundEnd();
       }
-    }, GAME.TIMER_MS);
+    },
 
-    timerInterval = setInterval(() => {
+    onTick: () => {
+      // Check if round should end (redundant with onTimeout but safer)
       if (state.status !== GameStatus.PLAYING || !state.currentRound) {
-        stopTimer();
+        timerSystem.stop();
         return;
       }
 
@@ -141,19 +143,12 @@ const startTimer = () => {
         state = handleTimeout(state);
         onRoundEnd();
       }
-    }, 50);
-  }, GAME.GRACE_PERIOD_MS);
+    }
+  });
 };
 
 const stopTimer = () => {
-  if (timerInterval) {
-    clearInterval(timerInterval);
-    timerInterval = null;
-  }
-  if (timerTimeout) {
-    clearTimeout(timerTimeout);
-    timerTimeout = null;
-  }
+  timerSystem.stop();
 };
 
 const handleStart = async (gameType = "classic") => {
@@ -204,38 +199,23 @@ const handleMapClick = (coords) => {
   onRoundEnd();
 };
 
-let scoreAnimationFrame = null;
-
 const animateScoreCountUp = (oldScore, targetScore, points) => {
-  if (scoreAnimationFrame) {
-    cancelAnimationFrame(scoreAnimationFrame);
-    scoreAnimationFrame = null;
+  // Stop any existing animation
+  if (scoreAnimationController) {
+    scoreAnimationController.stop();
   }
 
-  const startTime = performance.now();
+  const scoreEl = document.querySelector("#game-header .text-yellow-400");
+  if (!scoreEl) return; // No element to animate
 
-  const animateScore = (currentTime) => {
-    const scoreEl = document.querySelector("#game-header .text-yellow-400");
-    if (!scoreEl) {
-      scoreAnimationFrame = null;
-      return; // Arrêter l'animation si l'élément n'existe plus
-    }
-
-    const elapsed = currentTime - startTime;
-    const progress = Math.min(elapsed / TIMING.SCORE_ANIMATION_MS, 1);
-    const currentScore = Math.floor(oldScore + points * progress);
-
-    scoreEl.textContent = formatScore(currentScore);
-
-    if (progress < 1) {
-      scoreAnimationFrame = requestAnimationFrame(animateScore);
-    } else {
-      scoreEl.textContent = formatScore(targetScore);
-      scoreAnimationFrame = null;
-    }
-  };
-
-  scoreAnimationFrame = requestAnimationFrame(animateScore);
+  // Use AnimationController for proper cleanup
+  scoreAnimationController = animateValue(
+    scoreEl,
+    oldScore,
+    targetScore,
+    TIMING.SCORE_ANIMATION_MS,
+    formatScore
+  );
 };
 
 const onRoundEnd = () => {
