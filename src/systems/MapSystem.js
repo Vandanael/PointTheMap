@@ -89,6 +89,15 @@ export class MapSystem {
 
     this.#map.setView(MAP.CENTER, MAP.ZOOM, { animate: false });
     this.#map.doubleClickZoom.disable();
+
+    // Désactiver l'antialiasing du Canvas pour des lignes en pointillés plus nettes
+    if (this.#map._renderer && this.#map._renderer._ctx) {
+      const ctx = this.#map._renderer._ctx;
+      ctx.imageSmoothingEnabled = false;
+      ctx.webkitImageSmoothingEnabled = false;
+      ctx.mozImageSmoothingEnabled = false;
+      ctx.msImageSmoothingEnabled = false;
+    }
   }
 
   /**

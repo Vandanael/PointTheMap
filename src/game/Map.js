@@ -70,6 +70,15 @@ export const initMap = (containerId) => {
   updateMapTiles();
   map.doubleClickZoom.disable();
 
+  // Désactiver l'antialiasing du Canvas pour des lignes en pointillés plus nettes
+  if (map._renderer && map._renderer._ctx) {
+    const ctx = map._renderer._ctx;
+    ctx.imageSmoothingEnabled = false;
+    ctx.webkitImageSmoothingEnabled = false;
+    ctx.mozImageSmoothingEnabled = false;
+    ctx.msImageSmoothingEnabled = false;
+  }
+
   return map;
 };
 
