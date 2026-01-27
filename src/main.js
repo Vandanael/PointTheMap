@@ -1,5 +1,6 @@
 /// <reference types="../vite-env" />
 import "./styles.css";
+import "leaflet/dist/leaflet.css";
 import { TIMING } from "./config.js";
 import { setLastPseudo } from "./services/storage.js";
 import { isIOS } from "./utils.js";

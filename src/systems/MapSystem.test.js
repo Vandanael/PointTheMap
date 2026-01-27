@@ -2,51 +2,67 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MapSystem, getMapSystem, mapSystem } from './MapSystem.js';
 import { eventBus } from '../core/EventBus.js';
 import { logger } from '../utils/logger.js';
+import * as leaflet from 'leaflet';
+
+// Mock Leaflet module
+const mockTileLayer = {
+  addTo: vi.fn().mockReturnThis(),
+  on: vi.fn(),
+};
+
+const mockLeafletMap = {
+  setView: vi.fn().mockReturnThis(),
+  on: vi.fn(),
+  off: vi.fn(),
+  addLayer: vi.fn(),
+  removeLayer: vi.fn(),
+  flyTo: vi.fn(),
+  flyToBounds: vi.fn(),
+  getCenter: vi.fn(() => ({ lat: 0, lng: 0 })),
+  getZoom: vi.fn(() => 2),
+  remove: vi.fn(),
+  doubleClickZoom: {
+    disable: vi.fn(),
+  },
+};
+
+vi.mock('leaflet', () => {
+  const mockMarker = vi.fn((coords, options) => ({
+    addTo: vi.fn().mockReturnThis(),
+  }));
+
+  const mockPolyline = vi.fn((coords, options) => ({}));
+
+  const mockLayerGroup = vi.fn((layers) => ({
+    addTo: vi.fn().mockReturnThis(),
+    clearLayers: vi.fn(),
+  }));
+
+  const mockLatLngBounds = vi.fn((coords) => ({
+    extend: vi.fn().mockReturnThis(),
+  }));
+
+  return {
+    map: vi.fn(() => mockLeafletMap),
+    tileLayer: vi.fn(() => mockTileLayer),
+    marker: mockMarker,
+    polyline: mockPolyline,
+    layerGroup: mockLayerGroup,
+    latLngBounds: mockLatLngBounds,
+    divIcon: vi.fn((options) => options),
+  };
+});
+
+// Get mocked functions for use in tests
+const mockMarker = vi.mocked(leaflet.marker);
+const mockPolyline = vi.mocked(leaflet.polyline);
+const mockLayerGroup = vi.mocked(leaflet.layerGroup);
+const mockLatLngBounds = vi.mocked(leaflet.latLngBounds);
 
 describe('MapSystem', () => {
   let system;
-  let mockLeafletMap;
-  let mockTileLayer;
 
   beforeEach(() => {
-    // Mock Leaflet
-    mockTileLayer = {
-      addTo: vi.fn().mockReturnThis(),
-      on: vi.fn(),
-    };
-
-    mockLeafletMap = {
-      setView: vi.fn().mockReturnThis(),
-      on: vi.fn(),
-      off: vi.fn(),
-      addLayer: vi.fn(),
-      removeLayer: vi.fn(),
-      flyTo: vi.fn(),
-      flyToBounds: vi.fn(),
-      getCenter: vi.fn(() => ({ lat: 0, lng: 0 })),
-      getZoom: vi.fn(() => 2),
-      remove: vi.fn(),
-      doubleClickZoom: {
-        disable: vi.fn(),
-      },
-    };
-
-    global.L = {
-      map: vi.fn(() => mockLeafletMap),
-      tileLayer: vi.fn(() => mockTileLayer),
-      marker: vi.fn((coords, options) => ({
-        addTo: vi.fn().mockReturnThis(),
-      })),
-      polyline: vi.fn((coords, options) => ({})),
-      layerGroup: vi.fn((layers) => ({
-        addTo: vi.fn().mockReturnThis(),
-      })),
-      latLngBounds: vi.fn((coords) => ({
-        extend: vi.fn().mockReturnThis(),
-      })),
-      divIcon: vi.fn((options) => options),
-    };
-
     // Mock DOM container
     if (typeof document === 'undefined') {
       global.document = {
@@ -54,75 +70,75 @@ describe('MapSystem', () => {
       };
     }
 
+    // Reset mocks
+    mockLeafletMap.on.mockClear();
+    mockLeafletMap.off.mockClear();
+    mockTileLayer.addTo.mockClear();
+    mockTileLayer.on.mockClear();
+
     system = new MapSystem();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     if (system && system.isInitialized()) {
       system.destroy();
     }
-    delete global.L;
   });
 
   describe('Initialization', () => {
-    it('should initialize without errors', () => {
-      expect(() => system.init('map')).not.toThrow();
+    it('should initialize without errors', async () => {
+      await expect(system.init('map')).resolves.not.toThrow();
     });
 
-    it('should throw error if Leaflet is not loaded', () => {
-      delete global.L;
-      expect(() => system.init('map')).toThrow('Leaflet');
-    });
-
-    it('should emit map:ready event on successful init', () => {
+    it('should emit map:ready event on successful init', async () => {
       const handler = vi.fn();
       eventBus.subscribe('map:ready', handler);
 
-      system.init('map');
+      await system.init('map');
 
       expect(handler).toHaveBeenCalledWith({ containerId: 'map' });
     });
 
-    it('should emit map:error event on init failure', () => {
+    it('should emit map:error event on init failure', async () => {
       const handler = vi.fn();
       eventBus.subscribe('map:error', handler);
 
-      // Make Leaflet fail
-      global.L.map = vi.fn(() => {
+      // Make Leaflet map fail
+      vi.mocked(leaflet.map).mockImplementationOnce(() => {
         throw new Error('Init failed');
       });
 
-      expect(() => system.init('map')).toThrow();
+      await expect(system.init('map')).rejects.toThrow();
       expect(handler).toHaveBeenCalled();
     });
 
-    it('should warn if initialized multiple times', () => {
+    it('should warn if initialized multiple times', async () => {
       const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 
-      system.init('map');
-      system.init('map');
+      await system.init('map');
+      await system.init('map');
 
       expect(warnSpy).toHaveBeenCalledWith('MapSystem already initialized');
 
       warnSpy.mockRestore();
     });
 
-    it('should disable double click zoom', () => {
-      system.init('map');
+    it('should disable double click zoom', async () => {
+      await system.init('map');
 
       expect(mockLeafletMap.doubleClickZoom.disable).toHaveBeenCalled();
     });
 
-    it('should set isInitialized to true', () => {
-      system.init('map');
+    it('should set isInitialized to true', async () => {
+      await system.init('map');
 
       expect(system.isInitialized()).toBe(true);
     });
   });
 
   describe('Click Handling', () => {
-    beforeEach(() => {
-      system.init('map');
+    beforeEach(async () => {
+      await system.init('map');
     });
 
     it('should enable clicks with callback', () => {
@@ -196,14 +212,14 @@ describe('MapSystem', () => {
   });
 
   describe('Markers', () => {
-    beforeEach(() => {
-      system.init('map');
+    beforeEach(async () => {
+      await system.init('map');
     });
 
     it('should add click marker', () => {
       system.addClickMarker([48.8566, 2.3522]);
 
-      expect(global.L.marker).toHaveBeenCalledWith(
+      expect(mockMarker).toHaveBeenCalledWith(
         [48.8566, 2.3522],
         expect.any(Object)
       );
@@ -213,7 +229,7 @@ describe('MapSystem', () => {
     it('should add capital marker', () => {
       system.addCapitalMarker([48.8566, 2.3522]);
 
-      expect(global.L.marker).toHaveBeenCalledWith(
+      expect(mockMarker).toHaveBeenCalledWith(
         [48.8566, 2.3522],
         expect.any(Object)
       );
@@ -231,7 +247,7 @@ describe('MapSystem', () => {
       system.addClickMarker([48.8566, 2.3522]);
       system.addCapitalMarker([51.5074, -0.1278]);
 
-      const calls = global.L.marker.mock.calls;
+      const calls = mockMarker.mock.calls;
       const icon1 = calls[0][1].icon.html;
       const icon2 = calls[1][1].icon.html;
 
@@ -241,8 +257,8 @@ describe('MapSystem', () => {
   });
 
   describe('Lines', () => {
-    beforeEach(() => {
-      system.init('map');
+    beforeEach(async () => {
+      await system.init('map');
     });
 
     it('should draw line between two points', () => {
@@ -251,8 +267,8 @@ describe('MapSystem', () => {
 
       system.drawLine(from, to, 344);
 
-      expect(global.L.polyline).toHaveBeenCalled();
-      expect(global.L.layerGroup).toHaveBeenCalled();
+      expect(mockPolyline).toHaveBeenCalled();
+      expect(mockLayerGroup).toHaveBeenCalled();
       expect(system.getPolylineCount()).toBe(1);
     });
 
@@ -265,8 +281,8 @@ describe('MapSystem', () => {
   });
 
   describe('Round Result', () => {
-    beforeEach(() => {
-      system.init('map');
+    beforeEach(async () => {
+      await system.init('map');
     });
 
     it('should show round result with markers and line', () => {
@@ -305,7 +321,7 @@ describe('MapSystem', () => {
       system.showRoundResult(clickCoords, capitalCoords, 100);
 
       // Should create bounds with both coordinates
-      expect(global.L.latLngBounds).toHaveBeenCalledWith([clickCoords, capitalCoords]);
+      expect(mockLatLngBounds).toHaveBeenCalledWith([clickCoords, capitalCoords]);
 
       // Should use flyToBounds instead of flyTo
       expect(mockLeafletMap.flyToBounds).toHaveBeenCalledWith(
@@ -319,8 +335,8 @@ describe('MapSystem', () => {
   });
 
   describe('Map Operations', () => {
-    beforeEach(() => {
-      system.init('map');
+    beforeEach(async () => {
+      await system.init('map');
     });
 
     it('should clear all markers and polylines', () => {
@@ -384,23 +400,23 @@ describe('MapSystem', () => {
   });
 
   describe('Theme Changes', () => {
-    it('should update tiles on theme change', () => {
-      system.init('map');
+    it('should update tiles on theme change', async () => {
+      await system.init('map');
 
       // Clear previous calls
-      global.L.tileLayer.mockClear();
+      vi.mocked(leaflet.tileLayer).mockClear();
 
       // Emit theme change event
       eventBus.emit('theme:changed');
 
       // Should have created new tile layer
-      expect(global.L.tileLayer).toHaveBeenCalled();
+      expect(leaflet.tileLayer).toHaveBeenCalled();
     });
   });
 
   describe('Destroy', () => {
-    it('should clean up all resources', () => {
-      system.init('map');
+    it('should clean up all resources', async () => {
+      await system.init('map');
       system.addClickMarker([48, 2]);
       system.enableClicks(() => {});
 
@@ -411,34 +427,34 @@ describe('MapSystem', () => {
       expect(mockLeafletMap.remove).toHaveBeenCalled();
     });
 
-    it('should emit map:destroyed event', () => {
+    it('should emit map:destroyed event', async () => {
       const handler = vi.fn();
       eventBus.subscribe('map:destroyed', handler);
 
-      system.init('map');
+      await system.init('map');
       system.destroy();
 
       expect(handler).toHaveBeenCalled();
     });
 
-    it('should be safe to call destroy multiple times', () => {
-      system.init('map');
+    it('should be safe to call destroy multiple times', async () => {
+      await system.init('map');
       system.destroy();
       expect(() => system.destroy()).not.toThrow();
     });
 
-    it('should unsubscribe from events', () => {
-      system.init('map');
+    it('should unsubscribe from events', async () => {
+      await system.init('map');
 
       // Get initial subscription count
-      const initialCount = global.L.tileLayer.mock.calls.length;
+      const initialCount = vi.mocked(leaflet.tileLayer).mock.calls.length;
 
       system.destroy();
 
       // Emit theme change - should not create new tile layer
       eventBus.emit('theme:changed');
 
-      const finalCount = global.L.tileLayer.mock.calls.length;
+      const finalCount = vi.mocked(leaflet.tileLayer).mock.calls.length;
       expect(finalCount).toBe(initialCount);
     });
   });
@@ -457,8 +473,8 @@ describe('MapSystem', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should handle clearMap when no markers', () => {
-      system.init('map');
+    it('should handle clearMap when no markers', async () => {
+      await system.init('map');
       expect(() => system.clearMap()).not.toThrow();
     });
 
@@ -466,8 +482,8 @@ describe('MapSystem', () => {
       expect(() => system.resetView()).not.toThrow();
     });
 
-    it('should handle disableClicks when no handler', () => {
-      system.init('map');
+    it('should handle disableClicks when no handler', async () => {
+      await system.init('map');
       expect(() => system.disableClicks()).not.toThrow();
     });
 

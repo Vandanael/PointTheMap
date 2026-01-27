@@ -12,7 +12,6 @@
   <link rel="icon" href="/favicon.svg">
 
   <!-- Resource Hints - Early connection to external domains -->
-  <link rel="dns-prefetch" href="https://unpkg.com">
   <link rel="dns-prefetch" href="https://fonts.googleapis.com">
   <link rel="dns-prefetch" href="https://fonts.gstatic.com">
   <link rel="dns-prefetch" href="https://basemaps.cartocdn.com">
@@ -42,13 +41,6 @@
   <!-- Google Fonts - Optimized loading with preload -->
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"></noscript>
-
-  <!-- Leaflet CSS - Non-blocking load -->
-  <link rel="preload" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-  <noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"></noscript>
-
-  <!-- Leaflet JS - Async load (non-blocking but available early) -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" async defer></script>
 
   <!-- Preload main module for faster execution -->
   <link rel="modulepreload" href="/src/main.js">

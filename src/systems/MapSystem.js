@@ -8,6 +8,15 @@
  * - Testable without DOM
  */
 
+import {
+  map,
+  tileLayer,
+  marker,
+  divIcon,
+  polyline,
+  layerGroup,
+  latLngBounds,
+} from 'leaflet';
 import { MAP } from '../config.js';
 import { getTheme } from '../services/storage.js';
 import { isIOS } from '../utils.js';
@@ -44,9 +53,6 @@ export class MapSystem {
     }
 
     try {
-      // Wait for Leaflet if it's loading asynchronously
-      await this.#waitForLeaflet();
-      this.#validateLeaflet();
       this.#containerId = containerId;
       this.#createMap(containerId);
       this.#setupTileLayer();
@@ -62,42 +68,11 @@ export class MapSystem {
   }
 
   /**
-   * Wait for Leaflet to load if it's not ready yet
-   * @private
-   * @returns {Promise<void>}
-   */
-  async #waitForLeaflet() {
-    if (typeof L !== 'undefined') {
-      return;
-    }
-
-    // Wait up to 5 seconds for Leaflet to load
-    const maxWait = 5000;
-    const checkInterval = 50;
-    let waited = 0;
-
-    while (typeof L === 'undefined' && waited < maxWait) {
-      await new Promise(resolve => setTimeout(resolve, checkInterval));
-      waited += checkInterval;
-    }
-  }
-
-  /**
-   * Validate that Leaflet is loaded
-   * @private
-   */
-  #validateLeaflet() {
-    if (typeof L === 'undefined') {
-      throw new Error('Leaflet (L) is not loaded. Check that Leaflet script is included.');
-    }
-  }
-
-  /**
    * Create Leaflet map instance
    * @private
    */
   #createMap(containerId) {
-    this.#map = L.map(containerId, {
+    this.#map = map(containerId, {
       center: MAP.CENTER,
       zoom: MAP.ZOOM,
       minZoom: MAP.MIN_ZOOM,
@@ -161,7 +136,7 @@ export class MapSystem {
     const theme = getTheme();
     const tileUrl = theme === 'light' ? MAP.TILE_URL_LIGHT : MAP.TILE_URL_DARK;
 
-    this.#tileLayer = L.tileLayer(tileUrl, {
+    this.#tileLayer = tileLayer(tileUrl, {
       maxZoom: MAP.MAX_ZOOM,
       attribution: MAP.ATTRIBUTION,
       keepBuffer: 4,
@@ -233,8 +208,8 @@ export class MapSystem {
    * @returns {Object} Leaflet marker instance
    */
   addClickMarker(coords) {
-    const marker = L.marker(coords, {
-      icon: L.divIcon({
+    const markerInstance = marker(coords, {
+      icon: divIcon({
         className: '',
         html: `<div class="marker-player"></div>`,
         iconSize: MARKERS.PLAYER.iconSize,
@@ -252,8 +227,8 @@ export class MapSystem {
    * @returns {Object} Leaflet marker instance
    */
   addCapitalMarker(coords) {
-    const marker = L.marker(coords, {
-      icon: L.divIcon({
+    const markerInstance = marker(coords, {
+      icon: divIcon({
         className: '',
         html: `<div class="marker-target"></div>`,
         iconSize: MARKERS.CAPITAL.iconSize,
@@ -261,8 +236,8 @@ export class MapSystem {
       }),
     }).addTo(this.#map);
 
-    this.#markers.push(marker);
-    return marker;
+    this.#markers.push(markerInstance);
+    return markerInstance;
   }
 
   /**
@@ -276,16 +251,16 @@ export class MapSystem {
     const lineColor = getLineColor(distanceKm);
     const coords = [from, to];
 
-    const outlineLine = L.polyline(coords, {
+    const outlineLine = polyline(coords, {
       ...LINES.OUTLINE,
     });
 
-    const mainLine = L.polyline(coords, {
+    const mainLine = polyline(coords, {
       ...LINES.MAIN,
       color: lineColor,
     });
 
-    const lineGroup = L.layerGroup([outlineLine, mainLine]).addTo(this.#map);
+    const lineGroup = layerGroup([outlineLine, mainLine]).addTo(this.#map);
     this.#polylines.push(lineGroup);
     return lineGroup;
   }
@@ -302,7 +277,7 @@ export class MapSystem {
     this.drawLine(clickCoords, capitalCoords, distanceKm);
 
     // Créer les bounds contenant les deux points
-    const bounds = L.latLngBounds([clickCoords, capitalCoords]);
+    const bounds = latLngBounds([clickCoords, capitalCoords]);
 
     // Options pour fitBounds avec animation fluide
     const fitBoundsOptions = {
