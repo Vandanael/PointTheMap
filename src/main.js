@@ -173,11 +173,14 @@ const stopTimer = () => {
 const handleStart = async (gameType = "classic") => {
   UI.hideStart();
   UI.showLoader();
+  UI.updateLoader(20);
   clearMap();
   resetView();
 
   const newState = await startGame(stateManager.getState(), gameType);
   stateManager.setState(newState, `game:start:${gameType}`);
+  UI.updateLoader(100);
+  await new Promise((resolve) => setTimeout(resolve, UI_TIMING.LOADER_FINAL_DELAY));
   UI.hideLoader();
 
   const state = stateManager.getState();
