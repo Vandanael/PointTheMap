@@ -3,6 +3,7 @@
 
 import { logger } from "../utils/logger.js";
 import { eventBus } from "./EventBus.js";
+import { t } from "../i18n.js";
 
 /**
  * @typedef {'NETWORK_ERROR' | 'TIMEOUT' | 'VALIDATION_ERROR' | 'API_ERROR' | 'GAME_ERROR' | 'STORAGE_ERROR' | 'UNKNOWN'} ErrorCode
@@ -159,24 +160,12 @@ class ErrorHandler {
   getUserFriendlyMessage(error, context) {
     // API errors with specific handling
     if (error instanceof APIError) {
-      if (error.status === 429) {
-        return 'Trop de requêtes. Veuillez patienter quelques instants avant de réessayer.';
-      }
-      if (error.status === 403) {
-        return 'Accès refusé. Veuillez recommencer une partie.';
-      }
-      if (error.status === 401) {
-        return 'Session expirée. Veuillez recommencer une partie.';
-      }
-      if (error.status === 409) {
-        return 'Ce pseudo est déjà utilisé depuis cette adresse IP.';
-      }
-      if (error.status >= 500) {
-        return 'Le serveur rencontre des difficultés. Veuillez réessayer dans quelques instants.';
-      }
-      if (error.status === 0 || error.status >= 400) {
-        return 'Impossible de contacter le serveur. Vérifiez votre connexion internet.';
-      }
+      if (error.status === 429) return t('error.rateLimit');
+      if (error.status === 403) return t('error.forbidden');
+      if (error.status === 401) return t('error.sessionExpired');
+      if (error.status === 409) return t('error.pseudoTaken');
+      if (error.status >= 500) return t('error.serverError');
+      if (error.status === 0 || error.status >= 400) return t('error.connectionFailed');
     }
 
     // Validation errors (keep original message, already user-friendly)
@@ -186,38 +175,28 @@ class ErrorHandler {
 
     // Game errors
     if (error instanceof GameError) {
-      if (error.code === 'NETWORK_ERROR') {
-        return 'Erreur de connexion. Vérifiez que vous êtes bien connecté à internet.';
-      }
-      if (error.code === 'TIMEOUT') {
-        return 'Le chargement a pris trop de temps. Veuillez réessayer.';
-      }
+      if (error.code === 'NETWORK_ERROR') return t('error.networkError');
+      if (error.code === 'TIMEOUT') return t('error.loadTimeout');
       return error.message;
     }
 
     // Network errors (fetch failures)
     if (error.message?.includes('fetch') || error.message?.includes('Failed to fetch')) {
-      return 'Impossible de se connecter au serveur. Vérifiez votre connexion internet.';
+      return t('error.connectionFailed');
     }
 
     // Timeout errors
     if (error.message === 'TIMEOUT') {
-      return 'Le chargement a pris trop de temps. Veuillez réessayer.';
+      return t('error.loadTimeout');
     }
 
     // Context-specific messages
-    if (context === 'leaderboard:load') {
-      return 'Le classement est temporairement indisponible. Réessayez dans quelques instants.';
-    }
-    if (context === 'score:submit') {
-      return 'Impossible d\'enregistrer votre score pour le moment. Il sera envoyé automatiquement plus tard.';
-    }
-    if (context === 'game:start') {
-      return 'Impossible de démarrer la partie. Veuillez réessayer.';
-    }
+    if (context === 'leaderboard:load') return t('error.leaderboardUnavailable');
+    if (context === 'score:submit') return t('error.submitFailed');
+    if (context === 'game:start') return t('error.startFailed');
 
     // Generic fallback
-    return 'Une erreur est survenue. Veuillez réessayer.';
+    return t('error.generic');
   }
 
   /**

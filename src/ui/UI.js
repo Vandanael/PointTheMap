@@ -103,7 +103,7 @@ const handleToggleLang = () => {
 
 const LEADERBOARD_TIMEOUT_MS = 5000; // 5 seconds timeout
 
-const loadLeaderboard = async (type) => {
+export const loadLeaderboard = async (type) => {
   const scores = await safeAsync(
     () => Promise.race([
       api.getLeaderboard(type),
@@ -126,6 +126,9 @@ const setupLeaderboardTabs = () => {
     UI.showLeaderboardModal([], "daily", true);
   });
 };
+
+// Export for testing
+export const _domCacheForTesting = _domCache;
 
 export const UI = {
   _langChangeCleanup: null,
@@ -249,9 +252,9 @@ export const UI = {
           // Check if it's a timeout or error vs empty results
           contentEl.innerHTML = `
             <div class="text-center py-8">
-              <p class="text-tertiary mb-4">Le classement est temporairement indisponible.</p>
+              <p class="text-tertiary mb-4">${t('error.leaderboardRetry')}</p>
               <button id="btn-retry-leaderboard" class="text-yellow-400 hover:text-yellow-300 font-bold">
-                Réessayer
+                ${t('error.retry')}
               </button>
             </div>
           `;

@@ -54,6 +54,19 @@ const translations = {
       network: "❌ Erreur réseau. Réessayez.",
       timeout: "⏰ Délai d'attente dépassé",
       generic: "❌ Une erreur est survenue",
+      rateLimit: "Trop de requêtes. Veuillez patienter quelques instants avant de réessayer.",
+      forbidden: "Accès refusé. Veuillez recommencer une partie.",
+      sessionExpired: "Session expirée. Veuillez recommencer une partie.",
+      pseudoTaken: "Ce pseudo est déjà utilisé depuis cette adresse IP.",
+      serverError: "Le serveur rencontre des difficultés. Veuillez réessayer dans quelques instants.",
+      connectionFailed: "Impossible de contacter le serveur. Vérifiez votre connexion internet.",
+      networkError: "Erreur de connexion. Vérifiez que vous êtes bien connecté à internet.",
+      loadTimeout: "Le chargement a pris trop de temps. Veuillez réessayer.",
+      leaderboardUnavailable: "Le classement est temporairement indisponible. Réessayez dans quelques instants.",
+      submitFailed: "Impossible d'enregistrer votre score pour le moment. Il sera envoyé automatiquement plus tard.",
+      startFailed: "Impossible de démarrer la partie. Veuillez réessayer.",
+      retry: "Réessayer",
+      leaderboardRetry: "Le classement est temporairement indisponible.",
     },
   },
 
@@ -107,15 +120,40 @@ const translations = {
       network: "❌ Network error. Please retry.",
       timeout: "⏰ Request timeout",
       generic: "❌ An error occurred",
+      rateLimit: "Too many requests. Please wait a few moments before trying again.",
+      forbidden: "Access denied. Please start a new game.",
+      sessionExpired: "Session expired. Please start a new game.",
+      pseudoTaken: "This nickname is already in use from this IP address.",
+      serverError: "The server is experiencing difficulties. Please try again in a few moments.",
+      connectionFailed: "Unable to contact the server. Check your internet connection.",
+      networkError: "Connection error. Check that you are connected to the internet.",
+      loadTimeout: "Loading took too long. Please try again.",
+      leaderboardUnavailable: "The leaderboard is temporarily unavailable. Try again in a few moments.",
+      submitFailed: "Unable to save your score at the moment. It will be sent automatically later.",
+      startFailed: "Unable to start the game. Please try again.",
+      retry: "Retry",
+      leaderboardRetry: "The leaderboard is temporarily unavailable.",
     },
   },
 };
 
-let currentLang = storage.get("lang") || "fr";
+let currentLang = null;
 
-export const t = (key) => translations[currentLang][key] || key;
+const initLang = () => {
+  if (currentLang === null) {
+    currentLang = storage.get("lang") || "fr";
+  }
+};
 
-export const getLang = () => currentLang;
+export const t = (key) => {
+  initLang();
+  return translations[currentLang][key] || key;
+};
+
+export const getLang = () => {
+  initLang();
+  return currentLang;
+};
 
 const setLang = (lang) => {
   if (translations[lang]) {
