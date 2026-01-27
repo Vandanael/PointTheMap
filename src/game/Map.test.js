@@ -15,6 +15,7 @@ import {
 const mockMap = {
   setView: vi.fn().mockReturnThis(),
   flyTo: vi.fn().mockReturnThis(),
+  flyToBounds: vi.fn().mockReturnThis(),
   on: vi.fn().mockReturnThis(),
   off: vi.fn().mockReturnThis(),
   removeLayer: vi.fn().mockReturnThis(),
@@ -40,6 +41,10 @@ const mockLayerGroup = {
   addTo: vi.fn().mockReturnThis(),
 };
 
+const mockLatLngBounds = {
+  extend: vi.fn().mockReturnThis(),
+};
+
 const mockDivIcon = vi.fn(() => ({ className: "", html: "", iconSize: [], iconAnchor: [] }));
 
 global.L = {
@@ -48,6 +53,7 @@ global.L = {
   marker: vi.fn(() => mockMarker),
   polyline: vi.fn(() => mockPolyline),
   layerGroup: vi.fn(() => mockLayerGroup),
+  latLngBounds: vi.fn(() => mockLatLngBounds),
   divIcon: mockDivIcon,
 };
 
@@ -103,12 +109,13 @@ vi.mock("../config/visual-constants.js", () => ({
   },
   MAP_ANIMATIONS: {
     SHOW_RESULT: {
-      duration: 1,
+      duration: 1.5,
+      easeLinearity: 0.25,
       animate: true,
     },
     RESET_VIEW: {
-      duration: 1,
-      animate: true,
+      duration: 0.5,
+      easeLinearity: 0.25,
     },
   },
   getLineColor: vi.fn((distanceKm) => {
@@ -149,6 +156,7 @@ describe("Map.js", () => {
     // Reset mockMap methods
     mockMap.setView.mockReturnThis();
     mockMap.flyTo.mockReturnThis();
+    mockMap.flyToBounds.mockReturnThis();
     mockMap.on.mockReturnThis();
     mockMap.off.mockReturnThis();
     mockMap.removeLayer.mockReturnThis();
@@ -439,7 +447,7 @@ describe("Map.js", () => {
       vi.clearAllMocks();
     });
 
-    it("should display markers, line and fly to midpoint", () => {
+    it("should display markers, line and fly to bounds", () => {
       const clickCoords = [48.8, 2.3];
       const capitalCoords = [51.5, -0.1];
       const distanceKm = 340;
@@ -452,41 +460,54 @@ describe("Map.js", () => {
       // Should draw line
       expect(global.L.polyline).toHaveBeenCalled();
 
-      // Should calculate midpoint
-      const expectedMidLat = (48.8 + 51.5) / 2;
-      const expectedMidLng = (2.3 + -0.1) / 2;
+      // Should create bounds with both coordinates
+      expect(global.L.latLngBounds).toHaveBeenCalledWith([clickCoords, capitalCoords]);
 
-      // Should get zoom level based on distance
-      expect(getZoomLevel).toHaveBeenCalledWith(distanceKm);
-
-      // Should fly to midpoint with calculated zoom
-      expect(mockMap.flyTo).toHaveBeenCalledWith(
-        [expectedMidLat, expectedMidLng],
-        expect.any(Number),
-        expect.any(Object)
+      // Should fly to bounds with padding and maxZoom
+      expect(mockMap.flyToBounds).toHaveBeenCalledWith(
+        mockLatLngBounds,
+        expect.objectContaining({
+          padding: [80, 80],
+          maxZoom: 10,
+          duration: 1.5,
+        })
       );
     });
 
-    it("should use appropriate zoom level for short distances", () => {
-      getZoomLevel.mockReturnValue(7);
+    it("should use fitBounds for short distances", () => {
       const clickCoords = [48.8, 2.3];
       const capitalCoords = [48.9, 2.4];
       const distanceKm = 50;
 
       showRoundResult(clickCoords, capitalCoords, distanceKm);
 
-      expect(getZoomLevel).toHaveBeenCalledWith(50);
+      // Should still use fitBounds approach
+      expect(global.L.latLngBounds).toHaveBeenCalledWith([clickCoords, capitalCoords]);
+      expect(mockMap.flyToBounds).toHaveBeenCalledWith(
+        mockLatLngBounds,
+        expect.objectContaining({
+          padding: [80, 80],
+          maxZoom: 10,
+        })
+      );
     });
 
-    it("should use appropriate zoom level for long distances", () => {
-      getZoomLevel.mockReturnValue(3);
+    it("should use fitBounds for long distances", () => {
       const clickCoords = [48.8, 2.3];
       const capitalCoords = [-33.9, 18.4]; // Cape Town
       const distanceKm = 9500;
 
       showRoundResult(clickCoords, capitalCoords, distanceKm);
 
-      expect(getZoomLevel).toHaveBeenCalledWith(9500);
+      // Should still use fitBounds approach
+      expect(global.L.latLngBounds).toHaveBeenCalledWith([clickCoords, capitalCoords]);
+      expect(mockMap.flyToBounds).toHaveBeenCalledWith(
+        mockLatLngBounds,
+        expect.objectContaining({
+          padding: [80, 80],
+          maxZoom: 10,
+        })
+      );
     });
   });
 
@@ -541,8 +562,8 @@ describe("Map.js", () => {
         [48.8566, 2.3522],
         3,
         expect.objectContaining({
-          duration: 1,
-          animate: true,
+          duration: 0.5,
+          easeLinearity: 0.25,
         })
       );
     });
@@ -617,7 +638,7 @@ describe("Map.js", () => {
       // Verify everything was displayed
       expect(global.L.marker).toHaveBeenCalledTimes(2);
       expect(global.L.polyline).toHaveBeenCalled();
-      expect(mockMap.flyTo).toHaveBeenCalled();
+      expect(mockMap.flyToBounds).toHaveBeenCalled();
 
       // Note the number of layers before clearing
       const layersAdded = 3; // 2 markers + 1 line group

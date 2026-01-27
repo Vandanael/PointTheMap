@@ -9,7 +9,6 @@ import {
   LINES,
   MAP_ANIMATIONS,
   getLineColor,
-  getZoomLevel,
 } from "../config/visual-constants.js";
 
 let map = null;
@@ -164,11 +163,17 @@ export const showRoundResult = (clickCoords, capitalCoords, distanceKm) => {
   addCapitalMarker(capitalCoords);
   drawLine(clickCoords, capitalCoords, distanceKm);
 
-  const midLat = (clickCoords[0] + capitalCoords[0]) / 2;
-  const midLng = (clickCoords[1] + capitalCoords[1]) / 2;
-  const zoomLevel = getZoomLevel(distanceKm);
+  // Créer les bounds contenant les deux points
+  const bounds = L.latLngBounds([clickCoords, capitalCoords]);
 
-  map.flyTo([midLat, midLng], zoomLevel, MAP_ANIMATIONS.SHOW_RESULT);
+  // Options pour fitBounds avec animation fluide
+  const fitBoundsOptions = {
+    ...MAP_ANIMATIONS.SHOW_RESULT,
+    padding: [80, 80],  // Padding en pixels pour éviter que les marqueurs touchent les bords
+    maxZoom: 10         // Limite supérieure pour éviter un zoom trop proche
+  };
+
+  map.flyToBounds(bounds, fitBoundsOptions);
 };
 
 export const clearMap = () => {

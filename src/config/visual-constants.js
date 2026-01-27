@@ -63,6 +63,14 @@ export const MAP_ANIMATIONS = {
   },
 };
 
+// FitBounds padding options
+export const FITBOUNDS_OPTIONS = {
+  DEFAULT_PADDING: [80, 80],      // Padding horizontal et vertical en pixels
+  MOBILE_PADDING: [40, 40],       // Padding réduit pour mobile (futur)
+  MAX_ZOOM: 10,                    // Zoom maximum pour éviter trop zoomer sur des points proches
+  MIN_ZOOM: 2,                     // Zoom minimum pour éviter de trop dézoomer
+};
+
 // UI timings
 export const UI_TIMING = {
   QUESTION_AUTO_CLOSE: 1000,        // Auto-close question modal after 1s

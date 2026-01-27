@@ -21,6 +21,7 @@ describe('MapSystem', () => {
       addLayer: vi.fn(),
       removeLayer: vi.fn(),
       flyTo: vi.fn(),
+      flyToBounds: vi.fn(),
       getCenter: vi.fn(() => ({ lat: 0, lng: 0 })),
       getZoom: vi.fn(() => 2),
       remove: vi.fn(),
@@ -38,6 +39,9 @@ describe('MapSystem', () => {
       polyline: vi.fn((coords, options) => ({})),
       layerGroup: vi.fn((layers) => ({
         addTo: vi.fn().mockReturnThis(),
+      })),
+      latLngBounds: vi.fn((coords) => ({
+        extend: vi.fn().mockReturnThis(),
       })),
       divIcon: vi.fn((options) => options),
     };
@@ -272,7 +276,7 @@ describe('MapSystem', () => {
 
       expect(system.getMarkerCount()).toBe(2);
       expect(system.getPolylineCount()).toBe(1);
-      expect(mockLeafletMap.flyTo).toHaveBeenCalled();
+      expect(mockLeafletMap.flyToBounds).toHaveBeenCalled();
     });
 
     it('should emit map:result-shown event', () => {
@@ -293,17 +297,22 @@ describe('MapSystem', () => {
       );
     });
 
-    it('should calculate midpoint for flyTo', () => {
+    it('should use flyToBounds to show both markers', () => {
       const clickCoords = [40, 10];
       const capitalCoords = [50, 20];
 
       system.showRoundResult(clickCoords, capitalCoords, 100);
 
-      // Midpoint should be [45, 15]
-      expect(mockLeafletMap.flyTo).toHaveBeenCalledWith(
-        [45, 15],
-        expect.any(Number),
-        expect.any(Object)
+      // Should create bounds with both coordinates
+      expect(global.L.latLngBounds).toHaveBeenCalledWith([clickCoords, capitalCoords]);
+
+      // Should use flyToBounds instead of flyTo
+      expect(mockLeafletMap.flyToBounds).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({
+          padding: [80, 80],
+          maxZoom: 10,
+        })
       );
     });
   });
