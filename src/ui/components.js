@@ -201,7 +201,7 @@ export const StartScreen = () => `
     <div class="w-full py-4 mt-auto" style="background: var(--bg-secondary); border-top: 1px solid var(--border-color);">
       <div class="max-w-3xl mx-auto px-4 md:px-8 text-center text-tertiary text-sm">
         ${t("madeBy")}
-        <a href="https://github.com/Vandanael" target="_blank" rel="noopener noreferrer" class="text-yellow-400 hover:text-yellow-300 font-semibold transition-colors no-underline hover:underline">
+        <a href="https://github.com/Vandanael" target="_blank" rel="noopener noreferrer" class="font-semibold transition-colors no-underline hover:underline" style="color: var(--text-primary);">
           Vandanael
         </a>
       </div>
