@@ -1,0 +1,3 @@
+# robots.txt - Empêche tous les robots d'indexer ou de scraper le site
+User-agent: *
+Disallow: /

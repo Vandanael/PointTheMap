@@ -1,6 +1,9 @@
 # Dossiers personnels IDE/AI
+.agents/
 .claude/
 .cursor/
+.opencode/
+.github/skills/
 
 # Documentation (tous les .md sauf README.md)
 docs/
