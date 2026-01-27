@@ -1,0 +1,192 @@
+/* StateDevTools - Development debugging panel */
+
+.state-devtools {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 400px;
+  max-height: 500px;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #d4d4d4;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+}
+
+.state-devtools-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #333;
+  background: #252526;
+}
+
+.state-devtools-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.state-devtools-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.state-devtools-actions button {
+  background: #3c3c3c;
+  border: 1px solid #555;
+  color: #d4d4d4;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s;
+}
+
+.state-devtools-actions button:hover {
+  background: #505050;
+}
+
+#state-devtools-close {
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 8px;
+}
+
+.state-devtools-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.state-devtools-list {
+  padding: 8px;
+}
+
+.state-devtools-empty {
+  padding: 20px;
+  text-align: center;
+  color: #808080;
+  font-style: italic;
+}
+
+.state-devtools-entry {
+  padding: 8px;
+  margin-bottom: 4px;
+  background: #2d2d2d;
+  border: 1px solid #3c3c3c;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.state-devtools-entry:hover {
+  background: #333;
+}
+
+.state-devtools-entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.state-devtools-entry-action {
+  font-weight: 600;
+  color: #4ec9b0;
+}
+
+.state-devtools-entry-time {
+  font-size: 10px;
+  color: #808080;
+}
+
+.state-devtools-entry-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.state-devtools-restore,
+.state-devtools-inspect {
+  background: #0e639c;
+  border: none;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: background 0.2s;
+}
+
+.state-devtools-restore:hover {
+  background: #1177bb;
+}
+
+.state-devtools-inspect {
+  background: #3c3c3c;
+}
+
+.state-devtools-inspect:hover {
+  background: #505050;
+}
+
+/* Light theme support */
+body.light-theme .state-devtools {
+  background: #fff;
+  border-color: #ccc;
+  color: #333;
+}
+
+body.light-theme .state-devtools-header {
+  background: #f3f3f3;
+  border-bottom-color: #ccc;
+}
+
+body.light-theme .state-devtools-header h3 {
+  color: #333;
+}
+
+body.light-theme .state-devtools-actions button {
+  background: #e0e0e0;
+  border-color: #bbb;
+  color: #333;
+}
+
+body.light-theme .state-devtools-actions button:hover {
+  background: #d0d0d0;
+}
+
+body.light-theme .state-devtools-entry {
+  background: #f9f9f9;
+  border-color: #ddd;
+}
+
+body.light-theme .state-devtools-entry:hover {
+  background: #f0f0f0;
+}
+
+body.light-theme .state-devtools-entry-action {
+  color: #0e7490;
+}
+
+body.light-theme .state-devtools-restore {
+  background: #0e7490;
+}
+
+body.light-theme .state-devtools-restore:hover {
+  background: #0891b2;
+}
+
+body.light-theme .state-devtools-inspect {
+  background: #e0e0e0;
+  color: #333;
+}
+
+body.light-theme .state-devtools-inspect:hover {
+  background: #d0d0d0;
+}

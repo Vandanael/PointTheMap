@@ -1,0 +1,702 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import {
+  createGameState,
+  startGame,
+  playRound,
+  handleTimeout,
+  nextRound,
+  resetGame,
+  getCurrentCapital,
+  isLastRound,
+  getProgress,
+  checkIfNewSessionBest,
+  updateSessionBestScore,
+  GameStatus,
+} from "./Game.js";
+
+// Mock dependencies
+vi.mock("../services/api.js", () => ({
+  api: {
+    start: vi.fn(),
+  },
+}));
+
+vi.mock("./Round.js", () => ({
+  createRound: vi.fn((capital, roundNumber) => ({
+    capital,
+    roundNumber,
+    startTime: Date.now(),
+    endTime: null,
+    click: null,
+    distance: null,
+    score: null,
+    status: "playing",
+  })),
+  recordClick: vi.fn((round, clickCoords) => ({
+    ...round,
+    endTime: Date.now(),
+    click: { lat: clickCoords[0], lng: clickCoords[1] },
+    distance: 100,
+    score: 500,
+    status: "completed",
+  })),
+  timeoutRound: vi.fn((round) => ({
+    ...round,
+    endTime: Date.now(),
+    distance: null,
+    score: 0,
+    status: "timeout",
+  })),
+}));
+
+vi.mock("../config.js", () => ({
+  GAME: {
+    ROUNDS: 10,
+  },
+}));
+
+import { api } from "../services/api.js";
+import { createRound, recordClick, timeoutRound } from "./Round.js";
+
+describe("Game.js", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe("createGameState", () => {
+    it("should create initial game state with correct defaults", () => {
+      const state = createGameState();
+
+      expect(state).toEqual({
+        status: GameStatus.IDLE,
+        token: null,
+        capitals: [],
+        rounds: [],
+        currentRoundIndex: 0,
+        currentRound: null,
+        totalScore: 0,
+        pseudo: null,
+        result: null,
+        error: null,
+        sessionBestScore: 0,
+        gameType: "classic",
+      });
+    });
+  });
+
+  describe("startGame", () => {
+    it("should start a new game session with classic mode", async () => {
+      const mockCapitals = [
+        { name: "Paris", country: "France", lat: 48.8566, lng: 2.3522 },
+        { name: "London", country: "UK", lat: 51.5074, lng: -0.1278 },
+      ];
+
+      api.start.mockResolvedValue({
+        token: "test-token-123",
+        capitals: mockCapitals,
+      });
+
+      const initialState = createGameState();
+      const newState = await startGame(initialState, "classic");
+
+      expect(api.start).toHaveBeenCalledWith("classic");
+      expect(newState.status).toBe(GameStatus.PLAYING);
+      expect(newState.token).toBe("test-token-123");
+      expect(newState.capitals).toEqual(mockCapitals);
+      expect(newState.gameType).toBe("classic");
+      expect(newState.currentRound).toBeDefined();
+      expect(createRound).toHaveBeenCalledWith(mockCapitals[0], 0);
+    });
+
+    it("should start a new game session with daily mode", async () => {
+      const mockCapitals = [
+        { name: "Paris", country: "France", lat: 48.8566, lng: 2.3522 },
+      ];
+
+      api.start.mockResolvedValue({
+        token: "daily-token",
+        capitals: mockCapitals,
+      });
+
+      const initialState = createGameState();
+      const newState = await startGame(initialState, "daily");
+
+      expect(api.start).toHaveBeenCalledWith("daily");
+      expect(newState.gameType).toBe("daily");
+    });
+
+    it("should handle empty capitals array", async () => {
+      api.start.mockResolvedValue({
+        token: "test-token",
+        capitals: [],
+      });
+
+      const initialState = createGameState();
+      const newState = await startGame(initialState);
+
+      expect(newState.status).toBe(GameStatus.IDLE);
+      expect(newState.error).toBe("Aucune capitale disponible");
+    });
+
+    it("should handle missing capitals", async () => {
+      api.start.mockResolvedValue({
+        token: "test-token",
+      });
+
+      const initialState = createGameState();
+      const newState = await startGame(initialState);
+
+      expect(newState.status).toBe(GameStatus.IDLE);
+      expect(newState.error).toBe("Aucune capitale disponible");
+    });
+
+    it("should handle API error", async () => {
+      api.start.mockRejectedValue(new Error("Network error"));
+
+      const initialState = createGameState();
+      const newState = await startGame(initialState);
+
+      expect(newState.status).toBe(GameStatus.IDLE);
+      expect(newState.error).toBe("Network error");
+    });
+
+    it("should default to classic mode when no gameType provided", async () => {
+      const mockCapitals = [
+        { name: "Paris", country: "France", lat: 48.8566, lng: 2.3522 },
+      ];
+
+      api.start.mockResolvedValue({
+        token: "test-token",
+        capitals: mockCapitals,
+      });
+
+      const initialState = createGameState();
+      const newState = await startGame(initialState);
+
+      expect(api.start).toHaveBeenCalledWith("classic");
+      expect(newState.gameType).toBe("classic");
+    });
+  });
+
+  describe("playRound", () => {
+    it("should process a round with user click", () => {
+      const currentRound = {
+        capital: { name: "Paris", country: "France", lat: 48.8566, lng: 2.3522 },
+        roundNumber: 0,
+        startTime: Date.now(),
+        endTime: null,
+        click: null,
+        distance: null,
+        score: null,
+        status: "playing",
+      };
+
+      const state = {
+        ...createGameState(),
+        status: GameStatus.PLAYING,
+        currentRound,
+        totalScore: 0,
+        rounds: [],
+      };
+
+      const clickCoords = [48.8, 2.3];
+      const newState = playRound(state, clickCoords);
+
+      expect(recordClick).toHaveBeenCalledWith(currentRound, clickCoords);
+      expect(newState.status).toBe(GameStatus.ROUND_RESULT);
+      expect(newState.rounds).toHaveLength(1);
+      expect(newState.currentRound.status).toBe("completed");
+      expect(newState.totalScore).toBe(500); // mocked score
+    });
+
+    it("should not process click if status is not PLAYING", () => {
+      const state = {
+        ...createGameState(),
+        status: GameStatus.IDLE,
+        currentRound: null,
+      };
+
+      const clickCoords = [48.8, 2.3];
+      const newState = playRound(state, clickCoords);
+
+      expect(newState).toBe(state);
+      expect(recordClick).not.toHaveBeenCalled();
+    });
+
+    it("should not process click if no current round", () => {
+      const state = {
+        ...createGameState(),
+        status: GameStatus.PLAYING,
+        currentRound: null,
+      };
+
+      const clickCoords = [48.8, 2.3];
+      const newState = playRound(state, clickCoords);
+
+      expect(newState).toBe(state);
+      expect(recordClick).not.toHaveBeenCalled();
+    });
+
+    it("should accumulate scores across rounds", () => {
+      const currentRound = {
+        capital: { name: "Paris", country: "France", lat: 48.8566, lng: 2.3522 },
+        roundNumber: 1,
+        startTime: Date.now(),
+        endTime: null,
+        click: null,
+        distance: null,
+        score: null,
+        status: "playing",
+      };
+
+      const state = {
+        ...createGameState(),
+        status: GameStatus.PLAYING,
+        currentRound,
+        totalScore: 1000, // previous rounds
+        rounds: [],
+      };
+
+      const clickCoords = [48.8, 2.3];
+      const newState = playRound(state, clickCoords);
+
+      expect(newState.totalScore).toBe(1500); // 1000 + 500
+    });
+  });
+
+  describe("handleTimeout", () => {
+    it("should handle round timeout", () => {
+      const currentRound = {
+        capital: { name: "Paris", country: "France", lat: 48.8566, lng: 2.3522 },
+        roundNumber: 0,
+        startTime: Date.now(),
+        endTime: null,
+        click: null,
+        distance: null,
+        score: null,
+        status: "playing",
+      };
+
+      const state = {
+        ...createGameState(),
+        status: GameStatus.PLAYING,
+        currentRound,
+        rounds: [],
+      };
+
+      const newState = handleTimeout(state);
+
+      expect(timeoutRound).toHaveBeenCalledWith(currentRound);
+      expect(newState.status).toBe(GameStatus.ROUND_RESULT);
+      expect(newState.rounds).toHaveLength(1);
+      expect(newState.currentRound.status).toBe("timeout");
+      expect(newState.totalScore).toBe(0);
+    });
+
+    it("should not handle timeout if status is not PLAYING", () => {
+      const state = {
+        ...createGameState(),
+        status: GameStatus.IDLE,
+        currentRound: null,
+      };
+
+      const newState = handleTimeout(state);
+
+      expect(newState).toBe(state);
+      expect(timeoutRound).not.toHaveBeenCalled();
+    });
+
+    it("should not handle timeout if no current round", () => {
+      const state = {
+        ...createGameState(),
+        status: GameStatus.PLAYING,
+        currentRound: null,
+      };
+
+      const newState = handleTimeout(state);
+
+      expect(newState).toBe(state);
+      expect(timeoutRound).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("nextRound", () => {
+    it("should advance to next round", () => {
+      const capitals = [
+        { name: "Paris", country: "France", lat: 48.8566, lng: 2.3522 },
+        { name: "London", country: "UK", lat: 51.5074, lng: -0.1278 },
+        { name: "Berlin", country: "Germany", lat: 52.52, lng: 13.405 },
+      ];
+
+      const state = {
+        ...createGameState(),
+        status: GameStatus.ROUND_RESULT,
+        capitals,
+        currentRoundIndex: 0,
+        rounds: [{ /* completed round */ }],
+      };
+
+      const newState = nextRound(state);
+
+      expect(newState.status).toBe(GameStatus.PLAYING);
+      expect(newState.currentRoundIndex).toBe(1);
+      expect(createRound).toHaveBeenCalledWith(capitals[1], 1);
+      expect(newState.currentRound).toBeDefined();
+    });
+
+    it("should end game when all rounds are completed", () => {
+      const state = {
+        ...createGameState(),
+        status: GameStatus.ROUND_RESULT,
+        currentRoundIndex: 9, // last round (0-indexed, total 10 rounds)
+        rounds: Array(10).fill({ /* completed rounds */ }),
+      };
+
+      const newState = nextRound(state);
+
+      expect(newState.status).toBe(GameStatus.GAME_OVER);
+      expect(newState.currentRound).toBeNull();
+    });
+
+    it("should transition properly between multiple rounds", () => {
+      const capitals = Array(10).fill(null).map((_, i) => ({
+        name: `Capital${i}`,
+        country: `Country${i}`,
+        lat: 48 + i,
+        lng: 2 + i,
+      }));
+
+      let state = {
+        ...createGameState(),
+        status: GameStatus.ROUND_RESULT,
+        capitals,
+        currentRoundIndex: 0,
+        rounds: [],
+      };
+
+      // Advance through several rounds
+      for (let i = 0; i < 5; i++) {
+        state = nextRound(state);
+        expect(state.currentRoundIndex).toBe(i + 1);
+        expect(state.status).toBe(GameStatus.PLAYING);
+      }
+    });
+  });
+
+  describe("resetGame", () => {
+    it("should reset game to initial state", () => {
+      const newState = resetGame();
+
+      expect(newState).toEqual(createGameState());
+      expect(newState.status).toBe(GameStatus.IDLE);
+      expect(newState.rounds).toEqual([]);
+      expect(newState.totalScore).toBe(0);
+    });
+  });
+
+  describe("getCurrentCapital", () => {
+    it("should return current capital from current round", () => {
+      const capital = { name: "Paris", country: "France", lat: 48.8566, lng: 2.3522 };
+      const state = {
+        ...createGameState(),
+        currentRound: {
+          capital,
+          roundNumber: 0,
+          startTime: Date.now(),
+          endTime: null,
+          click: null,
+          distance: null,
+          score: null,
+          status: "playing",
+        },
+      };
+
+      const result = getCurrentCapital(state);
+
+      expect(result).toEqual(capital);
+    });
+
+    it("should return null when no current round", () => {
+      const state = {
+        ...createGameState(),
+        currentRound: null,
+      };
+
+      const result = getCurrentCapital(state);
+
+      expect(result).toBeNull();
+    });
+
+    it("should return null when current round has no capital", () => {
+      const state = {
+        ...createGameState(),
+        currentRound: {
+          roundNumber: 0,
+          startTime: Date.now(),
+        },
+      };
+
+      const result = getCurrentCapital(state);
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("isLastRound", () => {
+    it("should return true when on last round", () => {
+      const state = {
+        ...createGameState(),
+        currentRoundIndex: 9, // 10th round (0-indexed)
+      };
+
+      expect(isLastRound(state)).toBe(true);
+    });
+
+    it("should return false when not on last round", () => {
+      const state = {
+        ...createGameState(),
+        currentRoundIndex: 5,
+      };
+
+      expect(isLastRound(state)).toBe(false);
+    });
+
+    it("should return false on first round", () => {
+      const state = {
+        ...createGameState(),
+        currentRoundIndex: 0,
+      };
+
+      expect(isLastRound(state)).toBe(false);
+    });
+
+    it("should handle edge case where index exceeds rounds", () => {
+      const state = {
+        ...createGameState(),
+        currentRoundIndex: 15,
+      };
+
+      expect(isLastRound(state)).toBe(true);
+    });
+  });
+
+  describe("getProgress", () => {
+    it("should return correct progress for first round", () => {
+      const state = {
+        ...createGameState(),
+        currentRoundIndex: 0,
+      };
+
+      expect(getProgress(state)).toEqual({
+        current: 1,
+        total: 10,
+      });
+    });
+
+    it("should return correct progress for middle round", () => {
+      const state = {
+        ...createGameState(),
+        currentRoundIndex: 4,
+      };
+
+      expect(getProgress(state)).toEqual({
+        current: 5,
+        total: 10,
+      });
+    });
+
+    it("should return correct progress for last round", () => {
+      const state = {
+        ...createGameState(),
+        currentRoundIndex: 9,
+      };
+
+      expect(getProgress(state)).toEqual({
+        current: 10,
+        total: 10,
+      });
+    });
+  });
+
+  describe("checkIfNewSessionBest", () => {
+    it("should return true when new score is higher than session best", () => {
+      const state = {
+        ...createGameState(),
+        sessionBestScore: 1000,
+      };
+
+      expect(checkIfNewSessionBest(state, 1500)).toBe(true);
+    });
+
+    it("should return false when new score is lower than session best", () => {
+      const state = {
+        ...createGameState(),
+        sessionBestScore: 1000,
+      };
+
+      expect(checkIfNewSessionBest(state, 500)).toBe(false);
+    });
+
+    it("should return false when new score equals session best", () => {
+      const state = {
+        ...createGameState(),
+        sessionBestScore: 1000,
+      };
+
+      expect(checkIfNewSessionBest(state, 1000)).toBe(false);
+    });
+
+    it("should return true when session best is 0", () => {
+      const state = {
+        ...createGameState(),
+        sessionBestScore: 0,
+      };
+
+      expect(checkIfNewSessionBest(state, 100)).toBe(true);
+    });
+  });
+
+  describe("updateSessionBestScore", () => {
+    it("should update session best score when new score is higher", () => {
+      const state = {
+        ...createGameState(),
+        sessionBestScore: 1000,
+      };
+
+      const newState = updateSessionBestScore(state, 1500);
+
+      expect(newState.sessionBestScore).toBe(1500);
+    });
+
+    it("should not update session best score when new score is lower", () => {
+      const state = {
+        ...createGameState(),
+        sessionBestScore: 1000,
+      };
+
+      const newState = updateSessionBestScore(state, 500);
+
+      expect(newState).toBe(state);
+      expect(newState.sessionBestScore).toBe(1000);
+    });
+
+    it("should not update session best score when new score equals current best", () => {
+      const state = {
+        ...createGameState(),
+        sessionBestScore: 1000,
+      };
+
+      const newState = updateSessionBestScore(state, 1000);
+
+      expect(newState).toBe(state);
+      expect(newState.sessionBestScore).toBe(1000);
+    });
+
+    it("should update from 0 to new score", () => {
+      const state = {
+        ...createGameState(),
+        sessionBestScore: 0,
+      };
+
+      const newState = updateSessionBestScore(state, 500);
+
+      expect(newState.sessionBestScore).toBe(500);
+    });
+
+    it("should create new state object when updating", () => {
+      const state = {
+        ...createGameState(),
+        sessionBestScore: 1000,
+      };
+
+      const newState = updateSessionBestScore(state, 1500);
+
+      expect(newState).not.toBe(state);
+      expect(newState.sessionBestScore).toBe(1500);
+    });
+  });
+
+  describe("GameStatus constants", () => {
+    it("should have correct status values", () => {
+      expect(GameStatus.IDLE).toBe("idle");
+      expect(GameStatus.LOADING).toBe("loading");
+      expect(GameStatus.PLAYING).toBe("playing");
+      expect(GameStatus.ROUND_RESULT).toBe("round_result");
+      expect(GameStatus.GAME_OVER).toBe("game_over");
+    });
+  });
+
+  describe("Integration: Full game flow", () => {
+    it("should handle complete game flow from start to finish", async () => {
+      const mockCapitals = Array(10).fill(null).map((_, i) => ({
+        name: `Capital${i}`,
+        country: `Country${i}`,
+        lat: 48 + i,
+        lng: 2 + i,
+      }));
+
+      api.start.mockResolvedValue({
+        token: "test-token",
+        capitals: mockCapitals,
+      });
+
+      // Start game
+      let state = createGameState();
+      state = await startGame(state);
+
+      expect(state.status).toBe(GameStatus.PLAYING);
+      expect(state.currentRoundIndex).toBe(0);
+
+      // Play 10 rounds
+      for (let i = 0; i < 10; i++) {
+        expect(state.status).toBe(GameStatus.PLAYING);
+        expect(state.currentRoundIndex).toBe(i);
+
+        // Play round with click
+        state = playRound(state, [48 + i, 2 + i]);
+        expect(state.status).toBe(GameStatus.ROUND_RESULT);
+
+        // Move to next round or game over
+        state = nextRound(state);
+      }
+
+      expect(state.status).toBe(GameStatus.GAME_OVER);
+      expect(state.rounds).toHaveLength(10);
+      expect(state.totalScore).toBe(5000); // 10 rounds * 500 points
+    });
+
+    it("should handle timeout in middle of game", async () => {
+      const mockCapitals = Array(10).fill(null).map((_, i) => ({
+        name: `Capital${i}`,
+        country: `Country${i}`,
+        lat: 48 + i,
+        lng: 2 + i,
+      }));
+
+      api.start.mockResolvedValue({
+        token: "test-token",
+        capitals: mockCapitals,
+      });
+
+      // Start game
+      let state = createGameState();
+      state = await startGame(state);
+
+      // Play 3 rounds
+      for (let i = 0; i < 3; i++) {
+        state = playRound(state, [48 + i, 2 + i]);
+        state = nextRound(state);
+      }
+
+      // Timeout on 4th round
+      state = handleTimeout(state);
+      expect(state.status).toBe(GameStatus.ROUND_RESULT);
+      expect(state.currentRound.status).toBe("timeout");
+      expect(state.totalScore).toBe(1500); // 3 * 500, timeout adds 0
+
+      // Continue playing
+      state = nextRound(state);
+      expect(state.status).toBe(GameStatus.PLAYING);
+    });
+  });
+});

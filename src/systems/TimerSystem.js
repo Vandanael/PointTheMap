@@ -5,9 +5,11 @@
  * - Tracks ALL timeouts and intervals
  * - Ensures proper cleanup on stop()
  * - No orphaned callbacks
+ * - Uses EventBus for decoupled communication
  */
 
 import { GAME } from '../config.js';
+import { eventBus } from '../core/EventBus.js';
 
 /**
  * @typedef {Object} TimerCallbacks
@@ -31,56 +33,49 @@ export class TimerSystem {
   }
 
   /**
-   * Start the game timer with callbacks
-   * @param {TimerCallbacks} callbacks - Event callbacks
+   * Start the game timer
+   * Emits events: timer:started, timer:danger, timer:timeout, timer:tick
    */
-  start(callbacks = {}) {
+  start() {
     // Stop any existing timer first
     this.stop();
 
     this.#isRunning = true;
-    const { onStart, onDangerZone, onTimeout, onTick } = callbacks;
 
     // Grace period timeout (before timer UI starts)
     const gracePeriodTimeout = setTimeout(() => {
       if (!this.#isRunning) return;
 
-      // Notify timer has started
-      onStart?.();
+      // Emit timer started event
+      eventBus.emit('timer:started');
 
       // Danger zone timeout (visual warning)
-      if (onDangerZone) {
-        const dangerZoneTimeout = setTimeout(() => {
-          if (!this.#isRunning) return;
-          onDangerZone();
-        }, GAME.TIMER_MS - GAME.DANGER_ZONE_MS);
+      const dangerZoneTimeout = setTimeout(() => {
+        if (!this.#isRunning) return;
+        eventBus.emit('timer:danger');
+      }, GAME.TIMER_MS - GAME.DANGER_ZONE_MS);
 
-        this.#timeouts.push(dangerZoneTimeout);
-      }
+      this.#timeouts.push(dangerZoneTimeout);
 
       // Main timeout (game over)
-      if (onTimeout) {
-        const mainTimeout = setTimeout(() => {
-          if (!this.#isRunning) return;
-          onTimeout();
-          this.stop();
-        }, GAME.TIMER_MS);
+      const mainTimeout = setTimeout(() => {
+        if (!this.#isRunning) return;
+        eventBus.emit('timer:timeout');
+        this.stop();
+      }, GAME.TIMER_MS);
 
-        this.#timeouts.push(mainTimeout);
-      }
+      this.#timeouts.push(mainTimeout);
 
-      // Tick interval (for UI updates)
-      if (onTick) {
-        const tickInterval = setInterval(() => {
-          if (!this.#isRunning) {
-            clearInterval(tickInterval);
-            return;
-          }
-          onTick(Date.now());
-        }, 50);
+      // Tick interval (for updates)
+      const tickInterval = setInterval(() => {
+        if (!this.#isRunning) {
+          clearInterval(tickInterval);
+          return;
+        }
+        eventBus.emit('timer:tick', { timestamp: Date.now() });
+      }, 50);
 
-        this.#intervals.push(tickInterval);
-      }
+      this.#intervals.push(tickInterval);
     }, GAME.GRACE_PERIOD_MS);
 
     this.#timeouts.push(gracePeriodTimeout);
