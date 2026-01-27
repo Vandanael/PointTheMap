@@ -5,6 +5,7 @@
  * @property {string} token
  * @property {import('../game/Game.js').Capital[]} capitals
  * @property {number} startTime
+ * @property {string} csrfToken
  */
 
 /**
@@ -39,6 +40,9 @@ import {
 const API_BASE = "/.netlify/functions";
 const USE_MOCK = import.meta.env.DEV && !import.meta.env.VITE_USE_API;
 
+// Store current CSRF token
+let currentCsrfToken = null;
+
 /**
  * Mock implementation of start API
  * @returns {StartSessionResponse}
@@ -54,6 +58,7 @@ const mockStart = () => {
       lng: c.lng,
     })),
     startTime: Date.now(),
+    csrfToken: generateId(), // Mock CSRF token
   };
 };
 
@@ -80,9 +85,19 @@ const mockSubmit = (token, rounds, pseudo) => {
  * @returns {Promise<any>}
  */
 const fetchApi = async (endpoint, options = {}) => {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {})
+  };
+
+  // Add CSRF token to protected endpoints
+  if (currentCsrfToken && endpoint === "submit") {
+    headers["X-CSRF-Token"] = currentCsrfToken;
+  }
+
   const res = await fetch(`${API_BASE}/${endpoint}`, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers,
   });
 
   const data = await res.json().catch(() => ({ error: "Invalid response" }));
@@ -113,12 +128,16 @@ export const api = {
   start: async (gameType = "classic") => {
     if (USE_MOCK) {
       logger.log("[API] Mode mock activé");
-      return mockStart();
+      const session = mockStart();
+      currentCsrfToken = session.csrfToken; // Store CSRF token
+      return session;
     }
-    return fetchApi("start", { 
+    const session = await fetchApi("start", {
       method: "POST",
       body: JSON.stringify({ gameType }),
     });
+    currentCsrfToken = session.csrfToken; // Store CSRF token
+    return session;
   },
 
   submit: async (token, rounds, pseudo, gameType = "classic") => {

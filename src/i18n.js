@@ -47,6 +47,14 @@ const translations = {
     close: "FERMER",
     classic: "Classique",
     daily: "Quotidien",
+
+    // Errors
+    error: {
+      tooFast: "⏳ Veuillez attendre avant de soumettre à nouveau",
+      network: "❌ Erreur réseau. Réessayez.",
+      timeout: "⏰ Délai d'attente dépassé",
+      generic: "❌ Une erreur est survenue",
+    },
   },
 
   en: {
@@ -92,6 +100,14 @@ const translations = {
     close: "CLOSE",
     classic: "Classic",
     daily: "Daily",
+
+    // Errors
+    error: {
+      tooFast: "⏳ Please wait before submitting again",
+      network: "❌ Network error. Please retry.",
+      timeout: "⏰ Request timeout",
+      generic: "❌ An error occurred",
+    },
   },
 };
 

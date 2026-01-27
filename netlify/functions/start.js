@@ -67,6 +67,7 @@ export default async (req, context) => {
     const body = await req.json().catch(() => ({}));
     const gameType = body.gameType || "classic";
     const token = randomUUID();
+    const csrfToken = randomUUID(); // CSRF protection token
     
     let selectedCapitals;
     if (gameType === "daily") {
@@ -82,8 +83,8 @@ export default async (req, context) => {
     const expiresAt = new Date(startTime + 10 * 60 * 1000);
     const sql = getDatabase(context);
     await sql`
-      INSERT INTO sessions (token, capitals, start_time, used, game_type, expires_at)
-      VALUES (${token}, ${JSON.stringify(selectedCapitals)}::jsonb, ${startTime}, false, ${gameType}, ${expiresAt})
+      INSERT INTO sessions (token, capitals, start_time, used, game_type, expires_at, csrf_token)
+      VALUES (${token}, ${JSON.stringify(selectedCapitals)}::jsonb, ${startTime}, false, ${gameType}, ${expiresAt}, ${csrfToken})
     `;
 
     const clientCapitals = selectedCapitals.map((c) => ({
@@ -98,6 +99,7 @@ export default async (req, context) => {
         token,
         capitals: clientCapitals,
         startTime,
+        csrfToken, // CSRF token for subsequent requests
       }),
       {
         status: 200,

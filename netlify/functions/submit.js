@@ -115,6 +115,7 @@ export default async (req, context) => {
   try {
     const body = await req.json();
     const { token, rounds, pseudo, gameType = "classic" } = body;
+    const csrfToken = req.headers.get("x-csrf-token");
 
     if (!pseudo || !validatePseudo(pseudo)) {
       return jsonResponse(
@@ -128,9 +129,9 @@ export default async (req, context) => {
     }
 
     const sql = getDatabase(context);
-    
+
     const sessionResult = await sql`
-      SELECT token, capitals, start_time, used, game_type, expires_at
+      SELECT token, capitals, start_time, used, game_type, expires_at, csrf_token
       FROM sessions
       WHERE token = ${token}
         AND expires_at > NOW()
@@ -147,7 +148,13 @@ export default async (req, context) => {
       startTime: parseInt(sessionRow.start_time, 10),
       used: sessionRow.used,
       gameType: sessionRow.game_type,
+      csrfToken: sessionRow.csrf_token,
     };
+
+    // CSRF token validation
+    if (session.csrfToken && session.csrfToken !== csrfToken) {
+      return jsonResponse({ error: "Invalid CSRF token" }, 403);
+    }
 
     if (session.used) {
       return jsonResponse({ error: "Session already used" }, 401);
