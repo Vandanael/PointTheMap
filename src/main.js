@@ -1,9 +1,10 @@
+/// <reference types="../vite-env" />
 import "./styles.css";
-import { GAME, TIMING } from "./config.js";
+import { TIMING } from "./config.js";
 import { setLastPseudo } from "./services/storage.js";
-import { formatScore, isIOS } from "./utils.js";
+import { isIOS } from "./utils.js";
 import { logger } from "./utils/logger.js";
-import { debounce, throttle } from "./utils/performance.js";
+import { debounce } from "./utils/performance.js";
 import { eventBus, StateManager } from "./core/index.js";
 import { UI_TIMING } from "./config/visual-constants.js";
 import {
@@ -49,7 +50,6 @@ const setIOSViewportHeight = () => {
   if (!isIOS()) return;
 
   const setHeight = () => {
-    const vh = window.innerHeight * 0.01;
     document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
   };
 
@@ -58,6 +58,7 @@ const setIOSViewportHeight = () => {
 
   // Mettre à jour lors du redimensionnement - debounced pour éviter trop d'appels
   const debouncedSetHeight = debounce(setHeight, 150);
+  // @ts-ignore - debounce returns a function compatible with EventListener
   window.addEventListener('resize', debouncedSetHeight);
   window.addEventListener('orientationchange', setHeight); // Immediate for orientation change
 
@@ -81,15 +82,16 @@ const init = async () => {
     setIOSViewportHeight();
 
     // Register state validators
-    stateManager.registerValidator('totalScore', (value) => {
+    stateManager.registerValidator('totalScore', (/** @type {unknown} */ value) => {
       if (typeof value !== 'number') return 'totalScore must be a number';
       if (value < 0) return 'totalScore cannot be negative';
       if (!Number.isFinite(value)) return 'totalScore must be finite';
       return true;
     });
 
-    stateManager.registerValidator('status', (value) => {
+    stateManager.registerValidator('status', (/** @type {unknown} */ value) => {
       const valid = Object.values(GameStatus);
+      // @ts-ignore - value is checked against valid array
       if (!valid.includes(value)) {
         return `status must be one of: ${valid.join(', ')}`;
       }
@@ -170,6 +172,9 @@ const stopTimer = () => {
   timerSystem.stop();
 };
 
+/**
+ * @param {"classic" | "daily"} [gameType="classic"]
+ */
 const handleStart = async (gameType = "classic") => {
   UI.hideStart();
   UI.showLoader();
@@ -223,6 +228,9 @@ const handleStart = async (gameType = "classic") => {
   }
 };
 
+/**
+ * @param {[number, number]} coords - [lat, lng] coordinates
+ */
 const handleMapClick = (coords) => {
   const state = stateManager.getState();
   if (state.status !== GameStatus.PLAYING) return;
@@ -300,6 +308,9 @@ const handleNext = () => {
   });
 };
 
+/**
+ * @param {string} pseudo
+ */
 const handleSubmit = async (pseudo) => {
   UI.showLoader();
   try {
@@ -317,13 +328,15 @@ const handleSubmit = async (pseudo) => {
   } catch (error) {
     logger.error("Submit error:", error);
 
-    if (error.status === 409 && error.data?.error === "pseudo_already_set_for_this_ip") {
+    /** @type {any} */
+    const err = error;
+    if (err.status === 409 && err.data?.error === "pseudo_already_set_for_this_ip") {
       UI.hideLoader();
-      UI.showPseudoLockedDialog(error.data.pseudo);
+      UI.showPseudoLockedDialog(err.data.pseudo);
       return;
     }
 
-    UI.showError(error.message || "Erreur lors de la soumission");
+    UI.showError(err.message || "Erreur lors de la soumission");
   } finally {
     UI.hideLoader();
   }

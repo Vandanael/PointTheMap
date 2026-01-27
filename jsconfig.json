@@ -18,7 +18,8 @@
   "include": [
     "src/**/*",
     "lib/**/*",
-    "netlify/functions/**/*"
+    "netlify/functions/**/*",
+    "vite-env.d.ts"
   ],
   "exclude": [
     "node_modules",
