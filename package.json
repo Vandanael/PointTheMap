@@ -24,7 +24,7 @@
     "@tailwindcss/postcss": "^4.1.18",
     "@vitest/coverage-v8": "^4.0.18",
     "@vitest/ui": "^4.0.18",
-    "artillery": "^2.0.21",
+    "artillery": "^2.0.28",
     "autoprefixer": "^10.4.23",
     "fake-indexeddb": "^6.2.5",
     "happy-dom": "^20.3.9",
