@@ -291,15 +291,33 @@ export const LeaderboardRow = (rank, pseudo, score, time, isHighlighted = false)
   `;
 };
 
-export const Leaderboard = (scores, highlightPseudo = null) => `
-  <div class="rounded-xl max-h-[300px] overflow-y-auto" style="background: var(--bg-tertiary);">
-    ${scores.length === 0 ? `
-      <p class="text-center py-8 text-tertiary">${t("noScores")}</p>
-    ` : scores.map((s) => LeaderboardRow(s.rank, s.pseudo, s.score, s.time, s.pseudo === highlightPseudo)).join("")}
+// Skeleton row for loading state
+export const LeaderboardSkeletonRow = () => `
+  <div class="flex items-center justify-between py-3 px-4" style="border-bottom: 1px solid var(--border-color);">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-6 rounded" style="background: var(--bg-primary); opacity: 0.3; animation: pulse 1.5s ease-in-out infinite;"></div>
+      <div class="w-16 h-6 rounded" style="background: var(--bg-primary); opacity: 0.3; animation: pulse 1.5s ease-in-out infinite;"></div>
+    </div>
+    <div class="flex gap-2">
+      <div class="w-20 h-6 rounded" style="background: var(--bg-primary); opacity: 0.3; animation: pulse 1.5s ease-in-out infinite;"></div>
+      <div class="w-12 h-6 rounded" style="background: var(--bg-primary); opacity: 0.3; animation: pulse 1.5s ease-in-out infinite;"></div>
+    </div>
   </div>
 `;
 
-export const LeaderboardModal = (scores, currentType = "classic") => {
+export const Leaderboard = (scores, highlightPseudo = null, loading = false) => `
+  <div id="leaderboard-content" class="rounded-xl max-h-[300px] overflow-y-auto" style="background: var(--bg-tertiary);">
+    ${loading ?
+      // Show skeleton while loading
+      Array(10).fill(0).map(() => LeaderboardSkeletonRow()).join('')
+      : scores.length === 0 ? `
+        <p class="text-center py-8 text-tertiary">${t("noScores")}</p>
+      ` : scores.map((s) => LeaderboardRow(s.rank, s.pseudo, s.score, s.time, s.pseudo === highlightPseudo)).join("")
+    }
+  </div>
+`;
+
+export const LeaderboardModal = (scores, currentType = "classic", loading = false) => {
   const isClassic = currentType === "classic";
   const isDaily = currentType === "daily";
 
@@ -309,62 +327,40 @@ export const LeaderboardModal = (scores, currentType = "classic") => {
         <h2 class="text-3xl font-black text-primary mb-6 text-center tracking-tight uppercase" id="leaderboardTitle">
           ${t("leaderboard")}
         </h2>
-        
+
         <!-- Boutons de switch -->
         <div class="flex gap-2 mb-6">
-          <button 
-            id="btn-leaderboard-classic" 
+          <button
+            id="btn-leaderboard-classic"
             class="flex-1 py-3 px-4 rounded-xl font-black text-lg transition-all ${
               isClassic
                 ? "bg-yellow-400 text-black"
                 : "bg-slate-700 hover:bg-slate-600 text-white"
             }"
+            ${loading ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
           >
             ${t("classic")}
           </button>
-          <button 
-            id="btn-leaderboard-daily" 
+          <button
+            id="btn-leaderboard-daily"
             class="flex-1 py-3 px-4 rounded-xl font-black text-lg transition-all ${
               isDaily
                 ? "bg-yellow-400 text-black"
                 : "bg-slate-700 hover:bg-slate-600 text-white"
             }"
+            ${loading ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
           >
             ${t("daily")}
           </button>
         </div>
 
-        ${Leaderboard(scores)}
+        ${Leaderboard(scores, null, loading)}
         <div class="mt-6">
           ${Button("btn-close-leaderboard", t("close"), "secondary")}
         </div>
       </div>
     </div>
   `;
-};
-
-export const deduplicateLeaderboard = (scores) => {
-  const pseudoMap = new Map();
-
-  scores.forEach((entry) => {
-    const existing = pseudoMap.get(entry.pseudo);
-
-    if (!existing) {
-      pseudoMap.set(entry.pseudo, entry);
-    } else {
-      const isBetter =
-        entry.score > existing.score ||
-        (entry.score === existing.score && entry.time < existing.time);
-
-      if (isBetter) {
-        pseudoMap.set(entry.pseudo, entry);
-      }
-    }
-  });
-
-  return Array.from(pseudoMap.values()).sort(
-    (a, b) => b.score - a.score || a.time - b.time
-  );
 };
 
 const getPseudoLockedTexts = () => {
@@ -399,6 +395,42 @@ export const PseudoLockedDialog = (pseudo) => {
           <div class="text-tertiary text-sm">${texts.rule}</div>
         </div>
         ${Button("btn-pseudo-locked-ok", texts.button, "primary")}
+      </div>
+    </div>
+  `;
+};
+
+/**
+ * Toast notification component
+ * @param {string} id - Toast ID
+ * @param {string} message - Message to display
+ * @param {string} type - Type of toast: 'info', 'warning', 'error', 'success'
+ * @returns {string} HTML string
+ */
+export const Toast = (id, message, type = "info") => {
+  const icons = {
+    info: "ℹ️",
+    warning: "⚠️",
+    error: "❌",
+    success: "✅",
+  };
+
+  const colors = {
+    info: "bg-blue-500",
+    warning: "bg-yellow-500",
+    error: "bg-red-500",
+    success: "bg-green-500",
+  };
+
+  const icon = icons[type] || icons.info;
+  const color = colors[type] || colors.info;
+
+  return `
+    <div id="${id}" class="fixed bottom-8 left-1/2 -translate-x-1/2 max-w-md w-full px-4 toast-slide-up" style="z-index: var(--z-toast);" role="alert" aria-live="assertive">
+      <div class="${color} text-white rounded-xl shadow-lg p-4 flex items-start gap-3">
+        <span class="text-2xl flex-shrink-0">${icon}</span>
+        <div class="flex-1 text-sm font-medium" style="line-height: 1.5;">${escapeHtml(message)}</div>
+        <button id="${id}-close" class="flex-shrink-0 text-white hover:text-gray-200 text-xl leading-none" aria-label="Close notification">×</button>
       </div>
     </div>
   `;

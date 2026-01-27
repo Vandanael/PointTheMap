@@ -3,6 +3,14 @@
 import { MAP } from "../config.js";
 import { getTheme } from "../services/storage.js";
 import { isIOS } from "../utils.js";
+import { eventBus } from "../core/EventBus.js";
+import {
+  MARKERS,
+  LINES,
+  MAP_ANIMATIONS,
+  getLineColor,
+  getZoomLevel,
+} from "../config/visual-constants.js";
 
 let map = null;
 let tileLayer = null;
@@ -66,11 +74,10 @@ export const initMap = (containerId) => {
   return map;
 };
 
-export const refreshMapTiles = updateMapTiles;
-
-if (typeof window !== 'undefined') {
-  window.refreshMapTiles = updateMapTiles;
-}
+// Subscribe to theme changes
+eventBus.subscribe('theme:changed', () => {
+  updateMapTiles();
+});
 
 const onMapClick = (callback) => {
   if (clickHandler) {
@@ -111,8 +118,8 @@ export const addClickMarker = (coords) => {
     icon: L.divIcon({
       className: "",
       html: `<div class="marker-player"></div>`,
-      iconSize: [16, 16],
-      iconAnchor: [10, 10],
+      iconSize: MARKERS.PLAYER.iconSize,
+      iconAnchor: MARKERS.PLAYER.iconAnchor,
     }),
   }).addTo(map);
 
@@ -125,8 +132,8 @@ export const addCapitalMarker = (coords) => {
     icon: L.divIcon({
       className: "",
       html: `<div class="marker-target"></div>`,
-      iconSize: [28, 28],
-      iconAnchor: [14, 14],
+      iconSize: MARKERS.CAPITAL.iconSize,
+      iconAnchor: MARKERS.CAPITAL.iconAnchor,
     }),
   }).addTo(map);
 
@@ -134,38 +141,17 @@ export const addCapitalMarker = (coords) => {
   return marker;
 };
 
-const getLineColor = (distanceKm) => {
-  if (distanceKm < 100) return "#22c55e";
-  if (distanceKm < 500) return "#facc15";
-  return "#94a3b8";
-};
-
-const getZoomLevel = (distanceKm) => {
-  if (distanceKm < 50) return 10;
-  if (distanceKm < 200) return 8;
-  if (distanceKm < 500) return 6;
-  if (distanceKm < 1000) return 5;
-  return 4;
-};
-
 export const drawLine = (from, to, distanceKm) => {
   const lineColor = getLineColor(distanceKm);
   const coords = [from, to];
 
   const outlineLine = L.polyline(coords, {
-    color: "#000000",
-    weight: 6,
-    dashArray: "10, 14",
-    opacity: 1,
-    lineCap: "butt",
+    ...LINES.OUTLINE,
   });
 
   const mainLine = L.polyline(coords, {
+    ...LINES.MAIN,
     color: lineColor,
-    weight: 4,
-    dashArray: "10, 14",
-    opacity: 1,
-    lineCap: "butt",
   });
 
   const lineGroup = L.layerGroup([outlineLine, mainLine]).addTo(map);
@@ -182,11 +168,7 @@ export const showRoundResult = (clickCoords, capitalCoords, distanceKm) => {
   const midLng = (clickCoords[1] + capitalCoords[1]) / 2;
   const zoomLevel = getZoomLevel(distanceKm);
 
-  map.flyTo([midLat, midLng], zoomLevel, {
-    duration: 1.5,
-    easeLinearity: 0.25,
-    animate: true,
-  });
+  map.flyTo([midLat, midLng], zoomLevel, MAP_ANIMATIONS.SHOW_RESULT);
 };
 
 export const clearMap = () => {
@@ -197,8 +179,5 @@ export const clearMap = () => {
 };
 
 export const resetView = () => {
-  map.flyTo(MAP.CENTER, MAP.ZOOM, {
-    duration: 0.5,
-    easeLinearity: 0.25,
-  });
+  map.flyTo(MAP.CENTER, MAP.ZOOM, MAP_ANIMATIONS.RESET_VIEW);
 };

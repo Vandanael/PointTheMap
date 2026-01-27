@@ -3,6 +3,9 @@ import { GAME, TIMING } from "./config.js";
 import { setLastPseudo } from "./services/storage.js";
 import { formatScore, isIOS } from "./utils.js";
 import { logger } from "./utils/logger.js";
+import { debounce, throttle } from "./utils/performance.js";
+import { eventBus, StateManager } from "./core/index.js";
+import { UI_TIMING } from "./config/visual-constants.js";
 import {
   initMap,
   disableClicks,
@@ -15,7 +18,7 @@ import {
   createGameState,
   startGame,
   playRound,
-  handleTimeout,
+  handleTimeout as gameHandleTimeout,
   nextRound,
   getCurrentCapital,
   isLastRound,
@@ -29,11 +32,17 @@ import { getRemainingTime } from "./game/Round.js";
 import { UI } from "./ui/UI.js";
 import { processRetryQueue, submitWithRetry } from "./services/api.js";
 import { timerSystem } from "./systems/TimerSystem.js";
-import { animateValue } from "./systems/AnimationController.js";
+import { uiSystem } from "./systems/UISystem.js";
 
-// State
-let state = createGameState();
-let scoreAnimationController = null;
+// State Management
+const stateManager = new StateManager(createGameState());
+
+// Initialize DevTools in dev mode (dynamic import to exclude from production bundle)
+if (import.meta.env.DEV) {
+  import("./core/StateDevTools.js").then(({ StateDevTools }) => {
+    new StateDevTools(stateManager);
+  });
+}
 
 // iOS: Fix viewport height dynamique pour gérer la barre d'adresse Safari
 const setIOSViewportHeight = () => {
@@ -47,11 +56,13 @@ const setIOSViewportHeight = () => {
   // Définir la hauteur initiale
   setHeight();
 
-  // Mettre à jour lors du redimensionnement (rotation, apparition/disparition de la barre d'adresse)
-  window.addEventListener('resize', setHeight);
-  window.addEventListener('orientationchange', setHeight);
+  // Mettre à jour lors du redimensionnement - debounced pour éviter trop d'appels
+  const debouncedSetHeight = debounce(setHeight, 150);
+  window.addEventListener('resize', debouncedSetHeight);
+  window.addEventListener('orientationchange', setHeight); // Immediate for orientation change
 
   // iOS: Mettre à jour également lors du scroll (barre d'adresse Safari)
+  // Utilise RAF throttling qui est déjà optimal
   let ticking = false;
   window.addEventListener('scroll', () => {
     if (!ticking) {
@@ -69,7 +80,52 @@ const init = async () => {
     // iOS: Configurer le viewport height dynamique en premier
     setIOSViewportHeight();
 
-    UI.init();
+    // Register state validators
+    stateManager.registerValidator('totalScore', (value) => {
+      if (typeof value !== 'number') return 'totalScore must be a number';
+      if (value < 0) return 'totalScore cannot be negative';
+      if (!Number.isFinite(value)) return 'totalScore must be finite';
+      return true;
+    });
+
+    stateManager.registerValidator('status', (value) => {
+      const valid = Object.values(GameStatus);
+      if (!valid.includes(value)) {
+        return `status must be one of: ${valid.join(', ')}`;
+      }
+      return true;
+    });
+
+    // Subscribe to timer game logic events
+    eventBus.subscribe('timer:timeout', () => {
+      const state = stateManager.getState();
+      if (state.status === GameStatus.PLAYING && state.currentRound) {
+        stateManager.setState(
+          gameHandleTimeout(state),
+          'timer:timeout'
+        );
+        onRoundEnd();
+      }
+    });
+
+    eventBus.subscribe('timer:tick', () => {
+      const state = stateManager.getState();
+      if (state.status !== GameStatus.PLAYING || !state.currentRound) {
+        timerSystem.stop();
+        return;
+      }
+      const remaining = getRemainingTime(state.currentRound);
+      if (remaining <= 0) {
+        stateManager.setState(
+          gameHandleTimeout(state),
+          'timer:tick:timeout'
+        );
+        onRoundEnd();
+      }
+    });
+
+    // Initialize UI system (handles all UI-related EventBus subscriptions)
+    uiSystem.init();
     UI.showLoader();
     UI.updateLoader(20);
 
@@ -96,7 +152,7 @@ const init = async () => {
     }
 
     UI.updateLoader(100);
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await new Promise((resolve) => setTimeout(resolve, UI_TIMING.LOADER_FINAL_DELAY));
     UI.hideLoader();
     UI.showStart(handleStart);
   } catch (error) {
@@ -107,44 +163,7 @@ const init = async () => {
 
 const startTimer = () => {
   UI.resetTimer();
-
-  timerSystem.start({
-    onStart: () => {
-      const timerProgress = document.getElementById("timer-progress");
-      if (!timerProgress) return;
-
-      timerProgress.style.transition = `width ${GAME.TIMER_MS}ms linear`;
-      timerProgress.style.width = "0%";
-    },
-
-    onDangerZone: () => {
-      if (state.status === GameStatus.PLAYING && state.currentRound) {
-        const progress = document.getElementById("timer-progress");
-        if (progress) progress.classList.add("timer-danger");
-      }
-    },
-
-    onTimeout: () => {
-      if (state.status === GameStatus.PLAYING && state.currentRound) {
-        state = handleTimeout(state);
-        onRoundEnd();
-      }
-    },
-
-    onTick: () => {
-      // Check if round should end (redundant with onTimeout but safer)
-      if (state.status !== GameStatus.PLAYING || !state.currentRound) {
-        timerSystem.stop();
-        return;
-      }
-
-      const remaining = getRemainingTime(state.currentRound);
-      if (remaining <= 0) {
-        state = handleTimeout(state);
-        onRoundEnd();
-      }
-    }
-  });
+  timerSystem.start(); // No callbacks needed!
 };
 
 const stopTimer = () => {
@@ -157,13 +176,21 @@ const handleStart = async (gameType = "classic") => {
   clearMap();
   resetView();
 
-  state = await startGame(state, gameType);
+  const newState = await startGame(stateManager.getState(), gameType);
+  stateManager.setState(newState, `game:start:${gameType}`);
   UI.hideLoader();
 
+  const state = stateManager.getState();
   if (state.status !== GameStatus.PLAYING) {
     if (state.error) UI.showError(state.error);
     return;
   }
+
+  // Emit game started event
+  eventBus.emit('game:started', {
+    gameType,
+    capitalCount: state.capitals.length
+  });
 
   const capital = getCurrentCapital(state);
   if (!capital) {
@@ -187,53 +214,41 @@ const handleStart = async (gameType = "classic") => {
   };
 
   if (state.currentRoundIndex === 0) {
-    UI.showQuestionWithButton(capital.name, capital.country, onReady);
+    UI.showQuestion(capital.name, capital.country, onReady, { requireButton: true });
   } else {
     UI.showQuestion(capital.name, capital.country, onReady);
   }
 };
 
 const handleMapClick = (coords) => {
+  const state = stateManager.getState();
   if (state.status !== GameStatus.PLAYING) return;
-  state = playRound(state, coords);
+  stateManager.setState(playRound(state, coords), 'round:click');
   onRoundEnd();
-};
-
-const animateScoreCountUp = (oldScore, targetScore, points) => {
-  // Stop any existing animation
-  if (scoreAnimationController) {
-    scoreAnimationController.stop();
-  }
-
-  const scoreEl = document.querySelector("#game-header .text-yellow-400");
-  if (!scoreEl) return; // No element to animate
-
-  // Use AnimationController for proper cleanup
-  scoreAnimationController = animateValue(
-    scoreEl,
-    oldScore,
-    targetScore,
-    TIMING.SCORE_ANIMATION_MS,
-    formatScore
-  );
 };
 
 const onRoundEnd = () => {
   disableClicks();
   stopTimer();
 
+  const state = stateManager.getState();
   const round = state.currentRound;
   if (!round) return;
+
+  // Emit round completed event
+  eventBus.emit('game:round:completed', { round });
 
   if (round.click) {
     const clickCoords = [round.click.lat, round.click.lng];
     const capitalCoords = [round.capital.lat, round.capital.lng];
     showRoundResult(clickCoords, capitalCoords, round.distance || 0);
-    animateScoreCountUp(
-      state.totalScore - round.score,
-      state.totalScore,
-      round.score
-    );
+
+    // Emit score updated event
+    eventBus.emit('score:updated', {
+      oldScore: state.totalScore - round.score,
+      newScore: state.totalScore,
+      delta: round.score,
+    });
   }
 
   setTimeout(() => {
@@ -251,12 +266,14 @@ const handleNext = () => {
   UI.hideRoundResult();
   clearMap();
 
+  let state = stateManager.getState();
   if (isLastRound(state)) {
     UI.showGameOver(state.totalScore, handleSubmit, handleReplay);
     return;
   }
 
-  state = nextRound(state);
+  stateManager.setState(nextRound(state), 'round:next');
+  state = stateManager.getState();
   resetView();
 
   const capital = getCurrentCapital(state);
@@ -283,22 +300,26 @@ const handleNext = () => {
 const handleSubmit = async (pseudo) => {
   UI.showLoader();
   try {
+    const state = stateManager.getState();
     const result = await submitWithRetry(state.token, state.rounds, pseudo, state.gameType);
     setLastPseudo(pseudo);
 
     const isNewBest = checkIfNewSessionBest(state, result.score);
-    state = updateSessionBestScore(state, result.score);
+    stateManager.setState(
+      updateSessionBestScore(state, result.score),
+      'score:submit'
+    );
 
     UI.showFinalResults(result.score, pseudo, result, handleReplay, isNewBest);
   } catch (error) {
     logger.error("Submit error:", error);
-    
+
     if (error.status === 409 && error.data?.error === "pseudo_already_set_for_this_ip") {
       UI.hideLoader();
       UI.showPseudoLockedDialog(error.data.pseudo);
       return;
     }
-    
+
     UI.showError(error.message || "Erreur lors de la soumission");
   } finally {
     UI.hideLoader();
@@ -306,7 +327,7 @@ const handleSubmit = async (pseudo) => {
 };
 
 const handleReplay = () => {
-  state = resetGame();
+  stateManager.setState(resetGame(), 'game:reset');
   UI.hideGameOver();
   UI.showStart(handleStart);
 };
