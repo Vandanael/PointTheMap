@@ -13,16 +13,19 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Manual chunk splitting for better caching
-        manualChunks: {
-          'vendor-core': ['../core/index.js'],
-          'vendor-game': ['../game/Game.js'],
-          'vendor-systems': [
-            '../systems/MapSystem.js',
-            '../systems/TimerSystem.js',
-            '../systems/UISystem.js',
-            '../systems/InputSystem.js',
-            '../systems/ScoringSystem.js',
-          ],
+        manualChunks: (id) => {
+          // Check if module is in core directory
+          if (id.includes('/src/core/') || id.includes('\\src\\core\\')) {
+            return 'vendor-core';
+          }
+          // Check if module is in game directory
+          if (id.includes('/src/game/') || id.includes('\\src\\game\\')) {
+            return 'vendor-game';
+          }
+          // Check if module is in systems directory
+          if (id.includes('/src/systems/') || id.includes('\\src\\systems\\')) {
+            return 'vendor-systems';
+          }
         },
         // Optimize asset file names for better caching
         assetFileNames: (assetInfo) => {
