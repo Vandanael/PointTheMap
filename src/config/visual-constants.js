@@ -36,10 +36,12 @@ export const LINES = {
   },
 };
 
-// Distance thresholds and colors
+import { SCORING_THRESHOLDS } from '../config.js';
+
+// Distance thresholds and colors (using shared constants)
 export const DISTANCE_COLORS = {
-  EXCELLENT: { threshold: 100, color: '#22c55e' },    // < 100km → green
-  GOOD: { threshold: 500, color: '#facc15' },         // < 500km → yellow
+  EXCELLENT: { threshold: SCORING_THRESHOLDS.VISUAL_EXCELLENT, color: '#22c55e' },    // < 100km → green
+  GOOD: { threshold: SCORING_THRESHOLDS.VISUAL_GOOD, color: '#facc15' },         // < 500km → yellow
   DEFAULT: { color: '#94a3b8' },                      // >= 500km → gray
 };
 

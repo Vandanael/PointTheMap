@@ -254,6 +254,34 @@ describe('MapSystem', () => {
       expect(icon1).toContain('marker-player');
       expect(icon2).toContain('marker-target');
     });
+
+    it('should add capital markers to capitals layer', async () => {
+      await system.init('map');
+      
+      // Verify that layerGroup was called to create the capitals layer
+      expect(mockLayerGroup).toHaveBeenCalled();
+      
+      // Track calls to marker.addTo
+      const addToCalls = [];
+      const originalAddTo = vi.fn().mockImplementation(function(layer) {
+        addToCalls.push({ marker: this, layer });
+        return this;
+      });
+      
+      // Mock marker to track addTo calls
+      mockMarker.mockImplementation((coords, options) => ({
+        addTo: originalAddTo,
+      }));
+      
+      system.addCapitalMarker([48.8566, 2.3522]);
+      
+      // Verify marker was created and added to a layerGroup
+      expect(mockMarker).toHaveBeenCalled();
+      expect(addToCalls.length).toBe(1);
+      // Verify that addTo was called with a layerGroup instance (has clearLayers method)
+      expect(addToCalls[0].layer).toHaveProperty('clearLayers');
+      expect(typeof addToCalls[0].layer.clearLayers).toBe('function');
+    });
   });
 
   describe('Lines', () => {
@@ -357,6 +385,47 @@ describe('MapSystem', () => {
       system.clearMap();
 
       expect(handler).toHaveBeenCalled();
+    });
+
+    it('should clear only capital markers', async () => {
+      const clickMarker = system.addClickMarker([48, 2]);
+      const capitalMarker1 = system.addCapitalMarker([51, 0]);
+      const capitalMarker2 = system.addCapitalMarker([52, 1]);
+
+      expect(system.getMarkerCount()).toBe(3);
+
+      // Get all layerGroup instances created (first one should be the capitals layer)
+      const allLayerGroups = mockLayerGroup.mock.results.map(r => r.value);
+      const capitalsLayerInstance = allLayerGroups[0]; // First call is for capitals layer
+      
+      // Reset clearLayers mock to track this specific call
+      capitalsLayerInstance.clearLayers.mockClear();
+
+      system.clearCapitals();
+
+      // Verify clearLayers was called on the capitals layer
+      // Check that clearLayers was called on at least one layerGroup instance
+      const clearLayersCalled = allLayerGroups.some(layer => 
+        layer.clearLayers.mock.calls.length > 0
+      );
+      expect(clearLayersCalled).toBe(true);
+
+      // Capital markers should be removed from the markers array
+      expect(system.getMarkerCount()).toBe(1); // Only click marker remains
+    });
+
+    it('should emit map:capitals-cleared event', () => {
+      const handler = vi.fn();
+      eventBus.subscribe('map:capitals-cleared', handler);
+
+      system.addCapitalMarker([51, 0]);
+      system.clearCapitals();
+
+      expect(handler).toHaveBeenCalled();
+    });
+
+    it('should handle clearCapitals when no capitals are present', () => {
+      expect(() => system.clearCapitals()).not.toThrow();
     });
 
     it('should reset view to default', () => {
@@ -495,6 +564,11 @@ describe('MapSystem', () => {
     it('should return null for zoom when not initialized', () => {
       const uninitializedSystem = new MapSystem();
       expect(uninitializedSystem.getZoom()).toBeNull();
+    });
+
+    it('should handle clearCapitals when not initialized', () => {
+      const uninitializedSystem = new MapSystem();
+      expect(() => uninitializedSystem.clearCapitals()).not.toThrow();
     });
   });
 });

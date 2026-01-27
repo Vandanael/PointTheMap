@@ -4,15 +4,24 @@ import { scoringSystem } from '../systems/ScoringSystem.js';
 import { GAME } from '../config.js';
 
 describe('calculateScore (via ScoringSystem)', () => {
-  it('returns max score (5000) for distance < 1km', () => {
+  it('returns max score (5000) for distance < 0.5km (perfect zone)', () => {
     expect(scoringSystem.calculateScore(0)).toBe(5000);
     expect(scoringSystem.calculateScore(0.5)).toBe(5000);
-    expect(scoringSystem.calculateScore(0.99)).toBe(5000);
+    expect(scoringSystem.calculateScore(0.49)).toBe(5000);
   });
 
-  it('applies exponential decay for distance < 100km', () => {
-    expect(scoringSystem.calculateScore(1)).toBeLessThan(5000);
-    expect(scoringSystem.calculateScore(50)).toBeLessThan(scoringSystem.calculateScore(1));
+  it('applies smooth transition for 0.5-2km', () => {
+    const score099 = scoringSystem.calculateScore(0.99);
+    const score1 = scoringSystem.calculateScore(1);
+    // Should be in transition (not max, but high)
+    expect(score099).toBeLessThan(5000);
+    expect(score099).toBeGreaterThan(4900);
+    expect(score1).toBeLessThan(5000);
+  });
+
+  it('applies exponential decay for distance 2-100km', () => {
+    expect(scoringSystem.calculateScore(2)).toBeLessThan(5000);
+    expect(scoringSystem.calculateScore(50)).toBeLessThan(scoringSystem.calculateScore(2));
     expect(scoringSystem.calculateScore(99)).toBeLessThan(scoringSystem.calculateScore(50));
   });
 
@@ -39,7 +48,10 @@ describe('calculateScore (via ScoringSystem)', () => {
   // Reference values that MUST match server-side
   it('matches known reference values', () => {
     expect(scoringSystem.calculateScore(0)).toBe(5000);
-    expect(scoringSystem.calculateScore(1)).toBe(4982); // 5000 * exp(-1/280) rounded
+    expect(scoringSystem.calculateScore(0.5)).toBe(5000); // Perfect zone
+    // Note: 1km is now in transition zone, so value differs from old formula
+    expect(scoringSystem.calculateScore(1)).toBeLessThan(5000);
+    expect(scoringSystem.calculateScore(1)).toBeGreaterThan(4900);
     expect(scoringSystem.calculateScore(50)).toBe(4182); // Actual value from implementation
     expect(scoringSystem.calculateScore(100)).toBe(3498); // Actual value from implementation
     expect(scoringSystem.calculateScore(500)).toBe(1000);

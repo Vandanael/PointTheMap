@@ -9,6 +9,32 @@ export const GAME = {
   MAX_SCORE_PER_ROUND: 5000,
 };
 
+/**
+ * Scoring thresholds - Single source of truth for all distance-based categories
+ * Used by: ScoringSystem, UI components, visual constants
+ */
+export const SCORING_THRESHOLDS = {
+  // Category boundaries (km)
+  PERFECT_MAX: 1,        // < 1km = Perfect
+  EXCELLENT_MAX: 50,     // 1-50km = Excellent
+  GOOD_MAX: 200,         // 50-200km = Good
+  FAIR_MAX: 1000,        // 200-1000km = Fair
+  // > 1000km = Poor
+
+  // Smooth transition zones
+  PERFECT_TRANSITION_START: 0.5,  // Start transition from perfect
+  PERFECT_TRANSITION_END: 2,       // End transition to excellent
+
+  // Formula transition points (km)
+  EXPONENTIAL_END: 100,  // End of exponential decay (1-100km)
+  LINEAR_END: 500,       // End of linear interpolation (100-500km)
+  // > 500km = exponential decay
+
+  // Visual/UI thresholds (can differ from category boundaries)
+  VISUAL_EXCELLENT: 100,  // Green line color
+  VISUAL_GOOD: 500,       // Yellow line color
+};
+
 export const TIMING = {
   SCORE_ANIMATION_MS: 800,
   RESULT_DELAY_MS: 2500,

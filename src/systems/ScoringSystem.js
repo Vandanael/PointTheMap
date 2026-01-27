@@ -9,7 +9,7 @@
  */
 
 import { calculateScore as calculateScoreLib, haversine } from '@lib/game-math/index.js';
-import { GAME } from '../config.js';
+import { GAME, SCORING_THRESHOLDS } from '../config.js';
 import { eventBus } from '../core/EventBus.js';
 
 /**
@@ -61,20 +61,51 @@ export class ScoringSystem {
   }
 
   /**
+   * Calculate time bonus (stub for future feature)
+   * Feature flag: ENABLE_TIME_BONUS (currently false)
+   * 
+   * @param {number} totalTimeMs - Total time allowed
+   * @param {number} timeRemainingMs - Time remaining
+   * @param {number} distanceKm - Distance in kilometers
+   * @returns {number} Time bonus (0-1000)
+   */
+  calculateTimeBonus(totalTimeMs, timeRemainingMs, distanceKm) {
+    // Feature flag - not enabled yet
+    const ENABLE_TIME_BONUS = false;
+    if (!ENABLE_TIME_BONUS) {
+      return 0;
+    }
+
+    const MAX_TIME_BONUS = 1000;
+    const DISTANCE_THRESHOLD_FOR_BONUS = 200; // Only reward time bonus for good accuracy
+
+    // No bonus if distance is too large
+    if (distanceKm >= DISTANCE_THRESHOLD_FOR_BONUS) {
+      return 0;
+    }
+
+    // Linear bonus based on time remaining
+    const timeRatio = Math.max(0, timeRemainingMs / totalTimeMs);
+    return Math.round(MAX_TIME_BONUS * timeRatio);
+  }
+
+  /**
    * Calculate score with distance and time remaining
    * This method is kept for future enhancements (time bonuses)
    * Currently, we don't use time in scoring per game rules
    *
    * @param {number} distanceKm - Distance in kilometers
    * @param {number} timeRemainingMs - Time remaining in milliseconds
+   * @param {number} [totalTimeMs] - Total time allowed (for time bonus calculation)
    * @returns {ScoreResult}
    */
-  calculateScoreWithTime(distanceKm, timeRemainingMs) {
+  calculateScoreWithTime(distanceKm, timeRemainingMs, totalTimeMs = null) {
     const baseScore = this.calculateScore(distanceKm);
 
-    // Currently no time bonus per game rules
-    // But this method allows future enhancements
-    const timeBonus = 0;
+    // Calculate time bonus (currently disabled via feature flag)
+    const timeBonus = totalTimeMs !== null
+      ? this.calculateTimeBonus(totalTimeMs, timeRemainingMs, distanceKm)
+      : 0;
 
     return {
       distance: Math.round(distanceKm),
@@ -119,7 +150,7 @@ export class ScoringSystem {
     const distance = this.calculateDistance(clickCoords, targetCoords);
     const timeRemaining = totalTimeAllowed - timeElapsedMs;
 
-    return this.calculateScoreWithTime(distance, timeRemaining);
+    return this.calculateScoreWithTime(distance, timeRemaining, totalTimeAllowed);
   }
 
   /**
@@ -133,15 +164,34 @@ export class ScoringSystem {
 
   /**
    * Get score category based on distance
+   * Uses shared SCORING_THRESHOLDS constants
    * @param {number} distanceKm - Distance in kilometers
    * @returns {'perfect' | 'excellent' | 'good' | 'fair' | 'poor'}
    */
   getScoreCategory(distanceKm) {
-    if (distanceKm < 1) return 'perfect';
-    if (distanceKm < 50) return 'excellent';
-    if (distanceKm < 200) return 'good';
-    if (distanceKm < 1000) return 'fair';
+    const { PERFECT_MAX, EXCELLENT_MAX, GOOD_MAX, FAIR_MAX } = SCORING_THRESHOLDS;
+    
+    if (distanceKm < PERFECT_MAX) return 'perfect';
+    if (distanceKm < EXCELLENT_MAX) return 'excellent';
+    if (distanceKm < GOOD_MAX) return 'good';
+    if (distanceKm < FAIR_MAX) return 'fair';
     return 'poor';
+  }
+
+  /**
+   * Get human-readable label for score category
+   * @param {'perfect' | 'excellent' | 'good' | 'fair' | 'poor'} category
+   * @returns {string} Localized label
+   */
+  getCategoryLabel(category) {
+    const labels = {
+      perfect: 'Perfect',
+      excellent: 'Excellent',
+      good: 'Good',
+      fair: 'Fair',
+      poor: 'Keep trying',
+    };
+    return labels[category] || 'Unknown';
   }
 
   /**

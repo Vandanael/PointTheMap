@@ -34,10 +34,13 @@ export class MapSystem {
   #tileLayer = null;
   #markers = [];
   #polylines = [];
+  #capitalsLayer = null;
+  #capitalMarkers = [];
   #clickHandler = null;
   #initialized = false;
   #containerId = null;
   #eventUnsubscribers = [];
+  #clearCapitalsTimeout = null;
 
   constructor() {}
 
@@ -88,6 +91,9 @@ export class MapSystem {
 
     this.#map.setView(MAP.CENTER, MAP.ZOOM, { animate: false });
     this.#map.doubleClickZoom.disable();
+
+    // Créer un layerGroup dédié aux markers de capitales
+    this.#capitalsLayer = layerGroup().addTo(this.#map);
 
     // Désactiver l'antialiasing du Canvas pour des lignes en pointillés plus nettes
     if (this.#map._renderer && this.#map._renderer._ctx) {
@@ -217,8 +223,8 @@ export class MapSystem {
       }),
     }).addTo(this.#map);
 
-    this.#markers.push(marker);
-    return marker;
+    this.#markers.push(markerInstance);
+    return markerInstance;
   }
 
   /**
@@ -227,6 +233,10 @@ export class MapSystem {
    * @returns {Object} Leaflet marker instance
    */
   addCapitalMarker(coords) {
+    if (!this.#capitalsLayer) {
+      throw new Error('Map not initialized');
+    }
+
     const markerInstance = marker(coords, {
       icon: divIcon({
         className: '',
@@ -234,9 +244,10 @@ export class MapSystem {
         iconSize: MARKERS.CAPITAL.iconSize,
         iconAnchor: MARKERS.CAPITAL.iconAnchor,
       }),
-    }).addTo(this.#map);
+    }).addTo(this.#capitalsLayer);
 
     this.#markers.push(markerInstance);
+    this.#capitalMarkers.push(markerInstance);
     return markerInstance;
   }
 
@@ -272,6 +283,15 @@ export class MapSystem {
    * @param {number} distanceKm - Distance in kilometers
    */
   showRoundResult(clickCoords, capitalCoords, distanceKm) {
+    // Annuler le timeout précédent s'il existe
+    if (this.#clearCapitalsTimeout) {
+      clearTimeout(this.#clearCapitalsTimeout);
+      this.#clearCapitalsTimeout = null;
+    }
+
+    // Nettoyer les markers de capitales précédents AVANT d'ajouter le nouveau
+    this.clearCapitals();
+
     this.addClickMarker(clickCoords);
     this.addCapitalMarker(capitalCoords);
     this.drawLine(clickCoords, capitalCoords, distanceKm);
@@ -289,6 +309,10 @@ export class MapSystem {
     // Animate to result
     this.#map.flyToBounds(bounds, fitBoundsOptions);
 
+    // Ne pas nettoyer automatiquement les markers de capitales
+    // Ils seront nettoyés lors du passage au round suivant (handleNext -> clearMap)
+    // Cela permet de garder le marker visible pendant toute la durée d'affichage du résultat
+
     // Emit event
     eventBus.emit('map:result-shown', {
       clickCoords,
@@ -303,12 +327,41 @@ export class MapSystem {
   clearMap() {
     if (!this.#map) return;
 
+    // Clear capital markers first (they're in a layerGroup)
+    this.clearCapitals();
+
+    // Remove other markers directly from the map
     this.#markers.forEach((m) => this.#map.removeLayer(m));
     this.#polylines.forEach((p) => this.#map.removeLayer(p));
     this.#markers = [];
     this.#polylines = [];
 
     eventBus.emit('map:cleared');
+  }
+
+  /**
+   * Clear all capital markers from the map
+   * This removes only the capital markers, keeping other markers and polylines intact
+   */
+  clearCapitals() {
+    if (!this.#capitalsLayer) return;
+
+    // Annuler le timeout en cours s'il existe
+    if (this.#clearCapitalsTimeout) {
+      clearTimeout(this.#clearCapitalsTimeout);
+      this.#clearCapitalsTimeout = null;
+    }
+
+    // Clear the layer (removes markers from the map)
+    this.#capitalsLayer.clearLayers();
+
+    // Remove capital markers from the main markers array
+    this.#markers = this.#markers.filter((m) => !this.#capitalMarkers.includes(m));
+
+    // Clear the capital markers tracking array
+    this.#capitalMarkers = [];
+
+    eventBus.emit('map:capitals-cleared');
   }
 
   /**
@@ -389,6 +442,12 @@ export class MapSystem {
     // Disable clicks
     this.disableClicks();
 
+    // Annuler le timeout en cours s'il existe
+    if (this.#clearCapitalsTimeout) {
+      clearTimeout(this.#clearCapitalsTimeout);
+      this.#clearCapitalsTimeout = null;
+    }
+
     // Clear all layers
     this.clearMap();
 
@@ -400,6 +459,12 @@ export class MapSystem {
     if (this.#tileLayer) {
       this.#map.removeLayer(this.#tileLayer);
       this.#tileLayer = null;
+    }
+
+    // Remove capitals layer
+    if (this.#capitalsLayer) {
+      this.#map.removeLayer(this.#capitalsLayer);
+      this.#capitalsLayer = null;
     }
 
     // Destroy Leaflet map

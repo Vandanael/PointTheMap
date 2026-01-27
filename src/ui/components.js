@@ -1,14 +1,28 @@
-import { GAME } from "../config.js";
+import { GAME, SCORING_THRESHOLDS } from "../config.js";
 import { formatScore, escapeHtml } from "../utils.js";
 import { t, getLang } from "../i18n.js";
+import { scoringSystem } from "../systems/ScoringSystem.js";
 
+/**
+ * @param {string} id
+ * @param {string} content
+ * @param {boolean} [fullScreen=true]
+ */
 export const Modal = (id, content, fullScreen = true) => `
   <div id="${id}" class="fixed ${fullScreen ? "inset-0 modal-bg" : "bottom-8 left-1/2 -translate-x-1/2"} ${fullScreen ? "flex items-center justify-center" : ""}" style="z-index: var(--z-modal);">
     ${content}
   </div>
 `;
 
+/**
+ * @param {string} id
+ * @param {string} text
+ * @param {"primary" | "secondary"} [variant="primary"]
+ * @param {boolean} [fullWidth=true]
+ * @param {boolean} [pulse=false]
+ */
 export const Button = (id, text, variant = "primary", fullWidth = true, pulse = false) => {
+  /** @type {Record<"primary" | "secondary", string>} */
   const variants = {
     primary: "bg-yellow-400 hover:bg-yellow-300 text-black",
     secondary: "bg-slate-700 hover:bg-slate-600 text-white",
@@ -38,6 +52,13 @@ export const TimerBar = () => `
   </div>
 `;
 
+/**
+ * @param {number} roundNum
+ * @param {number} totalRounds
+ * @param {string} capitalName
+ * @param {string} country
+ * @param {number} totalScore
+ */
 export const GameHeader = (roundNum, totalRounds, capitalName, country, totalScore) => {
   const escapedCapital = escapeHtml(capitalName);
   const escapedCountry = escapeHtml(country);
@@ -57,6 +78,10 @@ export const GameHeader = (roundNum, totalRounds, capitalName, country, totalSco
 `;
 };
 
+/**
+ * @param {string} capitalName
+ * @param {string} country
+ */
 export const QuestionModal = (capitalName, country) => {
   const escapedCapital = escapeHtml(capitalName);
   const escapedCountry = escapeHtml(country);
@@ -76,6 +101,10 @@ export const QuestionModal = (capitalName, country) => {
 `;
 };
 
+/**
+ * @param {string} capitalName
+ * @param {string} country
+ */
 export const QuestionModalWithButton = (capitalName, country) => {
   const escapedCapital = escapeHtml(capitalName);
   const escapedCountry = escapeHtml(country);
@@ -96,7 +125,16 @@ export const QuestionModalWithButton = (capitalName, country) => {
 `;
 };
 
+/**
+ * @param {number} distance
+ * @param {number} score
+ * @param {boolean} isTimeout
+ * @param {boolean} isLast
+ */
 export const RoundResult = (distance, score, isTimeout, isLast) => {
+  /**
+   * @param {number} distanceKm
+   */
   const formatDistance = (distanceKm) => {
     if (distanceKm < 1) {
       return `${Math.round(distanceKm * 1000)} m`;
@@ -104,13 +142,30 @@ export const RoundResult = (distance, score, isTimeout, isLast) => {
     return `${Math.round(distanceKm)} km`;
   };
 
+  // Get category using shared thresholds
+  const getCategory = () => {
+    if (isTimeout || distance === null) return null;
+    return scoringSystem.getScoreCategory(distance);
+  };
+
+  const getCategoryLabel = () => {
+    const category = getCategory();
+    if (!category) return null;
+    return scoringSystem.getCategoryLabel(category);
+  };
+
+  // Icon based on category (using shared thresholds)
   const getIcon = () => {
     if (isTimeout) return "⏱️";
-    if (distance < 50) return "🏆";
-    if (distance < 200) return "🎯";
-    if (distance < 500) return "👍";
-    if (distance < 1000) return "👌";
-    return "🤔";
+    const category = getCategory();
+    if (!category) return "🤔";
+    
+    const { PERFECT_MAX, EXCELLENT_MAX, GOOD_MAX, FAIR_MAX } = SCORING_THRESHOLDS;
+    if (distance < PERFECT_MAX) return "🏆";
+    if (distance < EXCELLENT_MAX) return "⭐";
+    if (distance < GOOD_MAX) return "🎯";
+    if (distance < FAIR_MAX) return "👍";
+    return "👌";
   };
 
   if (isTimeout) {
@@ -128,10 +183,13 @@ export const RoundResult = (distance, score, isTimeout, isLast) => {
     `;
   }
 
+  const categoryLabel = getCategoryLabel();
+
   return `
     <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
       <div class="text-center mb-6">
         <div id="resultIcon" class="text-6xl mb-4">${getIcon()}</div>
+        ${categoryLabel ? `<div class="text-xl font-bold text-primary mb-2" id="categoryLabel">${categoryLabel}</div>` : ''}
         <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="distanceLabel">${t("distance")}</div>
         <div class="text-3xl font-black text-primary mb-6" id="distanceDisplay">${formatDistance(distance)}</div>
         <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="pointsEarnedLabel">${t("pointsEarned")}</div>
@@ -162,8 +220,8 @@ export const StartScreen = () => `
       <div class="text-left modal-content max-w-3xl w-full">
         <!-- Titre Hero - Signature visuelle sur deux lignes, plus grand et ferré à gauche -->
         <h1 class="text-primary mb-2 md:mb-3 uppercase leading-none -mt-1" style="font-weight: 900;">
-          <div class="text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide break-words">POINT</div>
-          <div class="text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide break-words">THE MAP</div>
+          <div class="text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide wrap-break-word">POINT</div>
+          <div class="text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide wrap-break-word">THE MAP</div>
         </h1>
 
         <!-- Info Card sobre -->
@@ -203,6 +261,10 @@ export const StartScreen = () => `
   </div>
 `;
 
+/**
+ * @param {number} totalScore
+ * @param {string} [lastPseudo=""]
+ */
 export const GameOverScreen = (totalScore, lastPseudo = "") => {
   const escapedPseudo = escapeHtml(lastPseudo);
   return `
@@ -247,6 +309,13 @@ export const GameOverScreen = (totalScore, lastPseudo = "") => {
 `;
 };
 
+/**
+ * @param {number} totalScore
+ * @param {string} pseudo
+ * @param {number} rank
+ * @param {boolean} isTopFifty
+ * @param {boolean} [isNewSessionBest=false]
+ */
 export const FinalResults = (totalScore, pseudo, rank, isTopFifty, isNewSessionBest = false) => {
   const escapedPseudo = escapeHtml(pseudo);
   return `
@@ -266,6 +335,13 @@ export const FinalResults = (totalScore, pseudo, rank, isTopFifty, isNewSessionB
 `;
 };
 
+/**
+ * @param {number} rank
+ * @param {string} pseudo
+ * @param {number} score
+ * @param {number} time
+ * @param {boolean} [isHighlighted=false]
+ */
 export const LeaderboardRow = (rank, pseudo, score, time, isHighlighted = false) => {
   const medals = ["🥇", "🥈", "🥉"];
   const rankDisplay = rank <= 3 ? medals[rank - 1] : `#${rank}`;
@@ -299,6 +375,11 @@ export const LeaderboardSkeletonRow = () => `
   </div>
 `;
 
+/**
+ * @param {Array<{rank: number, pseudo: string, score: number, time: number}>} scores
+ * @param {string | null} [highlightPseudo=null]
+ * @param {boolean} [loading=false]
+ */
 export const Leaderboard = (scores, highlightPseudo = null, loading = false) => `
   <div id="leaderboard-content" class="rounded-xl max-h-[400px]" style="background: var(--bg-tertiary); overflow: hidden;">
     ${loading ?
@@ -306,11 +387,16 @@ export const Leaderboard = (scores, highlightPseudo = null, loading = false) => 
       Array(10).fill(0).map(() => LeaderboardSkeletonRow()).join('')
       : scores.length === 0 ? `
         <p class="text-center py-8 text-tertiary">${t("noScores")}</p>
-      ` : scores.map((s) => LeaderboardRow(s.rank, s.pseudo, s.score, s.time, s.pseudo === highlightPseudo)).join("")
+      ` : scores.map((/** @type {{rank: number, pseudo: string, score: number, time: number}} */ s) => LeaderboardRow(s.rank, s.pseudo, s.score, s.time, s.pseudo === highlightPseudo)).join("")
     }
   </div>
 `;
 
+/**
+ * @param {Array<{rank: number, pseudo: string, score: number, time: number}>} scores
+ * @param {"classic" | "daily"} [currentType="classic"]
+ * @param {boolean} [loading=false]
+ */
 export const LeaderboardModal = (scores, currentType = "classic", loading = false) => {
   const isClassic = currentType === "classic";
   const isDaily = currentType === "daily";
@@ -375,6 +461,9 @@ const getPseudoLockedTexts = () => {
   };
 };
 
+/**
+ * @param {string} pseudo
+ */
 export const PseudoLockedDialog = (pseudo) => {
   const texts = getPseudoLockedTexts();
   const escapedPseudo = escapeHtml(pseudo);
@@ -401,7 +490,13 @@ export const PseudoLockedDialog = (pseudo) => {
  * @param {string} type - Type of toast: 'info', 'warning', 'error', 'success'
  * @returns {string} HTML string
  */
+/**
+ * @param {string} id
+ * @param {string} message
+ * @param {"info" | "warning" | "error" | "success"} [type="info"]
+ */
 export const Toast = (id, message, type = "info") => {
+  /** @type {Record<"info" | "warning" | "error" | "success", string>} */
   const icons = {
     info: "ℹ️",
     warning: "⚠️",
@@ -409,6 +504,7 @@ export const Toast = (id, message, type = "info") => {
     success: "✅",
   };
 
+  /** @type {Record<"info" | "warning" | "error" | "success", string>} */
   const colors = {
     info: "bg-blue-500",
     warning: "bg-yellow-500",
@@ -422,9 +518,9 @@ export const Toast = (id, message, type = "info") => {
   return `
     <div id="${id}" class="fixed bottom-8 left-1/2 -translate-x-1/2 max-w-md w-full px-4 toast-slide-up" style="z-index: var(--z-toast);" role="alert" aria-live="assertive">
       <div class="${color} text-white rounded-xl shadow-lg p-4 flex items-start gap-3">
-        <span class="text-2xl flex-shrink-0">${icon}</span>
+        <span class="text-2xl shrink-0">${icon}</span>
         <div class="flex-1 text-sm font-medium" style="line-height: 1.5;">${escapeHtml(message)}</div>
-        <button id="${id}-close" class="flex-shrink-0 text-white hover:text-gray-200 text-xl leading-none" aria-label="Close notification">×</button>
+        <button id="${id}-close" class="shrink-0 text-white hover:text-gray-200 text-xl leading-none" aria-label="Close notification">×</button>
       </div>
     </div>
   `;

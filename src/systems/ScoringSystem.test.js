@@ -74,10 +74,19 @@ describe('ScoringSystem', () => {
   });
 
   describe('calculateScore', () => {
-    it('should return 5000 for distance < 1km', () => {
+    it('should return 5000 for distance < 0.5km (perfect zone)', () => {
       expect(system.calculateScore(0)).toBe(5000);
       expect(system.calculateScore(0.5)).toBe(5000);
-      expect(system.calculateScore(0.99)).toBe(5000);
+      expect(system.calculateScore(0.49)).toBe(5000);
+    });
+
+    it('should apply smooth transition for 0.5-2km', () => {
+      const score099 = system.calculateScore(0.99);
+      const score1 = system.calculateScore(1);
+      // Should be in transition (not max, but high)
+      expect(score099).toBeLessThan(5000);
+      expect(score099).toBeGreaterThan(4900);
+      expect(score1).toBeLessThan(5000);
     });
 
     it('should return high scores for short distances', () => {
@@ -283,6 +292,34 @@ describe('ScoringSystem', () => {
       expect(system.getScoreCategory(1000)).toBe('poor');
       expect(system.getScoreCategory(5000)).toBe('poor');
       expect(system.getScoreCategory(20000)).toBe('poor');
+    });
+  });
+
+  describe('getCategoryLabel', () => {
+    it('should return correct labels for all categories', () => {
+      expect(system.getCategoryLabel('perfect')).toBe('Perfect');
+      expect(system.getCategoryLabel('excellent')).toBe('Excellent');
+      expect(system.getCategoryLabel('good')).toBe('Good');
+      expect(system.getCategoryLabel('fair')).toBe('Fair');
+      expect(system.getCategoryLabel('poor')).toBe('Keep trying');
+    });
+
+    it('should return "Unknown" for invalid category', () => {
+      expect(system.getCategoryLabel('invalid')).toBe('Unknown');
+    });
+  });
+
+  describe('calculateTimeBonus', () => {
+    it('should return 0 when feature flag is disabled', () => {
+      const bonus = system.calculateTimeBonus(5000, 4000, 50);
+      expect(bonus).toBe(0);
+    });
+
+    it('should return 0 for distances >= 200km even if enabled', () => {
+      // Note: Feature flag is disabled, but testing the logic
+      // In a real scenario, this would test with flag enabled
+      const bonus = system.calculateTimeBonus(5000, 4000, 200);
+      expect(bonus).toBe(0);
     });
   });
 

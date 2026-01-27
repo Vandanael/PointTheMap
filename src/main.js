@@ -247,7 +247,7 @@ const handleStart = async (gameType = "classic") => {
   UI.hideStart();
   UI.showLoader();
   UI.updateLoader(20);
-  mapSystem.clearMap();
+  mapSystem.clearMap(); // Nettoie tous les markers (y compris les capitales)
   mapSystem.resetView();
 
   const newState = await safeAsync(
@@ -358,7 +358,7 @@ const onRoundEnd = () => {
 
 const handleNext = () => {
   UI.hideRoundResult();
-  mapSystem.clearMap();
+  mapSystem.clearMap(); // Nettoie tous les markers (y compris les capitales)
 
   let state = stateManager.getState();
   if (isLastRound(state)) {
@@ -431,6 +431,8 @@ const handleSubmit = async (pseudo) => {
 
 const handleReplay = () => {
   stateManager.setState(resetGame(), 'game:reset');
+  mapSystem.clearMap(); // Nettoyer tous les markers (y compris les capitales) lors du reset
+  mapSystem.resetView();
   UI.hideGameOver();
   UI.showStart();
 };
