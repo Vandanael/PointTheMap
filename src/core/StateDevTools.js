@@ -61,6 +61,22 @@ export class StateDevTools {
       </div>
     `;
 
+    // Use event delegation for dynamic buttons
+    this.#panel.addEventListener('click', (e) => {
+      const target = /** @type {HTMLElement} */ (e.target);
+      if (target.classList.contains('state-devtools-restore')) {
+        const index = parseInt(target.dataset.index || '0');
+        this.#stateManager.restoreFromHistory(index);
+      } else if (target.classList.contains('state-devtools-inspect')) {
+        const index = parseInt(target.dataset.index || '0');
+        const history = this.#stateManager.getHistory();
+        const entry = history[index];
+        logger.debug(`State at ${new Date(entry.timestamp).toLocaleTimeString()} (${entry.action})`);
+        logger.debug('State:', entry.state);
+        logger.debug('Previous State:', entry.prevState);
+      }
+    });
+
     document.body.appendChild(this.#panel);
 
     // Bind events
@@ -105,25 +121,6 @@ export class StateDevTools {
       })
       .reverse()
       .join('');
-
-    // Bind restore buttons
-    list.querySelectorAll('.state-devtools-restore').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        const index = parseInt(e.target.dataset.index);
-        this.#stateManager.restoreFromHistory(index);
-      });
-    });
-
-    // Bind inspect buttons
-    list.querySelectorAll('.state-devtools-inspect').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        const index = parseInt(e.target.dataset.index);
-        const entry = history[index];
-        logger.debug(`State at ${new Date(entry.timestamp).toLocaleTimeString()} (${entry.action})`);
-        logger.debug('State:', entry.state);
-        logger.debug('Previous State:', entry.prevState);
-      });
-    });
   }
 
   toggle() {

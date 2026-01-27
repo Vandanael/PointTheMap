@@ -35,7 +35,16 @@ import { errorHandler, APIError, safeAsync } from "./core/ErrorHandler.js";
 const stateManager = new StateManager(createGameState());
 
 // Track event subscriptions for cleanup
+/** @type {Array<() => void>} */
 const eventUnsubscribers = [];
+
+// Store iOS viewport listeners for cleanup
+/** @type {(() => void) | null} */
+let iosResizeHandler = null;
+/** @type {(() => void) | null} */
+let iosOrientationHandler = null;
+/** @type {(() => void) | null} */
+let iosScrollHandler = null;
 
 // Initialize DevTools in dev mode (dynamic import to exclude from production bundle)
 if (import.meta.env.DEV) {
@@ -57,14 +66,18 @@ const setIOSViewportHeight = () => {
 
   // Mettre à jour lors du redimensionnement - debounced pour éviter trop d'appels
   const debouncedSetHeight = debounce(setHeight, 150);
-  // @ts-ignore - debounce returns a function compatible with EventListener
+  // Type assertion: debounce returns Function, but we know it's compatible with EventListener
+  iosResizeHandler = /** @type {() => void} */ (debouncedSetHeight);
+  // @ts-expect-error - debounce returns Function, compatible at runtime with EventListener
   window.addEventListener('resize', debouncedSetHeight);
-  window.addEventListener('orientationchange', setHeight); // Immediate for orientation change
+
+  iosOrientationHandler = setHeight;
+  window.addEventListener('orientationchange', iosOrientationHandler);
 
   // iOS: Mettre à jour également lors du scroll (barre d'adresse Safari)
   // Utilise RAF throttling qui est déjà optimal
   let ticking = false;
-  window.addEventListener('scroll', () => {
+  iosScrollHandler = () => {
     if (!ticking) {
       window.requestAnimationFrame(() => {
         setHeight();
@@ -72,7 +85,8 @@ const setIOSViewportHeight = () => {
       });
       ticking = true;
     }
-  }, { passive: true });
+  };
+  window.addEventListener('scroll', iosScrollHandler, { passive: true });
 };
 
 /**
@@ -81,6 +95,17 @@ const setIOSViewportHeight = () => {
 const cleanup = () => {
   eventUnsubscribers.forEach((unsubscribe) => unsubscribe());
   eventUnsubscribers.length = 0;
+
+  // Clean up iOS viewport listeners
+  if (iosResizeHandler) {
+    window.removeEventListener('resize', iosResizeHandler);
+  }
+  if (iosOrientationHandler) {
+    window.removeEventListener('orientationchange', iosOrientationHandler);
+  }
+  if (iosScrollHandler) {
+    window.removeEventListener('scroll', iosScrollHandler);
+  }
 };
 
 const init = async () => {
@@ -107,7 +132,7 @@ const init = async () => {
 
     // Subscribe to timer game logic events
     eventUnsubscribers.push(
-      eventBus.subscribe('timer:timeout', () => {
+      /** @type {() => void} */ (eventBus.subscribe('timer:timeout', () => {
         const state = stateManager.getState();
         if (state.status === GameStatus.PLAYING && state.currentRound) {
           // Stop timer to prevent tick handler from also firing
@@ -120,11 +145,11 @@ const init = async () => {
             onRoundEnd();
           }
         }
-      })
+      }))
     );
 
     eventUnsubscribers.push(
-      eventBus.subscribe('timer:tick', () => {
+      /** @type {() => void} */ (eventBus.subscribe('timer:tick', () => {
         const state = stateManager.getState();
         if (state.status !== GameStatus.PLAYING || !state.currentRound) {
           timerSystem.stop();
@@ -142,7 +167,7 @@ const init = async () => {
             onRoundEnd();
           }
         }
-      })
+      }))
     );
 
     // Initialize UI system (handles all UI-related EventBus subscriptions)
@@ -153,35 +178,31 @@ const init = async () => {
     scoringSystem.init();
 
     // Subscribe to InputSystem events
-    eventUnsubscribers.push(
-      eventBus.subscribe('input:start-game', (/** @type {{ gameType?: "classic" | "daily" }} */ { gameType }) => {
-        handleStart(gameType || 'classic');
-      })
-    );
+    const unsubscribeStartGame = eventBus.subscribe('input:start-game', (/** @type {{ gameType?: "classic" | "daily" }} */ { gameType }) => {
+      handleStart(gameType || 'classic');
+    });
+    eventUnsubscribers.push(/** @type {() => void} */ (unsubscribeStartGame));
 
-    eventUnsubscribers.push(
-      eventBus.subscribe('input:next-round', () => {
-        handleNext();
-      })
-    );
+    const unsubscribeNextRound = eventBus.subscribe('input:next-round', () => {
+      handleNext();
+    });
+    eventUnsubscribers.push(/** @type {() => void} */ (unsubscribeNextRound));
 
-    eventUnsubscribers.push(
-      eventBus.subscribe('input:submit', (/** @type {{ pseudo: string }} */ { pseudo }) => {
-        handleSubmit(pseudo);
-      })
-    );
+    const unsubscribeSubmit = eventBus.subscribe('input:submit', (/** @type {{ pseudo: string }} */ { pseudo }) => {
+      handleSubmit(pseudo);
+    });
+    eventUnsubscribers.push(/** @type {() => void} */ (unsubscribeSubmit));
 
-    eventUnsubscribers.push(
-      eventBus.subscribe('input:replay', () => {
-        handleReplay();
-      })
-    );
+    const unsubscribeReplay = eventBus.subscribe('input:replay', () => {
+      handleReplay();
+    });
+    eventUnsubscribers.push(/** @type {() => void} */ (unsubscribeReplay));
 
     UI.showLoader();
     UI.updateLoader(20);
 
     try {
-      mapSystem.init("map");
+      await mapSystem.init("map");
       UI.updateLoader(50);
     } catch (error) {
       errorHandler.handle(error instanceof Error ? error : new Error(String(error)), 'map:init', { showToUser: true, fatal: false });

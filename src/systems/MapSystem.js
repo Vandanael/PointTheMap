@@ -35,15 +35,17 @@ export class MapSystem {
   /**
    * Initialize the map
    * @param {string} containerId - DOM container ID for the map
-   * @returns {boolean} Success status
+   * @returns {Promise<boolean>} Success status
    */
-  init(containerId) {
+  async init(containerId) {
     if (this.#initialized) {
       logger.warn('MapSystem already initialized');
       return true;
     }
 
     try {
+      // Wait for Leaflet if it's loading asynchronously
+      await this.#waitForLeaflet();
       this.#validateLeaflet();
       this.#containerId = containerId;
       this.#createMap(containerId);
@@ -56,6 +58,27 @@ export class MapSystem {
     } catch (error) {
       eventBus.emit('map:error', { error: error.message });
       throw error;
+    }
+  }
+
+  /**
+   * Wait for Leaflet to load if it's not ready yet
+   * @private
+   * @returns {Promise<void>}
+   */
+  async #waitForLeaflet() {
+    if (typeof L !== 'undefined') {
+      return;
+    }
+
+    // Wait up to 5 seconds for Leaflet to load
+    const maxWait = 5000;
+    const checkInterval = 50;
+    let waited = 0;
+
+    while (typeof L === 'undefined' && waited < maxWait) {
+      await new Promise(resolve => setTimeout(resolve, checkInterval));
+      waited += checkInterval;
     }
   }
 

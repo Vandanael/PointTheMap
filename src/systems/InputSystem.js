@@ -13,8 +13,12 @@ import { eventBus } from '../core/EventBus.js';
 export class InputSystem {
   #initialized = false;
   #mapClickEnabled = false;
+  /** @type {Function | null} */
   #mapClickCallback = null;
+  /** @type {(() => void) | null} */
   #mapClickUnsubscribe = null;
+  /** @type {((e: KeyboardEvent) => void) | null} */
+  #keyboardHandler = null;
 
   constructor() {}
 
@@ -32,11 +36,10 @@ export class InputSystem {
 
   /**
    * Setup keyboard event listeners
-   * @private
    */
   #setupKeyboardListeners() {
     // Enter and Space can be used to trigger actions
-    document.addEventListener('keydown', (e) => {
+    this.#keyboardHandler = /** @type {(e: KeyboardEvent) => void} */ ((e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         // Check if focus is on a button or input
         const activeElement = document.activeElement;
@@ -51,9 +54,10 @@ export class InputSystem {
 
       // Escape key
       if (e.key === 'Escape') {
-        eventBus.emit('input:escape');
+        eventBus.emit('input:escape', {});
       }
     });
+    document.addEventListener('keydown', this.#keyboardHandler);
   }
 
   /**
@@ -71,13 +75,13 @@ export class InputSystem {
     this.#mapClickCallback = callback;
 
     // Subscribe to map:click events
-    this.#mapClickUnsubscribe = eventBus.subscribe('map:click', ({ lat, lng }) => {
+    this.#mapClickUnsubscribe = eventBus.subscribe('map:click', (/** @type {{ lat: any, lng: any }} */ { lat, lng }) => {
       if (this.#mapClickEnabled && this.#mapClickCallback) {
         this.#mapClickCallback([lat, lng]);
       }
     });
 
-    eventBus.emit('input:map-enabled');
+    eventBus.emit('input:map-enabled', {});
   }
 
   /**
@@ -93,7 +97,7 @@ export class InputSystem {
       this.#mapClickUnsubscribe = null;
     }
 
-    eventBus.emit('input:map-disabled');
+    eventBus.emit('input:map-disabled', {});
   }
 
   /**
@@ -101,7 +105,7 @@ export class InputSystem {
    * Emits input:next-round event
    */
   handleNextRound() {
-    eventBus.emit('input:next-round');
+    eventBus.emit('input:next-round', {});
   }
 
   /**
@@ -118,7 +122,7 @@ export class InputSystem {
    * Emits input:replay event
    */
   handleReplay() {
-    eventBus.emit('input:replay');
+    eventBus.emit('input:replay', {});
   }
 
   /**
@@ -151,11 +155,16 @@ export class InputSystem {
    */
   destroy() {
     this.disableMapInput();
+    if (this.#keyboardHandler) {
+      document.removeEventListener('keydown', this.#keyboardHandler);
+      this.#keyboardHandler = null;
+    }
     this.#initialized = false;
   }
 }
 
 // Singleton instance
+/** @type {InputSystem | null} */
 let _inputSystemInstance = null;
 
 /**

@@ -22,7 +22,7 @@
       script-src 'self' 'unsafe-inline' https://unpkg.com;
       style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com;
       img-src 'self' data: https://*.openstreetmap.org https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://*.basemaps.cartocdn.com;
-      connect-src 'self' https://*.netlify.app https://unpkg.com https://*.openstreetmap.org https://tile.openstreetmap.org;
+      connect-src 'self' https://*.netlify.app https://unpkg.com https://*.openstreetmap.org https://tile.openstreetmap.org https://ingesteer.services-prod.nsvcs.net;
       font-src 'self' https://fonts.gstatic.com data:;
       object-src 'none';
       base-uri 'self';

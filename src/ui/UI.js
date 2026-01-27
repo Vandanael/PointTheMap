@@ -36,6 +36,12 @@ let lastSubmitTime = 0;
 // Store UI.init() subscriptions for cleanup
 let _uiInitUnsubscribers = [];
 
+// Store dynamic event listeners for cleanup
+let _questionModalClickHandler = null;
+let _pseudoInputHandler = null;
+let _pseudoKeypressHandler = null;
+let _pseudoFocusHandler = null;
+
 // DOM cache to avoid repeated queries
 const _domCache = {
   _cache: {},
@@ -186,6 +192,18 @@ export const UI = {
   destroy() {
     _uiInitUnsubscribers.forEach(unsub => unsub());
     _uiInitUnsubscribers = [];
+
+    // Clean up dynamic listeners
+    const questionModal = document.getElementById("question-modal");
+    if (questionModal && _questionModalClickHandler) {
+      questionModal.removeEventListener("click", _questionModalClickHandler);
+    }
+    const pseudoInput = document.getElementById("pseudo-input");
+    if (pseudoInput) {
+      if (_pseudoInputHandler) pseudoInput.removeEventListener("input", _pseudoInputHandler);
+      if (_pseudoKeypressHandler) pseudoInput.removeEventListener("keypress", _pseudoKeypressHandler);
+      if (_pseudoFocusHandler) pseudoInput.removeEventListener("focus", _pseudoFocusHandler);
+    }
     _domCache.invalidate();
   },
 
@@ -301,6 +319,7 @@ export const UI = {
   hideGameUI() {
     remove("game-header");
     remove("timer-bar");
+    _domCache.invalidate();
   },
 
   /**
@@ -322,6 +341,11 @@ export const UI = {
     // Shared close handler
     const close = () => {
       remove("question-modal");
+      // Clean up click listener if it was set
+      if (_questionModalClickHandler) {
+        const modal = document.getElementById("question-modal");
+        modal?.removeEventListener("click", _questionModalClickHandler);
+      }
       _domCache.invalidate("question-modal");
       // Wait for DOM update before enabling clicks
       requestAnimationFrame(() => {
@@ -335,7 +359,9 @@ export const UI = {
     if (requireButton) {
       bindClick("btn-ready", close);
     } else {
-      _domCache.get("question-modal")?.addEventListener("click", close);
+      _questionModalClickHandler = close;
+      const modal = _domCache.get("question-modal");
+      if (modal) modal.addEventListener("click", _questionModalClickHandler);
       setTimeout(close, UI_TIMING.QUESTION_AUTO_CLOSE);
     }
   },
@@ -357,6 +383,7 @@ export const UI = {
   },
   hideRoundResult() {
     remove("round-result");
+    _domCache.invalidate("round-result");
   },
 
   // Game over / submit
@@ -364,21 +391,32 @@ export const UI = {
     const lastPseudo = getLastPseudo() || "";
     render(GameOverScreen(totalScore, lastPseudo));
 
+    // Clean up old listeners before adding new ones
+    const oldInput = document.getElementById("pseudo-input");
+    if (oldInput) {
+      if (_pseudoInputHandler) oldInput.removeEventListener("input", _pseudoInputHandler);
+      if (_pseudoKeypressHandler) oldInput.removeEventListener("keypress", _pseudoKeypressHandler);
+      if (_pseudoFocusHandler) oldInput.removeEventListener("focus", _pseudoFocusHandler);
+    }
+
     const input = _domCache.get("pseudo-input");
     if (input) {
-      input.addEventListener("input", (e) => {
+      _pseudoInputHandler = (e) => {
         e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 5);
-      });
-      input.addEventListener("keypress", (e) => {
+      };
+      _pseudoKeypressHandler = (e) => {
         if (e.key === "Enter") {
           const btn = _domCache.get("btn-submit");
           if (btn) btn.click();
         }
-      });
-      input.addEventListener("focus", (e) => {
+      };
+      _pseudoFocusHandler = (e) => {
         e.target.style.outline = "none";
         e.target.style.boxShadow = "none";
-      });
+      };
+      input.addEventListener("input", _pseudoInputHandler);
+      input.addEventListener("keypress", _pseudoKeypressHandler);
+      input.addEventListener("focus", _pseudoFocusHandler);
       input.focus();
     }
 
@@ -425,6 +463,7 @@ export const UI = {
 
   hideGameOver() {
     remove("result-modal");
+    _domCache.invalidate("result-modal");
   },
 
   showError(message) {
@@ -442,6 +481,7 @@ export const UI = {
     render(PseudoLockedDialog(pseudo));
     bindClick("btn-pseudo-locked-ok", () => {
       remove("pseudo-locked-modal");
+      _domCache.invalidate("pseudo-locked-modal");
     });
   },
 
