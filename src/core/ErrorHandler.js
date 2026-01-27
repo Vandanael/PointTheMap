@@ -153,38 +153,79 @@ class ErrorHandler {
   }
 
   /**
+   * Get user-friendly error message
+   * @private
+   */
+  getUserFriendlyMessage(error, context) {
+    // API errors with specific handling
+    if (error instanceof APIError) {
+      if (error.status === 429) {
+        return 'Trop de requêtes. Veuillez patienter quelques instants avant de réessayer.';
+      }
+      if (error.status === 403) {
+        return 'Accès refusé. Veuillez recommencer une partie.';
+      }
+      if (error.status === 401) {
+        return 'Session expirée. Veuillez recommencer une partie.';
+      }
+      if (error.status === 409) {
+        return 'Ce pseudo est déjà utilisé depuis cette adresse IP.';
+      }
+      if (error.status >= 500) {
+        return 'Le serveur rencontre des difficultés. Veuillez réessayer dans quelques instants.';
+      }
+      if (error.status === 0 || error.status >= 400) {
+        return 'Impossible de contacter le serveur. Vérifiez votre connexion internet.';
+      }
+    }
+
+    // Validation errors (keep original message, already user-friendly)
+    if (error instanceof ValidationError) {
+      return error.message;
+    }
+
+    // Game errors
+    if (error instanceof GameError) {
+      if (error.code === 'NETWORK_ERROR') {
+        return 'Erreur de connexion. Vérifiez que vous êtes bien connecté à internet.';
+      }
+      if (error.code === 'TIMEOUT') {
+        return 'Le chargement a pris trop de temps. Veuillez réessayer.';
+      }
+      return error.message;
+    }
+
+    // Network errors (fetch failures)
+    if (error.message?.includes('fetch') || error.message?.includes('Failed to fetch')) {
+      return 'Impossible de se connecter au serveur. Vérifiez votre connexion internet.';
+    }
+
+    // Timeout errors
+    if (error.message === 'TIMEOUT') {
+      return 'Le chargement a pris trop de temps. Veuillez réessayer.';
+    }
+
+    // Context-specific messages
+    if (context === 'leaderboard:load') {
+      return 'Le classement est temporairement indisponible. Réessayez dans quelques instants.';
+    }
+    if (context === 'score:submit') {
+      return 'Impossible d\'enregistrer votre score pour le moment. Il sera envoyé automatiquement plus tard.';
+    }
+    if (context === 'game:start') {
+      return 'Impossible de démarrer la partie. Veuillez réessayer.';
+    }
+
+    // Generic fallback
+    return 'Une erreur est survenue. Veuillez réessayer.';
+  }
+
+  /**
    * Show error to user
    * @private
    */
   showUserError(error, context) {
-    // Determine user-friendly message based on error type
-    let message = 'Une erreur est survenue';
-
-    if (error instanceof APIError) {
-      if (error.status === 429) {
-        message = 'Trop de requêtes. Veuillez patienter.';
-      } else if (error.status === 403) {
-        message = 'Accès refusé. Veuillez recommencer une partie.';
-      } else if (error.status >= 500) {
-        message = 'Erreur serveur. Veuillez réessayer.';
-      } else if (error.status === 401) {
-        message = 'Session expirée. Veuillez recommencer une partie.';
-      } else {
-        message = error.message;
-      }
-    } else if (error instanceof ValidationError) {
-      message = error.message;
-    } else if (error instanceof GameError) {
-      if (error.code === 'NETWORK_ERROR') {
-        message = 'Erreur réseau. Vérifiez votre connexion.';
-      } else if (error.code === 'TIMEOUT') {
-        message = 'Délai d\'attente dépassé.';
-      } else {
-        message = error.message;
-      }
-    } else if (error.message.includes('fetch')) {
-      message = 'Erreur réseau. Vérifiez votre connexion.';
-    }
+    const message = this.getUserFriendlyMessage(error, context);
 
     // Emit event for UI to show error
     eventBus.emit('error:show', { message, error, context });

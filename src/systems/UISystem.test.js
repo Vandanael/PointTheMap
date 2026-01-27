@@ -11,6 +11,7 @@ vi.mock("../core/EventBus.js", () => ({
 vi.mock("../ui/UI.js", () => ({
   UI: {
     init: vi.fn(),
+    destroy: vi.fn(),
   },
 }));
 

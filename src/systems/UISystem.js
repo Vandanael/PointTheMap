@@ -151,6 +151,9 @@ export class UISystem {
       this.#scoreAnimationController = null;
     }
 
+    // Also cleanup UI subscriptions
+    UI.destroy();
+
     logger.info('UISystem destroyed');
   }
 }

@@ -1,24 +1,25 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { calculateScore, createRound, recordClick, timeoutRound, getRemainingTime } from './Round.js';
+import { createRound, recordClick, timeoutRound, getRemainingTime } from './Round.js';
+import { scoringSystem } from '../systems/ScoringSystem.js';
 import { GAME } from '../config.js';
 
-describe('calculateScore', () => {
+describe('calculateScore (via ScoringSystem)', () => {
   it('returns max score (5000) for distance < 1km', () => {
-    expect(calculateScore(0)).toBe(5000);
-    expect(calculateScore(0.5)).toBe(5000);
-    expect(calculateScore(0.99)).toBe(5000);
+    expect(scoringSystem.calculateScore(0)).toBe(5000);
+    expect(scoringSystem.calculateScore(0.5)).toBe(5000);
+    expect(scoringSystem.calculateScore(0.99)).toBe(5000);
   });
 
   it('applies exponential decay for distance < 100km', () => {
-    expect(calculateScore(1)).toBeLessThan(5000);
-    expect(calculateScore(50)).toBeLessThan(calculateScore(1));
-    expect(calculateScore(99)).toBeLessThan(calculateScore(50));
+    expect(scoringSystem.calculateScore(1)).toBeLessThan(5000);
+    expect(scoringSystem.calculateScore(50)).toBeLessThan(scoringSystem.calculateScore(1));
+    expect(scoringSystem.calculateScore(99)).toBeLessThan(scoringSystem.calculateScore(50));
   });
 
   it('applies linear interpolation for 100km < distance < 500km', () => {
-    const score100 = calculateScore(100);
-    const score300 = calculateScore(300);
-    const score500 = calculateScore(500);
+    const score100 = scoringSystem.calculateScore(100);
+    const score300 = scoringSystem.calculateScore(300);
+    const score500 = scoringSystem.calculateScore(500);
 
     expect(score300).toBeLessThan(score100);
     expect(score300).toBeGreaterThan(score500);
@@ -26,22 +27,22 @@ describe('calculateScore', () => {
   });
 
   it('applies exponential decay for distance > 500km', () => {
-    expect(calculateScore(500)).toBe(1000);
-    expect(calculateScore(1000)).toBeLessThan(1000);
-    expect(calculateScore(5000)).toBeGreaterThanOrEqual(0);
+    expect(scoringSystem.calculateScore(500)).toBe(1000);
+    expect(scoringSystem.calculateScore(1000)).toBeLessThan(1000);
+    expect(scoringSystem.calculateScore(5000)).toBeGreaterThanOrEqual(0);
   });
 
   it('returns 0 for very large distances', () => {
-    expect(calculateScore(20000)).toBe(0);
+    expect(scoringSystem.calculateScore(20000)).toBe(0);
   });
 
   // Reference values that MUST match server-side
   it('matches known reference values', () => {
-    expect(calculateScore(0)).toBe(5000);
-    expect(calculateScore(1)).toBe(4982); // 5000 * exp(-1/280) rounded
-    expect(calculateScore(50)).toBe(4182); // Actual value from implementation
-    expect(calculateScore(100)).toBe(3498); // Actual value from implementation
-    expect(calculateScore(500)).toBe(1000);
+    expect(scoringSystem.calculateScore(0)).toBe(5000);
+    expect(scoringSystem.calculateScore(1)).toBe(4982); // 5000 * exp(-1/280) rounded
+    expect(scoringSystem.calculateScore(50)).toBe(4182); // Actual value from implementation
+    expect(scoringSystem.calculateScore(100)).toBe(3498); // Actual value from implementation
+    expect(scoringSystem.calculateScore(500)).toBe(1000);
   });
 });
 

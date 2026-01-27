@@ -33,8 +33,29 @@ import {
 const MIN_SUBMIT_INTERVAL = 2000; // 2 seconds between submissions
 let lastSubmitTime = 0;
 
+// Store UI.init() subscriptions for cleanup
+let _uiInitUnsubscribers = [];
+
+// DOM cache to avoid repeated queries
+const _domCache = {
+  _cache: {},
+  get(id) {
+    if (!this._cache[id] || !document.body.contains(this._cache[id])) {
+      this._cache[id] = document.getElementById(id);
+    }
+    return this._cache[id];
+  },
+  invalidate(id) {
+    if (id) {
+      delete this._cache[id];
+    } else {
+      this._cache = {};
+    }
+  }
+};
+
 const app = () => {
-  const el = document.getElementById("app");
+  const el = _domCache.get("app");
   if (!el) {
     logger.error("Element #app introuvable");
     return document.body; // Fallback
@@ -50,16 +71,19 @@ const render = (html, container = app()) => {
   return el;
 };
 
-const remove = (id) => document.getElementById(id)?.remove();
+const remove = (id) => {
+  _domCache.get(id)?.remove();
+  _domCache.invalidate(id);
+};
 const bindClick = (id, handler) => {
-  const el = document.getElementById(id);
+  const el = _domCache.get(id);
   if (el) el.addEventListener("click", handler);
 };
 
 const applyTheme = (theme) => {
   if (theme === "light") document.body.classList.add("light-theme");
   else document.body.classList.remove("light-theme");
-  const icon = document.getElementById("theme-icon");
+  const icon = _domCache.get("theme-icon");
   if (icon) icon.textContent = theme === "light" ? "☀️" : "🌙";
 };
 
@@ -72,14 +96,21 @@ const toggleTheme = () => {
 
 const handleToggleLang = () => {
   const newLang = toggleLang();
-  const icon = document.getElementById("lang-icon");
+  const icon = _domCache.get("lang-icon");
   if (icon) icon.textContent = newLang.toUpperCase();
   eventBus.emit('language:changed', { language: newLang });
 };
 
+const LEADERBOARD_TIMEOUT_MS = 5000; // 5 seconds timeout
+
 const loadLeaderboard = async (type) => {
   const scores = await safeAsync(
-    () => api.getLeaderboard(type),
+    () => Promise.race([
+      api.getLeaderboard(type),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('TIMEOUT')), LEADERBOARD_TIMEOUT_MS)
+      )
+    ]),
     'leaderboard:load',
     []
   );
@@ -103,35 +134,56 @@ export const UI = {
     applyTheme(getTheme());
 
     // Subscribe to error events
-    eventBus.subscribe('error:show', ({ message }) => {
-      UI.showError(message);
-    });
+    _uiInitUnsubscribers.push(
+      eventBus.subscribe('error:show', ({ message }) => {
+        UI.showError(message);
+      })
+    );
 
     // Subscribe to timer UI events
-    eventBus.subscribe('timer:started', () => {
-      const timerProgress = document.getElementById("timer-progress");
-      if (!timerProgress) return;
-      timerProgress.style.transition = `width ${GAME.TIMER_MS}ms linear`;
-      timerProgress.style.width = "0%";
-    });
+    _uiInitUnsubscribers.push(
+      eventBus.subscribe('timer:started', () => {
+        const timerProgress = _domCache.get("timer-progress");
+        if (!timerProgress) return;
+        timerProgress.style.transition = `width ${GAME.TIMER_MS}ms linear`;
+        timerProgress.style.width = "0%";
+      })
+    );
 
-    eventBus.subscribe('timer:danger', () => {
-      const progress = document.getElementById("timer-progress");
-      if (progress) progress.classList.add("timer-danger");
-    });
+    _uiInitUnsubscribers.push(
+      eventBus.subscribe('timer:danger', () => {
+        const progress = _domCache.get("timer-progress");
+        if (progress) progress.classList.add("timer-danger");
+      })
+    );
 
     // Subscribe to storage quota events
-    eventBus.subscribe('storage:quota-exceeded', ({ message }) => {
-      this.showToast(message, 'warning', 4000);
-    });
+    _uiInitUnsubscribers.push(
+      eventBus.subscribe('storage:quota-exceeded', ({ message }) => {
+        this.showToast(message, 'warning', 4000);
+      })
+    );
 
-    eventBus.subscribe('storage:quota-recovered', ({ message }) => {
-      this.showToast(message, 'success', 3000);
-    });
+    _uiInitUnsubscribers.push(
+      eventBus.subscribe('storage:quota-recovered', ({ message }) => {
+        this.showToast(message, 'success', 3000);
+      })
+    );
 
-    eventBus.subscribe('storage:quota-failed', ({ message }) => {
-      this.showToast(message, 'error', 6000);
-    });
+    _uiInitUnsubscribers.push(
+      eventBus.subscribe('storage:quota-failed', ({ message }) => {
+        this.showToast(message, 'error', 6000);
+      })
+    );
+  },
+
+  /**
+   * Cleanup UI subscriptions
+   */
+  destroy() {
+    _uiInitUnsubscribers.forEach(unsub => unsub());
+    _uiInitUnsubscribers = [];
+    _domCache.invalidate();
   },
 
   // Loader
@@ -144,7 +196,7 @@ export const UI = {
     remove("loading-spinner");
   },
   updateLoader(percent) {
-    const p = document.getElementById("loading-progress");
+    const p = _domCache.get("loading-progress");
     if (p) p.style.width = `${Math.min(100, percent)}%`;
   },
 
@@ -169,6 +221,7 @@ export const UI = {
   },
   hideStart() {
     remove("start-modal");
+    _domCache.invalidate(); // Clear cache after DOM change
     this._langChangeCleanup?.(); // Cleanup subscription
   },
 
@@ -190,15 +243,31 @@ export const UI = {
       const scores = await loadLeaderboard(type);
 
       // Update content with real data
-      const contentEl = document.getElementById("leaderboard-content");
+      const contentEl = _domCache.get("leaderboard-content");
       if (contentEl) {
-        contentEl.outerHTML = Leaderboard(scores, null, false);
+        if (scores.length === 0) {
+          // Check if it's a timeout or error vs empty results
+          contentEl.innerHTML = `
+            <div class="text-center py-8">
+              <p class="text-tertiary mb-4">Le classement est temporairement indisponible.</p>
+              <button id="btn-retry-leaderboard" class="text-yellow-400 hover:text-yellow-300 font-bold">
+                Réessayer
+              </button>
+            </div>
+          `;
+          bindClick("btn-retry-leaderboard", () => {
+            UI.showLeaderboardModal([], type, true);
+          });
+        } else {
+          contentEl.outerHTML = Leaderboard(scores, null, false);
+        }
+        _domCache.invalidate("leaderboard-content");
       }
 
       // Re-enable buttons
       const btns = ["btn-leaderboard-classic", "btn-leaderboard-daily"];
       btns.forEach(id => {
-        const btn = document.getElementById(id);
+        const btn = _domCache.get(id);
         if (btn) {
           btn.disabled = false;
           btn.style.opacity = "";
@@ -223,6 +292,7 @@ export const UI = {
   },
   updateGameUI(roundNum, totalRounds, capitalName, country, totalScore) {
     remove("game-header");
+    _domCache.invalidate("game-header");
     render(GameHeader(roundNum, totalRounds, capitalName, country, totalScore));
   },
   hideGameUI() {
@@ -249,6 +319,7 @@ export const UI = {
     // Shared close handler
     const close = () => {
       remove("question-modal");
+      _domCache.invalidate("question-modal");
       // Wait for DOM update before enabling clicks
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
@@ -261,13 +332,13 @@ export const UI = {
     if (requireButton) {
       bindClick("btn-ready", close);
     } else {
-      document.getElementById("question-modal")?.addEventListener("click", close);
+      _domCache.get("question-modal")?.addEventListener("click", close);
       setTimeout(close, UI_TIMING.QUESTION_AUTO_CLOSE);
     }
   },
 
   resetTimer() {
-    const p = document.getElementById("timer-progress");
+    const p = _domCache.get("timer-progress");
     if (!p) return;
     p.style.transition = "none";
     p.style.width = "100%";
@@ -290,14 +361,14 @@ export const UI = {
     const lastPseudo = getLastPseudo() || "";
     render(GameOverScreen(totalScore, lastPseudo));
 
-    const input = document.getElementById("pseudo-input");
+    const input = _domCache.get("pseudo-input");
     if (input) {
       input.addEventListener("input", (e) => {
         e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 5);
       });
       input.addEventListener("keypress", (e) => {
         if (e.key === "Enter") {
-          const btn = document.getElementById("btn-submit");
+          const btn = _domCache.get("btn-submit");
           if (btn) btn.click();
         }
       });
@@ -317,7 +388,7 @@ export const UI = {
       }
 
       const pseudo = input?.value.trim();
-      const error = document.getElementById("pseudo-error");
+      const error = _domCache.get("pseudo-error");
       const validation = validationSystem.validatePseudo(pseudo);
       if (!validation.valid) {
         error?.classList.remove("hidden");

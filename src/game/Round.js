@@ -91,14 +91,6 @@ export const timeoutRound = (round) => ({
 });
 
 /**
- * Calculate score based on distance
- * @param {number} distanceKm - Distance in kilometers
- * @returns {number} Score (0-5000)
- * @deprecated Use scoringSystem.calculateScore() instead for consistency
- */
-export const calculateScore = (distanceKm) => scoringSystem.calculateScore(distanceKm);
-
-/**
  * Get remaining time for current round
  * @param {import('./Game.js').Round} round - Current round
  * @returns {number} Remaining time in milliseconds

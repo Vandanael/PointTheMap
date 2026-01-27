@@ -303,6 +303,8 @@ export class MapSystem {
    * Clear all markers and polylines from the map
    */
   clearMap() {
+    if (!this.#map) return;
+
     this.#markers.forEach((m) => this.#map.removeLayer(m));
     this.#polylines.forEach((p) => this.#map.removeLayer(p));
     this.#markers = [];

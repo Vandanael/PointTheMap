@@ -10,6 +10,7 @@
 
 import './StateDevTools.css';
 import { logger } from '../utils/logger.js';
+import { escapeHtml } from '../utils.js';
 
 export class StateDevTools {
   #stateManager;
@@ -92,7 +93,7 @@ export class StateDevTools {
         return `
           <div class="state-devtools-entry" data-index="${index}">
             <div class="state-devtools-entry-header">
-              <span class="state-devtools-entry-action">${this.#escapeHtml(entry.action)}</span>
+              <span class="state-devtools-entry-action">${escapeHtml(entry.action)}</span>
               <span class="state-devtools-entry-time">${time}</span>
             </div>
             <div class="state-devtools-entry-actions">
@@ -123,12 +124,6 @@ export class StateDevTools {
         logger.debug('Previous State:', entry.prevState);
       });
     });
-  }
-
-  #escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
   }
 
   toggle() {

@@ -1,12 +1,6 @@
 import { GAME } from "../config.js";
-import { formatScore } from "../utils.js";
+import { formatScore, escapeHtml } from "../utils.js";
 import { t, getLang } from "../i18n.js";
-
-const escapeHtml = (text) => {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
-};
 
 export const Modal = (id, content, fullScreen = true) => `
   <div id="${id}" class="fixed ${fullScreen ? "inset-0 modal-bg" : "bottom-8 left-1/2 -translate-x-1/2"} ${fullScreen ? "flex items-center justify-center" : ""}" style="z-index: var(--z-modal);">

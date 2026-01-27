@@ -43,15 +43,6 @@ export const DISTANCE_COLORS = {
   DEFAULT: { color: '#94a3b8' },                      // >= 500km → gray
 };
 
-// Distance-based zoom levels
-export const DISTANCE_ZOOM = {
-  VERY_CLOSE: { threshold: 50, zoom: 10 },      // < 50km
-  CLOSE: { threshold: 200, zoom: 8 },           // < 200km
-  MEDIUM: { threshold: 500, zoom: 6 },          // < 500km
-  FAR: { threshold: 1000, zoom: 5 },            // < 1000km
-  VERY_FAR: { zoom: 4 },                        // >= 1000km
-};
-
 // Map animations
 export const MAP_ANIMATIONS = {
   SHOW_RESULT: {
@@ -65,13 +56,6 @@ export const MAP_ANIMATIONS = {
   },
 };
 
-// FitBounds padding options
-export const FITBOUNDS_OPTIONS = {
-  DEFAULT_PADDING: [80, 80],      // Padding horizontal et vertical en pixels
-  MAX_ZOOM: 10,                    // Zoom maximum pour éviter trop zoomer sur des points proches
-  MIN_ZOOM: 2,                     // Zoom minimum pour éviter de trop dézoomer
-};
-
 // UI timings
 export const UI_TIMING = {
   QUESTION_AUTO_CLOSE: 1000,        // Auto-close question modal after 1s
@@ -79,17 +63,13 @@ export const UI_TIMING = {
   LOADER_FINAL_DELAY: 300,          // Delay before hiding loader at 100%
 };
 
-// Helper functions using constants
+/**
+ * Get line color based on distance
+ * @param {number} distanceKm - Distance in kilometers
+ * @returns {string} Color hex code
+ */
 export const getLineColor = (distanceKm) => {
   if (distanceKm < DISTANCE_COLORS.EXCELLENT.threshold) return DISTANCE_COLORS.EXCELLENT.color;
   if (distanceKm < DISTANCE_COLORS.GOOD.threshold) return DISTANCE_COLORS.GOOD.color;
   return DISTANCE_COLORS.DEFAULT.color;
-};
-
-export const getZoomLevel = (distanceKm) => {
-  if (distanceKm < DISTANCE_ZOOM.VERY_CLOSE.threshold) return DISTANCE_ZOOM.VERY_CLOSE.zoom;
-  if (distanceKm < DISTANCE_ZOOM.CLOSE.threshold) return DISTANCE_ZOOM.CLOSE.zoom;
-  if (distanceKm < DISTANCE_ZOOM.MEDIUM.threshold) return DISTANCE_ZOOM.MEDIUM.zoom;
-  if (distanceKm < DISTANCE_ZOOM.FAR.threshold) return DISTANCE_ZOOM.FAR.zoom;
-  return DISTANCE_ZOOM.VERY_FAR.zoom;
 };

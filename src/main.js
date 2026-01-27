@@ -75,6 +75,14 @@ const setIOSViewportHeight = () => {
   }, { passive: true });
 };
 
+/**
+ * Cleanup all event subscriptions
+ */
+const cleanup = () => {
+  eventUnsubscribers.forEach((unsubscribe) => unsubscribe());
+  eventUnsubscribers.length = 0;
+};
+
 const init = async () => {
   try {
     // iOS: Configurer le viewport height dynamique en premier
@@ -246,7 +254,7 @@ const handleStart = async (gameType = "classic") => {
   });
 
   const capital = getCurrentCapital(state);
-  if (!capital) {
+  if (!capital || !capital.name || !capital.country) {
     UI.showError("Erreur: capitale introuvable");
     return;
   }
@@ -298,12 +306,12 @@ const onRoundEnd = () => {
   stopTimer();
 
   const round = state.currentRound;
-  if (!round) return;
+  if (!round || !round.capital) return;
 
   // Emit round completed event
   eventBus.emit('game:round:completed', { round });
 
-  if (round.click) {
+  if (round.click && round.click.lat != null && round.click.lng != null) {
     const clickCoords = /** @type {[number, number]} */ ([round.click.lat, round.click.lng]);
     const capitalCoords = /** @type {[number, number]} */ ([round.capital.lat, round.capital.lng]);
     mapSystem.showRoundResult(clickCoords, capitalCoords, round.distance || 0);
@@ -341,7 +349,7 @@ const handleNext = () => {
   mapSystem.resetView();
 
   const capital = getCurrentCapital(state);
-  if (!capital) {
+  if (!capital || !capital.name || !capital.country) {
     UI.showError("Erreur: capitale introuvable");
     return;
   }
@@ -404,6 +412,15 @@ const handleReplay = () => {
   UI.hideGameOver();
   UI.showStart();
 };
+
+// Cleanup on page unload to prevent memory leaks
+window.addEventListener('beforeunload', () => {
+  cleanup();
+  uiSystem.destroy();
+  mapSystem.destroy();
+  inputSystem.destroy();
+  scoringSystem.destroy();
+});
 
 document.addEventListener("DOMContentLoaded", () => {
   init().catch((e) => {
