@@ -6,13 +6,24 @@ export function getDatabase(context) {
                         context?.NETLIFY_DATABASE_URL ||
                         process.env.NETLIFY_DATABASE_URL;
     
-    return databaseUrl ? neon(databaseUrl) : neon();
+    if (!databaseUrl) {
+      // In production, neon() should work without URL if configured via Netlify
+      // But we'll try both approaches
+      try {
+        return neon();
+      } catch (fallbackError) {
+        throw new Error("Database URL not configured and neon() failed");
+      }
+    }
+    
+    return neon(databaseUrl);
   } catch (error) {
+    const errorMessage = error.message || "Unknown database connection error";
     if (process.env.NODE_ENV === "development") {
-      console.error("Error creating database connection:", error.message);
+      console.error("Error creating database connection:", errorMessage, error.code);
     } else {
       console.error("Database connection error");
     }
-    throw new Error(`Failed to connect to database: ${error.message}`);
+    throw new Error(`Failed to connect to database: ${errorMessage}`);
   }
 }

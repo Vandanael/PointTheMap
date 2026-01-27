@@ -5,6 +5,9 @@ import { randomUUID } from "crypto";
 import { capitals, selectBalancedCapitals } from "../../capitals.js";
 
 class SeededRandom {
+  /**
+   * @param {number} seed
+   */
   constructor(seed) {
     this.seed = seed;
   }
@@ -15,11 +18,16 @@ class SeededRandom {
   }
 }
 
+/**
+ * @param {Array<{name: string, country: string, lat: number, lng: number, popular: boolean}>} allCapitals
+ * @param {number} seed
+ * @returns {Array<{name: string, country: string, lat: number, lng: number, popular: boolean}>}
+ */
 const selectBalancedCapitalsDeterministic = (allCapitals, seed) => {
   const rng = new SeededRandom(seed);
   
-  const popularCities = allCapitals.filter((city) => city.popular === true);
-  const obscureCities = allCapitals.filter((city) => city.popular === false);
+  const popularCities = allCapitals.filter((/** @type {{popular: boolean}} */ city) => city.popular === true);
+  const obscureCities = allCapitals.filter((/** @type {{popular: boolean}} */ city) => city.popular === false);
 
   if (popularCities.length < 2 || obscureCities.length < 3) {
     const shuffled = [...allCapitals];
@@ -55,12 +63,33 @@ const selectBalancedCapitalsDeterministic = (allCapitals, seed) => {
   return sessionCapitals;
 };
 
+/**
+ * @param {Request} req
+ * @param {any} context
+ * @returns {Promise<Response>}
+ */
 export default async (req, context) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method not allowed" }), {
       status: 405,
       headers: { "Content-Type": "application/json" },
     });
+  }
+
+  // Early database connection check
+  let sql;
+  try {
+    sql = getDatabase(context);
+  } catch (dbError) {
+    const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
+    console.error("Database connection failed:", errorMessage);
+    return new Response(
+      JSON.stringify({ error: "Database connection failed. Please try again later." }),
+      {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 
   try {
@@ -81,7 +110,6 @@ export default async (req, context) => {
     
     const startTime = Date.now();
     const expiresAt = new Date(startTime + 10 * 60 * 1000);
-    const sql = getDatabase(context);
     await sql`
       INSERT INTO sessions (token, capitals, start_time, used, game_type, expires_at, csrf_token)
       VALUES (${token}, ${JSON.stringify(selectedCapitals)}::jsonb, ${startTime}, false, ${gameType}, ${expiresAt}, ${csrfToken})
@@ -107,20 +135,38 @@ export default async (req, context) => {
       }
     );
   } catch (error) {
+    // Handle database connection errors
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorCode = /** @type {any} */ (error)?.code;
+    if (errorMessage?.includes("Failed to connect") || 
+        errorMessage?.includes("connection") ||
+        errorCode === "ECONNREFUSED" ||
+        errorCode === "ETIMEDOUT") {
+      console.error("Database connection error:", errorMessage);
+      return new Response(
+        JSON.stringify({ error: "Database connection error. Please try again later." }),
+        {
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+    
+    const errorStack = /** @type {any} */ (error)?.stack;
+    const isMissingColumnError = errorCode === '42703' && 
+                                  errorMessage?.includes('does not exist');
+    
     if (process.env.NODE_ENV === "development") {
-      console.error("Start error:", error.message, error.code);
+      console.error("Start error:", errorMessage, errorCode, errorStack);
     } else {
       console.error("Start error occurred");
     }
-    
-    const isMissingColumnError = error.code === '42703' && 
-                                  error.message?.includes('does not exist');
     
     return new Response(JSON.stringify({ 
       error: isMissingColumnError 
         ? "Database schema error: missing column. Please run the migration script."
         : "Internal server error",
-      details: process.env.NODE_ENV === "development" ? error.message : undefined
+      details: process.env.NODE_ENV === "development" ? errorMessage : undefined
     }), {
       status: 500,
       headers: { "Content-Type": "application/json" },

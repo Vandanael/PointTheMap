@@ -13,6 +13,11 @@ const MIN_GAME_DURATION_MS = 5000;
 const MAX_GAME_DURATION_MS = 10 * 60 * 1000;
 const MAX_DISTANCE_KM = 20015;
 
+/**
+ * @param {any} data
+ * @param {number} [status=200]
+ * @returns {Response}
+ */
 const jsonResponse = (data, status = 200) =>
   new Response(JSON.stringify(data), {
     status,
@@ -21,6 +26,10 @@ const jsonResponse = (data, status = 200) =>
 
 const MIN_PLAUSIBLE_DURATION_MS = 15000;
 
+/**
+ * @param {number} gameDuration
+ * @returns {{valid: boolean, reason?: string}}
+ */
 const checkPlausibility = (gameDuration) => {
   if (gameDuration < MIN_PLAUSIBLE_DURATION_MS || gameDuration > MAX_GAME_DURATION_MS) {
     return { valid: false, reason: "Session duration implausible" };
@@ -28,6 +37,11 @@ const checkPlausibility = (gameDuration) => {
   return { valid: true };
 };
 
+/**
+ * @param {string} ip
+ * @param {any} context
+ * @returns {Promise<{allowed: boolean, remaining: number}>}
+ */
 const checkRateLimit = async (ip, context) => {
   try {
     const sql = getDatabase(context);
@@ -59,13 +73,22 @@ const checkRateLimit = async (ip, context) => {
       return { allowed: true, remaining: RATE_LIMIT_PER_HOUR - 1 };
     }
   } catch (e) {
+    // On database errors, allow the request but log the error
+    // This prevents rate limiting from blocking legitimate requests when DB is down
     if (process.env.NODE_ENV === "development") {
-      console.error("Rate limit error:", e.message);
+      const error = /** @type {Error & {code?: string}} */ (e);
+      console.error("Rate limit error:", error.message, error.code);
     }
-    return { allowed: false, remaining: 0 };
+    // Allow request to proceed if rate limiting fails (fail open)
+    return { allowed: true, remaining: RATE_LIMIT_PER_HOUR };
   }
 };
 
+/**
+ * @param {any[]} rounds
+ * @param {any[]} sessionCapitals
+ * @returns {{valid: boolean, error?: string}}
+ */
 const validateRounds = (rounds, sessionCapitals) => {
   if (!Array.isArray(rounds) || rounds.length !== ROUNDS) {
     return { valid: false, error: "Invalid rounds count" };
@@ -97,9 +120,27 @@ const validateRounds = (rounds, sessionCapitals) => {
   return { valid: true };
 };
 
+/**
+ * @param {Request} req
+ * @param {any} context
+ * @returns {Promise<Response>}
+ */
 export default async (req, context) => {
   if (req.method !== "POST") {
     return jsonResponse({ error: "Method not allowed" }, 405);
+  }
+
+  // Early database connection check
+  let sql;
+  try {
+    sql = getDatabase(context);
+  } catch (dbError) {
+    const error = /** @type {Error} */ (dbError);
+    console.error("Database connection failed:", error.message);
+    return jsonResponse(
+      { error: "Database connection failed. Please try again later." },
+      503
+    );
   }
 
   const ip = context.ip || req.headers.get("x-forwarded-for") || "unknown";
@@ -126,8 +167,6 @@ export default async (req, context) => {
     if (!token || typeof token !== "string") {
       return jsonResponse({ error: "Invalid token" }, 400);
     }
-
-    const sql = getDatabase(context);
 
     const sessionResult = await sql`
       SELECT token, capitals, start_time, used, game_type, expires_at, csrf_token
@@ -194,9 +233,14 @@ export default async (req, context) => {
       return jsonResponse({ error: plausibility.reason }, 400);
     }
 
-    const validatedRounds = rounds.map((round, i) => {
+    /**
+     * @param {any} round
+     * @param {number} i
+     * @returns {any}
+     */
+    const validateRound = (round, i) => {
       const serverCapital = session.capitals[i];
-      const capitalCoords = [serverCapital.lat, serverCapital.lng];
+      const capitalCoords = /** @type {[number, number]} */ ([serverCapital.lat, serverCapital.lng]);
 
       if (!round.click) {
         return {
@@ -208,7 +252,7 @@ export default async (req, context) => {
         };
       }
 
-      const clickCoords = [round.click.lat, round.click.lng];
+      const clickCoords = /** @type {[number, number]} */ ([round.click.lat, round.click.lng]);
       const distance = haversine(clickCoords, capitalCoords);
 
       if (distance > MAX_DISTANCE_KM) {
@@ -230,9 +274,11 @@ export default async (req, context) => {
         score: Math.round(score),
         status: "completed",
       };
-    });
+    };
 
-    const totalScore = validatedRounds.reduce((sum, r) => sum + r.score, 0);
+    const validatedRounds = rounds.map(validateRound);
+
+    const totalScore = validatedRounds.reduce((/** @type {number} */ sum, /** @type {any} */ r) => sum + r.score, 0);
     const clientIp = ip.split(",")[0].trim();
 
     if (clientIp === "unknown") {
@@ -268,8 +314,8 @@ export default async (req, context) => {
     let isTopFifty = false;
     
     try {
-      if (sql.begin) {
-        await sql.begin(async (tx) => {
+      if (/** @type {any} */ (sql).begin) {
+        await /** @type {any} */ (sql).begin(async (/** @type {any} */ tx) => {
           const doubleCheckResult = await tx`
             SELECT pseudo
             FROM scores
@@ -317,9 +363,10 @@ export default async (req, context) => {
         rounds: validatedRounds,
       });
     } catch (dbError) {
+      const error = /** @type {Error & {code?: string}} */ (dbError);
       // Gérer l'erreur de pseudo mismatch dans la transaction
-      if (dbError.message?.startsWith("PSEUDO_MISMATCH:")) {
-        const mismatchPseudo = dbError.message.split(":")[1];
+      if (error.message?.startsWith("PSEUDO_MISMATCH:")) {
+        const mismatchPseudo = error.message.split(":")[1];
         return jsonResponse(
           {
             error: "pseudo_already_set_for_this_ip",
@@ -328,8 +375,22 @@ export default async (req, context) => {
           409
         );
       }
+      // Handle database connection errors
+      if (error.message?.includes("Failed to connect") || 
+          error.message?.includes("connection") ||
+          error.code === "ECONNREFUSED" ||
+          error.code === "ETIMEDOUT") {
+        console.error("Database connection error:", error.message);
+        return jsonResponse({ 
+          error: "Database connection error. Please try again later.",
+          score: totalScore,
+          rank: 0,
+          isTopFifty: false,
+          rounds: validatedRounds,
+        }, 503);
+      }
       if (process.env.NODE_ENV === "development") {
-        console.error("Database error:", dbError.message);
+        console.error("Database error:", error.message, error.code);
       } else {
         console.error("Database error occurred");
       }
@@ -342,8 +403,13 @@ export default async (req, context) => {
       }, 500);
     }
   } catch (error) {
+    // Handle JSON parsing errors
+    if (error instanceof SyntaxError) {
+      return jsonResponse({ error: "Invalid request body" }, 400);
+    }
     if (process.env.NODE_ENV === "development") {
-      console.error("Submit error:", error.message);
+      const err = /** @type {Error} */ (error);
+      console.error("Submit error:", err.message, err.stack);
     } else {
       console.error("Submit error occurred");
     }

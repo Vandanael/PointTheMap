@@ -36,10 +36,24 @@ export default async (req, context) => {
     });
   }
 
+  // Early database connection check
+  let sql;
+  try {
+    sql = getDatabase(context);
+  } catch (dbError) {
+    console.error("Database connection failed:", dbError.message);
+    return new Response(
+      JSON.stringify({ error: "Database connection failed. Please try again later." }),
+      {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+
   try {
     const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
     const type = url.searchParams.get("type") || "classic";
-    const sql = getDatabase(context);
     let query;
     if (type === "daily") {
       const today = new Date();
@@ -82,8 +96,23 @@ export default async (req, context) => {
       },
     });
   } catch (error) {
+    // Handle database connection errors
+    if (error.message?.includes("Failed to connect") || 
+        error.message?.includes("connection") ||
+        error.code === "ECONNREFUSED" ||
+        error.code === "ETIMEDOUT") {
+      console.error("Database connection error:", error.message);
+      return new Response(
+        JSON.stringify({ error: "Database connection error. Please try again later." }),
+        {
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+    
     if (process.env.NODE_ENV === "development") {
-      console.error("Leaderboard error:", error.message);
+      console.error("Leaderboard error:", error.message, error.code, error.stack);
     } else {
       console.error("Leaderboard error occurred");
     }
