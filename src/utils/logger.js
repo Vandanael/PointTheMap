@@ -63,13 +63,6 @@ const createLogger = (category = 'app') => {
 export const logger = createLogger();
 
 /**
- * Create a logger for a specific component
- * @param {string} component - Component name
- * @returns {Logger}
- */
-export const createComponentLogger = (component) => createLogger(component);
-
-/**
  * @typedef {Object} Logger
  * @property {(...args: any[]) => void} debug
  * @property {(...args: any[]) => void} info

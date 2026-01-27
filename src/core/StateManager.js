@@ -10,6 +10,7 @@
  */
 
 import { eventBus } from './EventBus.js';
+import { logger } from '../utils/logger.js';
 
 export class StateManager {
   #state;
@@ -137,7 +138,7 @@ export class StateManager {
 
       if (result !== true) {
         const errorMessage = typeof result === 'string' ? result : `Validation failed for ${path}`;
-        console.error(`StateManager validation error:`, errorMessage);
+        logger.error(`StateManager validation error:`, errorMessage);
         throw new Error(errorMessage);
       }
     }
@@ -184,7 +185,7 @@ export class StateManager {
       try {
         callback(nextState, prevState, action);
       } catch (error) {
-        console.error('StateManager: Error in subscriber:', error);
+        logger.error('StateManager: Error in subscriber:', error);
       }
     });
   }

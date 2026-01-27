@@ -26,7 +26,7 @@ const publicDir = join(rootDir, 'public');
 
 try {
   await generatePNG(
-    join(publicDir, 'og-image.svg'),
+    join(publicDir, 'favicon.svg'),
     join(publicDir, 'og-image.png')
   );
   console.log('✅ og-image.png créé');

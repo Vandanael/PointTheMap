@@ -68,7 +68,6 @@ export const MAP_ANIMATIONS = {
 // FitBounds padding options
 export const FITBOUNDS_OPTIONS = {
   DEFAULT_PADDING: [80, 80],      // Padding horizontal et vertical en pixels
-  MOBILE_PADDING: [40, 40],       // Padding réduit pour mobile (futur)
   MAX_ZOOM: 10,                    // Zoom maximum pour éviter trop zoomer sur des points proches
   MIN_ZOOM: 2,                     // Zoom minimum pour éviter de trop dézoomer
 };
@@ -78,7 +77,6 @@ export const UI_TIMING = {
   QUESTION_AUTO_CLOSE: 1000,        // Auto-close question modal after 1s
   ERROR_DISPLAY: 4000,              // Error message display duration
   LOADER_FINAL_DELAY: 300,          // Delay before hiding loader at 100%
-  ROUND_RESULT_DELAY: 0,            // Delay before showing round result (currently 0 in setTimeout)
 };
 
 // Helper functions using constants

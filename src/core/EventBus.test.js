@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { EventBus } from './EventBus.js';
+import { logger } from '../utils/logger.js';
 
 describe('EventBus', () => {
   let eventBus;
@@ -147,33 +148,33 @@ describe('EventBus', () => {
       eventBus.subscribe('test:event', errorHandler);
       eventBus.subscribe('test:event', successHandler);
 
-      // Mock console.error to avoid noise in test output
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      // Mock logger.error to avoid noise in test output
+      const loggerError = vi.spyOn(logger, 'error').mockImplementation(() => {});
 
       eventBus.emit('test:event');
 
       expect(errorHandler).toHaveBeenCalledTimes(1);
       expect(successHandler).toHaveBeenCalledTimes(1);
-      expect(consoleError).toHaveBeenCalled();
+      expect(loggerError).toHaveBeenCalled();
 
-      consoleError.mockRestore();
+      loggerError.mockRestore();
     });
 
     it('should log error details when handler throws', () => {
       const errorHandler = vi.fn(() => {
         throw new Error('Test error');
       });
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const loggerError = vi.spyOn(logger, 'error').mockImplementation(() => {});
 
       eventBus.subscribe('test:event', errorHandler);
       eventBus.emit('test:event');
 
-      expect(consoleError).toHaveBeenCalledWith(
+      expect(loggerError).toHaveBeenCalledWith(
         expect.stringContaining('EventBus: Error in handler for "test:event"'),
         expect.any(Error)
       );
 
-      consoleError.mockRestore();
+      loggerError.mockRestore();
     });
   });
 

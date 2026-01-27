@@ -11,6 +11,8 @@
  * Examples: theme:changed, timer:started, game:round:completed
  */
 
+import { logger } from '../utils/logger.js';
+
 class EventBus {
   constructor() {
     this._listeners = new Map();
@@ -121,7 +123,7 @@ class EventBus {
       try {
         handler(data);
       } catch (error) {
-        console.error(`EventBus: Error in handler for "${event}":`, error);
+        logger.error(`EventBus: Error in handler for "${event}":`, error);
         // Continue executing other handlers
       }
     });

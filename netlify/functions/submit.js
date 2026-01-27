@@ -3,6 +3,7 @@
 import { getDatabase } from "./db.js";
 // Import shared game logic from lib (same functions used by client)
 import { haversine, calculateScore } from "../../lib/game-math/index.js";
+import { validationSystem } from "../../src/systems/ValidationSystem.js";
 
 const MAX_SCORE_PER_ROUND = 5000;
 const ROUNDS = 5;
@@ -11,8 +12,6 @@ const RATE_LIMIT_PER_HOUR = 50;
 const MIN_GAME_DURATION_MS = 5000;
 const MAX_GAME_DURATION_MS = 10 * 60 * 1000;
 const MAX_DISTANCE_KM = 20015;
-
-const validatePseudo = (pseudo) => /^[A-Z]{3,5}$/.test(pseudo);
 
 const jsonResponse = (data, status = 200) =>
   new Response(JSON.stringify(data), {
@@ -117,7 +116,7 @@ export default async (req, context) => {
     const { token, rounds, pseudo, gameType = "classic" } = body;
     const csrfToken = req.headers.get("x-csrf-token");
 
-    if (!pseudo || !validatePseudo(pseudo)) {
+    if (!pseudo || !validationSystem.validatePseudo(pseudo).valid) {
       return jsonResponse(
         { error: "Invalid pseudo (3-5 uppercase letters required)" },
         400

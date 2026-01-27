@@ -9,6 +9,7 @@
  */
 
 import './StateDevTools.css';
+import { logger } from '../utils/logger.js';
 
 export class StateDevTools {
   #stateManager;
@@ -117,10 +118,9 @@ export class StateDevTools {
       btn.addEventListener('click', (e) => {
         const index = parseInt(e.target.dataset.index);
         const entry = history[index];
-        console.group(`State at ${new Date(entry.timestamp).toLocaleTimeString()} (${entry.action})`);
-        console.log('State:', entry.state);
-        console.log('Previous State:', entry.prevState);
-        console.groupEnd();
+        logger.debug(`State at ${new Date(entry.timestamp).toLocaleTimeString()} (${entry.action})`);
+        logger.debug('State:', entry.state);
+        logger.debug('Previous State:', entry.prevState);
       });
     });
   }

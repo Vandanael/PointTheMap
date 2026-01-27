@@ -28,10 +28,14 @@ import { processRetryQueue, submitWithRetry } from "./services/api.js";
 import { timerSystem } from "./systems/TimerSystem.js";
 import { uiSystem } from "./systems/UISystem.js";
 import { inputSystem } from "./systems/InputSystem.js";
-import { errorHandler, APIError, GameError, safeAsync } from "./core/ErrorHandler.js";
+import { scoringSystem } from "./systems/ScoringSystem.js";
+import { errorHandler, APIError, safeAsync } from "./core/ErrorHandler.js";
 
 // State Management
 const stateManager = new StateManager(createGameState());
+
+// Track event subscriptions for cleanup
+const eventUnsubscribers = [];
 
 // Initialize DevTools in dev mode (dynamic import to exclude from production bundle)
 if (import.meta.env.DEV) {
@@ -94,54 +98,76 @@ const init = async () => {
     });
 
     // Subscribe to timer game logic events
-    eventBus.subscribe('timer:timeout', () => {
-      const state = stateManager.getState();
-      if (state.status === GameStatus.PLAYING && state.currentRound) {
-        stateManager.setState(
-          gameHandleTimeout(state),
-          'timer:timeout'
-        );
-        onRoundEnd();
-      }
-    });
+    eventUnsubscribers.push(
+      eventBus.subscribe('timer:timeout', () => {
+        const state = stateManager.getState();
+        if (state.status === GameStatus.PLAYING && state.currentRound) {
+          // Stop timer to prevent tick handler from also firing
+          timerSystem.stop();
+          const newState = gameHandleTimeout(state);
+          stateManager.setState(newState, 'timer:timeout');
+          
+          // Only call onRoundEnd if state was actually changed (guard against race condition)
+          if (newState.status === GameStatus.ROUND_RESULT) {
+            onRoundEnd();
+          }
+        }
+      })
+    );
 
-    eventBus.subscribe('timer:tick', () => {
-      const state = stateManager.getState();
-      if (state.status !== GameStatus.PLAYING || !state.currentRound) {
-        timerSystem.stop();
-        return;
-      }
-      const remaining = getRemainingTime(state.currentRound);
-      if (remaining <= 0) {
-        stateManager.setState(
-          gameHandleTimeout(state),
-          'timer:tick:timeout'
-        );
-        onRoundEnd();
-      }
-    });
+    eventUnsubscribers.push(
+      eventBus.subscribe('timer:tick', () => {
+        const state = stateManager.getState();
+        if (state.status !== GameStatus.PLAYING || !state.currentRound) {
+          timerSystem.stop();
+          return;
+        }
+        const remaining = getRemainingTime(state.currentRound);
+        if (remaining <= 0) {
+          // Stop timer to prevent timer:timeout handler from also firing
+          timerSystem.stop();
+          const newState = gameHandleTimeout(state);
+          stateManager.setState(newState, 'timer:tick:timeout');
+          
+          // Only call onRoundEnd if state was actually changed (guard against race condition)
+          if (newState.status === GameStatus.ROUND_RESULT) {
+            onRoundEnd();
+          }
+        }
+      })
+    );
 
     // Initialize UI system (handles all UI-related EventBus subscriptions)
     uiSystem.init();
     // Initialize Input system
     inputSystem.init();
+    // Initialize Scoring system
+    scoringSystem.init();
 
     // Subscribe to InputSystem events
-    eventBus.subscribe('input:start-game', (/** @type {{ gameType?: "classic" | "daily" }} */ { gameType }) => {
-      handleStart(gameType || 'classic');
-    });
+    eventUnsubscribers.push(
+      eventBus.subscribe('input:start-game', (/** @type {{ gameType?: "classic" | "daily" }} */ { gameType }) => {
+        handleStart(gameType || 'classic');
+      })
+    );
 
-    eventBus.subscribe('input:next-round', () => {
-      handleNext();
-    });
+    eventUnsubscribers.push(
+      eventBus.subscribe('input:next-round', () => {
+        handleNext();
+      })
+    );
 
-    eventBus.subscribe('input:submit', (/** @type {{ pseudo: string }} */ { pseudo }) => {
-      handleSubmit(pseudo);
-    });
+    eventUnsubscribers.push(
+      eventBus.subscribe('input:submit', (/** @type {{ pseudo: string }} */ { pseudo }) => {
+        handleSubmit(pseudo);
+      })
+    );
 
-    eventBus.subscribe('input:replay', () => {
-      handleReplay();
-    });
+    eventUnsubscribers.push(
+      eventBus.subscribe('input:replay', () => {
+        handleReplay();
+      })
+    );
 
     UI.showLoader();
     UI.updateLoader(20);
@@ -260,11 +286,17 @@ const handleMapClick = (coords) => {
 };
 
 const onRoundEnd = () => {
+  const state = stateManager.getState();
+  
+  // Guard: Only process if we're in ROUND_RESULT status (prevents double execution)
+  if (state.status !== GameStatus.ROUND_RESULT) {
+    return;
+  }
+  
   mapSystem.disableClicks();
   inputSystem.disableMapInput();
   stopTimer();
 
-  const state = stateManager.getState();
   const round = state.currentRound;
   if (!round) return;
 

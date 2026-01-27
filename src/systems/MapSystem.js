@@ -12,6 +12,7 @@ import { MAP } from '../config.js';
 import { getTheme } from '../services/storage.js';
 import { isIOS } from '../utils.js';
 import { eventBus } from '../core/EventBus.js';
+import { logger } from '../utils/logger.js';
 import {
   MARKERS,
   LINES,
@@ -38,7 +39,7 @@ export class MapSystem {
    */
   init(containerId) {
     if (this.#initialized) {
-      console.warn('MapSystem already initialized');
+      logger.warn('MapSystem already initialized');
       return true;
     }
 

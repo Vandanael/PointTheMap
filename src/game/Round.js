@@ -1,6 +1,8 @@
 import { GAME } from "../config.js";
-import { haversine } from "../utils.js";
-import { calculateScore as calculateScoreLib, normalizeLat as normalizeLatLib, normalizeLng as normalizeLngLib } from '@lib/game-math/index.js';
+import { normalizeCoords } from '@lib/game-math/index.js';
+import { validationSystem } from "../systems/ValidationSystem.js";
+import { scoringSystem } from "../systems/ScoringSystem.js";
+import { logger } from "../utils/logger.js";
 
 /**
  * Create a new round
@@ -19,10 +21,6 @@ export const createRound = (capital, roundNumber) => ({
   status: "playing",
 });
 
-// Use normalize functions from shared library
-const normalizeLng = normalizeLngLib;
-const normalizeLat = normalizeLatLib;
-
 /**
  * Record user click and calculate score
  * @param {import('./Game.js').Round} round - Current round
@@ -34,11 +32,20 @@ export const recordClick = (round, clickCoords) => {
   const elapsed = endTime - round.startTime;
   const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
 
-  // Normalize coordinates to valid ranges
-  const normalizedLat = normalizeLat(clickCoords[0]);
-  const normalizedLng = normalizeLng(clickCoords[1]);
-  const normalizedCoords = [normalizedLat, normalizedLng];
+  // Validate coordinates before processing
+  const coordValidation = validationSystem.validateCoordinates(clickCoords[0], clickCoords[1]);
+  if (!coordValidation.valid) {
+    // Log error and use normalized values as fallback
+    logger.warn('Invalid coordinates:', coordValidation.error);
+  }
 
+  // Normalize coordinates to valid ranges
+  const normalizedCoords = normalizeCoords(clickCoords);
+  const [normalizedLat, normalizedLng] = normalizedCoords;
+
+  const capitalCoords = [round.capital.lat, round.capital.lng];
+  
+  // Check timeout first (before calculating score)
   if (elapsed > totalTimeAllowed) {
     return {
       ...round,
@@ -50,16 +57,21 @@ export const recordClick = (round, clickCoords) => {
     };
   }
 
-  const capitalCoords = [round.capital.lat, round.capital.lng];
-  const distance = haversine(normalizedCoords, capitalCoords);
-  const score = calculateScore(distance);
+  // Use ScoringSystem for consistent architecture
+  const scoreResult = scoringSystem.calculateClickScore(
+    normalizedCoords,
+    capitalCoords,
+    elapsed
+  );
 
   return {
     ...round,
     endTime,
     click: { lat: normalizedLat, lng: normalizedLng },
-    distance: Math.round(distance),
-    score: Math.round(score),
+    distance: scoreResult.distance !== null && scoreResult.distance !== undefined 
+      ? Math.round(scoreResult.distance) 
+      : null,
+    score: Math.round(scoreResult.score),
     status: "completed",
   };
 };
@@ -82,9 +94,9 @@ export const timeoutRound = (round) => ({
  * Calculate score based on distance
  * @param {number} distanceKm - Distance in kilometers
  * @returns {number} Score (0-5000)
+ * @deprecated Use scoringSystem.calculateScore() instead for consistency
  */
-// Use calculateScore from shared library
-export const calculateScore = calculateScoreLib;
+export const calculateScore = (distanceKm) => scoringSystem.calculateScore(distanceKm);
 
 /**
  * Get remaining time for current round

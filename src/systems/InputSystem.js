@@ -14,6 +14,7 @@ export class InputSystem {
   #initialized = false;
   #mapClickEnabled = false;
   #mapClickCallback = null;
+  #mapClickUnsubscribe = null;
 
   constructor() {}
 
@@ -60,11 +61,17 @@ export class InputSystem {
    * @param {Function} callback - Callback receiving [lat, lng]
    */
   enableMapInput(callback) {
+    // Cleanup previous subscription if exists
+    if (this.#mapClickUnsubscribe) {
+      this.#mapClickUnsubscribe();
+      this.#mapClickUnsubscribe = null;
+    }
+
     this.#mapClickEnabled = true;
     this.#mapClickCallback = callback;
 
     // Subscribe to map:click events
-    eventBus.subscribe('map:click', ({ lat, lng }) => {
+    this.#mapClickUnsubscribe = eventBus.subscribe('map:click', ({ lat, lng }) => {
       if (this.#mapClickEnabled && this.#mapClickCallback) {
         this.#mapClickCallback([lat, lng]);
       }
@@ -79,6 +86,12 @@ export class InputSystem {
   disableMapInput() {
     this.#mapClickEnabled = false;
     this.#mapClickCallback = null;
+
+    // Unsubscribe from map:click events
+    if (this.#mapClickUnsubscribe) {
+      this.#mapClickUnsubscribe();
+      this.#mapClickUnsubscribe = null;
+    }
 
     eventBus.emit('input:map-disabled');
   }

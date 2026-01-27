@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MapSystem, getMapSystem, mapSystem } from './MapSystem.js';
 import { eventBus } from '../core/EventBus.js';
+import { logger } from '../utils/logger.js';
 
 describe('MapSystem', () => {
   let system;
@@ -96,7 +97,7 @@ describe('MapSystem', () => {
     });
 
     it('should warn if initialized multiple times', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 
       system.init('map');
       system.init('map');

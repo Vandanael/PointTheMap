@@ -88,6 +88,9 @@ export class IndexedDBQueue {
     if (this.#db) {
       return this.#db;
     }
+    if (!this.#dbPromise) {
+      throw new Error('Database is closed');
+    }
     return await this.#dbPromise;
   }
 
@@ -252,7 +255,18 @@ export class IndexedDBQueue {
    */
   async clear() {
     try {
+      // Check if DB is closed
+      if (!this.#db && !this.#dbPromise) {
+        logger.warn("IndexedDBQueue: Cannot clear - database is closed");
+        return false;
+      }
+
       const db = await this.#getDB();
+      if (!db) {
+        logger.warn("IndexedDBQueue: Cannot clear - database is null");
+        return false;
+      }
+
       const transaction = db.transaction([STORE_NAME], "readwrite");
       const store = transaction.objectStore(STORE_NAME);
 

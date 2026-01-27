@@ -159,7 +159,7 @@ export const handleTimeout = (state) => {
 export const nextRound = (state) => {
   const nextIndex = state.currentRoundIndex + 1;
 
-  if (nextIndex >= GAME.ROUNDS) {
+  if (nextIndex >= GAME.ROUNDS || nextIndex >= state.capitals.length) {
     return {
       ...state,
       status: GameStatus.GAME_OVER,

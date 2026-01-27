@@ -11,6 +11,7 @@ import { UI_TIMING } from "../config/visual-constants.js";
 import { debounce } from "../utils/performance.js";
 import { inputSystem } from "../systems/InputSystem.js";
 import { safeAsync } from "../core/ErrorHandler.js";
+import { validationSystem } from "../systems/ValidationSystem.js";
 import {
   Modal,
   TimerBar,
@@ -317,7 +318,8 @@ export const UI = {
 
       const pseudo = input?.value.trim();
       const error = document.getElementById("pseudo-error");
-      if (!/^[A-Z]{3,5}$/.test(pseudo)) {
+      const validation = validationSystem.validatePseudo(pseudo);
+      if (!validation.valid) {
         error?.classList.remove("hidden");
         input?.style.setProperty("border-color", "#ef4444");
         return;
