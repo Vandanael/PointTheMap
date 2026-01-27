@@ -339,8 +339,6 @@ const stopTimer = () => {
  */
 const handleStart = async (gameType = "classic") => {
   UI.hideStart();
-  UI.showLoader();
-  UI.updateLoader(20);
   mapSystem.clearMap(); // Nettoie tous les markers (y compris les capitales)
   mapSystem.resetView();
 
@@ -354,8 +352,6 @@ const handleStart = async (gameType = "classic") => {
     return;
   }
   stateManager.setState(newState, `game:start:${gameType}`);
-  UI.updateLoader(100);
-  UI.hideLoader();
 
   const state = stateManager.getState();
   if (state.status !== GameStatus.PLAYING) {
@@ -488,7 +484,6 @@ const handleNext = () => {
  * @param {string} pseudo
  */
 const handleSubmit = async (pseudo) => {
-  UI.showLoader();
   try {
     const state = stateManager.getState();
     const result = await submitWithRetry(state.token, state.rounds, pseudo, state.gameType);
@@ -534,7 +529,6 @@ const handleSubmit = async (pseudo) => {
     /** @type {any} */
     const err = error;
     if (err.status === 409 && err.data?.error === "pseudo_already_set_for_this_ip") {
-      UI.hideLoader();
       UI.showPseudoLockedDialog(err.data.pseudo);
       return;
     }
@@ -545,8 +539,6 @@ const handleSubmit = async (pseudo) => {
       err.data
     );
     errorHandler.handle(apiError, 'score:submit', { showToUser: true, fatal: false });
-  } finally {
-    UI.hideLoader();
   }
 };
 

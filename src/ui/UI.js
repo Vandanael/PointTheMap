@@ -244,7 +244,14 @@ export const UI = {
   showLoader() {
     const existing = document.getElementById("loading-spinner");
     if (existing) return;
-    render(LoadingSpinner());
+    const spinner = render(LoadingSpinner());
+    // Force reflow to ensure loader is rendered and visible
+    if (spinner) {
+      spinner.offsetHeight; // Force reflow
+      // Update cache immediately
+      _domCache._cache["loading-spinner"] = spinner;
+      _domCache._cache["loading-progress"] = document.getElementById("loading-progress");
+    }
   },
   hideLoader() {
     remove("loading-spinner");
