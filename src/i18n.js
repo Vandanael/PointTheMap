@@ -12,6 +12,45 @@ const translations = {
     start: "COMMENCER",
     madeBy: "Made by",
 
+    // Share
+    share: "Partager",
+    shareCopied: "Lien copié",
+    shareFailed: "Impossible de partager",
+    shareOnAchievement: "Partager cette réussite",
+    shareGameMessage: "Point The Map — Devine les capitales ! https://pointthemap.app",
+
+    // Stats
+    myStats: "Mes Statistiques",
+    stats: {
+      gamesPlayed: "Parties jouées",
+      bestClassic: "Meilleur (Classique)",
+      bestDaily: "Meilleur (Quotidien)",
+      avgDistance: "Distance moyenne",
+      perfectRounds: "Rounds parfaits",
+      dailyStreak: "Série quotidienne"
+    },
+
+    // Achievements
+    achievement: {
+      perfectRound: "Premier Parfait",
+      perfectRoundDesc: "Moins de 1 km sur un round",
+      perfectGame: "Jeu Parfait",
+      perfectGameDesc: "5 rounds parfaits en une partie",
+      avgUnder10: "Expert",
+      avgUnder10Desc: "Moyenne < 10 km",
+      avgUnder50: "Pro",
+      avgUnder50Desc: "Moyenne < 50 km",
+      top1pct: "Élite",
+      top1pctDesc: "Top 1% du classement",
+      streak3: "En Feu",
+      streak3Desc: "3 jours d'affilée",
+      play10: "Joueur",
+      play10Desc: "10 parties jouées",
+      play50: "Vétéran",
+      play50Desc: "50 parties jouées",
+      unlocked: "Succès débloqué !"
+    },
+
     // Game
     round: "Round",
     score: "Score",
@@ -25,6 +64,14 @@ const translations = {
     seeResults: "VOIR RÉSULTATS",
     timeUp: "Temps écoulé",
     tooSlow: "Trop lent !",
+    category: {
+      perfect: "Parfait",
+      excellent: "Excellent",
+      good: "Bien",
+      fair: "Correct",
+      poor: "Continue d'essayer",
+      unknown: "Inconnu",
+    },
 
     // Game over
     gameOver: "Game Over",
@@ -78,6 +125,45 @@ const translations = {
     start: "START",
     madeBy: "Made by",
 
+    // Share
+    share: "Share",
+    shareCopied: "Link copied",
+    shareFailed: "Unable to share",
+    shareOnAchievement: "Share this achievement",
+    shareGameMessage: "Point The Map — Try to guess the capitals! https://pointthemap.app",
+
+    // Stats
+    myStats: "My Stats",
+    stats: {
+      gamesPlayed: "Games played",
+      bestClassic: "Best (Classic)",
+      bestDaily: "Best (Daily)",
+      avgDistance: "Average distance",
+      perfectRounds: "Perfect rounds",
+      dailyStreak: "Daily streak"
+    },
+
+    // Achievements
+    achievement: {
+      perfectRound: "First Perfect",
+      perfectRoundDesc: "Less than 1 km on a round",
+      perfectGame: "Perfect Game",
+      perfectGameDesc: "5 perfect rounds in one game",
+      avgUnder10: "Expert",
+      avgUnder10Desc: "Average < 10 km",
+      avgUnder50: "Pro",
+      avgUnder50Desc: "Average < 50 km",
+      top1pct: "Elite",
+      top1pctDesc: "Top 1% of leaderboard",
+      streak3: "On Fire",
+      streak3Desc: "3 days in a row",
+      play10: "Player",
+      play10Desc: "10 games played",
+      play50: "Veteran",
+      play50Desc: "50 games played",
+      unlocked: "Achievement unlocked!"
+    },
+
     // Game
     round: "Round",
     score: "Score",
@@ -91,6 +177,14 @@ const translations = {
     seeResults: "SEE RESULTS",
     timeUp: "Time's up",
     tooSlow: "Too slow!",
+    category: {
+      perfect: "Perfect",
+      excellent: "Excellent",
+      good: "Good",
+      fair: "Fair",
+      poor: "Keep trying",
+      unknown: "Unknown",
+    },
 
     // Game over
     gameOver: "Game Over",
@@ -147,6 +241,18 @@ const initLang = () => {
 
 export const t = (key) => {
   initLang();
+
+  // Handle nested keys (e.g., "stats.gamesPlayed")
+  if (key.includes('.')) {
+    const parts = key.split('.');
+    let value = translations[currentLang];
+    for (const part of parts) {
+      value = value?.[part];
+      if (value === undefined) return key;
+    }
+    return value;
+  }
+
   return translations[currentLang][key] || key;
 };
 
@@ -163,6 +269,7 @@ const setLang = (lang) => {
 };
 
 export const toggleLang = () => {
+  initLang(); // Initialize currentLang before using it
   const newLang = currentLang === "fr" ? "en" : "fr";
   setLang(newLang);
   return newLang;

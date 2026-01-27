@@ -12,7 +12,7 @@ import { logger } from "../utils/logger.js";
 import { migrations } from "./migrations.js";
 
 const STORAGE_VERSION_KEY = "ptm_storage_version";
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
 
 /**
  * @typedef {Object} StorageInfo

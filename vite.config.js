@@ -14,17 +14,14 @@ export default defineConfig({
       output: {
         // Manual chunk splitting for better caching
         manualChunks: (id) => {
-          // Check if module is in core directory
-          if (id.includes('/src/core/') || id.includes('\\src\\core\\')) {
-            return 'vendor-core';
-          }
-          // Check if module is in game directory
-          if (id.includes('/src/game/') || id.includes('\\src\\game\\')) {
-            return 'vendor-game';
-          }
-          // Check if module is in systems directory
-          if (id.includes('/src/systems/') || id.includes('\\src\\systems\\')) {
-            return 'vendor-systems';
+          // Combine core, game, and systems into a single chunk to avoid circular dependencies
+          // These are tightly coupled application modules
+          if (
+            id.includes('/src/core/') || id.includes('\\src\\core\\') ||
+            id.includes('/src/game/') || id.includes('\\src\\game\\') ||
+            id.includes('/src/systems/') || id.includes('\\src\\systems\\')
+          ) {
+            return 'vendor-app';
           }
         },
         // Optimize asset file names for better caching

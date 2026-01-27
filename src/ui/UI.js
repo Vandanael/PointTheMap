@@ -27,7 +27,11 @@ import {
   LoadingSpinner,
   PseudoLockedDialog,
   Toast,
+  MyStatsModal,
+  AchievementUnlockModal,
 } from "./components.js";
+import { getStats } from "../features/StatsManager.js";
+import { shareGameResults } from "../features/Share.js";
 
 // Rate limiting for submit button
 const MIN_SUBMIT_INTERVAL = 2000; // 2 seconds between submissions
@@ -41,6 +45,9 @@ let _questionModalClickHandler = null;
 let _pseudoInputHandler = null;
 let _pseudoKeypressHandler = null;
 let _pseudoFocusHandler = null;
+
+// Store click handlers to allow removal before adding new ones
+const _clickHandlers = new Map();
 
 // DOM cache to avoid repeated queries
 const _domCache = {
@@ -78,12 +85,38 @@ const render = (html, container = app()) => {
 };
 
 const remove = (id) => {
-  _domCache.get(id)?.remove();
+  const el = document.getElementById(id) || _domCache.get(id);
+  if (el) {
+    el.remove();
+  }
   _domCache.invalidate(id);
+  // Also remove click handler when element is removed
+  _clickHandlers.delete(id);
 };
+
 const bindClick = (id, handler) => {
-  const el = _domCache.get(id);
-  if (el) el.addEventListener("click", handler);
+  // Try cache first, then direct DOM lookup
+  let el = _domCache.get(id);
+  if (!el) {
+    el = document.getElementById(id);
+    if (el) {
+      // Update cache if found
+      _domCache._cache[id] = el;
+    }
+  }
+  
+  if (el) {
+    // Remove previous handler if it exists
+    const previousHandler = _clickHandlers.get(id);
+    if (previousHandler) {
+      el.removeEventListener("click", previousHandler);
+    }
+    // Add new handler and store it
+    el.addEventListener("click", handler);
+    _clickHandlers.set(id, handler);
+  } else {
+    logger.warn(`bindClick: Element #${id} not found`);
+  }
 };
 
 const applyTheme = (theme) => {
@@ -169,19 +202,19 @@ export const UI = {
     // Subscribe to storage quota events
     _uiInitUnsubscribers.push(
       eventBus.subscribe('storage:quota-exceeded', ({ message }) => {
-        this.showToast(message, 'warning', 4000);
+        UI.showToast(message, 'warning', 4000);
       })
     );
 
     _uiInitUnsubscribers.push(
       eventBus.subscribe('storage:quota-recovered', ({ message }) => {
-        this.showToast(message, 'success', 3000);
+        UI.showToast(message, 'success', 3000);
       })
     );
 
     _uiInitUnsubscribers.push(
       eventBus.subscribe('storage:quota-failed', ({ message }) => {
-        this.showToast(message, 'error', 6000);
+        UI.showToast(message, 'error', 6000);
       })
     );
   },
@@ -235,9 +268,19 @@ export const UI = {
     bindClick("btn-start-daily", () => inputSystem.handleStartGame("daily"));
     bindClick("btn-theme", toggleTheme);
     bindClick("btn-lang", handleToggleLang);
+    bindClick("btn-stats", () => UI.showStatsModal());
     bindClick("btn-leaderboard", () => {
       // Show skeleton immediately, load data in background
       UI.showLeaderboardModal([], "classic", true);
+    });
+    bindClick("btn-share-game", async () => {
+      const shareText = t("shareGameMessage");
+      const success = await shareGameResults(shareText);
+      UI.showToast(
+        success ? t("shareCopied") : t("shareFailed"),
+        success ? "success" : "error",
+        3000
+      );
     });
   },
   hideStart() {
@@ -306,15 +349,23 @@ export const UI = {
     }
   },
 
-  // Game UI
-  showGameUI(roundNum, totalRounds, capitalName, country, totalScore) {
-    render(TimerBar());
-    render(GameHeader(roundNum, totalRounds, capitalName, country, totalScore));
+  showStatsModal() {
+    remove("stats-modal");
+    
+    const stats = getStats();
+    render(MyStatsModal(stats));
+    bindClick("btn-close-stats", () => remove("stats-modal"));
   },
-  updateGameUI(roundNum, totalRounds, capitalName, country, totalScore) {
+
+  // Game UI
+  showGameUI(roundNum, totalRounds, totalScore) {
+    render(TimerBar());
+    render(GameHeader(roundNum, totalRounds, totalScore));
+  },
+  updateGameUI(roundNum, totalRounds, totalScore) {
     remove("game-header");
     _domCache.invalidate("game-header");
-    render(GameHeader(roundNum, totalRounds, capitalName, country, totalScore));
+    render(GameHeader(roundNum, totalRounds, totalScore));
   },
   hideGameUI() {
     remove("game-header");

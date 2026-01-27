@@ -342,6 +342,22 @@ export class IndexedDBQueue {
       return await new Promise((resolve, reject) => {
         const request = index.openCursor(null, "next");
         const results = [];
+        let transactionEnded = false;
+
+        // Handle transaction completion
+        transaction.oncomplete = () => {
+          if (!transactionEnded) {
+            transactionEnded = true;
+            resolve(results);
+          }
+        };
+
+        transaction.onerror = () => {
+          if (!transactionEnded) {
+            transactionEnded = true;
+            reject(transaction.error || new Error("Transaction failed"));
+          }
+        };
 
         request.onsuccess = (event) => {
           const cursor = event.target.result;
@@ -349,11 +365,20 @@ export class IndexedDBQueue {
             results.push(cursor.value);
             cursor.continue();
           } else {
-            resolve(results);
+            // Cursor finished or limit reached
+            if (!transactionEnded) {
+              transactionEnded = true;
+              resolve(results);
+            }
           }
         };
 
-        request.onerror = () => reject(request.error);
+        request.onerror = () => {
+          if (!transactionEnded) {
+            transactionEnded = true;
+            reject(request.error);
+          }
+        };
       });
     } catch (error) {
       logger.error("IndexedDBQueue: Failed to get oldest entries", error);

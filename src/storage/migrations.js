@@ -61,33 +61,53 @@ const migrationV1 = {
 };
 
 /**
- * Example Migration v2: Rename retry_queue to retryQueue
- * (Not active yet, but shows how to add future migrations)
+ * Migration v2: Initialize stats and achievements
+ *
+ * Adds personal statistics tracking and achievement system
  */
-const migrationV2Example = {
+const migrationV2 = {
   version: 2,
-  name: "Rename retry_queue to retryQueue",
+  name: "Initialize stats and achievements",
   up: (storageManager) => {
-    // Get old data
-    const oldKey = "retry_queue";
-    const oldData = storageManager.get(oldKey);
+    // Initialize stats with defaults
+    if (!storageManager.get('stats')) {
+      storageManager.set('stats', {
+        bestClassic: Infinity,
+        bestDaily: Infinity,
+        averageDistance: 0,
+        perfectCount: 0,
+        playCount: 0,
+        streakDaily: 0,
+        lastDailyDate: null,
+        totalRoundsPlayed: 0,
+        under20kmCount: 0,
+        lastUpdated: Date.now(),
+        lastAccess: Date.now()
+      });
+      logger.info("Migration v2: Initialized stats");
+    }
 
-    if (oldData) {
-      // Save with new key
-      storageManager.set("retryQueue", oldData);
-      // Remove old key
-      storageManager.remove(oldKey);
-      logger.info("Migration v2: Renamed retry_queue to retryQueue");
+    // Initialize achievements with all false
+    if (!storageManager.get('achievements')) {
+      storageManager.set('achievements', {
+        perfectRound: false,
+        perfectGame: false,
+        avgUnder10: false,
+        avgUnder50: false,
+        top1pct: false,
+        streak3: false,
+        play10: false,
+        play50: false,
+        lastAccess: Date.now()
+      });
+      logger.info("Migration v2: Initialized achievements");
     }
   },
   down: (storageManager) => {
-    // Rollback: rename back
-    const newData = storageManager.get("retryQueue");
-
-    if (newData) {
-      storageManager.set("retry_queue", newData);
-      storageManager.remove("retryQueue");
-    }
+    // Rollback: remove stats and achievements
+    storageManager.remove('stats');
+    storageManager.remove('achievements');
+    logger.info("Migration v2: Removed stats and achievements");
   },
 };
 
@@ -97,5 +117,5 @@ const migrationV2Example = {
  */
 export const migrations = [
   migrationV1,
-  // migrationV2Example, // Uncomment when ready to activate
+  migrationV2,
 ];

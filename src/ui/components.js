@@ -1,4 +1,4 @@
-import { GAME, SCORING_THRESHOLDS } from "../config.js";
+import { SCORING_THRESHOLDS } from "../config.js";
 import { formatScore, escapeHtml } from "../utils.js";
 import { t, getLang } from "../i18n.js";
 import { scoringSystem } from "../systems/ScoringSystem.js";
@@ -25,7 +25,7 @@ export const Button = (id, text, variant = "primary", fullWidth = true, pulse = 
   /** @type {Record<"primary" | "secondary", string>} */
   const variants = {
     primary: "bg-yellow-400 hover:bg-yellow-300 text-black",
-    secondary: "bg-slate-700 hover:bg-slate-600 text-white",
+    secondary: "btn-secondary",
   };
 
   return `
@@ -55,13 +55,9 @@ export const TimerBar = () => `
 /**
  * @param {number} roundNum
  * @param {number} totalRounds
- * @param {string} capitalName
- * @param {string} country
  * @param {number} totalScore
  */
-export const GameHeader = (roundNum, totalRounds, capitalName, country, totalScore) => {
-  const escapedCapital = escapeHtml(capitalName);
-  const escapedCountry = escapeHtml(country);
+export const GameHeader = (roundNum, totalRounds, totalScore) => {
   return `
   <div id="game-header" class="game-header fixed top-0 left-0 right-0" style="z-index: var(--z-base);">
     <div class="px-6 py-2 flex justify-between items-center" style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
@@ -204,6 +200,9 @@ export const StartScreen = () => `
   <div id="start-modal" class="fixed inset-0 modal-bg flex flex-col" style="z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="challengeText">
     <!-- Toggle buttons -->
     <div class="absolute top-4 right-4 md:top-6 md:right-6 z-10 flex gap-2">
+      <button id="btn-stats" class="toggle-btn" title="My Stats" aria-label="Show stats">
+        <span>📋</span>
+      </button>
       <button id="btn-leaderboard" class="toggle-btn" title="Leaderboard" aria-label="Show leaderboard">
         <span>🏆</span>
       </button>
@@ -251,11 +250,16 @@ export const StartScreen = () => `
 
     <!-- Footer collé en bas -->
     <div class="w-full py-4 mt-auto" style="background: var(--bg-secondary); border-top: 1px solid var(--border-color);">
-      <div class="max-w-3xl mx-auto px-4 md:px-8 text-center text-tertiary text-sm">
-        ${t("madeBy")}
-        <a href="https://github.com/Vandanael" target="_blank" rel="noopener noreferrer" class="font-semibold transition-colors no-underline hover:underline text-secondary">
-          Vandanael
-        </a>
+      <div class="max-w-3xl mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center justify-between gap-3">
+        <div class="text-center md:text-left text-tertiary text-sm">
+          ${t("madeBy")}
+          <a href="https://github.com/Vandanael" target="_blank" rel="noopener noreferrer" class="font-semibold transition-colors no-underline hover:underline text-secondary">
+            Vandanael
+          </a>
+        </div>
+        <button id="btn-share-game" class="text-secondary hover:underline text-sm font-medium transition-colors" aria-label="Share game">
+          ${t("share")}
+        </button>
       </div>
     </div>
   </div>
@@ -330,6 +334,11 @@ export const FinalResults = (totalScore, pseudo, rank, isTopFifty, isNewSessionB
         <span class="font-mono font-bold text-primary">${escapedPseudo}</span> · ${t("rank")} #${rank}
       </div>
     </div>
+
+    <div class="mb-3">
+      ${Button("btn-share", t("share"), "secondary", true, false)}
+    </div>
+
     ${Button("btn-replay", t("replay"), "primary", true, true)}
   </div>
 `;
@@ -402,7 +411,7 @@ export const LeaderboardModal = (scores, currentType = "classic", loading = fals
   const isDaily = currentType === "daily";
 
   return `
-    <div id="leaderboard-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: calc(var(--z-modal) + 1);" role="dialog" aria-modal="true">
+    <div id="leaderboard-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-overlay);" role="dialog" aria-modal="true">
       <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
         <h2 class="text-3xl font-black text-primary mb-6 text-center tracking-tight uppercase" id="leaderboardTitle">
           ${t("leaderboard")}
@@ -501,7 +510,7 @@ export const Toast = (id, message, type = "info") => {
     info: "ℹ️",
     warning: "⚠️",
     error: "❌",
-    success: "✅",
+    success: "", // Pas d'émoji pour les toasts de succès
   };
 
   /** @type {Record<"info" | "warning" | "error" | "success", string>} */
@@ -518,9 +527,99 @@ export const Toast = (id, message, type = "info") => {
   return `
     <div id="${id}" class="fixed bottom-8 left-1/2 -translate-x-1/2 max-w-md w-full px-4 toast-slide-up" style="z-index: var(--z-toast);" role="alert" aria-live="assertive">
       <div class="${color} text-white rounded-xl shadow-lg p-4 flex items-start gap-3">
-        <span class="text-2xl shrink-0">${icon}</span>
+        ${icon ? `<span class="text-2xl shrink-0">${icon}</span>` : ''}
         <div class="flex-1 text-sm font-medium" style="line-height: 1.5;">${escapeHtml(message)}</div>
         <button id="${id}-close" class="shrink-0 text-white hover:text-gray-200 text-xl leading-none" aria-label="Close notification">×</button>
+      </div>
+    </div>
+  `;
+};
+
+/**
+ * Stats modal component
+ * @param {{bestClassic: number, bestDaily: number, averageDistance: number, perfectCount: number, playCount: number, streakDaily: number}} stats
+ */
+export const MyStatsModal = (stats) => {
+  /**
+   * @param {number} km
+   */
+  const formatDistance = (km) => {
+    if (km === Infinity || km === null || km === undefined || isNaN(km)) {
+      return '—';
+    }
+    return `${km.toFixed(1)} km`;
+  };
+
+  return `
+    <div id="stats-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4"
+         style="z-index: var(--z-overlay);">
+      <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
+        <h2 class="text-3xl font-black text-primary mb-6 text-center tracking-tight uppercase">
+          ${t('myStats')}
+        </h2>
+
+        <div class="space-y-4 mb-6">
+          <div class="flex justify-between items-center py-3" style="border-bottom: 1px solid var(--border-color);">
+            <span class="text-secondary">${t('stats.gamesPlayed')}</span>
+            <span class="text-2xl font-black text-primary">${stats.playCount}</span>
+          </div>
+
+          <div class="flex justify-between items-center py-3" style="border-bottom: 1px solid var(--border-color);">
+            <span class="text-secondary">${t('stats.bestClassic')}</span>
+            <span class="text-2xl font-black text-yellow-400">${formatDistance(stats.bestClassic)}</span>
+          </div>
+
+          <div class="flex justify-between items-center py-3" style="border-bottom: 1px solid var(--border-color);">
+            <span class="text-secondary">${t('stats.bestDaily')}</span>
+            <span class="text-2xl font-black text-yellow-400">${formatDistance(stats.bestDaily)}</span>
+          </div>
+
+          <div class="flex justify-between items-center py-3" style="border-bottom: 1px solid var(--border-color);">
+            <span class="text-secondary">${t('stats.avgDistance')}</span>
+            <span class="text-2xl font-black text-primary">${formatDistance(stats.averageDistance)}</span>
+          </div>
+
+          <div class="flex justify-between items-center py-3" style="border-bottom: 1px solid var(--border-color);">
+            <span class="text-secondary">${t('stats.perfectRounds')}</span>
+            <span class="text-2xl font-black text-primary">${stats.perfectCount}</span>
+          </div>
+
+          <div class="flex justify-between items-center py-3">
+            <span class="text-secondary">${t('stats.dailyStreak')}</span>
+            <span class="text-2xl font-black text-yellow-400">${stats.streakDaily} 🔥</span>
+          </div>
+        </div>
+
+        ${Button("btn-close-stats", t("close"), "secondary")}
+      </div>
+    </div>
+  `;
+};
+
+/**
+ * Achievement unlock modal component
+ * @param {string} achievementId
+ * @param {{id: string, icon: string, labelKey: string, descKey: string}} achievement
+ */
+export const AchievementUnlockModal = (achievementId, achievement) => {
+  return `
+    <div id="achievement-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4 achievement-fade-in"
+         style="z-index: var(--z-modal);">
+      <div class="modal-card rounded-2xl max-w-sm w-full p-8 modal-content">
+        <div class="text-center">
+          <div class="text-8xl mb-4 achievement-bounce">${achievement.icon}</div>
+          <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-2">
+            ${t('achievement.unlocked')}
+          </div>
+          <h3 class="text-3xl font-black text-primary mb-2">${t(achievement.labelKey)}</h3>
+          <p class="text-secondary text-sm mb-6">${t(achievement.descKey)}</p>
+
+          <div class="mb-3">
+            ${Button(`btn-share-achievement-${achievementId}`, t("shareOnAchievement"), "secondary", true, false)}
+          </div>
+
+          ${Button("btn-close-achievement", t("continue"), "secondary")}
+        </div>
       </div>
     </div>
   `;

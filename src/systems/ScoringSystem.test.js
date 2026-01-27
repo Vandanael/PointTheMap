@@ -1,4 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+// Mock storage before importing modules that use i18n
+vi.mock('../services/storage.js', () => ({
+  storage: {
+    get: vi.fn((key) => {
+      if (key === 'lang') return 'en'; // Default to English for tests
+      return null;
+    }),
+    set: vi.fn(),
+    remove: vi.fn(),
+  },
+}));
+
 import { ScoringSystem, getScoringSystem, scoringSystem } from './ScoringSystem.js';
 import { eventBus } from '../core/EventBus.js';
 import { GAME } from '../config.js';

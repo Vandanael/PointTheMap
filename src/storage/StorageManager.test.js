@@ -241,7 +241,7 @@ describe("StorageManager", () => {
   describe("Versioning", () => {
     it("should set storage version on initialization", () => {
       const version = localStorage.getItem("ptm_storage_version");
-      expect(version).toBe("1");
+      expect(version).toBe("2"); // Current version is 2
     });
 
     it("should not run migrations if version is current", () => {
@@ -259,7 +259,7 @@ describe("StorageManager", () => {
       const manager = new StorageManager();
 
       const version = localStorage.getItem("ptm_storage_version");
-      expect(version).toBe("1");
+      expect(version).toBe("2"); // Current version is 2
     });
   });
 

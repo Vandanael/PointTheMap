@@ -7,7 +7,6 @@ import { isIOS } from "./utils.js";
 import { logger } from "./utils/logger.js";
 import { debounce } from "./utils/performance.js";
 import { eventBus, StateManager } from "./core/index.js";
-import { UI_TIMING } from "./config/visual-constants.js";
 import { mapSystem } from "./systems/MapSystem.js";
 import {
   createGameState,
@@ -31,6 +30,11 @@ import { uiSystem } from "./systems/UISystem.js";
 import { inputSystem } from "./systems/InputSystem.js";
 import { scoringSystem } from "./systems/ScoringSystem.js";
 import { errorHandler, APIError, safeAsync } from "./core/ErrorHandler.js";
+import { updateStats } from "./features/StatsManager.js";
+import { checkAchievements } from "./features/AchievementManager.js";
+import { formatShareText, shareGameResults, getDailyNumber } from "./features/Share.js";
+import { getLang, t } from "./i18n.js";
+import { AchievementUnlockModal } from "./ui/components.js";
 
 // State Management
 const stateManager = new StateManager(createGameState());
@@ -46,6 +50,10 @@ let iosResizeHandler = null;
 let iosOrientationHandler = null;
 /** @type {(() => void) | null} */
 let iosScrollHandler = null;
+
+// Store share button handler for cleanup
+/** @type {(() => void) | null} */
+let shareButtonHandler = null;
 
 // Initialize DevTools in dev mode (dynamic import to exclude from production bundle)
 if (import.meta.env.DEV) {
@@ -199,6 +207,92 @@ const init = async () => {
     });
     eventUnsubscribers.push(/** @type {() => void} */ (unsubscribeReplay));
 
+    // Achievement unlock display (non-blocking queue)
+    /** @type {Array<{id: string, achievement: {id: string, icon: string, labelKey: string, descKey: string}}>} */
+    let achievementQueue = [];
+    let isShowingAchievement = false;
+
+    // Store handlers for cleanup
+    /** @type {(() => void) | null} */
+    let currentAchievementCloseHandler = null;
+    /** @type {(() => void) | null} */
+    let currentAchievementShareHandler = null;
+    /** @type {string | null} */
+    let currentAchievementId = null;
+
+    const showNextAchievement = () => {
+      if (isShowingAchievement || achievementQueue.length === 0) return;
+
+      isShowingAchievement = true;
+      const nextAchievement = achievementQueue.shift();
+      if (!nextAchievement) {
+        isShowingAchievement = false;
+        return;
+      }
+      const { id, achievement } = nextAchievement;
+
+      // Clean up previous modal handlers if any (before creating new modal)
+      if (currentAchievementCloseHandler) {
+        const prevCloseBtn = document.getElementById("btn-close-achievement");
+        if (prevCloseBtn) {
+          prevCloseBtn.removeEventListener("click", currentAchievementCloseHandler);
+        }
+      }
+      if (currentAchievementShareHandler && currentAchievementId) {
+        const prevShareBtn = document.getElementById(`btn-share-achievement-${currentAchievementId}`);
+        if (prevShareBtn) {
+          prevShareBtn.removeEventListener("click", currentAchievementShareHandler);
+        }
+      }
+
+      const achievementModal = document.createElement("div");
+      achievementModal.innerHTML = AchievementUnlockModal(id, achievement);
+      const modalElement = achievementModal.firstElementChild;
+      if (modalElement) {
+        document.body.appendChild(modalElement);
+      }
+
+      const closeAchievement = () => {
+        const modal = document.getElementById("achievement-modal");
+        if (modal) modal.remove();
+        isShowingAchievement = false;
+        currentAchievementCloseHandler = null;
+        currentAchievementShareHandler = null;
+        currentAchievementId = null;
+        showNextAchievement();
+      };
+
+      const closeBtn = document.getElementById("btn-close-achievement");
+      if (closeBtn) {
+        currentAchievementCloseHandler = closeAchievement;
+        closeBtn.addEventListener("click", currentAchievementCloseHandler);
+      }
+
+      const shareBtn = document.getElementById(`btn-share-achievement-${id}`);
+      if (shareBtn) {
+        currentAchievementShareHandler = async () => {
+          const shareText = `${t('achievement.unlocked')}\n${t(achievement.labelKey)}: ${t(achievement.descKey)}\n\nhttps://pointthemap.app`;
+          const success = await shareGameResults(shareText);
+          if (success) {
+            UI.showToast(
+              t('shareCopied'),
+              'success',
+              3000
+            );
+          }
+        };
+        shareBtn.addEventListener("click", currentAchievementShareHandler);
+        currentAchievementId = id; // Store ID for proper cleanup
+      }
+    };
+
+    eventUnsubscribers.push(
+      /** @type {() => void} */ (eventBus.subscribe('achievement:unlocked', (/** @type {{id: string, achievement: any}} */ { id, achievement }) => {
+        achievementQueue.push({ id, achievement });
+        setTimeout(() => showNextAchievement(), 1000);
+      }))
+    );
+
     UI.showLoader();
     UI.updateLoader(20);
 
@@ -286,8 +380,6 @@ const handleStart = async (gameType = "classic") => {
   UI.showGameUI(
     progress.current,
     progress.total,
-    capital.name,
-    capital.country,
     state.totalScore
   );
 
@@ -311,6 +403,8 @@ const handleStart = async (gameType = "classic") => {
 const handleMapClick = (coords) => {
   const state = stateManager.getState();
   if (state.status !== GameStatus.PLAYING) return;
+  // Stop timer to prevent timeout events from firing
+  stopTimer();
   stateManager.setState(playRound(state, coords), 'round:click');
   onRoundEnd();
 };
@@ -380,8 +474,6 @@ const handleNext = () => {
   UI.updateGameUI(
     progress.current,
     progress.total,
-    capital.name,
-    capital.country,
     state.totalScore
   );
 
@@ -408,7 +500,36 @@ const handleSubmit = async (pseudo) => {
       'score:submit'
     );
 
+    // Update stats and check achievements
+    const updatedStats = updateStats(state.rounds, state.gameType);
+    checkAchievements(state.rounds, updatedStats, result.rank);
+
     UI.showFinalResults(result.score, pseudo, result, isNewBest);
+
+    // Bind share button (after UI.showFinalResults renders the button)
+    // Remove any existing listener first to prevent duplicates
+    const shareBtn = document.getElementById("btn-share");
+    if (shareBtn) {
+      // Remove previous handler if it exists
+      if (shareButtonHandler) {
+        shareBtn.removeEventListener("click", shareButtonHandler);
+      }
+      
+      shareButtonHandler = async () => {
+        const avgDistance = state.rounds.reduce((/** @type {number} */ sum, /** @type {any} */ r) => sum + (r.distance || 0), 0) / state.rounds.length;
+        const dailyNumber = state.gameType === 'daily' ? getDailyNumber(state.lastDailyDate) : null;
+        const shareText = formatShareText(dailyNumber, avgDistance, state.rounds, getLang());
+        const success = await shareGameResults(shareText);
+
+        UI.showToast(
+          success ? t('shareCopied') : t('shareFailed'),
+          success ? 'success' : 'error',
+          3000
+        );
+      };
+      
+      shareBtn.addEventListener("click", shareButtonHandler);
+    }
   } catch (error) {
     /** @type {any} */
     const err = error;
@@ -434,6 +555,8 @@ const handleReplay = () => {
   mapSystem.clearMap(); // Nettoyer tous les markers (y compris les capitales) lors du reset
   mapSystem.resetView();
   UI.hideGameOver();
+  // Clean up share button handler
+  shareButtonHandler = null;
   UI.showStart();
 };
 

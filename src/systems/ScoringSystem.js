@@ -11,6 +11,7 @@
 import { calculateScore as calculateScoreLib, haversine } from '@lib/game-math/index.js';
 import { GAME, SCORING_THRESHOLDS } from '../config.js';
 import { eventBus } from '../core/EventBus.js';
+import { t } from '../i18n.js';
 
 /**
  * @typedef {Object} ScoreResult
@@ -184,14 +185,12 @@ export class ScoringSystem {
    * @returns {string} Localized label
    */
   getCategoryLabel(category) {
-    const labels = {
-      perfect: 'Perfect',
-      excellent: 'Excellent',
-      good: 'Good',
-      fair: 'Fair',
-      poor: 'Keep trying',
-    };
-    return labels[category] || 'Unknown';
+    const translation = t(`category.${category}`);
+    // If translation returns the key itself (not found), use unknown fallback
+    if (translation === `category.${category}`) {
+      return t('category.unknown');
+    }
+    return translation;
   }
 
   /**
