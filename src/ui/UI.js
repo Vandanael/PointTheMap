@@ -381,6 +381,19 @@ export const UI = {
   },
 
   /**
+   * Hide question modal
+   */
+  hideQuestion() {
+    remove("question-modal");
+    _domCache.invalidate("question-modal");
+    if (_questionModalClickHandler) {
+      const modal = document.getElementById("question-modal");
+      modal?.removeEventListener("click", _questionModalClickHandler);
+      _questionModalClickHandler = null;
+    }
+  },
+
+  /**
    * Show question modal
    * @param {string} capitalName - Capital name
    * @param {string} country - Country name
@@ -389,6 +402,9 @@ export const UI = {
    * @param {boolean} options.requireButton - If true, show button instead of auto-close
    */
   showQuestion(capitalName, country, onClose, { requireButton = false } = {}) {
+    // Remove existing modal first
+    remove("question-modal");
+    
     // Render appropriate modal variant
     if (requireButton) {
       render(QuestionModalWithButton(capitalName, country));

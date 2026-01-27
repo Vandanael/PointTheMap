@@ -339,6 +339,13 @@ const stopTimer = () => {
  */
 const handleStart = async (gameType = "classic") => {
   UI.hideStart();
+  // Show overlay immediately to hide the map
+  const overlay = document.createElement("div");
+  overlay.id = "game-start-overlay";
+  overlay.className = "fixed inset-0";
+  overlay.style.cssText = "background: var(--bg-primary); z-index: var(--z-modal);";
+  document.body.appendChild(overlay);
+  
   mapSystem.clearMap(); // Nettoie tous les markers (y compris les capitales)
   mapSystem.resetView();
 
@@ -347,6 +354,11 @@ const handleStart = async (gameType = "classic") => {
     'game:start',
     null
   );
+  
+  // Remove overlay
+  const overlayElement = document.getElementById("game-start-overlay");
+  if (overlayElement) overlayElement.remove();
+  
   if (!newState) {
     // Error already handled by errorHandler
     return;
@@ -368,6 +380,7 @@ const handleStart = async (gameType = "classic") => {
   const capital = getCurrentCapital(state);
   if (!capital || !capital.name || !capital.country) {
     UI.showError("Erreur: capitale introuvable");
+    UI.hideQuestion();
     return;
   }
 
@@ -386,6 +399,7 @@ const handleStart = async (gameType = "classic") => {
     inputSystem.enableMapInput(handleMapClick);
   };
 
+  // Update modal with real data
   if (state.currentRoundIndex === 0) {
     UI.showQuestion(capital.name, capital.country, onReady, { requireButton: true });
   } else {

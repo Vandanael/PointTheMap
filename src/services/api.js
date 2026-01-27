@@ -96,10 +96,34 @@ const fetchApi = async (endpoint, options = {}) => {
     headers["X-CSRF-Token"] = currentCsrfToken;
   }
 
-  const res = await fetch(`${API_BASE}/${endpoint}`, {
-    ...options,
-    headers,
-  });
+  let res;
+  try {
+    res = await fetch(`${API_BASE}/${endpoint}`, {
+      ...options,
+      headers,
+    });
+  } catch (networkError) {
+    // Network errors (connection refused, timeout, etc.)
+    const error = /** @type {Error} */ (networkError);
+    throw new APIError(
+      `Network error: ${error.message}`,
+      0, // 0 indicates network error
+      { error: error.message, networkError: true }
+    );
+  }
+
+  // Handle 502/503 errors before trying to parse JSON
+  if (res.status === 502 || res.status === 503) {
+    const data = await res.json().catch(() => ({ 
+      error: res.status === 502 ? "Bad Gateway - Server error" : "Service Unavailable" 
+    }));
+    const error = new APIError(
+      data.error || `HTTP ${res.status}`,
+      res.status,
+      data
+    );
+    throw error;
+  }
 
   const data = await res.json().catch(() => ({ error: "Invalid response" }));
 
@@ -190,12 +214,22 @@ export const submitWithRetry = async (token, rounds, pseudo, gameType = "classic
       throw error;
     }
     
-    if (
+    // Check for network errors or server errors that should trigger retry
+    const isNetworkError = 
+      error instanceof APIError && (
+        error.status === 0 || // Network error
+        error.status === 502 || // Bad Gateway
+        error.status === 503 || // Service Unavailable
+        error.status === 500 || // Internal Server Error
+        error.status >= 504 // Gateway Timeout, etc.
+      ) ||
       error.message.includes("Failed to fetch") ||
-      error.message.includes("500") ||
+      error.message.includes("Network error") ||
       error.message.includes("502") ||
-      error.message.includes("503")
-    ) {
+      error.message.includes("503") ||
+      error.message.includes("500");
+    
+    if (isNetworkError) {
       addToRetryQueue(token, rounds, pseudo, gameType);
       throw new GameError(
         "Score en attente de synchronisation (connexion perdue). Réessai automatique...",

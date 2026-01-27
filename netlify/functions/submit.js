@@ -3,7 +3,6 @@
 import { getDatabase } from "./db.js";
 // Import shared game logic from lib (same functions used by client)
 import { haversine, calculateScore } from "../../lib/game-math/index.js";
-import { validationSystem } from "../../src/systems/ValidationSystem.js";
 
 const MAX_SCORE_PER_ROUND = 5000;
 const ROUNDS = 5;
@@ -126,38 +125,62 @@ const validateRounds = (rounds, sessionCapitals) => {
  * @returns {Promise<Response>}
  */
 export default async (req, context) => {
-  if (req.method !== "POST") {
-    return jsonResponse({ error: "Method not allowed" }, 405);
-  }
-
-  // Early database connection check
-  let sql;
+  // Wrap entire function in try-catch to catch any unhandled errors
   try {
-    sql = getDatabase(context);
-  } catch (dbError) {
-    const error = /** @type {Error} */ (dbError);
-    console.error("Database connection failed:", error.message);
-    return jsonResponse(
-      { error: "Database connection failed. Please try again later." },
-      503
-    );
-  }
+    if (req.method !== "POST") {
+      return jsonResponse({ error: "Method not allowed" }, 405);
+    }
 
-  const ip = context.ip || req.headers.get("x-forwarded-for") || "unknown";
-  const rateLimit = await checkRateLimit(ip, context);
-  if (!rateLimit.allowed) {
-    return jsonResponse(
-      { error: "Rate limit exceeded. Try again later." },
-      429
-    );
-  }
+    // Early database connection check
+    let sql;
+    try {
+      sql = getDatabase(context);
+    } catch (dbError) {
+      const error = /** @type {Error} */ (dbError);
+      console.error("Database connection failed:", error.message);
+      return jsonResponse(
+        { error: "Database connection failed. Please try again later." },
+        503
+      );
+    }
 
-  try {
-    const body = await req.json();
+    const ip = context.ip || req.headers.get("x-forwarded-for") || "unknown";
+    
+    // Wrap rate limit check in try-catch
+    let rateLimit;
+    try {
+      rateLimit = await checkRateLimit(ip, context);
+    } catch (rateLimitError) {
+      // If rate limiting fails, log but allow request to proceed
+      console.error("Rate limit check failed:", rateLimitError);
+      rateLimit = { allowed: true, remaining: RATE_LIMIT_PER_HOUR };
+    }
+    
+    if (!rateLimit.allowed) {
+      return jsonResponse(
+        { error: "Rate limit exceeded. Try again later." },
+        429
+      );
+    }
+
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      return jsonResponse({ error: "Invalid request body" }, 400);
+    }
     const { token, rounds, pseudo, gameType = "classic" } = body;
     const csrfToken = req.headers.get("x-csrf-token");
 
-    if (!pseudo || !validationSystem.validatePseudo(pseudo).valid) {
+    // Validate pseudo: 3-5 uppercase letters
+    if (!pseudo || typeof pseudo !== "string") {
+      return jsonResponse(
+        { error: "Invalid pseudo (3-5 uppercase letters required)" },
+        400
+      );
+    }
+    const trimmedPseudo = pseudo.trim();
+    if (trimmedPseudo.length < 3 || trimmedPseudo.length > 5 || !/^[A-Z]{3,5}$/.test(trimmedPseudo)) {
       return jsonResponse(
         { error: "Invalid pseudo (3-5 uppercase letters required)" },
         400
@@ -168,12 +191,33 @@ export default async (req, context) => {
       return jsonResponse({ error: "Invalid token" }, 400);
     }
 
-    const sessionResult = await sql`
-      SELECT token, capitals, start_time, used, game_type, expires_at, csrf_token
-      FROM sessions
-      WHERE token = ${token}
-        AND expires_at > NOW()
-    `;
+    let sessionResult;
+    try {
+      sessionResult = await sql`
+        SELECT token, capitals, start_time, used, game_type, expires_at, csrf_token
+        FROM sessions
+        WHERE token = ${token}
+          AND expires_at > NOW()
+      `;
+    } catch (dbError) {
+      const error = /** @type {Error & {code?: string}} */ (dbError);
+      console.error("Database query error (session lookup):", error.message, error.code);
+      // Check if it's a connection error
+      if (error.message?.includes("Failed to connect") || 
+          error.message?.includes("connection") ||
+          error.code === "ECONNREFUSED" ||
+          error.code === "ETIMEDOUT" ||
+          error.code === "ENOTFOUND") {
+        return jsonResponse(
+          { error: "Database connection error. Please try again later." },
+          503
+        );
+      }
+      return jsonResponse(
+        { error: "Database error. Please try again later." },
+        500
+      );
+    }
 
     if (sessionResult.length === 0) {
       return jsonResponse({ error: "Session not found or expired" }, 401);
@@ -288,13 +332,33 @@ export default async (req, context) => {
       );
     }
 
-    const existingPseudoResult = await sql`
-      SELECT pseudo
-      FROM scores
-      WHERE ip = ${clientIp}
-      ORDER BY timestamp DESC
-      LIMIT 1
-    `;
+    let existingPseudoResult;
+    try {
+      existingPseudoResult = await sql`
+        SELECT pseudo
+        FROM scores
+        WHERE ip = ${clientIp}
+        ORDER BY timestamp DESC
+        LIMIT 1
+      `;
+    } catch (dbError) {
+      const error = /** @type {Error & {code?: string}} */ (dbError);
+      console.error("Database query error (pseudo check):", error.message, error.code);
+      if (error.message?.includes("Failed to connect") || 
+          error.message?.includes("connection") ||
+          error.code === "ECONNREFUSED" ||
+          error.code === "ETIMEDOUT" ||
+          error.code === "ENOTFOUND") {
+        return jsonResponse(
+          { error: "Database connection error. Please try again later." },
+          503
+        );
+      }
+      return jsonResponse(
+        { error: "Database error. Please try again later." },
+        500
+      );
+    }
 
     let existingPseudo = null;
     if (existingPseudoResult.length > 0) {
@@ -346,15 +410,22 @@ export default async (req, context) => {
         await sql`DELETE FROM sessions WHERE token = ${token}`;
       }
 
-      const rankResult = await sql`
-        SELECT COUNT(*) + 1 as rank
-        FROM scores
-        WHERE game_type = ${gameType}
-          AND (score > ${totalScore} OR (score = ${totalScore} AND time < ${gameDuration}))
-      `;
-      
-      rank = parseInt(rankResult[0]?.rank || "1", 10);
-      isTopFifty = rank <= 50;
+      let rankResult;
+      try {
+        rankResult = await sql`
+          SELECT COUNT(*) + 1 as rank
+          FROM scores
+          WHERE game_type = ${gameType}
+            AND (score > ${totalScore} OR (score = ${totalScore} AND time < ${gameDuration}))
+        `;
+        rank = parseInt(rankResult[0]?.rank || "1", 10);
+        isTopFifty = rank <= 50;
+      } catch (rankError) {
+        // If rank query fails, we still return the score but with rank 0
+        console.error("Rank query error:", rankError);
+        rank = 0;
+        isTopFifty = false;
+      }
 
       return jsonResponse({
         score: totalScore,
@@ -379,8 +450,9 @@ export default async (req, context) => {
       if (error.message?.includes("Failed to connect") || 
           error.message?.includes("connection") ||
           error.code === "ECONNREFUSED" ||
-          error.code === "ETIMEDOUT") {
-        console.error("Database connection error:", error.message);
+          error.code === "ETIMEDOUT" ||
+          error.code === "ENOTFOUND") {
+        console.error("Database connection error:", error.message, error.code);
         return jsonResponse({ 
           error: "Database connection error. Please try again later.",
           score: totalScore,
@@ -402,17 +474,39 @@ export default async (req, context) => {
         rounds: validatedRounds,
       }, 500);
     }
-  } catch (error) {
+  } catch (outerError) {
+    // Catch any unhandled errors that might cause 502
+    const error = /** @type {Error & {code?: string}} */ (outerError);
+    
     // Handle JSON parsing errors
     if (error instanceof SyntaxError) {
       return jsonResponse({ error: "Invalid request body" }, 400);
     }
-    if (process.env.NODE_ENV === "development") {
-      const err = /** @type {Error} */ (error);
-      console.error("Submit error:", err.message, err.stack);
-    } else {
-      console.error("Submit error occurred");
+    
+    // Check if it's a database connection error
+    if (error.message?.includes("Failed to connect") || 
+        error.message?.includes("connection") ||
+        error.code === "ECONNREFUSED" ||
+        error.code === "ETIMEDOUT" ||
+        error.code === "ENOTFOUND") {
+      console.error("Database connection error:", error.message, error.code);
+      return jsonResponse(
+        { error: "Database connection error. Please try again later." },
+        503
+      );
     }
-    return jsonResponse({ error: "Internal server error" }, 500);
+    
+    // Log error details
+    if (process.env.NODE_ENV === "development") {
+      console.error("Submit error:", error.message, error.stack);
+    } else {
+      console.error("Submit error occurred:", error.message);
+    }
+    
+    // Generic error response
+    return jsonResponse(
+      { error: "Internal server error. Please try again later." },
+      500
+    );
   }
 };

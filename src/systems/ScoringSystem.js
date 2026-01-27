@@ -15,7 +15,7 @@ import { t } from '../i18n.js';
 
 /**
  * @typedef {Object} ScoreResult
- * @property {number} distance - Distance in kilometers
+ * @property {number | null} distance - Distance in kilometers (null if timeout)
  * @property {number} score - Calculated score (0-5000)
  * @property {number} timeBonus - Time bonus (0-1000)
  * @property {number} totalScore - Total score with time bonus
@@ -23,6 +23,7 @@ import { t } from '../i18n.js';
 
 export class ScoringSystem {
   #initialized = false;
+  /** @type {Array<Function>} */
   #eventUnsubscribers = [];
 
   constructor() {}
@@ -37,7 +38,7 @@ export class ScoringSystem {
     }
 
     // Subscribe to round completed event to emit score calculated
-    const unsubRoundComplete = eventBus.subscribe('game:round:completed', ({ round }) => {
+    const unsubRoundComplete = eventBus.subscribe('game:round:completed', (/** @type {{ round: import('../game/Game.js').Round }} */ { round }) => {
       if (round.score !== null) {
         eventBus.emit('score:calculated', {
           round: round.roundNumber,
@@ -48,7 +49,7 @@ export class ScoringSystem {
       }
     });
 
-    this.#eventUnsubscribers.push(unsubRoundComplete);
+    this.#eventUnsubscribers.push(/** @type {() => void} */ (unsubRoundComplete));
     this.#initialized = true;
   }
 
@@ -97,7 +98,7 @@ export class ScoringSystem {
    *
    * @param {number} distanceKm - Distance in kilometers
    * @param {number} timeRemainingMs - Time remaining in milliseconds
-   * @param {number} [totalTimeMs] - Total time allowed (for time bonus calculation)
+   * @param {number | null} [totalTimeMs] - Total time allowed (for time bonus calculation)
    * @returns {ScoreResult}
    */
   calculateScoreWithTime(distanceKm, timeRemainingMs, totalTimeMs = null) {
@@ -140,12 +141,14 @@ export class ScoringSystem {
 
     // Check if timed out
     if (timeElapsedMs > totalTimeAllowed) {
-      return {
+      /** @type {ScoreResult} */
+      const timeoutResult = {
         distance: null,
         score: 0,
         timeBonus: 0,
         totalScore: 0,
       };
+      return timeoutResult;
     }
 
     const distance = this.calculateDistance(clickCoords, targetCoords);
@@ -215,6 +218,7 @@ export class ScoringSystem {
 }
 
 // Singleton instance
+/** @type {ScoringSystem | null} */
 let _scoringSystemInstance = null;
 
 /**
