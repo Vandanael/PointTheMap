@@ -19,6 +19,7 @@ import {
   StartScreen,
   GameOverScreen,
   FinalResults,
+  Leaderboard,
   LeaderboardModal,
   LoadingSpinner,
   PseudoLockedDialog,

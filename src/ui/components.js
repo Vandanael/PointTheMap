@@ -306,7 +306,7 @@ export const LeaderboardSkeletonRow = () => `
 `;
 
 export const Leaderboard = (scores, highlightPseudo = null, loading = false) => `
-  <div id="leaderboard-content" class="rounded-xl max-h-[300px] overflow-y-auto" style="background: var(--bg-tertiary);">
+  <div id="leaderboard-content" class="rounded-xl max-h-[400px]" style="background: var(--bg-tertiary); overflow: hidden;">
     ${loading ?
       // Show skeleton while loading
       Array(10).fill(0).map(() => LeaderboardSkeletonRow()).join('')
