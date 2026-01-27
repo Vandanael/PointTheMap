@@ -182,7 +182,7 @@ describe("Map.js", () => {
         attributionControl: false,
         keepBuffer: 4,
         zoomAnimation: true,
-        preferCanvas: false,
+        preferCanvas: true, // Canvas renderer pour des lignes plus nettes
         fadeAnimation: true,
         markerZoomAnimation: true,
       });

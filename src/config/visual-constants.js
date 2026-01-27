@@ -25,12 +25,14 @@ export const LINES = {
     dashArray: '10, 14',
     opacity: 1,
     lineCap: 'butt',
+    smoothFactor: 1, // Réduit le lissage pour un rendu plus net avec Canvas
   },
   MAIN: {
     weight: 4,
     dashArray: '10, 14',
     opacity: 1,
     lineCap: 'butt',
+    smoothFactor: 1, // Réduit le lissage pour un rendu plus net avec Canvas
   },
 };
 

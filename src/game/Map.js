@@ -61,7 +61,7 @@ export const initMap = (containerId) => {
     attributionControl: false,
     keepBuffer: 4,
     zoomAnimation: true,
-    preferCanvas: false,
+    preferCanvas: true, // Canvas renderer pour des lignes plus nettes (pas de SVG antialiasing)
     fadeAnimation: true,
     markerZoomAnimation: true,
   });
