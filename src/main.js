@@ -7,14 +7,7 @@ import { logger } from "./utils/logger.js";
 import { debounce } from "./utils/performance.js";
 import { eventBus, StateManager } from "./core/index.js";
 import { UI_TIMING } from "./config/visual-constants.js";
-import {
-  initMap,
-  disableClicks,
-  enableClicks,
-  showRoundResult,
-  clearMap,
-  resetView,
-} from "./game/Map.js";
+import { mapSystem } from "./systems/MapSystem.js";
 import {
   createGameState,
   startGame,
@@ -34,6 +27,8 @@ import { UI } from "./ui/UI.js";
 import { processRetryQueue, submitWithRetry } from "./services/api.js";
 import { timerSystem } from "./systems/TimerSystem.js";
 import { uiSystem } from "./systems/UISystem.js";
+import { inputSystem } from "./systems/InputSystem.js";
+import { errorHandler, APIError, GameError, safeAsync } from "./core/ErrorHandler.js";
 
 // State Management
 const stateManager = new StateManager(createGameState());
@@ -128,38 +123,55 @@ const init = async () => {
 
     // Initialize UI system (handles all UI-related EventBus subscriptions)
     uiSystem.init();
+    // Initialize Input system
+    inputSystem.init();
+
+    // Subscribe to InputSystem events
+    eventBus.subscribe('input:start-game', (/** @type {{ gameType?: "classic" | "daily" }} */ { gameType }) => {
+      handleStart(gameType || 'classic');
+    });
+
+    eventBus.subscribe('input:next-round', () => {
+      handleNext();
+    });
+
+    eventBus.subscribe('input:submit', (/** @type {{ pseudo: string }} */ { pseudo }) => {
+      handleSubmit(pseudo);
+    });
+
+    eventBus.subscribe('input:replay', () => {
+      handleReplay();
+    });
+
     UI.showLoader();
     UI.updateLoader(20);
 
     try {
-      initMap("map");
+      mapSystem.init("map");
       UI.updateLoader(50);
     } catch (error) {
-      logger.error("Erreur initialisation carte:", error);
-      UI.showError("Erreur lors du chargement de la carte");
+      errorHandler.handle(error instanceof Error ? error : new Error(String(error)), 'map:init', { showToUser: true, fatal: false });
     }
 
-    try {
-      const retryResult = await processRetryQueue();
-      UI.updateLoader(80);
+    const retryResult = await safeAsync(
+      () => processRetryQueue(),
+      'retry-queue',
+      { successful: 0, failed: 0 }
+    );
+    UI.updateLoader(80);
 
-      if (retryResult.successful > 0) {
-        logger.log(`✅ ${retryResult.successful} score(s) synchronisé(s)`);
-      }
-      if (retryResult.failed > 0) {
-        logger.warn(`⚠️ ${retryResult.failed} score(s) en attente`);
-      }
-    } catch (error) {
-      logger.error("Erreur retry queue:", error);
+    if (retryResult.successful > 0) {
+      logger.log(`✅ ${retryResult.successful} score(s) synchronisé(s)`);
+    }
+    if (retryResult.failed > 0) {
+      logger.warn(`⚠️ ${retryResult.failed} score(s) en attente`);
     }
 
     UI.updateLoader(100);
-    await new Promise((resolve) => setTimeout(resolve, UI_TIMING.LOADER_FINAL_DELAY));
     UI.hideLoader();
-    UI.showStart(handleStart);
+    UI.showStart();
   } catch (error) {
-    logger.error("Erreur fatale init:", error);
-    UI.showError("Erreur lors de l'initialisation");
+    errorHandler.handle(error instanceof Error ? error : new Error(String(error)), 'init', { showToUser: true, fatal: true });
   }
 };
 
@@ -179,13 +191,20 @@ const handleStart = async (gameType = "classic") => {
   UI.hideStart();
   UI.showLoader();
   UI.updateLoader(20);
-  clearMap();
-  resetView();
+  mapSystem.clearMap();
+  mapSystem.resetView();
 
-  const newState = await startGame(stateManager.getState(), gameType);
+  const newState = await safeAsync(
+    () => startGame(stateManager.getState(), gameType),
+    'game:start',
+    null
+  );
+  if (!newState) {
+    // Error already handled by errorHandler
+    return;
+  }
   stateManager.setState(newState, `game:start:${gameType}`);
   UI.updateLoader(100);
-  await new Promise((resolve) => setTimeout(resolve, UI_TIMING.LOADER_FINAL_DELAY));
   UI.hideLoader();
 
   const state = stateManager.getState();
@@ -218,7 +237,9 @@ const handleStart = async (gameType = "classic") => {
 
   const onReady = () => {
     startTimer();
-    enableClicks(handleMapClick);
+    // MapSystem emits map:click, InputSystem listens to it
+    mapSystem.enableClicks(() => {}); // Empty callback, InputSystem handles via EventBus
+    inputSystem.enableMapInput(handleMapClick);
   };
 
   if (state.currentRoundIndex === 0) {
@@ -239,7 +260,8 @@ const handleMapClick = (coords) => {
 };
 
 const onRoundEnd = () => {
-  disableClicks();
+  mapSystem.disableClicks();
+  inputSystem.disableMapInput();
   stopTimer();
 
   const state = stateManager.getState();
@@ -250,9 +272,9 @@ const onRoundEnd = () => {
   eventBus.emit('game:round:completed', { round });
 
   if (round.click) {
-    const clickCoords = [round.click.lat, round.click.lng];
-    const capitalCoords = [round.capital.lat, round.capital.lng];
-    showRoundResult(clickCoords, capitalCoords, round.distance || 0);
+    const clickCoords = /** @type {[number, number]} */ ([round.click.lat, round.click.lng]);
+    const capitalCoords = /** @type {[number, number]} */ ([round.capital.lat, round.capital.lng]);
+    mapSystem.showRoundResult(clickCoords, capitalCoords, round.distance || 0);
 
     // Emit score updated event
     eventBus.emit('score:updated', {
@@ -267,25 +289,24 @@ const onRoundEnd = () => {
       round.distance,
       round.score,
       round.status === "timeout",
-      isLastRound(state),
-      handleNext
+      isLastRound(state)
     );
   }, TIMING.RESULT_DELAY_MS);
 };
 
 const handleNext = () => {
   UI.hideRoundResult();
-  clearMap();
+  mapSystem.clearMap();
 
   let state = stateManager.getState();
   if (isLastRound(state)) {
-    UI.showGameOver(state.totalScore, handleSubmit, handleReplay);
+    UI.showGameOver(state.totalScore);
     return;
   }
 
   stateManager.setState(nextRound(state), 'round:next');
   state = stateManager.getState();
-  resetView();
+  mapSystem.resetView();
 
   const capital = getCurrentCapital(state);
   if (!capital) {
@@ -304,7 +325,8 @@ const handleNext = () => {
 
   UI.showQuestion(capital.name, capital.country, () => {
     startTimer();
-    enableClicks(handleMapClick);
+    mapSystem.enableClicks(() => {}); // Empty callback, InputSystem handles via EventBus
+    inputSystem.enableMapInput(handleMapClick);
   });
 };
 
@@ -324,10 +346,8 @@ const handleSubmit = async (pseudo) => {
       'score:submit'
     );
 
-    UI.showFinalResults(result.score, pseudo, result, handleReplay, isNewBest);
+    UI.showFinalResults(result.score, pseudo, result, isNewBest);
   } catch (error) {
-    logger.error("Submit error:", error);
-
     /** @type {any} */
     const err = error;
     if (err.status === 409 && err.data?.error === "pseudo_already_set_for_this_ip") {
@@ -336,7 +356,12 @@ const handleSubmit = async (pseudo) => {
       return;
     }
 
-    UI.showError(err.message || "Erreur lors de la soumission");
+    const apiError = new APIError(
+      err.message || "Erreur lors de la soumission",
+      err.status || 500,
+      err.data
+    );
+    errorHandler.handle(apiError, 'score:submit', { showToUser: true, fatal: false });
   } finally {
     UI.hideLoader();
   }
@@ -345,11 +370,11 @@ const handleSubmit = async (pseudo) => {
 const handleReplay = () => {
   stateManager.setState(resetGame(), 'game:reset');
   UI.hideGameOver();
-  UI.showStart(handleStart);
+  UI.showStart();
 };
 
 document.addEventListener("DOMContentLoaded", () => {
   init().catch((e) => {
-    logger.error("Erreur fatale dans init():", e);
+    errorHandler.handle(e, 'dom-ready', { showToUser: true, fatal: true });
   });
 });

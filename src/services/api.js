@@ -30,6 +30,7 @@ import { capitals, GAME } from "../config.js";
 import { generateId } from "../utils.js";
 import { logger } from "../utils/logger.js";
 import { selectBalancedCapitals } from "../../capitals.js";
+import { APIError, GameError } from "../core/ErrorHandler.js";
 import {
   getRetryQueue,
   removeFromRetryQueue,
@@ -103,9 +104,11 @@ const fetchApi = async (endpoint, options = {}) => {
   const data = await res.json().catch(() => ({ error: "Invalid response" }));
 
   if (!res.ok) {
-    const error = new Error(data.error || `HTTP ${res.status}`);
-    error.status = res.status;
-    error.data = data;
+    const error = new APIError(
+      data.error || `HTTP ${res.status}`,
+      res.status,
+      data
+    );
     throw error;
   }
 
@@ -183,7 +186,7 @@ export const submitWithRetry = async (token, rounds, pseudo, gameType = "classic
     }
     return result;
   } catch (error) {
-    if (error.status === 409 || error.status === 400) {
+    if (error instanceof APIError && (error.status === 409 || error.status === 400)) {
       throw error;
     }
     
@@ -194,8 +197,9 @@ export const submitWithRetry = async (token, rounds, pseudo, gameType = "classic
       error.message.includes("503")
     ) {
       addToRetryQueue(token, rounds, pseudo, gameType);
-      throw new Error(
-        "Score en attente de synchronisation (connexion perdue). Réessai automatique..."
+      throw new GameError(
+        "Score en attente de synchronisation (connexion perdue). Réessai automatique...",
+        'NETWORK_ERROR'
       );
     }
     throw error;

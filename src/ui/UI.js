@@ -9,6 +9,8 @@ import { eventBus } from "../core/EventBus.js";
 import { GAME } from "../config.js";
 import { UI_TIMING } from "../config/visual-constants.js";
 import { debounce } from "../utils/performance.js";
+import { inputSystem } from "../systems/InputSystem.js";
+import { safeAsync } from "../core/ErrorHandler.js";
 import {
   Modal,
   TimerBar,
@@ -75,14 +77,12 @@ const handleToggleLang = () => {
 };
 
 const loadLeaderboard = async (type) => {
-  try {
-    // Server already deduplicates, no need to do it client-side
-    const scores = await api.getLeaderboard(type);
-    return scores;
-  } catch (e) {
-    logger.error("Erreur leaderboard:", e);
-    return [];
-  }
+  const scores = await safeAsync(
+    () => api.getLeaderboard(type),
+    'leaderboard:load',
+    []
+  );
+  return scores;
 };
 
 const setupLeaderboardTabs = () => {
@@ -100,6 +100,11 @@ export const UI = {
 
   init() {
     applyTheme(getTheme());
+
+    // Subscribe to error events
+    eventBus.subscribe('error:show', ({ message }) => {
+      UI.showError(message);
+    });
 
     // Subscribe to timer UI events
     eventBus.subscribe('timer:started', () => {
@@ -143,17 +148,17 @@ export const UI = {
   },
 
   // Start screen
-  showStart(onStart) {
+  showStart() {
     // Subscribe to language changes
     const unsubscribe = eventBus.subscribe('language:changed', () => {
       UI.hideStart();
-      UI.showStart(onStart); // Re-render with new language
+      UI.showStart(); // Re-render with new language
     });
     this._langChangeCleanup = unsubscribe;
 
     render(StartScreen());
-    bindClick("btn-start-classic", () => onStart("classic"));
-    bindClick("btn-start-daily", () => onStart("daily"));
+    bindClick("btn-start-classic", () => inputSystem.handleStartGame("classic"));
+    bindClick("btn-start-daily", () => inputSystem.handleStartGame("daily"));
     bindClick("btn-theme", toggleTheme);
     bindClick("btn-lang", handleToggleLang);
     bindClick("btn-leaderboard", () => {
@@ -270,17 +275,17 @@ export const UI = {
   },
 
   // Round result
-  showRoundResult(distance, score, isTimeout, isLast, onNext) {
+  showRoundResult(distance, score, isTimeout, isLast) {
     const content = RoundResult(distance, score, isTimeout, isLast);
     render(Modal("round-result", content, true));
-    bindClick("btn-next", onNext);
+    bindClick("btn-next", () => inputSystem.handleNextRound());
   },
   hideRoundResult() {
     remove("round-result");
   },
 
   // Game over / submit
-  showGameOver(totalScore, onSubmit, onReplay) {
+  showGameOver(totalScore) {
     const lastPseudo = getLastPseudo() || "";
     render(GameOverScreen(totalScore, lastPseudo));
 
@@ -321,13 +326,13 @@ export const UI = {
       input?.style.setProperty("border-color", "var(--accent)");
 
       lastSubmitTime = now; // Update last submit time
-      onSubmit(pseudo);
+      inputSystem.handleSubmit(pseudo);
     }, 1000)); // Debounce with 1 second delay
 
-    bindClick("btn-replay", onReplay);
+    bindClick("btn-replay", () => inputSystem.handleReplay());
   },
 
-  showFinalResults(totalScore, pseudo, result, onReplay, isNewSessionBest = false) {
+  showFinalResults(totalScore, pseudo, result, isNewSessionBest = false) {
     let modal = document.getElementById("result-modal");
     if (!modal) {
       modal = render(`
@@ -339,7 +344,7 @@ export const UI = {
         ${FinalResults(totalScore, pseudo, result.rank, result.isTopFifty, isNewSessionBest)}
       </div>
     `;
-    bindClick("btn-replay", onReplay);
+    bindClick("btn-replay", () => inputSystem.handleReplay());
   },
 
   hideGameOver() {
