@@ -14,6 +14,8 @@ import { eventBus } from "../core/EventBus.js";
 const DEFAULT_STATS = {
   bestClassic: Infinity,
   bestDaily: Infinity,
+  bestScoreClassic: 0,
+  bestScoreDaily: 0,
   averageDistance: 0,
   perfectCount: 0,
   playCount: 0,
@@ -57,7 +59,7 @@ const getYesterday = () => {
 
 /**
  * Update stats after game completion
- * @param {Array<{distance: number}>} rounds - Array of round results
+ * @param {Array<{distance: number, score: number}>} rounds - Array of round results
  * @param {"classic" | "daily"} gameType - Type of game played
  * @returns {typeof DEFAULT_STATS} Updated stats
  */
@@ -68,6 +70,7 @@ export const updateStats = (rounds, gameType) => {
 
     // Calculate game metrics
     const avgDistance = rounds.reduce((sum, r) => sum + (r.distance || 0), 0) / rounds.length;
+    const totalScore = rounds.reduce((sum, r) => sum + (r.score || 0), 0);
     const perfectRounds = rounds.filter(r => r.distance < 1).length;
     const under20kmRounds = rounds.filter(r => r.distance < 20).length;
 
@@ -95,12 +98,20 @@ export const updateStats = (rounds, gameType) => {
     if (gameType === 'classic') {
       if (avgDistance < stats.bestClassic) {
         stats.bestClassic = avgDistance;
-        logger.info(`Stats: New best classic score: ${avgDistance.toFixed(2)} km`);
+        logger.info(`Stats: New best classic distance: ${avgDistance.toFixed(2)} km`);
+      }
+      if (totalScore > stats.bestScoreClassic) {
+        stats.bestScoreClassic = totalScore;
+        logger.info(`Stats: New best classic score: ${totalScore}`);
       }
     } else if (gameType === 'daily') {
       if (avgDistance < stats.bestDaily) {
         stats.bestDaily = avgDistance;
-        logger.info(`Stats: New best daily score: ${avgDistance.toFixed(2)} km`);
+        logger.info(`Stats: New best daily distance: ${avgDistance.toFixed(2)} km`);
+      }
+      if (totalScore > stats.bestScoreDaily) {
+        stats.bestScoreDaily = totalScore;
+        logger.info(`Stats: New best daily score: ${totalScore}`);
       }
 
       // Update daily streak (only for daily games)

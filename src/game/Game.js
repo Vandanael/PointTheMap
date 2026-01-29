@@ -1,6 +1,7 @@
 import { GAME } from "../config.js";
 import { api } from "../services/api.js";
 import { createRound, recordClick, timeoutRound } from "./Round.js";
+import { getStats } from "../features/StatsManager.js";
 
 /**
  * @typedef {'idle' | 'loading' | 'playing' | 'round_result' | 'game_over'} GameStatusType
@@ -94,6 +95,13 @@ export const startGame = async (state, gameType = "classic") => {
         error: "Aucune capitale disponible",
       };
     }
+
+    // Load best score from stats to initialize sessionBestScore
+    const stats = getStats();
+    const previousBestScore = gameType === 'classic'
+      ? stats.bestScoreClassic
+      : stats.bestScoreDaily;
+
     return {
       ...createGameState(),
       status: GameStatus.PLAYING,
@@ -101,6 +109,7 @@ export const startGame = async (state, gameType = "classic") => {
       capitals: session.capitals,
       currentRound: createRound(session.capitals[0], 0),
       gameType,
+      sessionBestScore: previousBestScore,
     };
   } catch (error) {
     return {

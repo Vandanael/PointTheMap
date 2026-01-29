@@ -326,7 +326,7 @@ export const FinalResults = (totalScore, pseudo, rank, isTopFifty, isNewSessionB
   <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
     ${isNewSessionBest ? `<div class="text-center mb-4 text-4xl animate-bounce">🏆</div>` : ""}
     <h2 class="text-4xl font-black text-primary mb-6 text-center tracking-tight uppercase" id="newRecordLabel">
-      ${isNewSessionBest ? "NOUVEAU RECORD" : isTopFifty ? t("top50") : t("scoreSaved")}
+      ${isNewSessionBest ? "NOUVEAU RECORD PERSONNEL" : isTopFifty ? t("top50") : t("scoreSaved")}
     </h2>
     <div class="text-center mb-6">
       <div class="text-8xl font-black text-yellow-400 mb-2">${formatScore(totalScore)}</div>
