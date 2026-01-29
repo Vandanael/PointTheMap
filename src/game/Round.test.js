@@ -4,10 +4,10 @@ import { scoringSystem } from '../systems/ScoringSystem.js';
 import { GAME } from '../config.js';
 
 describe('calculateScore (via ScoringSystem)', () => {
-  it('returns max score (5000) for distance < 0.5km (perfect zone)', () => {
+  it('returns max score (5000) for distance < 0.1km (perfect zone)', () => {
     expect(scoringSystem.calculateScore(0)).toBe(5000);
-    expect(scoringSystem.calculateScore(0.5)).toBe(5000);
-    expect(scoringSystem.calculateScore(0.49)).toBe(5000);
+    expect(scoringSystem.calculateScore(0.05)).toBe(5000);
+    expect(scoringSystem.calculateScore(0.09)).toBe(5000);
   });
 
   it('applies smooth transition for 0.5-2km', () => {
@@ -32,29 +32,32 @@ describe('calculateScore (via ScoringSystem)', () => {
 
     expect(score300).toBeLessThan(score100);
     expect(score300).toBeGreaterThan(score500);
-    expect(score500).toBe(245); // V2 formula (k=105, p=1.9)
+    expect(score500).toBe(3187); // V2 balanced (k=800, p=1.2)
   });
 
   it('applies sigmoid decay for all distances > 0.1km', () => {
-    expect(scoringSystem.calculateScore(500)).toBe(245);
-    expect(scoringSystem.calculateScore(1000)).toBeLessThan(245);
+    expect(scoringSystem.calculateScore(500)).toBe(3187);
+    expect(scoringSystem.calculateScore(1000)).toBe(2167);
+    expect(scoringSystem.calculateScore(2000)).toBe(1249);
     expect(scoringSystem.calculateScore(5000)).toBeGreaterThanOrEqual(0);
   });
 
-  it('returns 0 for very large distances', () => {
-    expect(scoringSystem.calculateScore(20000)).toBe(0);
+  it('returns very low score for very large distances', () => {
+    const score = scoringSystem.calculateScore(20000);
+    expect(score).toBeGreaterThanOrEqual(0);
+    expect(score).toBeLessThan(200); // Casual-friendly: even 20000km gives a bit
   });
 
   // Reference values that MUST match server-side
   it('matches known reference values', () => {
     expect(scoringSystem.calculateScore(0)).toBe(5000);
-    expect(scoringSystem.calculateScore(0.5)).toBe(5000); // Perfect zone
-    // Note: 1km is now in transition zone, so value differs from old formula
+    expect(scoringSystem.calculateScore(0.09)).toBe(5000); // Perfect zone (< 0.1km)
+    // Note: 0.5km is outside perfect zone with V2 balanced formula
     expect(scoringSystem.calculateScore(1)).toBeLessThan(5000);
     expect(scoringSystem.calculateScore(1)).toBeGreaterThan(4900);
-    expect(scoringSystem.calculateScore(50)).toBe(4019); // V2 formula (k=105, p=1.9)
-    expect(scoringSystem.calculateScore(100)).toBe(2616); // V2 formula
-    expect(scoringSystem.calculateScore(500)).toBe(245);  // V2 formula
+    expect(scoringSystem.calculateScore(50)).toBe(4827);  // V2 balanced (k=800, p=1.2)
+    expect(scoringSystem.calculateScore(100)).toBe(4619); // V2 balanced
+    expect(scoringSystem.calculateScore(500)).toBe(3187); // V2 balanced
   });
 });
 

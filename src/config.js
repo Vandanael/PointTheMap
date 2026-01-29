@@ -16,8 +16,8 @@ export const GAME = {
 export const SCORING_FORMULA = {
   version: 2,
   perfectThreshold: 0.1,  // km - distance below which score is perfect
-  k: 105,                 // Scale parameter (distance at ~50% score)
-  p: 1.9,                 // Power parameter (controls decay steepness)
+  k: 800,                 // Scale parameter (distance at ~50% score → ~1000km)
+  p: 1.2,                 // Power parameter (gentle decay for casual-friendly scoring)
   maxScore: 5000,         // Maximum possible score per round
 };
 

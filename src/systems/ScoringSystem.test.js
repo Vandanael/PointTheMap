@@ -87,10 +87,10 @@ describe('ScoringSystem', () => {
   });
 
   describe('calculateScore', () => {
-    it('should return 5000 for distance < 0.5km (perfect zone)', () => {
+    it('should return 5000 for distance < 0.1km (perfect zone)', () => {
       expect(system.calculateScore(0)).toBe(5000);
-      expect(system.calculateScore(0.5)).toBe(5000);
-      expect(system.calculateScore(0.49)).toBe(5000);
+      expect(system.calculateScore(0.05)).toBe(5000);
+      expect(system.calculateScore(0.09)).toBe(5000);
     });
 
     it('should apply smooth transition for 0.5-2km', () => {
@@ -122,9 +122,10 @@ describe('ScoringSystem', () => {
       expect(score1000).toBeGreaterThan(score5000);
     });
 
-    it('should return 0 or close to 0 for very large distances', () => {
+    it('should return very low score for very large distances', () => {
       const score = system.calculateScore(20000);
-      expect(score).toBeLessThan(10);
+      expect(score).toBeGreaterThanOrEqual(0);
+      expect(score).toBeLessThan(200); // Balanced formula is more forgiving
     });
 
     it('should return integer scores', () => {
