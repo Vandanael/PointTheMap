@@ -340,13 +340,9 @@ const stopTimer = () => {
  */
 const handleStart = async (gameType = "classic") => {
   UI.hideStart();
-  // Show overlay immediately to hide the map
-  const overlay = document.createElement("div");
-  overlay.id = "game-start-overlay";
-  overlay.className = "fixed inset-0";
-  overlay.style.cssText = "background: var(--bg-primary); z-index: var(--z-modal);";
-  document.body.appendChild(overlay);
-  
+  // Show loader while fetching game data
+  UI.showLoader();
+
   mapSystem.clearMap(); // Nettoie tous les markers (y compris les capitales)
   mapSystem.resetView();
 
@@ -355,10 +351,9 @@ const handleStart = async (gameType = "classic") => {
     'game:start',
     null
   );
-  
-  // Remove overlay
-  const overlayElement = document.getElementById("game-start-overlay");
-  if (overlayElement) overlayElement.remove();
+
+  // Hide loader
+  UI.hideLoader();
   
   if (!newState) {
     // Error already handled by errorHandler
