@@ -551,11 +551,13 @@ export const UI = {
     setTimeout(() => errorEl.remove(), UI_TIMING.ERROR_DISPLAY);
   },
 
-  showPseudoLockedDialog(pseudo) {
+  showPseudoLockedDialog(pseudo, onConfirm) {
     render(PseudoLockedDialog(pseudo));
     bindClick("btn-pseudo-locked-ok", () => {
       remove("pseudo-locked-modal");
       _domCache.invalidate("pseudo-locked-modal");
+      // Call the confirm callback to resubmit with locked pseudo
+      if (onConfirm) onConfirm();
     });
   },
 

@@ -542,7 +542,10 @@ const handleSubmit = async (pseudo) => {
     /** @type {any} */
     const err = error;
     if (err.status === 409 && err.data?.error === "pseudo_already_set_for_this_ip") {
-      UI.showPseudoLockedDialog(err.data.pseudo);
+      UI.showPseudoLockedDialog(err.data.pseudo, () => {
+        // Retry submission with the locked pseudo
+        handleSubmit(err.data.pseudo);
+      });
       return;
     }
 
