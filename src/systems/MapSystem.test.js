@@ -4,6 +4,15 @@ import { eventBus } from '../core/EventBus.js';
 import { logger } from '../utils/logger.js';
 import * as leaflet from 'leaflet';
 
+// Mock utils module (isIOS detection)
+vi.mock('../utils.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    isIOS: vi.fn(() => false), // Default to non-iOS
+  };
+});
+
 // Mock Leaflet module
 const mockTileLayer = {
   addTo: vi.fn().mockReturnThis(),
@@ -50,6 +59,9 @@ vi.mock('leaflet', () => {
     layerGroup: mockLayerGroup,
     latLngBounds: mockLatLngBounds,
     divIcon: vi.fn((options) => options),
+    Browser: {
+      mobile: false, // Default to desktop
+    },
   };
 });
 
@@ -58,6 +70,10 @@ const mockMarker = vi.mocked(leaflet.marker);
 const mockPolyline = vi.mocked(leaflet.polyline);
 const mockLayerGroup = vi.mocked(leaflet.layerGroup);
 const mockLatLngBounds = vi.mocked(leaflet.latLngBounds);
+
+// Import mocked isIOS function for tests
+import * as utils from '../utils.js';
+const mockIsIOS = vi.mocked(utils.isIOS);
 
 describe('MapSystem', () => {
   let system;
@@ -139,6 +155,10 @@ describe('MapSystem', () => {
   describe('Click Handling', () => {
     beforeEach(async () => {
       await system.init('map');
+      // Reset isIOS mock to default (false)
+      mockIsIOS.mockReturnValue(false);
+      // Reset L.Browser.mobile to default (false)
+      leaflet.Browser.mobile = false;
     });
 
     it('should enable clicks with callback', () => {
@@ -149,6 +169,26 @@ describe('MapSystem', () => {
       expect(mockLeafletMap.on).toHaveBeenCalledWith('click', expect.any(Function));
     });
 
+    it('should enable clicks and tap events on mobile', () => {
+      leaflet.Browser.mobile = true;
+      const callback = vi.fn();
+
+      system.enableClicks(callback);
+
+      expect(mockLeafletMap.on).toHaveBeenCalledWith('click', expect.any(Function));
+      expect(mockLeafletMap.on).toHaveBeenCalledWith('tap', expect.any(Function));
+    });
+
+    it('should enable clicks and tap events on iOS', () => {
+      mockIsIOS.mockReturnValue(true);
+      const callback = vi.fn();
+
+      system.enableClicks(callback);
+
+      expect(mockLeafletMap.on).toHaveBeenCalledWith('click', expect.any(Function));
+      expect(mockLeafletMap.on).toHaveBeenCalledWith('tap', expect.any(Function));
+    });
+
     it('should disable clicks', () => {
       const callback = vi.fn();
 
@@ -156,6 +196,30 @@ describe('MapSystem', () => {
       system.disableClicks();
 
       expect(mockLeafletMap.off).toHaveBeenCalledWith('click', expect.any(Function));
+    });
+
+    it('should disable clicks and tap events on mobile', () => {
+      leaflet.Browser.mobile = true;
+      const callback = vi.fn();
+
+      system.enableClicks(callback);
+      mockLeafletMap.off.mockClear(); // Clear previous calls
+      system.disableClicks();
+
+      expect(mockLeafletMap.off).toHaveBeenCalledWith('click', expect.any(Function));
+      expect(mockLeafletMap.off).toHaveBeenCalledWith('tap', expect.any(Function));
+    });
+
+    it('should disable clicks and tap events on iOS', () => {
+      mockIsIOS.mockReturnValue(true);
+      const callback = vi.fn();
+
+      system.enableClicks(callback);
+      mockLeafletMap.off.mockClear(); // Clear previous calls
+      system.disableClicks();
+
+      expect(mockLeafletMap.off).toHaveBeenCalledWith('click', expect.any(Function));
+      expect(mockLeafletMap.off).toHaveBeenCalledWith('tap', expect.any(Function));
     });
 
     it('should emit map:click event on click', () => {
@@ -201,7 +265,21 @@ describe('MapSystem', () => {
       system.enableClicks(callback2);
 
       // Should have called off to remove old handler
-      expect(mockLeafletMap.off).toHaveBeenCalled();
+      expect(mockLeafletMap.off).toHaveBeenCalledWith('click', expect.any(Function));
+    });
+
+    it('should remove old tap handler on mobile when enabling new clicks', () => {
+      leaflet.Browser.mobile = true;
+      const callback1 = vi.fn();
+      const callback2 = vi.fn();
+
+      system.enableClicks(callback1);
+      mockLeafletMap.off.mockClear();
+      system.enableClicks(callback2);
+
+      // Should have called off to remove both old handlers
+      expect(mockLeafletMap.off).toHaveBeenCalledWith('click', expect.any(Function));
+      expect(mockLeafletMap.off).toHaveBeenCalledWith('tap', expect.any(Function));
     });
 
     it('should throw error if enabling clicks before init', () => {

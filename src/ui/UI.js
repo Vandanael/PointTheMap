@@ -423,10 +423,9 @@ export const UI = {
       }
       _domCache.invalidate("question-modal");
       // Wait for DOM update before enabling clicks
+      // Single RAF is sufficient and prevents race condition on fast mobile taps
       requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          onClose?.();
-        });
+        onClose?.();
       });
     };
 

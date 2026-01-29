@@ -16,6 +16,7 @@ import {
   polyline,
   layerGroup,
   latLngBounds,
+  Browser as L_Browser,
 } from 'leaflet';
 import { MAP } from '../config.js';
 import { getTheme } from '../services/storage.js';
@@ -184,8 +185,9 @@ export class MapSystem {
     // Attach handlers
     this.#map.on('click', this.#clickHandler);
 
-    // iOS: Add tap support for better responsiveness
-    if (isIOS()) {
+    // Mobile: Add tap support for better responsiveness on all mobile devices
+    // Prevents 300ms click delay on Android and other mobile browsers
+    if (L_Browser.mobile || isIOS()) {
       this.#map.on('tap', this.#clickHandler);
     }
   }
@@ -200,8 +202,8 @@ export class MapSystem {
 
     this.#map.off('click', this.#clickHandler);
 
-    // iOS: Disable tap events too
-    if (isIOS()) {
+    // Mobile: Disable tap events too (for all mobile devices)
+    if (L_Browser.mobile || isIOS()) {
       this.#map.off('tap', this.#clickHandler);
     }
 
