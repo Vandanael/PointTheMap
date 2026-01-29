@@ -83,3 +83,6 @@ lerna-debug.log*
 # Images générées (peuvent être régénérées depuis les SVG)
 # Les PNG sont générés depuis les SVG via npm run generate:og-image
 # public/og-image*.png
+
+# Local Netlify folder
+.netlify

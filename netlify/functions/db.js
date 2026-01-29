@@ -2,28 +2,27 @@ import { neon } from "@netlify/neon";
 
 export function getDatabase(context) {
   try {
-    const databaseUrl = context?.env?.NETLIFY_DATABASE_URL || 
+    const databaseUrl = context?.env?.NETLIFY_DATABASE_URL ||
                         context?.NETLIFY_DATABASE_URL ||
                         process.env.NETLIFY_DATABASE_URL;
-    
+
     if (!databaseUrl) {
-      // In production, neon() should work without URL if configured via Netlify
-      // But we'll try both approaches
-      try {
-        return neon();
-      } catch (fallbackError) {
-        throw new Error("Database URL not configured and neon() failed");
-      }
+      console.error("NETLIFY_DATABASE_URL not found in context or environment");
+      throw new Error("Database URL not configured");
     }
-    
-    return neon(databaseUrl);
+
+    // Configure with connection options for better reliability
+    const sql = neon(databaseUrl, {
+      fetchOptions: {
+        timeout: 8000, // 8 second timeout to stay under function limit
+      },
+    });
+
+    return sql;
   } catch (error) {
-    const errorMessage = error.message || "Unknown database connection error";
-    if (process.env.NODE_ENV === "development") {
-      console.error("Error creating database connection:", errorMessage, error.code);
-    } else {
-      console.error("Database connection error");
-    }
+    const err = /** @type {Error & {code?: string}} */ (error);
+    const errorMessage = err.message || "Unknown database connection error";
+    console.error("Database connection error:", errorMessage, err.code);
     throw new Error(`Failed to connect to database: ${errorMessage}`);
   }
 }

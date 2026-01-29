@@ -127,6 +127,8 @@ const validateRounds = (rounds, sessionCapitals) => {
 export default async (req, context) => {
   // Wrap entire function in try-catch to catch any unhandled errors
   try {
+    console.log("[submit] Function invoked");
+
     if (req.method !== "POST") {
       return jsonResponse({ error: "Method not allowed" }, 405);
     }
@@ -135,9 +137,10 @@ export default async (req, context) => {
     let sql;
     try {
       sql = getDatabase(context);
+      console.log("[submit] Database connection established");
     } catch (dbError) {
       const error = /** @type {Error} */ (dbError);
-      console.error("Database connection failed:", error.message);
+      console.error("[submit] Database connection failed:", error.message, error.stack);
       return jsonResponse(
         { error: "Database connection failed. Please try again later." },
         503
@@ -171,6 +174,8 @@ export default async (req, context) => {
     }
     const { token, rounds, pseudo, gameType = "classic" } = body;
     const csrfToken = req.headers.get("x-csrf-token");
+
+    console.log("[submit] Request details - Token:", token?.substring(0, 8), "CSRF from header:", csrfToken?.substring(0, 8));
 
     // Validate pseudo: 3-5 uppercase letters
     if (!pseudo || typeof pseudo !== "string") {
@@ -234,9 +239,25 @@ export default async (req, context) => {
     };
 
     // CSRF token validation
+    console.log("[submit] CSRF validation:");
+    console.log("  - Expected (from DB):", session.csrfToken?.substring(0, 16) + "...");
+    console.log("  - Received (header):", csrfToken?.substring(0, 16) + "...");
+    console.log("  - Match:", session.csrfToken === csrfToken);
+    console.log("  - Types:", typeof session.csrfToken, typeof csrfToken);
+
     if (session.csrfToken && session.csrfToken !== csrfToken) {
-      return jsonResponse({ error: "Invalid CSRF token" }, 403);
+      console.log("[submit] CSRF token mismatch! Returning 403");
+      return jsonResponse({
+        error: "Invalid CSRF token",
+        debug: {
+          expectedPrefix: session.csrfToken?.substring(0, 8),
+          receivedPrefix: csrfToken?.substring(0, 8),
+          receivedIsNull: csrfToken === null,
+          receivedIsUndefined: csrfToken === undefined
+        }
+      }, 403);
     }
+    console.log("[submit] CSRF token validated successfully");
 
     if (session.used) {
       return jsonResponse({ error: "Session already used" }, 401);
@@ -378,40 +399,48 @@ export default async (req, context) => {
     let isTopFifty = false;
     
     try {
-      if (/** @type {any} */ (sql).begin) {
-        await /** @type {any} */ (sql).begin(async (/** @type {any} */ tx) => {
-          const doubleCheckResult = await tx`
-            SELECT pseudo
-            FROM scores
-            WHERE ip = ${clientIp}
-            ORDER BY timestamp DESC
-            LIMIT 1
-          `;
+      console.log("[submit] Starting database transaction");
 
-          if (doubleCheckResult.length > 0 && doubleCheckResult[0].pseudo !== pseudo) {
-            throw new Error(`PSEUDO_MISMATCH:${doubleCheckResult[0].pseudo}`);
-          }
+      // Neon SQL doesn't support transactions, run operations sequentially
+      // Mark session as used first to prevent double submission
+      await sql`UPDATE sessions SET used = true WHERE token = ${token}`;
+      console.log("[submit] Session marked as used");
 
-          await tx`UPDATE sessions SET used = true WHERE token = ${token}`;
-          
-          await tx`
-            INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, ip)
-            VALUES (${pseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}::jsonb, ${now}, ${gameType}, ${clientIp})
-          `;
-          
-          await tx`DELETE FROM sessions WHERE token = ${token}`;
-        });
-      } else {
-        await sql`UPDATE sessions SET used = true WHERE token = ${token}`;
-        await sql`
-          INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, ip)
-          VALUES (${pseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}::jsonb, ${now}, ${gameType}, ${clientIp})
-        `;
-        await sql`DELETE FROM sessions WHERE token = ${token}`;
+      // Double-check pseudo hasn't changed
+      const doubleCheckResult = await sql`
+        SELECT pseudo
+        FROM scores
+        WHERE ip = ${clientIp}
+        ORDER BY timestamp DESC
+        LIMIT 1
+      `;
+
+      if (doubleCheckResult.length > 0 && doubleCheckResult[0].pseudo !== pseudo) {
+        console.log("[submit] Pseudo mismatch detected");
+        await sql`UPDATE sessions SET used = false WHERE token = ${token}`;
+        return jsonResponse(
+          {
+            error: "pseudo_already_set_for_this_ip",
+            pseudo: doubleCheckResult[0].pseudo,
+          },
+          409
+        );
       }
+
+      // Insert score
+      await sql`
+        INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, ip)
+        VALUES (${pseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}::jsonb, ${now}, ${gameType}, ${clientIp})
+      `;
+      console.log("[submit] Score inserted");
+
+      // Clean up session
+      await sql`DELETE FROM sessions WHERE token = ${token}`;
+      console.log("[submit] Session deleted")
 
       let rankResult;
       try {
+        console.log("[submit] Calculating rank");
         rankResult = await sql`
           SELECT COUNT(*) + 1 as rank
           FROM scores
@@ -420,13 +449,15 @@ export default async (req, context) => {
         `;
         rank = parseInt(rankResult[0]?.rank || "1", 10);
         isTopFifty = rank <= 50;
+        console.log("[submit] Rank calculated:", rank);
       } catch (rankError) {
         // If rank query fails, we still return the score but with rank 0
-        console.error("Rank query error:", rankError);
+        console.error("[submit] Rank query error:", rankError);
         rank = 0;
         isTopFifty = false;
       }
 
+      console.log("[submit] Submission successful");
       return jsonResponse({
         score: totalScore,
         rank,
@@ -435,25 +466,17 @@ export default async (req, context) => {
       });
     } catch (dbError) {
       const error = /** @type {Error & {code?: string}} */ (dbError);
-      // Gérer l'erreur de pseudo mismatch dans la transaction
-      if (error.message?.startsWith("PSEUDO_MISMATCH:")) {
-        const mismatchPseudo = error.message.split(":")[1];
-        return jsonResponse(
-          {
-            error: "pseudo_already_set_for_this_ip",
-            pseudo: mismatchPseudo,
-          },
-          409
-        );
-      }
+      console.error("[submit] Database operation failed:", error.message, error.code, error.stack);
+
       // Handle database connection errors
-      if (error.message?.includes("Failed to connect") || 
+      if (error.message?.includes("Failed to connect") ||
           error.message?.includes("connection") ||
+          error.message?.includes("timeout") ||
           error.code === "ECONNREFUSED" ||
           error.code === "ETIMEDOUT" ||
           error.code === "ENOTFOUND") {
-        console.error("Database connection error:", error.message, error.code);
-        return jsonResponse({ 
+        console.error("[submit] Connection error detected");
+        return jsonResponse({
           error: "Database connection error. Please try again later.",
           score: totalScore,
           rank: 0,
@@ -461,12 +484,9 @@ export default async (req, context) => {
           rounds: validatedRounds,
         }, 503);
       }
-      if (process.env.NODE_ENV === "development") {
-        console.error("Database error:", error.message, error.code);
-      } else {
-        console.error("Database error occurred");
-      }
-      return jsonResponse({ 
+
+      console.error("[submit] Generic database error");
+      return jsonResponse({
         error: "Database error. Please try again later.",
         score: totalScore,
         rank: 0,
@@ -477,33 +497,37 @@ export default async (req, context) => {
   } catch (outerError) {
     // Catch any unhandled errors that might cause 502
     const error = /** @type {Error & {code?: string}} */ (outerError);
-    
+    console.error("[submit] Unhandled error caught:", error.message, error.code, error.stack);
+
     // Handle JSON parsing errors
     if (error instanceof SyntaxError) {
+      console.error("[submit] JSON parsing error");
       return jsonResponse({ error: "Invalid request body" }, 400);
     }
-    
+
     // Check if it's a database connection error
-    if (error.message?.includes("Failed to connect") || 
+    if (error.message?.includes("Failed to connect") ||
         error.message?.includes("connection") ||
+        error.message?.includes("timeout") ||
         error.code === "ECONNREFUSED" ||
         error.code === "ETIMEDOUT" ||
         error.code === "ENOTFOUND") {
-      console.error("Database connection error:", error.message, error.code);
+      console.error("[submit] Connection error in outer catch");
       return jsonResponse(
         { error: "Database connection error. Please try again later." },
         503
       );
     }
-    
-    // Log error details
-    if (process.env.NODE_ENV === "development") {
-      console.error("Submit error:", error.message, error.stack);
-    } else {
-      console.error("Submit error occurred:", error.message);
-    }
-    
-    // Generic error response
+
+    // Log full error details
+    console.error("[submit] Generic error - full details:", JSON.stringify({
+      message: error.message,
+      code: error.code,
+      name: error.name,
+      stack: error.stack
+    }));
+
+    // Generic error response - ALWAYS return a response to prevent 502
     return jsonResponse(
       { error: "Internal server error. Please try again later." },
       500
