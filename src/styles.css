@@ -65,6 +65,11 @@ body {
   left: 0;
 }
 
+/* Dark mode : éclaircir légèrement la carte pour mieux distinguer mers et océans */
+body:not(.light-theme) #map {
+  filter: brightness(1.07) contrast(0.98);
+}
+
 /* iOS: Désactiver le callout de sélection lors des appuis longs sur la carte */
 #map,
 #map * {
