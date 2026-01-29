@@ -142,13 +142,15 @@ const fetchApi = async (endpoint, options = {}) => {
 /**
  * Format rounds for API submission
  * @param {import('../game/Game.js').Round[]} rounds
- * @returns {Array<{capital: string, click: {lat: number, lng: number} | null, status: string}>}
+ * @returns {Array<{capital: string, click: {lat: number, lng: number} | null, status: string, score: number, timeElapsed?: number}>}
  */
 const formatRoundsForSubmit = (rounds) =>
   rounds.map((r) => ({
     capital: r.capital.name,
     click: r.click,
     status: r.status,
+    score: r.score || 0,
+    timeElapsed: r.endTime && r.startTime ? r.endTime - r.startTime : undefined,
   }));
 
 export const api = {

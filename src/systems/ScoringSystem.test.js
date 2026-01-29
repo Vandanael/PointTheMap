@@ -278,9 +278,10 @@ describe('ScoringSystem', () => {
   });
 
   describe('getScoreCategory', () => {
-    it('should return "perfect" for distance < 1km', () => {
+    it('should return "perfect" for distance < 0.1km', () => {
       expect(system.getScoreCategory(0)).toBe('perfect');
-      expect(system.getScoreCategory(0.5)).toBe('perfect');
+      expect(system.getScoreCategory(0.05)).toBe('perfect');
+      expect(system.getScoreCategory(0.09)).toBe('perfect');
     });
 
     it('should return "excellent" for distance < 50km', () => {

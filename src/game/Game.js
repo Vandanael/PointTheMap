@@ -25,6 +25,8 @@ import { getStats } from "../features/StatsManager.js";
  * @property {{lat: number, lng: number} | null} click
  * @property {number | null} distance
  * @property {number | null} score
+ * @property {number} [baseScore] - Base score before time bonus
+ * @property {number} [timeBonus] - Time bonus points
  * @property {'playing' | 'completed' | 'timeout'} status
  */
 
@@ -131,7 +133,7 @@ export const playRound = (state, clickCoords) => {
     return state;
   }
 
-  const completedRound = recordClick(state.currentRound, clickCoords);
+  const completedRound = recordClick(state.currentRound, clickCoords, state.gameType);
   return {
     ...state,
     status: GameStatus.ROUND_RESULT,

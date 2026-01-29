@@ -32,12 +32,12 @@ describe('calculateScore (via ScoringSystem)', () => {
 
     expect(score300).toBeLessThan(score100);
     expect(score300).toBeGreaterThan(score500);
-    expect(score500).toBe(1000); // Known value
+    expect(score500).toBe(245); // V2 formula (k=105, p=1.9)
   });
 
-  it('applies exponential decay for distance > 500km', () => {
-    expect(scoringSystem.calculateScore(500)).toBe(1000);
-    expect(scoringSystem.calculateScore(1000)).toBeLessThan(1000);
+  it('applies sigmoid decay for all distances > 0.1km', () => {
+    expect(scoringSystem.calculateScore(500)).toBe(245);
+    expect(scoringSystem.calculateScore(1000)).toBeLessThan(245);
     expect(scoringSystem.calculateScore(5000)).toBeGreaterThanOrEqual(0);
   });
 
@@ -52,9 +52,9 @@ describe('calculateScore (via ScoringSystem)', () => {
     // Note: 1km is now in transition zone, so value differs from old formula
     expect(scoringSystem.calculateScore(1)).toBeLessThan(5000);
     expect(scoringSystem.calculateScore(1)).toBeGreaterThan(4900);
-    expect(scoringSystem.calculateScore(50)).toBe(4182); // Actual value from implementation
-    expect(scoringSystem.calculateScore(100)).toBe(3498); // Actual value from implementation
-    expect(scoringSystem.calculateScore(500)).toBe(1000);
+    expect(scoringSystem.calculateScore(50)).toBe(4019); // V2 formula (k=105, p=1.9)
+    expect(scoringSystem.calculateScore(100)).toBe(2616); // V2 formula
+    expect(scoringSystem.calculateScore(500)).toBe(245);  // V2 formula
   });
 });
 

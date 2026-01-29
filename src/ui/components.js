@@ -126,8 +126,10 @@ export const QuestionModalWithButton = (capitalName, country) => {
  * @param {number} score
  * @param {boolean} isTimeout
  * @param {boolean} isLast
+ * @param {number} [baseScore] - Base score before time bonus
+ * @param {number} [timeBonus] - Time bonus points
  */
-export const RoundResult = (distance, score, isTimeout, isLast) => {
+export const RoundResult = (distance, score, isTimeout, isLast, baseScore, timeBonus) => {
   /**
    * @param {number} distanceKm
    */
@@ -180,6 +182,7 @@ export const RoundResult = (distance, score, isTimeout, isLast) => {
   }
 
   const categoryLabel = getCategoryLabel();
+  const hasTimeBonus = timeBonus && timeBonus > 0;
 
   return `
     <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
@@ -188,8 +191,17 @@ export const RoundResult = (distance, score, isTimeout, isLast) => {
         ${categoryLabel ? `<div class="text-xl font-bold text-primary mb-2" id="categoryLabel">${categoryLabel}</div>` : ''}
         <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="distanceLabel">${t("distance")}</div>
         <div class="text-3xl font-black text-primary mb-6" id="distanceDisplay">${formatDistance(distance)}</div>
+
         <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="pointsEarnedLabel">${t("pointsEarned")}</div>
-        <div class="text-6xl font-black text-yellow-400 mb-2" id="pointsDisplay">${formatScore(score)}</div>
+        ${hasTimeBonus ? `
+          <div class="mb-4">
+            <div class="text-2xl font-bold text-primary mb-1">${t("base")}: ${formatScore(baseScore || 0)}</div>
+            <div class="text-2xl font-bold text-green-400 mb-2">⚡ ${t("speedBonus")}: +${formatScore(timeBonus)}</div>
+            <div class="text-5xl font-black text-yellow-400" id="pointsDisplay">${formatScore(score)}</div>
+          </div>
+        ` : `
+          <div class="text-6xl font-black text-yellow-400 mb-2" id="pointsDisplay">${formatScore(score)}</div>
+        `}
       </div>
       ${Button("btn-next", isLast ? t("seeResults") : t("continue"), "primary")}
     </div>
@@ -497,20 +509,18 @@ export const PseudoLockedDialog = (pseudo) => {
  * @param {string} id - Toast ID
  * @param {string} message - Message to display
  * @param {string} type - Type of toast: 'info', 'warning', 'error', 'success'
+ * @param {{ compact?: boolean }} [options] - compact: smaller modal, no emoji, text only
  * @returns {string} HTML string
  */
-/**
- * @param {string} id
- * @param {string} message
- * @param {"info" | "warning" | "error" | "success"} [type="info"]
- */
-export const Toast = (id, message, type = "info") => {
+export const Toast = (id, message, type = "info", options = {}) => {
+  const { compact = false } = options;
+
   /** @type {Record<"info" | "warning" | "error" | "success", string>} */
   const icons = {
     info: "ℹ️",
     warning: "⚠️",
     error: "❌",
-    success: "", // Pas d'émoji pour les toasts de succès
+    success: "",
   };
 
   /** @type {Record<"info" | "warning" | "error" | "success", string>} */
@@ -521,15 +531,25 @@ export const Toast = (id, message, type = "info") => {
     success: "bg-green-500",
   };
 
-  const icon = icons[type] || icons.info;
+  const icon = compact ? "" : (icons[type] || icons.info);
   const color = colors[type] || colors.info;
+  const wrapperClass = compact
+    ? "fixed bottom-8 left-1/2 -translate-x-1/2 max-w-xs w-full px-3 toast-slide-up"
+    : "fixed bottom-8 left-1/2 -translate-x-1/2 max-w-md w-full px-4 toast-slide-up";
+  const innerClass = compact
+    ? `${color} text-white rounded-lg shadow-lg py-2.5 px-3 flex items-center gap-2`
+    : `${color} text-white rounded-xl shadow-lg p-4 flex items-start gap-3`;
+  const textClass = compact ? "flex-1 text-sm font-medium" : "flex-1 text-sm font-medium";
+  const closeClass = compact
+    ? "shrink-0 text-white hover:text-gray-200 text-lg leading-none"
+    : "shrink-0 text-white hover:text-gray-200 text-xl leading-none";
 
   return `
-    <div id="${id}" class="fixed bottom-8 left-1/2 -translate-x-1/2 max-w-md w-full px-4 toast-slide-up" style="z-index: var(--z-toast);" role="alert" aria-live="assertive">
-      <div class="${color} text-white rounded-xl shadow-lg p-4 flex items-start gap-3">
-        ${icon ? `<span class="text-2xl shrink-0">${icon}</span>` : ''}
-        <div class="flex-1 text-sm font-medium" style="line-height: 1.5;">${escapeHtml(message)}</div>
-        <button id="${id}-close" class="shrink-0 text-white hover:text-gray-200 text-xl leading-none" aria-label="Close notification">×</button>
+    <div id="${id}" class="${wrapperClass}" style="z-index: var(--z-toast);" role="alert" aria-live="assertive">
+      <div class="${innerClass}">
+        ${icon ? `<span class="text-2xl shrink-0">${icon}</span>` : ""}
+        <div class="${textClass}" style="line-height: 1.5;">${escapeHtml(message)}</div>
+        <button id="${id}-close" class="${closeClass}" aria-label="Close notification">×</button>
       </div>
     </div>
   `;

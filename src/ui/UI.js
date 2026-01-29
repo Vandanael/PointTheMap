@@ -286,7 +286,8 @@ export const UI = {
       UI.showToast(
         success ? t("shareCopied") : t("shareFailed"),
         success ? "success" : "error",
-        3000
+        3000,
+        { compact: true }
       );
     });
   },
@@ -450,8 +451,8 @@ export const UI = {
   },
 
   // Round result
-  showRoundResult(distance, score, isTimeout, isLast) {
-    const content = RoundResult(distance, score, isTimeout, isLast);
+  showRoundResult(distance, score, isTimeout, isLast, baseScore, timeBonus) {
+    const content = RoundResult(distance, score, isTimeout, isLast, baseScore, timeBonus);
     render(Modal("round-result", content, true));
     bindClick("btn-next", () => inputSystem.handleNextRound());
   },
@@ -564,11 +565,12 @@ export const UI = {
    * @param {string} message - Message to display
    * @param {string} type - Type: 'info', 'warning', 'error', 'success'
    * @param {number} duration - Duration in ms (default: 5000, 0 = no auto-close)
+   * @param {{ compact?: boolean }} [options] - compact: smaller, no emoji, text only
    * @returns {string} Toast ID
    */
-  showToast(message, type = "info", duration = 5000) {
+  showToast(message, type = "info", duration = 5000, options = {}) {
     const toastId = `toast-${Date.now()}`;
-    render(Toast(toastId, message, type));
+    render(Toast(toastId, message, type, options));
 
     // Bind close button
     bindClick(`${toastId}-close`, () => {

@@ -202,7 +202,7 @@ describe("Game.js", () => {
       const clickCoords = [48.8, 2.3];
       const newState = playRound(state, clickCoords);
 
-      expect(recordClick).toHaveBeenCalledWith(currentRound, clickCoords);
+      expect(recordClick).toHaveBeenCalledWith(currentRound, clickCoords, state.gameType);
       expect(newState.status).toBe(GameStatus.ROUND_RESULT);
       expect(newState.rounds).toHaveLength(1);
       expect(newState.currentRound.status).toBe("completed");

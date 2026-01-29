@@ -60,6 +60,8 @@ const translations = {
     // Results
     distance: "Distance",
     pointsEarned: "Points gagnés",
+    base: "Base",
+    speedBonus: "Bonus vitesse",
     continue: "CONTINUER",
     seeResults: "VOIR RÉSULTATS",
     timeUp: "Temps écoulé",
@@ -173,6 +175,8 @@ const translations = {
     // Results
     distance: "Distance",
     pointsEarned: "Points earned",
+    base: "Base",
+    speedBonus: "Speed bonus",
     continue: "CONTINUE",
     seeResults: "SEE RESULTS",
     timeUp: "Time's up",

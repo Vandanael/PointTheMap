@@ -10,29 +10,54 @@ export const GAME = {
 };
 
 /**
+ * Scoring formula configuration (Version 2)
+ * Uses sigmoid-based formula for smooth, continuous scoring
+ */
+export const SCORING_FORMULA = {
+  version: 2,
+  perfectThreshold: 0.1,  // km - distance below which score is perfect
+  k: 105,                 // Scale parameter (distance at ~50% score)
+  p: 1.9,                 // Power parameter (controls decay steepness)
+  maxScore: 5000,         // Maximum possible score per round
+};
+
+/**
  * Scoring thresholds - Single source of truth for all distance-based categories
  * Used by: ScoringSystem, UI components, visual constants
  */
 export const SCORING_THRESHOLDS = {
   // Category boundaries (km)
-  PERFECT_MAX: 1,        // < 1km = Perfect
-  EXCELLENT_MAX: 50,     // 1-50km = Excellent
+  PERFECT_MAX: 0.1,      // < 0.1km = Perfect (V2: reduced from 1km)
+  EXCELLENT_MAX: 50,     // 0.1-50km = Excellent
   GOOD_MAX: 200,         // 50-200km = Good
   FAIR_MAX: 1000,        // 200-1000km = Fair
   // > 1000km = Poor
 
-  // Smooth transition zones
-  PERFECT_TRANSITION_START: 0.5,  // Start transition from perfect
-  PERFECT_TRANSITION_END: 2,       // End transition to excellent
-
-  // Formula transition points (km)
-  EXPONENTIAL_END: 100,  // End of exponential decay (1-100km)
-  LINEAR_END: 500,       // End of linear interpolation (100-500km)
-  // > 500km = exponential decay
-
   // Visual/UI thresholds (can differ from category boundaries)
   VISUAL_EXCELLENT: 100,  // Green line color
   VISUAL_GOOD: 500,       // Yellow line color
+};
+
+/**
+ * Time bonus configuration by game mode
+ * Controls speed-based scoring bonuses
+ */
+export const SCORING = {
+  ENABLE_TIME_BONUS: true,  // Global feature flag
+  TIME_BONUS_BY_MODE: {
+    classic: {
+      enabled: false,           // Classic mode: pure geography skill, no time pressure
+      maxBonus: 0,
+      maxBonusPercent: 0,
+      distanceThreshold: 200,
+    },
+    daily: {
+      enabled: true,            // Daily mode: competitive speedrun aspect
+      maxBonus: 1000,           // Maximum bonus points (20% of 5000)
+      maxBonusPercent: 0.20,    // 20% max bonus
+      distanceThreshold: 200,   // Only award bonus if distance < 200km
+    },
+  },
 };
 
 export const TIMING = {

@@ -3,6 +3,7 @@
 import { getDatabase } from "./db.js";
 // Import shared game logic from lib (same functions used by client)
 import { haversine, calculateScore } from "../../lib/game-math/index.js";
+import { GAME, SCORING } from "../../src/config.js";
 
 const MAX_SCORE_PER_ROUND = 5000;
 const ROUNDS = 5;
@@ -330,13 +331,38 @@ export default async (req, context) => {
         };
       }
 
-      const score = calculateScore(distance);
+      const baseScore = calculateScore(distance);
+
+      // Calculate time bonus (if applicable for this game mode)
+      let timeBonus = 0;
+      if (round.timeElapsed && session.gameType === 'daily' && SCORING.ENABLE_TIME_BONUS) {
+        const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
+        const timeRemaining = totalTimeAllowed - round.timeElapsed;
+        const config = SCORING.TIME_BONUS_BY_MODE.daily;
+
+        if (config.enabled && distance < config.distanceThreshold && timeRemaining > 0) {
+          const timeRatio = timeRemaining / totalTimeAllowed;
+          const bonusPercent = timeRatio * config.maxBonusPercent;
+          timeBonus = Math.min(
+            Math.round(baseScore * bonusPercent),
+            config.maxBonus
+          );
+        }
+      }
+
+      const totalScore = baseScore + timeBonus;
+
+      // Validate client score matches server calculation (±1 point tolerance for rounding)
+      if (round.score && Math.abs(round.score - totalScore) > 1) {
+        console.warn(`[submit] Score mismatch: client=${round.score}, server=${totalScore} (base=${Math.round(baseScore)}, bonus=${timeBonus})`);
+        // Use server score for anti-cheat
+      }
 
       return {
         capital: round.capital,
         click: round.click,
         distance: Math.round(distance),
-        score: Math.round(score),
+        score: Math.round(totalScore),
         status: "completed",
       };
     };

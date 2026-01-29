@@ -277,7 +277,8 @@ const init = async () => {
             UI.showToast(
               t('shareCopied'),
               'success',
-              3000
+              3000,
+              { compact: true }
             );
           }
         };
@@ -455,7 +456,9 @@ const onRoundEnd = () => {
       round.distance,
       round.score,
       round.status === "timeout",
-      isLastRound(state)
+      isLastRound(state),
+      round.baseScore,
+      round.timeBonus
     );
   }, TIMING.RESULT_DELAY_MS);
 };
@@ -533,7 +536,8 @@ const handleSubmit = async (pseudo) => {
         UI.showToast(
           success ? t('shareCopied') : t('shareFailed'),
           success ? 'success' : 'error',
-          3000
+          3000,
+          { compact: true }
         );
       };
       

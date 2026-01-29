@@ -25,9 +25,10 @@ export const createRound = (capital, roundNumber) => ({
  * Record user click and calculate score
  * @param {import('./Game.js').Round} round - Current round
  * @param {[number, number]} clickCoords - [lat, lng] of user click
+ * @param {string} [gameMode='classic'] - Game mode ('classic' or 'daily')
  * @returns {import('./Game.js').Round}
  */
-export const recordClick = (round, clickCoords) => {
+export const recordClick = (round, clickCoords, gameMode = 'classic') => {
   const endTime = Date.now();
   const elapsed = endTime - round.startTime;
   const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
@@ -44,7 +45,7 @@ export const recordClick = (round, clickCoords) => {
   const [normalizedLat, normalizedLng] = normalizedCoords;
 
   const capitalCoords = [round.capital.lat, round.capital.lng];
-  
+
   // Check timeout first (before calculating score)
   if (elapsed > totalTimeAllowed) {
     return {
@@ -57,21 +58,24 @@ export const recordClick = (round, clickCoords) => {
     };
   }
 
-  // Use ScoringSystem for consistent architecture
+  // Use ScoringSystem for consistent architecture (pass gameMode for time bonus)
   const scoreResult = scoringSystem.calculateClickScore(
     normalizedCoords,
     capitalCoords,
-    elapsed
+    elapsed,
+    gameMode
   );
 
   return {
     ...round,
     endTime,
     click: { lat: normalizedLat, lng: normalizedLng },
-    distance: scoreResult.distance !== null && scoreResult.distance !== undefined 
-      ? Math.round(scoreResult.distance) 
+    distance: scoreResult.distance !== null && scoreResult.distance !== undefined
+      ? Math.round(scoreResult.distance)
       : null,
-    score: Math.round(scoreResult.score),
+    score: Math.round(scoreResult.totalScore), // Use totalScore (includes time bonus)
+    baseScore: Math.round(scoreResult.score),   // Base score before bonus
+    timeBonus: Math.round(scoreResult.timeBonus), // Time bonus points
     status: "completed",
   };
 };

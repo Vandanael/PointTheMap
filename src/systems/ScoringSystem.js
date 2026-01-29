@@ -9,7 +9,7 @@
  */
 
 import { calculateScore as calculateScoreLib, haversine } from '@lib/game-math/index.js';
-import { GAME, SCORING_THRESHOLDS } from '../config.js';
+import { GAME, SCORING_THRESHOLDS, SCORING_FORMULA, SCORING } from '../config.js';
 import { eventBus } from '../core/EventBus.js';
 import { t } from '../i18n.js';
 
@@ -59,54 +59,56 @@ export class ScoringSystem {
    * @returns {number} Score (0-5000)
    */
   calculateScore(distanceKm) {
-    return Math.round(calculateScoreLib(distanceKm));
+    return Math.round(calculateScoreLib(distanceKm, SCORING_FORMULA));
   }
 
   /**
-   * Calculate time bonus (stub for future feature)
-   * Feature flag: ENABLE_TIME_BONUS (currently false)
-   * 
+   * Calculate time bonus based on speed and accuracy
+   *
+   * @param {number} baseScore - Base score before bonus
    * @param {number} totalTimeMs - Total time allowed
    * @param {number} timeRemainingMs - Time remaining
    * @param {number} distanceKm - Distance in kilometers
-   * @returns {number} Time bonus (0-1000)
+   * @param {string} [gameMode='classic'] - Game mode ('classic' or 'daily')
+   * @returns {number} Time bonus (0-maxBonus)
    */
-  calculateTimeBonus(totalTimeMs, timeRemainingMs, distanceKm) {
-    // Feature flag - not enabled yet
-    const ENABLE_TIME_BONUS = false;
-    if (!ENABLE_TIME_BONUS) {
+  calculateTimeBonus(baseScore, totalTimeMs, timeRemainingMs, distanceKm, gameMode = 'classic') {
+    // Get mode-specific config
+    const config = SCORING.TIME_BONUS_BY_MODE[gameMode];
+
+    // Check global and mode-specific flags
+    if (!SCORING.ENABLE_TIME_BONUS || !config.enabled) {
       return 0;
     }
 
-    const MAX_TIME_BONUS = 1000;
-    const DISTANCE_THRESHOLD_FOR_BONUS = 200; // Only reward time bonus for good accuracy
-
-    // No bonus if distance is too large
-    if (distanceKm >= DISTANCE_THRESHOLD_FOR_BONUS) {
+    // Only reward time bonus for good accuracy
+    if (distanceKm >= config.distanceThreshold) {
       return 0;
     }
 
-    // Linear bonus based on time remaining
-    const timeRatio = Math.max(0, timeRemainingMs / totalTimeMs);
-    return Math.round(MAX_TIME_BONUS * timeRatio);
+    // Calculate bonus as percentage of base score
+    const timeRatio = Math.max(0, Math.min(1, timeRemainingMs / totalTimeMs));
+    const bonusPercent = timeRatio * config.maxBonusPercent;
+    const bonus = Math.round(baseScore * bonusPercent);
+
+    return Math.min(bonus, config.maxBonus);
   }
 
   /**
    * Calculate score with distance and time remaining
-   * This method is kept for future enhancements (time bonuses)
-   * Currently, we don't use time in scoring per game rules
    *
    * @param {number} distanceKm - Distance in kilometers
    * @param {number} timeRemainingMs - Time remaining in milliseconds
    * @param {number | null} [totalTimeMs] - Total time allowed (for time bonus calculation)
+   * @param {string} [gameMode='classic'] - Game mode ('classic' or 'daily')
    * @returns {ScoreResult}
    */
-  calculateScoreWithTime(distanceKm, timeRemainingMs, totalTimeMs = null) {
+  calculateScoreWithTime(distanceKm, timeRemainingMs, totalTimeMs = null, gameMode = 'classic') {
     const baseScore = this.calculateScore(distanceKm);
 
-    // Calculate time bonus (currently disabled via feature flag)
+    // Calculate time bonus
     const timeBonus = totalTimeMs !== null
-      ? this.calculateTimeBonus(totalTimeMs, timeRemainingMs, distanceKm)
+      ? this.calculateTimeBonus(baseScore, totalTimeMs, timeRemainingMs, distanceKm, gameMode)
       : 0;
 
     return {
@@ -134,9 +136,10 @@ export class ScoringSystem {
    * @param {[number, number]} clickCoords - [lat, lng] of user click
    * @param {[number, number]} targetCoords - [lat, lng] of capital
    * @param {number} timeElapsedMs - Time elapsed since round start
+   * @param {string} [gameMode='classic'] - Game mode ('classic' or 'daily')
    * @returns {ScoreResult}
    */
-  calculateClickScore(clickCoords, targetCoords, timeElapsedMs) {
+  calculateClickScore(clickCoords, targetCoords, timeElapsedMs, gameMode = 'classic') {
     const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
 
     // Check if timed out
@@ -154,7 +157,7 @@ export class ScoringSystem {
     const distance = this.calculateDistance(clickCoords, targetCoords);
     const timeRemaining = totalTimeAllowed - timeElapsedMs;
 
-    return this.calculateScoreWithTime(distance, timeRemaining, totalTimeAllowed);
+    return this.calculateScoreWithTime(distance, timeRemaining, totalTimeAllowed, gameMode);
   }
 
   /**
