@@ -3,7 +3,7 @@
 > A fast-paced geography game where you must locate world capitals on a blank map!
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
-[![Tests](https://img.shields.io/badge/tests-583%20passing-brightgreen.svg)](#)
+[![Tests](https://img.shields.io/badge/tests-587%20passing-brightgreen.svg)](#)
 
 **Play now:** [point-the-map.netlify.app](https://point-the-map.netlify.app)
 
@@ -67,7 +67,7 @@ eventBus.emit('timer:started', { duration: 5000 });
 
 ## Testing
 
-- **583 tests** passing
+- **587 tests** passing
 - **70%+** coverage
 - Unit, integration, and load tests
 
