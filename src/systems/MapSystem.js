@@ -93,6 +93,13 @@ export class MapSystem {
     this.#map.setView(MAP.CENTER, MAP.ZOOM, { animate: false });
     this.#map.doubleClickZoom.disable();
 
+    // Make map container focusable for programmatic focus
+    // This prevents "first tap = focus restoration" issue on mobile after long idle
+    const mapContainer = this.#map.getContainer();
+    if (mapContainer && !mapContainer.hasAttribute('tabindex')) {
+      mapContainer.setAttribute('tabindex', '-1');
+    }
+
     // Créer un layerGroup dédié aux markers de capitales
     this.#capitalsLayer = layerGroup().addTo(this.#map);
 
@@ -168,6 +175,11 @@ export class MapSystem {
 
     // Remove existing handler
     this.disableClicks();
+
+    // Refresh map size and hit-testing after long idle
+    // After tab inactive or long wait, map's internal size/hit-testing can be stale
+    // This ensures clicks are properly registered to the correct lat/lng
+    this.#map.invalidateSize({ animate: false });
 
     // Create new handler
     this.#clickHandler = (e) => {

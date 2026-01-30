@@ -422,10 +422,25 @@ export const UI = {
         modal?.removeEventListener("click", _questionModalClickHandler);
       }
       _domCache.invalidate("question-modal");
-      // Wait for DOM update before enabling clicks
-      // Single RAF is sufficient and prevents race condition on fast mobile taps
+
+      // Explicit focus management to prevent "first tap = focus restoration"
+      // After long wait (tab inactive/minimized), first tap would normally restore focus
+      // By proactively focusing the map container, we ensure subsequent taps work as clicks
+      const mapContainer = document.getElementById("map");
+      if (mapContainer) {
+        mapContainer.focus({ preventScroll: true });
+      } else {
+        // Fallback to body if map container not found
+        document.body.focus({ preventScroll: true });
+      }
+
+      // Double RAF to handle browser throttling after long idle
+      // After tab inactive or long wait, browser may throttle RAF/layout
+      // Single RAF works for fast taps, but double ensures map is fully ready after idle
       requestAnimationFrame(() => {
-        onClose?.();
+        requestAnimationFrame(() => {
+          onClose?.();
+        });
       });
     };
 
