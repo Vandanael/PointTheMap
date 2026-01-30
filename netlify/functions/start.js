@@ -109,17 +109,21 @@ export default async (req, context) => {
       const playerToken = authHeader.substring(7);
       try {
         const decoded = jwt.verify(playerToken, JWT_SECRET);
-        player_id = decoded.player_id;
+        // Type guard: jwt.verify returns string | JwtPayload
+        if (typeof decoded !== 'string' && decoded.player_id) {
+          player_id = decoded.player_id;
 
-        // Update last_seen for this player
-        await sql`
-          UPDATE players
-          SET last_seen = NOW()
-          WHERE player_id = ${player_id}
-        `;
+          // Update last_seen for this player
+          await sql`
+            UPDATE players
+            SET last_seen = NOW()
+            WHERE player_id = ${player_id}
+          `;
+        }
       } catch (jwtError) {
         // Invalid token - log but continue without player_id
-        console.warn('Invalid player token:', jwtError.message);
+        const errorMessage = jwtError instanceof Error ? jwtError.message : String(jwtError);
+        console.warn('Invalid player token:', errorMessage);
       }
     }
 
@@ -187,11 +191,10 @@ export default async (req, context) => {
       console.error("Start error occurred");
     }
     
-    return new Response(JSON.stringify({ 
-      error: isMissingColumnError 
+    return new Response(JSON.stringify({
+      error: isMissingColumnError
         ? "Database schema error: missing column. Please run the migration script."
-        : "Internal server error",
-      details: process.env.NODE_ENV === "development" ? errorMessage : undefined
+        : "Internal server error"
     }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
