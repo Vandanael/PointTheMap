@@ -3,6 +3,9 @@
 import { getDatabase } from "./db.js";
 import { randomUUID } from "crypto";
 import { capitals, selectBalancedCapitals } from "../../capitals.js";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 
 class SeededRandom {
   /**
@@ -97,7 +100,29 @@ export default async (req, context) => {
     const gameType = body.gameType || "classic";
     const token = randomUUID();
     const csrfToken = randomUUID(); // CSRF protection token
-    
+
+    // Extract and validate player token
+    let player_id = null;
+    const authHeader = req.headers.get('authorization');
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const playerToken = authHeader.substring(7);
+      try {
+        const decoded = jwt.verify(playerToken, JWT_SECRET);
+        player_id = decoded.player_id;
+
+        // Update last_seen for this player
+        await sql`
+          UPDATE players
+          SET last_seen = NOW()
+          WHERE player_id = ${player_id}
+        `;
+      } catch (jwtError) {
+        // Invalid token - log but continue without player_id
+        console.warn('Invalid player token:', jwtError.message);
+      }
+    }
+
     let selectedCapitals;
     if (gameType === "daily") {
       const today = new Date();
@@ -111,8 +136,8 @@ export default async (req, context) => {
     const startTime = Date.now();
     const expiresAt = new Date(startTime + 10 * 60 * 1000);
     await sql`
-      INSERT INTO sessions (token, capitals, start_time, used, game_type, expires_at, csrf_token)
-      VALUES (${token}, ${JSON.stringify(selectedCapitals)}::jsonb, ${startTime}, false, ${gameType}, ${expiresAt}, ${csrfToken})
+      INSERT INTO sessions (token, capitals, start_time, used, game_type, expires_at, csrf_token, player_id)
+      VALUES (${token}, ${JSON.stringify(selectedCapitals)}::jsonb, ${startTime}, false, ${gameType}, ${expiresAt}, ${csrfToken}, ${player_id})
     `;
 
     const clientCapitals = selectedCapitals.map((c) => ({

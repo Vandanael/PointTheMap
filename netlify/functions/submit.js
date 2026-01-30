@@ -200,7 +200,7 @@ export default async (req, context) => {
     let sessionResult;
     try {
       sessionResult = await sql`
-        SELECT token, capitals, start_time, used, game_type, expires_at, csrf_token
+        SELECT token, capitals, start_time, used, game_type, expires_at, csrf_token, player_id
         FROM sessions
         WHERE token = ${token}
           AND expires_at > NOW()
@@ -237,6 +237,7 @@ export default async (req, context) => {
       used: sessionRow.used,
       gameType: sessionRow.game_type,
       csrfToken: sessionRow.csrf_token,
+      playerId: sessionRow.player_id,
     };
 
     // CSRF token validation
@@ -455,10 +456,21 @@ export default async (req, context) => {
 
       // Insert score
       await sql`
-        INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, ip)
-        VALUES (${pseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}::jsonb, ${now}, ${gameType}, ${clientIp})
+        INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, ip, player_id)
+        VALUES (${pseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}::jsonb, ${now}, ${gameType}, ${clientIp}, ${session.playerId})
       `;
       console.log("[submit] Score inserted");
+
+      // Update player stats
+      if (session.playerId) {
+        await sql`
+          UPDATE players
+          SET total_games = total_games + 1,
+              total_score = total_score + ${totalScore}
+          WHERE player_id = ${session.playerId}
+        `;
+        console.log("[submit] Player stats updated");
+      }
 
       // Clean up session
       await sql`DELETE FROM sessions WHERE token = ${token}`;

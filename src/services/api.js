@@ -37,6 +37,7 @@ import {
   addToRetryQueue,
   saveRetryQueue,
 } from "./storage.js";
+import { playerAuth } from "./PlayerAuth.js";
 
 const API_BASE = "/.netlify/functions";
 const USE_MOCK = import.meta.env.DEV && !import.meta.env.VITE_USE_API;
@@ -90,6 +91,15 @@ const fetchApi = async (endpoint, options = {}) => {
     "Content-Type": "application/json",
     ...(options.headers || {})
   };
+
+  // Add player token to all requests
+  try {
+    const authHeader = await playerAuth.getAuthHeader();
+    headers["Authorization"] = authHeader;
+  } catch (error) {
+    console.error("[API] Failed to get player token:", error);
+    // Continue without token - server will handle missing token
+  }
 
   // Add CSRF token to protected endpoints
   if (currentCsrfToken && endpoint === "submit") {
