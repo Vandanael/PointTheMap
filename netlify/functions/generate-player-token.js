@@ -1,11 +1,11 @@
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
-import { getDb } from './db.js';
+import { getDatabase } from './db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 const TOKEN_EXPIRY = '1y'; // Token valide 1 an
 
-export const handler = async (event) => {
+export default async (req, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -14,21 +14,20 @@ export const handler = async (event) => {
   };
 
   // Handle CORS preflight
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
+  if (req.method === 'OPTIONS') {
+    return new Response('', { status: 200, headers });
   }
 
   // Only accept POST
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    };
+  if (req.method !== 'POST') {
+    return new Response(
+      JSON.stringify({ error: 'Method not allowed' }),
+      { status: 405, headers }
+    );
   }
 
   try {
-    const sql = getDb();
+    const sql = getDatabase(context);
 
     // Generate new player_id
     const player_id = randomUUID();
@@ -52,24 +51,23 @@ export const handler = async (event) => {
       { expiresIn: TOKEN_EXPIRY }
     );
 
-    return {
-      statusCode: 200,
-      headers,
-      body: JSON.stringify({
+    return new Response(
+      JSON.stringify({
         token,
         player_id,
         expires_in: TOKEN_EXPIRY,
       }),
-    };
+      { status: 200, headers }
+    );
   } catch (error) {
     console.error('Error generating player token:', error);
-    return {
-      statusCode: 500,
-      headers,
-      body: JSON.stringify({
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return new Response(
+      JSON.stringify({
         error: 'Internal server error',
-        message: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        message: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
       }),
-    };
+      { status: 500, headers }
+    );
   }
 };

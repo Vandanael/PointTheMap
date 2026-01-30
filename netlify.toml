@@ -17,18 +17,7 @@
   for = "/*"
   [headers.values]
     # Content Security Policy
-    Content-Security-Policy = """
-      default-src 'self';
-      script-src 'self' 'unsafe-inline' https://unpkg.com;
-      style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com;
-      img-src 'self' data: https://*.openstreetmap.org https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://*.basemaps.cartocdn.com;
-      connect-src 'self' https://*.netlify.app https://unpkg.com https://*.openstreetmap.org https://tile.openstreetmap.org https://ingesteer.services-prod.nsvcs.net;
-      font-src 'self' https://fonts.gstatic.com data:;
-      object-src 'none';
-      base-uri 'self';
-      form-action 'self';
-      frame-ancestors 'none';
-    """
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; img-src 'self' data: https://*.openstreetmap.org https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://*.basemaps.cartocdn.com; connect-src 'self' https://*.netlify.app https://unpkg.com https://*.openstreetmap.org https://tile.openstreetmap.org https://ingesteer.services-prod.nsvcs.net; font-src 'self' https://fonts.gstatic.com data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
     # Additional security headers
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
