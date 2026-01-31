@@ -61,12 +61,8 @@ export default async (req, context) => {
     );
   } catch (error) {
     console.error('Error generating player token:', error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
     return new Response(
-      JSON.stringify({
-        error: 'Internal server error',
-        message: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
-      }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers }
     );
   }
