@@ -78,7 +78,64 @@ body:not(.light-theme) #map {
   user-select: none;
 }
 
-/* Start screen: semi-transparent so game map tiles (Auray) show through */
+/* Start screen: static background image (Auray) by viewport + theme, then overlay on top */
+.start-screen-bg {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-modal) - 1);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  background-image: url("/start-screen-mobile-dark.png");
+}
+
+body.start-screen-visible .start-screen-bg {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .start-screen-bg {
+    background-image: url("/start-screen-tablet-dark.png");
+  }
+}
+
+@media (min-width: 1280px) {
+  .start-screen-bg {
+    background-image: url("/start-screen-desktop-dark.png");
+  }
+}
+
+@media (min-width: 2560px) {
+  .start-screen-bg {
+    background-image: url("/start-screen-2k-dark.png");
+  }
+}
+
+body.light-theme .start-screen-bg {
+  background-image: url("/start-screen-mobile-light.png");
+}
+
+@media (min-width: 768px) {
+  body.light-theme .start-screen-bg {
+    background-image: url("/start-screen-tablet-light.png");
+  }
+}
+
+@media (min-width: 1280px) {
+  body.light-theme .start-screen-bg {
+    background-image: url("/start-screen-desktop-light.png");
+  }
+}
+
+@media (min-width: 2560px) {
+  body.light-theme .start-screen-bg {
+    background-image: url("/start-screen-2k-light.png");
+  }
+}
+
+/* Start screen overlay: semi-transparent so static background shows through */
 .start-modal-overlay {
   background: rgba(2, 6, 23, 0.6);
 }

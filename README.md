@@ -41,10 +41,11 @@ Visit `http://localhost:5173` - No database needed, runs in mock mode!
 ## Scripts
 
 ```bash
-npm run dev          # Development server
-npm run build        # Production build
-npm test             # Run tests
-npm run test:coverage # Coverage report
+npm run dev                 # Development server
+npm run build               # Production build
+npm test                    # Run tests
+npm run test:coverage       # Coverage report
+npm run generate:start-screen  # Generate static start-screen images (mobile/tablet/desktop/2k, dark + light) from Carto tiles
 ```
 
 ## Architecture

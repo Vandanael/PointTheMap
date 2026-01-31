@@ -251,6 +251,7 @@ export const UI = {
 
   // Start screen
   showStart() {
+    document.body.classList.add('start-screen-visible');
     // Subscribe to language changes
     const unsubscribe = eventBus.subscribe('language:changed', () => {
       UI.hideStart();
@@ -472,6 +473,7 @@ export const UI = {
     });
   },
   hideStart() {
+    document.body.classList.remove('start-screen-visible');
     remove("start-modal");
     _domCache.invalidate(); // Clear cache after DOM change
     this._langChangeCleanup?.(); // Cleanup subscription
