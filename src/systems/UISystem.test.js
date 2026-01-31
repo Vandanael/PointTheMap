@@ -106,14 +106,6 @@ describe("UISystem", () => {
         expect.any(Function)
       );
       expect(eventBus.subscribe).toHaveBeenCalledWith(
-        "timer:tick",
-        expect.any(Function)
-      );
-      expect(eventBus.subscribe).toHaveBeenCalledWith(
-        "timer:timeout",
-        expect.any(Function)
-      );
-      expect(eventBus.subscribe).toHaveBeenCalledWith(
         "score:updated",
         expect.any(Function)
       );
@@ -139,15 +131,18 @@ describe("UISystem", () => {
     it("should call all unsubscribers", () => {
       const mockUnsub1 = vi.fn();
       const mockUnsub2 = vi.fn();
+      const mockUnsub3 = vi.fn();
 
       eventBus.subscribe.mockReturnValueOnce(mockUnsub1);
       eventBus.subscribe.mockReturnValueOnce(mockUnsub2);
+      eventBus.subscribe.mockReturnValueOnce(mockUnsub3);
 
       const tempSystem = new UISystem();
       tempSystem.destroy();
 
       expect(mockUnsub1).toHaveBeenCalled();
       expect(mockUnsub2).toHaveBeenCalled();
+      expect(mockUnsub3).toHaveBeenCalled();
     });
 
     it("should stop score animation if running", () => {
@@ -220,38 +215,6 @@ describe("UISystem", () => {
       )?.[1];
 
       expect(() => dangerHandler?.()).not.toThrow();
-    });
-  });
-
-  describe("timer:tick event", () => {
-    it("should handle timer tick", () => {
-      const tickHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "timer:tick"
-      )?.[1];
-
-      expect(() => tickHandler?.({ timestamp: Date.now() })).not.toThrow();
-    });
-
-    it("should accept timestamp parameter", () => {
-      const tickHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "timer:tick"
-      )?.[1];
-
-      const timestamp = Date.now();
-      tickHandler?.({ timestamp });
-
-      // Currently does nothing, but should not throw
-      expect(() => tickHandler?.({ timestamp })).not.toThrow();
-    });
-  });
-
-  describe("timer:timeout event", () => {
-    it("should handle timer timeout", () => {
-      const timeoutHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "timer:timeout"
-      )?.[1];
-
-      expect(() => timeoutHandler?.()).not.toThrow();
     });
   });
 
@@ -375,25 +338,12 @@ describe("UISystem", () => {
         ([event]) => event === "timer:danger"
       )?.[1];
 
-      const timerTickHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "timer:tick"
-      )?.[1];
-
-      const timerTimeoutHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "timer:timeout"
-      )?.[1];
-
-      // Simulate timer lifecycle
+      // Simulate timer lifecycle (started -> danger)
       timerStartedHandler?.();
       expect(mockTimerProgress.style.width).toBe("0%");
 
-      timerTickHandler?.({ timestamp: Date.now() });
-
       timerDangerHandler?.();
       expect(mockTimerProgress.classList.add).toHaveBeenCalledWith("timer-danger");
-
-      timerTimeoutHandler?.();
-      // Should not throw
     });
 
     it("should handle multiple score updates", () => {

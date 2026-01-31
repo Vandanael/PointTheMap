@@ -13,15 +13,48 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Manual chunk splitting for better caching
+        // Split by change frequency: stable code (core) vs frequently changing (ui)
         manualChunks: (id) => {
-          // Combine core, game, and systems into a single chunk to avoid circular dependencies
-          // These are tightly coupled application modules
-          if (
-            id.includes('/src/core/') || id.includes('\\src\\core\\') ||
-            id.includes('/src/game/') || id.includes('\\src\\game\\') ||
-            id.includes('/src/systems/') || id.includes('\\src\\systems\\')
-          ) {
-            return 'vendor-app';
+          // External dependencies
+          if (id.includes('node_modules')) {
+            // Leaflet is large and stable - separate chunk for better caching
+            if (id.includes('leaflet')) {
+              return 'vendor-leaflet';
+            }
+            // All other node_modules dependencies
+            return 'vendor';
+          }
+
+          // Application chunks (split by change frequency for better caching)
+
+          // Core: Rarely changes (EventBus, StateManager, ErrorHandler)
+          if (id.includes('/src/core/') || id.includes('\\src\\core\\')) {
+            return 'core';
+          }
+
+          // Game: Moderate changes (game logic, rounds)
+          if (id.includes('/src/game/') || id.includes('\\src\\game\\')) {
+            return 'game';
+          }
+
+          // Systems: Frequent changes (new features, scoring tweaks)
+          if (id.includes('/src/systems/') || id.includes('\\src\\systems\\')) {
+            return 'systems';
+          }
+
+          // UI: Very frequent changes (UI tweaks, components)
+          if (id.includes('/src/ui/') || id.includes('\\src\\ui\\')) {
+            return 'ui';
+          }
+
+          // Features: New features added here
+          if (id.includes('/src/features/') || id.includes('\\src\\features\\')) {
+            return 'features';
+          }
+
+          // Services: API and storage (moderate changes)
+          if (id.includes('/src/services/') || id.includes('\\src\\services\\')) {
+            return 'services';
           }
         },
         // Optimize asset file names for better caching

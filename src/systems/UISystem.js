@@ -32,26 +32,14 @@ export class UISystem {
   #setupEventListeners() {
     // Timer UI events
     this.#unsubscribers.push(
-      eventBus.subscribe('timer:started', () => {
-        this.#onTimerStarted();
+      eventBus.subscribe('timer:started', (/** @type {{ timerMs?: number } | undefined } */ payload) => {
+        this.#onTimerStarted(payload);
       })
     );
 
     this.#unsubscribers.push(
       eventBus.subscribe('timer:danger', () => {
         this.#onTimerDanger();
-      })
-    );
-
-    this.#unsubscribers.push(
-      eventBus.subscribe('timer:tick', ({ timestamp }) => {
-        this.#onTimerTick(timestamp);
-      })
-    );
-
-    this.#unsubscribers.push(
-      eventBus.subscribe('timer:timeout', () => {
-        this.#onTimerTimeout();
       })
     );
 
@@ -66,14 +54,16 @@ export class UISystem {
   }
 
   /**
-   * Timer started - update progress bar
+   * Timer started - update progress bar (duration from runtime config via event payload)
    * @private
+   * @param {{ timerMs?: number } | undefined} payload - From timer:started; timerMs from state.runtimeConfig
    */
-  #onTimerStarted() {
+  #onTimerStarted(payload) {
     const timerProgress = document.getElementById("timer-progress");
     if (!timerProgress) return;
 
-    timerProgress.style.transition = `width ${GAME.TIMER_MS}ms linear`;
+    const timerMs = payload?.timerMs ?? GAME.TIMER_MS;
+    timerProgress.style.transition = `width ${timerMs}ms linear`;
     timerProgress.style.width = "0%";
   }
 
@@ -86,24 +76,6 @@ export class UISystem {
     if (progress) {
       progress.classList.add("timer-danger");
     }
-  }
-
-  /**
-   * Timer tick - update UI
-   * @private
-   */
-  #onTimerTick(timestamp) {
-    // Could be used for countdown display if needed
-    // Currently handled by CSS transition
-  }
-
-  /**
-   * Timer timeout - handle timeout state
-   * @private
-   */
-  #onTimerTimeout() {
-    // Timeout handling is done in main.js game logic
-    // UI just reacts to the visual state
   }
 
   /**

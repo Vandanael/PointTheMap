@@ -1,37 +1,25 @@
 // POST /.netlify/functions/submit
 
-import { getDatabase } from "./db.js";
+import { compose, withDatabase, withMethod } from "./_middleware.js";
+import {
+  jsonResponse,
+  errorResponse,
+  successResponse,
+  parseJsonBody,
+  getClientIp,
+  handleDatabaseError,
+  isDatabaseConnectionError,
+} from "./_utils.js";
 // Import shared game logic from lib (same functions used by client)
 import { haversine, calculateScore } from "../../lib/game-math/index.js";
-import { GAME, SCORING } from "../../src/config.js";
-
-const MAX_SCORE_PER_ROUND = 5000;
-const ROUNDS = 5;
-const SESSION_EXPIRY_MS = 10 * 60 * 1000;
-const RATE_LIMIT_PER_HOUR = 50;
-const MIN_GAME_DURATION_MS = 5000;
-const MAX_GAME_DURATION_MS = 10 * 60 * 1000;
-const MAX_DISTANCE_KM = 20015;
-
-/**
- * @param {any} data
- * @param {number} [status=200]
- * @returns {Response}
- */
-const jsonResponse = (data, status = 200) =>
-  new Response(JSON.stringify(data), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-
-const MIN_PLAUSIBLE_DURATION_MS = 15000;
+import { GAME, SCORING, API } from "../../src/config.js";
 
 /**
  * @param {number} gameDuration
  * @returns {{valid: boolean, reason?: string}}
  */
 const checkPlausibility = (gameDuration) => {
-  if (gameDuration < MIN_PLAUSIBLE_DURATION_MS || gameDuration > MAX_GAME_DURATION_MS) {
+  if (gameDuration < API.MIN_PLAUSIBLE_DURATION_MS || gameDuration > API.MAX_GAME_DURATION_MS) {
     return { valid: false, reason: "Session duration implausible" };
   }
   return { valid: true };
@@ -44,33 +32,33 @@ const checkPlausibility = (gameDuration) => {
  */
 const checkRateLimit = async (ip, context) => {
   try {
-    const sql = getDatabase(context);
+    const sql = context.sql;
     const hourKey = `${ip}-${Math.floor(Date.now() / 3600000)}`;
     const expiresAt = new Date(Date.now() + 3600000);
-    
+
     await sql`DELETE FROM rate_limits WHERE expires_at < NOW()`;
-    
+
     const existing = await sql`
       SELECT count FROM rate_limits WHERE key = ${hourKey}
     `;
-    
+
     if (existing.length > 0) {
       const count = existing[0].count;
-      if (count >= RATE_LIMIT_PER_HOUR) {
+      if (count >= API.RATE_LIMIT_PER_HOUR) {
         return { allowed: false, remaining: 0 };
       }
       await sql`
-        UPDATE rate_limits 
-        SET count = count + 1 
+        UPDATE rate_limits
+        SET count = count + 1
         WHERE key = ${hourKey}
       `;
-      return { allowed: true, remaining: RATE_LIMIT_PER_HOUR - count - 1 };
+      return { allowed: true, remaining: API.RATE_LIMIT_PER_HOUR - count - 1 };
     } else {
       await sql`
         INSERT INTO rate_limits (key, count, expires_at)
         VALUES (${hourKey}, 1, ${expiresAt})
       `;
-      return { allowed: true, remaining: RATE_LIMIT_PER_HOUR - 1 };
+      return { allowed: true, remaining: API.RATE_LIMIT_PER_HOUR - 1 };
     }
   } catch (e) {
     // On database errors, allow the request but log the error
@@ -80,37 +68,65 @@ const checkRateLimit = async (ip, context) => {
       console.error("Rate limit error:", error.message, error.code);
     }
     // Allow request to proceed if rate limiting fails (fail open)
-    return { allowed: true, remaining: RATE_LIMIT_PER_HOUR };
+    return { allowed: true, remaining: API.RATE_LIMIT_PER_HOUR };
   }
 };
 
 /**
  * @param {any[]} rounds
- * @param {any[]} sessionCapitals
+ * @param {any[]} sessionTargets - Can be capitals or countries
+ * @param {string} gameType - 'classic', 'daily', or 'country'
  * @returns {{valid: boolean, error?: string}}
  */
-const validateRounds = (rounds, sessionCapitals) => {
-  if (!Array.isArray(rounds) || rounds.length !== ROUNDS) {
+const validateRounds = (rounds, sessionTargets, gameType) => {
+  if (!Array.isArray(rounds) || rounds.length !== GAME.ROUNDS) {
     return { valid: false, error: "Invalid rounds count" };
   }
 
-  for (let i = 0; i < ROUNDS; i++) {
-    const round = rounds[i];
-    const expected = sessionCapitals[i];
+  const isCountryMode = gameType === 'country';
 
-    if (!round || !round.capital) {
+  for (let i = 0; i < GAME.ROUNDS; i++) {
+    const round = rounds[i];
+    const expected = sessionTargets[i];
+
+    // For country mode: check country, for capital modes: check capital
+    const targetField = isCountryMode ? round.country : round.capital;
+
+    if (!round || !targetField) {
       return { valid: false, error: `Missing round ${i + 1}` };
     }
 
-    if (round.capital !== expected.name) {
-      return { valid: false, error: `Capital mismatch at round ${i + 1}` };
+    if (targetField !== expected.name) {
+      return { valid: false, error: `${isCountryMode ? 'Country' : 'Capital'} mismatch at round ${i + 1}` };
+    }
+
+    // Per-round time validation - detect suspiciously fast submissions
+    if (round.timeElapsed !== undefined && round.timeElapsed !== null) {
+      if (typeof round.timeElapsed !== "number" || !Number.isFinite(round.timeElapsed)) {
+        return { valid: false, error: `Invalid time at round ${i + 1}` };
+      }
+      if (round.timeElapsed < API.MIN_ROUND_TIME_MS) {
+        return { valid: false, error: `Round ${i + 1} completed too fast (${round.timeElapsed}ms)` };
+      }
+      if (round.timeElapsed > GAME.TIMER_MS + GAME.GRACE_PERIOD_MS + 1000) {
+        return { valid: false, error: `Round ${i + 1} time exceeds maximum (${round.timeElapsed}ms)` };
+      }
     }
 
     if (round.click) {
       const { lat, lng } = round.click;
+
+      // Type and finiteness validation
       if (typeof lat !== "number" || typeof lng !== "number") {
-        return { valid: false, error: `Invalid click at round ${i + 1}` };
+        return { valid: false, error: `Invalid click coordinates at round ${i + 1}` };
       }
+
+      // Check for NaN, Infinity, -Infinity
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return { valid: false, error: `Invalid coordinate values at round ${i + 1}` };
+      }
+
+      // Geographic bounds validation
       if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
         return { valid: false, error: `Click out of bounds at round ${i + 1}` };
       }
@@ -125,31 +141,17 @@ const validateRounds = (rounds, sessionCapitals) => {
  * @param {any} context
  * @returns {Promise<Response>}
  */
-export default async (req, context) => {
+const handler = async (req, context) => {
   // Wrap entire function in try-catch to catch any unhandled errors
   try {
     console.log("[submit] Function invoked");
 
-    if (req.method !== "POST") {
-      return jsonResponse({ error: "Method not allowed" }, 405);
-    }
+    // Database connection already established by withDatabase middleware
+    const sql = context.sql;
+    console.log("[submit] Database connection established");
 
-    // Early database connection check
-    let sql;
-    try {
-      sql = getDatabase(context);
-      console.log("[submit] Database connection established");
-    } catch (dbError) {
-      const error = /** @type {Error} */ (dbError);
-      console.error("[submit] Database connection failed:", error.message, error.stack);
-      return jsonResponse(
-        { error: "Database connection failed. Please try again later." },
-        503
-      );
-    }
+    const ip = getClientIp(req, context);
 
-    const ip = context.ip || req.headers.get("x-forwarded-for") || "unknown";
-    
     // Wrap rate limit check in try-catch
     let rateLimit;
     try {
@@ -157,22 +159,14 @@ export default async (req, context) => {
     } catch (rateLimitError) {
       // If rate limiting fails, log but allow request to proceed
       console.error("Rate limit check failed:", rateLimitError);
-      rateLimit = { allowed: true, remaining: RATE_LIMIT_PER_HOUR };
-    }
-    
-    if (!rateLimit.allowed) {
-      return jsonResponse(
-        { error: "Rate limit exceeded. Try again later." },
-        429
-      );
+      rateLimit = { allowed: true, remaining: API.RATE_LIMIT_PER_HOUR };
     }
 
-    let body;
-    try {
-      body = await req.json();
-    } catch (parseError) {
-      return jsonResponse({ error: "Invalid request body" }, 400);
+    if (!rateLimit.allowed) {
+      return errorResponse("Rate limit exceeded. Try again later.", 429);
     }
+
+    const body = await parseJsonBody(req);
     const { token, rounds, pseudo, gameType = "classic" } = body;
     const csrfToken = req.headers.get("x-csrf-token");
 
@@ -180,21 +174,15 @@ export default async (req, context) => {
 
     // Validate pseudo: 3-5 uppercase letters
     if (!pseudo || typeof pseudo !== "string") {
-      return jsonResponse(
-        { error: "Invalid pseudo (3-5 uppercase letters required)" },
-        400
-      );
+      return errorResponse("Invalid pseudo (3-5 uppercase letters required)", 400);
     }
     const trimmedPseudo = pseudo.trim();
     if (trimmedPseudo.length < 3 || trimmedPseudo.length > 5 || !/^[A-Z]{3,5}$/.test(trimmedPseudo)) {
-      return jsonResponse(
-        { error: "Invalid pseudo (3-5 uppercase letters required)" },
-        400
-      );
+      return errorResponse("Invalid pseudo (3-5 uppercase letters required)", 400);
     }
 
     if (!token || typeof token !== "string") {
-      return jsonResponse({ error: "Invalid token" }, 400);
+      return errorResponse("Invalid token", 400);
     }
 
     let sessionResult;
@@ -208,25 +196,11 @@ export default async (req, context) => {
     } catch (dbError) {
       const error = /** @type {Error & {code?: string}} */ (dbError);
       console.error("Database query error (session lookup):", error.message, error.code);
-      // Check if it's a connection error
-      if (error.message?.includes("Failed to connect") || 
-          error.message?.includes("connection") ||
-          error.code === "ECONNREFUSED" ||
-          error.code === "ETIMEDOUT" ||
-          error.code === "ENOTFOUND") {
-        return jsonResponse(
-          { error: "Database connection error. Please try again later." },
-          503
-        );
-      }
-      return jsonResponse(
-        { error: "Database error. Please try again later." },
-        500
-      );
+      return handleDatabaseError(error, "submit:session-lookup");
     }
 
     if (sessionResult.length === 0) {
-      return jsonResponse({ error: "Session not found or expired" }, 401);
+      return errorResponse("Session not found or expired", 401);
     }
 
     const sessionRow = sessionResult[0];
@@ -262,42 +236,42 @@ export default async (req, context) => {
     console.log("[submit] CSRF token validated successfully");
 
     if (session.used) {
-      return jsonResponse({ error: "Session already used" }, 401);
+      return errorResponse("Session already used", 401);
     }
 
     if (session.gameType && session.gameType !== gameType) {
-      return jsonResponse({ error: "Game type mismatch" }, 400);
+      return errorResponse("Game type mismatch", 400);
     }
 
     const now = Date.now();
-    
+
     if (session.startTime > now) {
-      return jsonResponse({ error: "Invalid session timestamp" }, 400);
+      return errorResponse("Invalid session timestamp", 400);
     }
-    
+
     const gameDuration = now - session.startTime;
-    
+
     if (gameDuration < 0) {
-      return jsonResponse({ error: "Invalid game duration" }, 400);
+      return errorResponse("Invalid game duration", 400);
     }
 
-    if (gameDuration > SESSION_EXPIRY_MS) {
+    if (gameDuration > API.SESSION_EXPIRY_MS) {
       await sql`DELETE FROM sessions WHERE token = ${token}`;
-      return jsonResponse({ error: "Session expired" }, 401);
+      return errorResponse("Session expired", 401);
     }
 
-    if (gameDuration < MIN_GAME_DURATION_MS) {
-      return jsonResponse({ error: "Suspicious activity: too fast" }, 400);
+    if (gameDuration < API.MIN_GAME_DURATION_MS) {
+      return errorResponse("Suspicious activity: too fast", 400);
     }
 
-    const validation = validateRounds(rounds, session.capitals);
+    const validation = validateRounds(rounds, session.capitals, session.gameType || 'classic');
     if (!validation.valid) {
-      return jsonResponse({ error: validation.error }, 400);
+      return errorResponse(validation.error, 400);
     }
 
     const plausibility = checkPlausibility(gameDuration);
     if (!plausibility.valid) {
-      return jsonResponse({ error: plausibility.reason }, 400);
+      return errorResponse(plausibility.reason, 400);
     }
 
     /**
@@ -306,8 +280,38 @@ export default async (req, context) => {
      * @returns {any}
      */
     const validateRound = (round, i) => {
-      const serverCapital = session.capitals[i];
-      const capitalCoords = /** @type {[number, number]} */ ([serverCapital.lat, serverCapital.lng]);
+      const isCountryMode = session.gameType === 'country';
+      const serverTarget = session.capitals[i]; // Contains capitals or countries
+
+      // For country mode: trust client score (server-side validation would require GeoJSON)
+      if (isCountryMode) {
+        if (!round.click) {
+          return {
+            country: round.country,
+            countryId: round.countryId,
+            click: null,
+            distance: null,
+            score: 0,
+            status: "timeout",
+          };
+        }
+
+        // For country mode, trust client-side score calculation
+        // (Server-side validation would require loading GeoJSON and doing polygon math)
+        return {
+          country: round.country,
+          countryId: round.countryId,
+          correctCountryId: round.correctCountryId,
+          clickedCountryId: round.clickedCountryId,
+          click: round.click,
+          distance: round.distanceToTargetKm || 0,
+          score: Math.round(round.score || 0),
+          status: "completed",
+        };
+      }
+
+      // Capital mode: validate server-side
+      const capitalCoords = /** @type {[number, number]} */ ([serverTarget.lat, serverTarget.lng]);
 
       if (!round.click) {
         return {
@@ -322,11 +326,11 @@ export default async (req, context) => {
       const clickCoords = /** @type {[number, number]} */ ([round.click.lat, round.click.lng]);
       const distance = haversine(clickCoords, capitalCoords);
 
-      if (distance > MAX_DISTANCE_KM) {
+      if (distance > API.MAX_DISTANCE_KM) {
         return {
           capital: round.capital,
           click: round.click,
-          distance: MAX_DISTANCE_KM,
+          distance: API.MAX_DISTANCE_KM,
           score: 0,
           status: "invalid",
         };
@@ -371,13 +375,10 @@ export default async (req, context) => {
     const validatedRounds = rounds.map(validateRound);
 
     const totalScore = validatedRounds.reduce((/** @type {number} */ sum, /** @type {any} */ r) => sum + r.score, 0);
-    const clientIp = ip.split(",")[0].trim();
+    const clientIp = getClientIp(req, context);
 
     if (clientIp === "unknown") {
-      return jsonResponse(
-        { error: "Unable to verify player identity" },
-        400
-      );
+      return errorResponse("Unable to verify player identity", 400);
     }
 
     let existingPseudoResult;
@@ -392,20 +393,7 @@ export default async (req, context) => {
     } catch (dbError) {
       const error = /** @type {Error & {code?: string}} */ (dbError);
       console.error("Database query error (pseudo check):", error.message, error.code);
-      if (error.message?.includes("Failed to connect") || 
-          error.message?.includes("connection") ||
-          error.code === "ECONNREFUSED" ||
-          error.code === "ETIMEDOUT" ||
-          error.code === "ENOTFOUND") {
-        return jsonResponse(
-          { error: "Database connection error. Please try again later." },
-          503
-        );
-      }
-      return jsonResponse(
-        { error: "Database error. Please try again later." },
-        500
-      );
+      return handleDatabaseError(error, "submit:pseudo-check");
     }
 
     let existingPseudo = null;
@@ -424,7 +412,7 @@ export default async (req, context) => {
 
     let rank = 1;
     let isTopFifty = false;
-    
+
     try {
       console.log("[submit] Starting database transaction");
 
@@ -496,7 +484,7 @@ export default async (req, context) => {
       }
 
       console.log("[submit] Submission successful");
-      return jsonResponse({
+      return successResponse({
         score: totalScore,
         rank,
         isTopFifty,
@@ -507,12 +495,7 @@ export default async (req, context) => {
       console.error("[submit] Database operation failed:", error.message, error.code, error.stack);
 
       // Handle database connection errors
-      if (error.message?.includes("Failed to connect") ||
-          error.message?.includes("connection") ||
-          error.message?.includes("timeout") ||
-          error.code === "ECONNREFUSED" ||
-          error.code === "ETIMEDOUT" ||
-          error.code === "ENOTFOUND") {
+      if (isDatabaseConnectionError(error)) {
         console.error("[submit] Connection error detected");
         return jsonResponse({
           error: "Database connection error. Please try again later.",
@@ -540,21 +523,13 @@ export default async (req, context) => {
     // Handle JSON parsing errors
     if (error instanceof SyntaxError) {
       console.error("[submit] JSON parsing error");
-      return jsonResponse({ error: "Invalid request body" }, 400);
+      return errorResponse("Invalid request body", 400);
     }
 
     // Check if it's a database connection error
-    if (error.message?.includes("Failed to connect") ||
-        error.message?.includes("connection") ||
-        error.message?.includes("timeout") ||
-        error.code === "ECONNREFUSED" ||
-        error.code === "ETIMEDOUT" ||
-        error.code === "ENOTFOUND") {
+    if (isDatabaseConnectionError(error)) {
       console.error("[submit] Connection error in outer catch");
-      return jsonResponse(
-        { error: "Database connection error. Please try again later." },
-        503
-      );
+      return errorResponse("Database connection error. Please try again later.", 503);
     }
 
     // Log full error details
@@ -566,9 +541,13 @@ export default async (req, context) => {
     }));
 
     // Generic error response - ALWAYS return a response to prevent 502
-    return jsonResponse(
-      { error: "Internal server error. Please try again later." },
-      500
-    );
+    return errorResponse("Internal server error. Please try again later.", 500);
   }
 };
+
+// Export handler wrapped with middleware
+// compose applies middleware right-to-left: first withDatabase, then withMethod
+export default compose(
+  withMethod('POST'),
+  withDatabase
+)(handler);

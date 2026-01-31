@@ -17,24 +17,27 @@ export const MARKERS = {
   },
 };
 
-// Map Lines (polylines)
-export const LINES = {
+// Single source for dashed polylines (in-game line + result line after fitBounds)
+const LINE_STYLE = {
   OUTLINE: {
     color: '#000000',
     weight: 6,
-    dashArray: '10, 14',
+    dashArray: '4, 6',
     opacity: 1,
     lineCap: 'butt',
-    smoothFactor: 1, // Réduit le lissage pour un rendu plus net avec Canvas
+    smoothFactor: 1,
   },
   MAIN: {
     weight: 4,
-    dashArray: '10, 14',
+    dashArray: '4, 6',
     opacity: 1,
     lineCap: 'butt',
-    smoothFactor: 1, // Réduit le lissage pour un rendu plus net avec Canvas
+    smoothFactor: 1,
   },
 };
+
+export const LINES = LINE_STYLE;
+export const RESULT_LINES = LINE_STYLE;
 
 import { SCORING_THRESHOLDS } from '../config.js';
 
@@ -56,13 +59,17 @@ export const MAP_ANIMATIONS = {
     duration: 0.5,
     easeLinearity: 0.25,
   },
+  /** Result line draw animation (after fitBounds). Distance label is shown from start and grows with the line. */
+  RESULT_LINE: {
+    durationMs: 1000,
+    steps: 75,
+  },
 };
 
 // UI timings
 export const UI_TIMING = {
   QUESTION_AUTO_CLOSE: 1000,        // Auto-close question modal after 1s
   ERROR_DISPLAY: 4000,              // Error message display duration
-  LOADER_FINAL_DELAY: 300,          // Delay before hiding loader at 100%
 };
 
 /**

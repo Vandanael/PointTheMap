@@ -295,10 +295,11 @@ export class ValidationSystem {
   /**
    * Validate all rounds for a session
    * @param {Array<Object>} rounds - Array of rounds
-   * @param {Array<{name: string}>} expectedCapitals - Expected capitals for this session
+   * @param {Array<{name: string}>} [expectedCapitals] - Expected capitals for this session
+   * @param {number} [expectedCount] - From state.runtimeConfig.roundCount; fallback GAME.ROUNDS for tests
    * @returns {ValidationResult}
    */
-  validateRounds(rounds, expectedCapitals) {
+  validateRounds(rounds, expectedCapitals, expectedCount = undefined) {
     if (!Array.isArray(rounds)) {
       return {
         valid: false,
@@ -306,11 +307,11 @@ export class ValidationSystem {
       };
     }
 
-    const expectedCount = GAME.ROUNDS;
-    if (rounds.length !== expectedCount) {
+    const count = expectedCount ?? GAME.ROUNDS;
+    if (rounds.length !== count) {
       return {
         valid: false,
-        error: `Expected ${expectedCount} rounds, got ${rounds.length}`,
+        error: `Expected ${count} rounds, got ${rounds.length}`,
       };
     }
 
@@ -346,9 +347,10 @@ export class ValidationSystem {
    * @param {string} session.pseudo - Player pseudo
    * @param {number} [session.startTime] - Session start time
    * @param {number} [session.endTime] - Session end time
+   * @param {number} [expectedRoundCount] - From state.runtimeConfig.roundCount when validating client-side
    * @returns {ValidationResult}
    */
-  validateSession(session) {
+  validateSession(session, expectedRoundCount = undefined) {
     if (!session || typeof session !== 'object') {
       return {
         valid: false,
@@ -368,8 +370,8 @@ export class ValidationSystem {
       return pseudoResult;
     }
 
-    // Validate rounds
-    const roundsResult = this.validateRounds(session.rounds);
+    // Validate rounds (expectedRoundCount from runtime config when available)
+    const roundsResult = this.validateRounds(session.rounds, undefined, expectedRoundCount);
     if (!roundsResult.valid) {
       return roundsResult;
     }

@@ -82,8 +82,8 @@ export const QuestionModal = (capitalName, country) => {
   const escapedCapital = escapeHtml(capitalName);
   const escapedCountry = escapeHtml(country);
   return `
-  <div id="question-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="background: var(--bg-primary); z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="capitalName">
-    <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
+  <div id="question-modal" class="fixed inset-0 flex items-center justify-center p-4" style="background: transparent; z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="capitalName">
+    <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content" style="box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
       <div class="text-center">
         <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-3" id="findLabel">${t("find")}</div>
         <h2 class="text-5xl font-black text-primary mb-2" id="capitalName">${escapedCapital}</h2>
@@ -105,8 +105,8 @@ export const QuestionModalWithButton = (capitalName, country) => {
   const escapedCapital = escapeHtml(capitalName);
   const escapedCountry = escapeHtml(country);
   return `
-  <div id="question-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="background: var(--bg-primary); z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="capitalName">
-    <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
+  <div id="question-modal" class="fixed inset-0 flex items-center justify-center p-4" style="background: transparent; z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="capitalName">
+    <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content" style="box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
       <div class="text-center">
         <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-3" id="findLabel">${t("find")}</div>
         <h2 class="text-5xl font-black text-primary mb-2" id="capitalName">${escapedCapital}</h2>
@@ -209,9 +209,9 @@ export const RoundResult = (distance, score, isTimeout, isLast, baseScore, timeB
 };
 
 export const StartScreen = () => `
-  <div id="start-modal" class="fixed inset-0 modal-bg flex flex-col" style="z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="challengeText">
-    <!-- Toggle buttons -->
-    <div class="absolute top-4 right-4 md:top-6 md:right-6 z-10 flex gap-2">
+  <div id="start-modal" class="start-modal-overlay fixed inset-0 flex flex-col" style="z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="challengeText">
+    <!-- Toggle buttons: top-right (no position override so they stay aligned right) -->
+    <div class="lobby-header-icons absolute top-4 right-4 md:top-6 md:right-6 flex gap-2" style="z-index: 10;">
       <button id="btn-stats" class="toggle-btn" title="My Stats" aria-label="Show stats">
         <span>📋</span>
       </button>
@@ -227,42 +227,101 @@ export const StartScreen = () => `
     </div>
 
     <!-- Contenu centré verticalement -->
-    <div class="flex-1 flex items-center justify-center px-4 md:px-8" style="padding-top: 3rem; padding-bottom: 1rem;">
-      <div class="text-left modal-content max-w-3xl w-full">
-        <!-- Titre Hero - Signature visuelle sur deux lignes, plus grand et ferré à gauche -->
-        <h1 class="text-primary mb-2 md:mb-3 uppercase leading-none -mt-1" style="font-weight: 900;">
-          <div class="text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide wrap-break-word">POINT</div>
-          <div class="text-7xl sm:text-8xl md:text-9xl lg:text-[10rem] tracking-wide wrap-break-word">THE MAP</div>
+    <div class="flex-1 flex items-center justify-center px-4 md:px-6 lobby-container" style="position: relative; z-index: 1;">
+      <div class="w-full lobby-content">
+        <!-- Titre Hero - MUST stay on 2 lines -->
+        <h1 class="lobby-title">
+          <div class="lobby-title-line">POINT</div>
+          <div class="lobby-title-line">THE MAP</div>
         </h1>
 
-        <!-- Info Card sobre -->
-        <div class="modal-card rounded-2xl p-6 md:p-8 mb-4 md:mb-6">
-          <p class="text-primary text-3xl mb-3 font-black uppercase tracking-tight" id="challengeText">
-            ${t("challenge")}
-          </p>
-          <p class="text-secondary text-base mb-1">
-            ${t("capitalsInfo")}
-          </p>
-          <p class="text-tertiary text-sm">
-            ${t("clickToWin")}
-          </p>
+        <!-- Desktop: Side-by-side | Mobile: Vertical stack -->
+        <div class="lobby-main">
+          <!-- Left side: 5S Challenge Card -->
+          <div class="lobby-challenge-wrapper">
+            <div id="challenge-card" class="challenge-card">
+              <p class="challenge-title" id="challengeText">
+                ${t("challenge")}
+              </p>
+              <p class="challenge-info">
+                ${t("capitalsInfo")}
+              </p>
+              <p class="challenge-desc">
+                ${t("clickToWin")}
+              </p>
+            </div>
+          </div>
+
+          <!-- Right side: Category Grid (2x2) - Compact -->
+          <div class="lobby-categories-wrapper">
+            <div class="category-grid">
+              <button
+                id="category-capitals"
+                class="category-btn category-active"
+                data-category="capitals"
+              >
+                <span>${t("capitals")}</span>
+              </button>
+              <button
+                id="category-countries"
+                class="category-btn"
+                data-category="countries"
+              >
+                <span>${t("countries")}</span>
+              </button>
+              <button
+                id="category-monuments"
+                class="category-btn"
+                data-category="monuments"
+              >
+                <span>${t("monuments")}</span>
+              </button>
+              <button
+                id="category-stadiums"
+                class="category-btn"
+                data-category="stadiums"
+              >
+                <span>${t("stadiums")}</span>
+              </button>
+            </div>
+          </div>
         </div>
-        
-        <!-- Boutons classic / daily -->
-        <div class="flex flex-col md:flex-row gap-3">
-          <button id="btn-start-classic" class="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black font-black py-5 px-6 rounded-xl text-lg" style="text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
-            ${t("classic")}
-          </button>
-          <button id="btn-start-daily" class="flex-1 bg-yellow-400 hover:bg-yellow-300 text-black font-black py-5 px-6 rounded-xl text-lg" style="text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
-            ${t("daily")}
+
+        <!-- Mode Selector + Play Button -->
+        <div class="lobby-actions">
+          <!-- Pill Toggle for Mode Selection -->
+          <div class="pill-toggle-wrapper">
+            <label class="mode-label">${t("selectMode")}</label>
+            <div class="pill-toggle">
+              <div id="pill-slider" class="pill-slider"></div>
+              <button
+                id="mode-classic"
+                class="pill-option pill-option-active"
+                data-mode="classic"
+              >
+                ${t("classic")}
+              </button>
+              <button
+                id="mode-daily"
+                class="pill-option"
+                data-mode="daily"
+              >
+                ${t("daily")}
+              </button>
+            </div>
+          </div>
+
+          <!-- Main Action Button -->
+          <button id="btn-start-game" class="play-btn">
+            ${t("play")}
           </button>
         </div>
       </div>
     </div>
 
     <!-- Footer collé en bas -->
-    <div class="w-full py-4 mt-auto" style="background: var(--bg-secondary); border-top: 1px solid var(--border-color);">
-      <div class="max-w-3xl mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center justify-between gap-3">
+    <div class="lobby-footer" style="position: relative; z-index: 1;">
+      <div class="lobby-footer-content">
         <div class="text-center md:text-left text-tertiary text-sm">
           ${t("madeBy")}
           <a href="https://github.com/Vandanael" target="_blank" rel="noopener noreferrer" class="font-semibold transition-colors no-underline hover:underline text-secondary">
@@ -421,6 +480,7 @@ export const Leaderboard = (scores, highlightPseudo = null, loading = false) => 
 export const LeaderboardModal = (scores, currentType = "classic", loading = false) => {
   const isClassic = currentType === "classic";
   const isDaily = currentType === "daily";
+  const isCountry = currentType === "country";
 
   return `
     <div id="leaderboard-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-overlay);" role="dialog" aria-modal="true">
@@ -433,7 +493,7 @@ export const LeaderboardModal = (scores, currentType = "classic", loading = fals
         <div class="flex gap-2 mb-6">
           <button
             id="btn-leaderboard-classic"
-            class="flex-1 py-3 px-4 rounded-xl font-black text-lg transition-all ${
+            class="flex-1 py-2 px-3 rounded-xl font-black text-base transition-all ${
               isClassic
                 ? "bg-yellow-400 text-black"
                 : "bg-slate-700 hover:bg-slate-600 text-white"
@@ -444,7 +504,7 @@ export const LeaderboardModal = (scores, currentType = "classic", loading = fals
           </button>
           <button
             id="btn-leaderboard-daily"
-            class="flex-1 py-3 px-4 rounded-xl font-black text-lg transition-all ${
+            class="flex-1 py-2 px-3 rounded-xl font-black text-base transition-all ${
               isDaily
                 ? "bg-yellow-400 text-black"
                 : "bg-slate-700 hover:bg-slate-600 text-white"
@@ -452,6 +512,17 @@ export const LeaderboardModal = (scores, currentType = "classic", loading = fals
             ${loading ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
           >
             ${t("daily")}
+          </button>
+          <button
+            id="btn-leaderboard-country"
+            class="flex-1 py-2 px-3 rounded-xl font-black text-base transition-all ${
+              isCountry
+                ? "bg-yellow-400 text-black"
+                : "bg-slate-700 hover:bg-slate-600 text-white"
+            }"
+            ${loading ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
+          >
+            ${t("countries")}
           </button>
         </div>
 

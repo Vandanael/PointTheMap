@@ -29,6 +29,15 @@ vi.mock("../../capitals.js", () => ({
   selectBalancedCapitals: vi.fn((caps) => caps.slice(0, 10)),
 }));
 
+vi.mock("../data/capitals-loader.js", () => ({
+  loadCapitals: vi.fn(async () => [
+    { name: "Paris", country: "France", lat: 48.8566, lng: 2.3522, popular: true },
+    { name: "London", country: "UK", lat: 51.5074, lng: -0.1278, popular: true },
+    { name: "Berlin", country: "Germany", lat: 52.52, lng: 13.405, popular: true },
+  ]),
+  loadSelectBalancedCapitals: vi.fn(async () => (caps) => caps.slice(0, 10)),
+}));
+
 vi.mock("./storage.js", () => ({
   getRetryQueue: vi.fn(() => []),
   removeFromRetryQueue: vi.fn(),
@@ -37,7 +46,7 @@ vi.mock("./storage.js", () => ({
 }));
 
 import { generateId } from "../utils.js";
-import { selectBalancedCapitals } from "../../capitals.js";
+import { loadCapitals, loadSelectBalancedCapitals } from "../data/capitals-loader.js";
 import {
   getRetryQueue,
   removeFromRetryQueue,
@@ -74,7 +83,7 @@ describe("api.js", () => {
     it("should select balanced capitals", async () => {
       await api.start();
 
-      expect(selectBalancedCapitals).toHaveBeenCalled();
+      expect(loadSelectBalancedCapitals).toHaveBeenCalled();
     });
 
     it("should format capitals without popular field", async () => {

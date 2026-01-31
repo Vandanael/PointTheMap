@@ -280,29 +280,25 @@ describe('StateManager', () => {
     });
   });
 
-  describe('EventBus integration', () => {
-    it('should emit state:changed event', () => {
-      const handler = vi.fn();
-      eventBus.subscribe('state:changed', handler);
+  describe('Subscriber notification shape', () => {
+    it('should pass (newState, prevState, action) to subscribers', () => {
+      const callback = vi.fn();
+      stateManager.subscribe(callback);
 
       const newState = { count: 1, name: 'test' };
       stateManager.setState(newState, 'increment');
 
-      expect(handler).toHaveBeenCalledTimes(1);
-      expect(handler).toHaveBeenCalledWith({
-        state: newState,
-        prevState: { count: 0, name: 'test' },
-        action: 'increment',
-      });
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith(newState, { count: 0, name: 'test' }, 'increment');
     });
 
-    it('should emit event with correct action name', () => {
-      const handler = vi.fn();
-      eventBus.subscribe('state:changed', handler);
+    it('should pass custom action name to subscribers', () => {
+      const callback = vi.fn();
+      stateManager.subscribe(callback);
 
       stateManager.setState({ count: 1, name: 'test' }, 'custom-action');
 
-      expect(handler.mock.calls[0][0].action).toBe('custom-action');
+      expect(callback).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'custom-action');
     });
   });
 
@@ -337,12 +333,12 @@ describe('StateManager', () => {
     });
 
     it('should default action name to "unknown"', () => {
-      const handler = vi.fn();
-      eventBus.subscribe('state:changed', handler);
+      const callback = vi.fn();
+      stateManager.subscribe(callback);
 
       stateManager.setState({ count: 1, name: 'test' });
 
-      expect(handler.mock.calls[0][0].action).toBe('unknown');
+      expect(callback).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'unknown');
     });
   });
 });

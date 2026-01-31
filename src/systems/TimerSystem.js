@@ -12,6 +12,13 @@ import { GAME } from '../config.js';
 import { eventBus } from '../core/EventBus.js';
 
 /**
+ * @typedef {Object} TimerRuntimeConfig
+ * @property {number} timerMs - Round timer duration (ms)
+ * @property {number} graceMs - Grace period before timer starts (ms)
+ * @property {number} dangerZoneMs - Time before expiry for "danger" visual (ms)
+ */
+
+/**
  * @typedef {Object} TimerCallbacks
  * @property {() => void} [onStart] - Called when timer starts (after grace period)
  * @property {() => void} [onDangerZone] - Called when entering danger zone
@@ -33,12 +40,17 @@ export class TimerSystem {
   }
 
   /**
-   * Start the game timer
-   * Emits events: timer:started, timer:danger, timer:timeout, timer:tick
+   * Start the game timer with runtime config (from state.runtimeConfig).
+   * Emits events: timer:started { timerMs }, timer:danger, timer:timeout, timer:tick
+   * @param {TimerRuntimeConfig | null} [config] - From state.runtimeConfig; null = fallback GAME for tests
    */
-  start() {
+  start(config = null) {
     // Stop any existing timer first
     this.stop();
+
+    const timerMs = config?.timerMs ?? GAME.TIMER_MS;
+    const graceMs = config?.graceMs ?? GAME.GRACE_PERIOD_MS;
+    const dangerZoneMs = config?.dangerZoneMs ?? GAME.DANGER_ZONE_MS;
 
     this.#isRunning = true;
 
@@ -46,14 +58,14 @@ export class TimerSystem {
     const gracePeriodTimeout = setTimeout(() => {
       if (!this.#isRunning) return;
 
-      // Emit timer started event
-      eventBus.emit('timer:started');
+      // Emit timer started event with duration for UI (transition)
+      eventBus.emit('timer:started', { timerMs });
 
       // Danger zone timeout (visual warning)
       const dangerZoneTimeout = setTimeout(() => {
         if (!this.#isRunning) return;
         eventBus.emit('timer:danger');
-      }, GAME.TIMER_MS - GAME.DANGER_ZONE_MS);
+      }, timerMs - dangerZoneMs);
 
       this.#timeouts.push(dangerZoneTimeout);
 
@@ -62,7 +74,7 @@ export class TimerSystem {
         if (!this.#isRunning) return;
         eventBus.emit('timer:timeout');
         this.stop();
-      }, GAME.TIMER_MS);
+      }, timerMs);
 
       this.#timeouts.push(mainTimeout);
 
@@ -76,7 +88,7 @@ export class TimerSystem {
       }, 50);
 
       this.#intervals.push(tickInterval);
-    }, GAME.GRACE_PERIOD_MS);
+    }, graceMs);
 
     this.#timeouts.push(gracePeriodTimeout);
   }

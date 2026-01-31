@@ -6,7 +6,6 @@ import { getLastPseudo, getTheme, setTheme } from "../services/storage.js";
 import { toggleLang, t } from "../i18n.js";
 import { logger } from "../utils/logger.js";
 import { eventBus } from "../core/EventBus.js";
-import { GAME } from "../config.js";
 import { UI_TIMING } from "../config/visual-constants.js";
 import { debounce } from "../utils/performance.js";
 import { inputSystem } from "../systems/InputSystem.js";
@@ -164,6 +163,10 @@ const setupLeaderboardTabs = () => {
   bindClick("btn-leaderboard-daily", async () => {
     UI.showLeaderboardModal([], "daily", true);
   });
+
+  bindClick("btn-leaderboard-country", async () => {
+    UI.showLeaderboardModal([], "country", true);
+  });
 };
 
 // Export for testing
@@ -182,22 +185,7 @@ export const UI = {
       })
     );
 
-    // Subscribe to timer UI events
-    _uiInitUnsubscribers.push(
-      eventBus.subscribe('timer:started', () => {
-        const timerProgress = _domCache.get("timer-progress");
-        if (!timerProgress) return;
-        timerProgress.style.transition = `width ${GAME.TIMER_MS}ms linear`;
-        timerProgress.style.width = "0%";
-      })
-    );
-
-    _uiInitUnsubscribers.push(
-      eventBus.subscribe('timer:danger', () => {
-        const progress = _domCache.get("timer-progress");
-        if (progress) progress.classList.add("timer-danger");
-      })
-    );
+    // Timer UI (timer:started, timer:danger) is handled by UISystem only to avoid duplicate subscriptions.
 
     // Subscribe to storage quota events
     _uiInitUnsubscribers.push(
@@ -271,8 +259,199 @@ export const UI = {
     this._langChangeCleanup = unsubscribe;
 
     render(StartScreen());
-    bindClick("btn-start-classic", () => inputSystem.handleStartGame("classic"));
-    bindClick("btn-start-daily", () => inputSystem.handleStartGame("daily"));
+
+    // State for lobby selections
+    let selectedCategory = "capitals"; // Default
+    let selectedMode = "classic"; // Default
+
+    // Helper to get category info
+    const getCategoryInfo = (category) => {
+      const infoMap = {
+        capitals: {
+          title: t("challenge"),
+          info: t("capitalsInfo"),
+          desc: t("clickToWin")
+        },
+        countries: {
+          title: t("challenge"),
+          info: t("countriesInfo"),
+          desc: t("clickToWin")
+        },
+        monuments: {
+          title: t("challenge"),
+          info: t("monumentsInfo"),
+          desc: t("comingSoon")
+        },
+        stadiums: {
+          title: t("challenge"),
+          info: t("stadiumsInfo"),
+          desc: t("comingSoon")
+        }
+      };
+      return infoMap[category] || infoMap.capitals;
+    };
+
+    // Helper to update challenge card with fade animation
+    const updateChallengeCard = (category) => {
+      const card = document.getElementById("challenge-card");
+      if (!card) return;
+
+      const info = getCategoryInfo(category);
+
+      // Fade out
+      card.classList.add("fade-out");
+      card.classList.remove("fade-in");
+
+      setTimeout(() => {
+        // Update content
+        const title = card.querySelector(".challenge-title");
+        const infoText = card.querySelector(".challenge-info");
+        const desc = card.querySelector(".challenge-desc");
+
+        if (title) title.textContent = info.title;
+        if (infoText) infoText.textContent = info.info;
+        if (desc) {
+          desc.textContent = info.desc;
+          // Apply color for "coming soon" text: black in light mode, yellow in dark mode
+          if (info.desc === t("comingSoon")) {
+            const theme = getTheme();
+            desc.style.color = theme === 'dark' ? 'var(--accent)' : '#000000';
+            desc.style.fontWeight = "bold";
+          } else {
+            desc.style.color = "";  // Reset to default
+            desc.style.fontWeight = "";
+          }
+        }
+
+        // Fade in
+        card.classList.remove("fade-out");
+        card.classList.add("fade-in");
+      }, 200);
+    };
+
+    // Category selection handlers
+    const categoryButtons = ["capitals", "countries", "monuments", "stadiums"];
+    categoryButtons.forEach(category => {
+      const btn = document.getElementById(`category-${category}`);
+      if (btn) {
+        btn.addEventListener("click", () => {
+          selectedCategory = category;
+
+          // Update challenge card
+          updateChallengeCard(category);
+
+          // Update active states
+          categoryButtons.forEach(cat => {
+            const catBtn = document.getElementById(`category-${cat}`);
+            if (catBtn) {
+              if (cat === category) {
+                catBtn.classList.add("category-active");
+                catBtn.style.borderColor = "var(--accent)";
+                // Change text color to primary
+                const textEl = catBtn.querySelector(".text-secondary, .text-primary");
+                if (textEl) {
+                  textEl.classList.remove("text-secondary");
+                  textEl.classList.add("text-primary");
+                }
+              } else {
+                catBtn.classList.remove("category-active");
+                catBtn.style.borderColor = "var(--border-color)";
+                // Change text color to secondary
+                const textEl = catBtn.querySelector(".text-primary, .text-secondary");
+                if (textEl) {
+                  textEl.classList.remove("text-primary");
+                  textEl.classList.add("text-secondary");
+                }
+              }
+            }
+          });
+        });
+      }
+    });
+
+    // Mode selection handlers with pill slider
+    const modeButtons = ["classic", "daily"];
+    const slider = document.getElementById("pill-slider");
+
+    modeButtons.forEach(mode => {
+      const btn = document.getElementById(`mode-${mode}`);
+      if (btn) {
+        btn.addEventListener("click", () => {
+          selectedMode = mode;
+
+          // Update slider position
+          if (slider) {
+            if (mode === "daily") {
+              slider.classList.add("slide-right");
+            } else {
+              slider.classList.remove("slide-right");
+            }
+          }
+
+          // Update active states
+          modeButtons.forEach(m => {
+            const modeBtn = document.getElementById(`mode-${m}`);
+            if (modeBtn) {
+              if (m === mode) {
+                modeBtn.classList.add("pill-option-active");
+              } else {
+                modeBtn.classList.remove("pill-option-active");
+              }
+            }
+          });
+        });
+      }
+    });
+
+    // Start game button with selected category and mode
+    bindClick("btn-start-game", async () => {
+      // Map category to game mode
+      let gameMode;
+
+      if (selectedCategory === "capitals") {
+        gameMode = selectedMode; // Use selected mode (classic or daily)
+      } else if (selectedCategory === "countries") {
+        gameMode = "country";
+
+        // Load countries GeoJSON if not already loaded
+        UI.showLoader();
+        UI.updateLoader(30);
+
+        try {
+          const { mapSystem } = await import("../systems/MapSystem.js");
+          UI.updateLoader(60);
+
+          const loaded = await mapSystem.loadCountriesGeoJSON();
+          UI.updateLoader(100);
+
+          if (!loaded) {
+            UI.hideLoader();
+            UI.showToast("Failed to load countries data. Please try again.", "error", 4000);
+            return;
+          }
+
+          console.log('Countries GeoJSON loaded successfully');
+        } catch (error) {
+          console.error('Error loading countries:', error);
+          UI.hideLoader();
+          UI.showToast("Error loading countries: " + error.message, "error", 4000);
+          return;
+        }
+
+        UI.hideLoader();
+      } else {
+        // monuments, stadiums, etc.
+        UI.showToast(
+          `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} mode coming soon!`,
+          "info",
+          3000
+        );
+        return;
+      }
+
+      inputSystem.handleStartGame(gameMode);
+    });
+
     bindClick("btn-theme", toggleTheme);
     bindClick("btn-lang", handleToggleLang);
     bindClick("btn-stats", () => UI.showStatsModal());
@@ -337,7 +516,7 @@ export const UI = {
       }
 
       // Re-enable buttons
-      const btns = ["btn-leaderboard-classic", "btn-leaderboard-daily"];
+      const btns = ["btn-leaderboard-classic", "btn-leaderboard-daily", "btn-leaderboard-country"];
       btns.forEach(id => {
         const btn = _domCache.get(id);
         if (btn) {

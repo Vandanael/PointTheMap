@@ -1,12 +1,13 @@
 /// <reference types="../vite-env" />
 import "./styles.css";
 import "leaflet/dist/leaflet.css";
-import { TIMING } from "./config.js";
+import { TIMING, MAP } from "./config.js";
 import { setLastPseudo } from "./services/storage.js";
 import { isIOS } from "./utils.js";
 import { logger } from "./utils/logger.js";
 import { debounce } from "./utils/performance.js";
-import { eventBus, StateManager } from "./core/index.js";
+import { eventBus } from "./core/EventBus.js";
+import { StateManager } from "./core/StateManager.js";
 import { mapSystem } from "./systems/MapSystem.js";
 import {
   createGameState,
@@ -14,7 +15,7 @@ import {
   playRound,
   handleTimeout as gameHandleTimeout,
   nextRound,
-  getCurrentCapital,
+  getCurrentTarget,
   isLastRound,
   getProgress,
   GameStatus,
@@ -164,7 +165,10 @@ const init = async () => {
           timerSystem.stop();
           return;
         }
-        const remaining = getRemainingTime(state.currentRound);
+        const totalTimeAllowed = state.runtimeConfig
+          ? state.runtimeConfig.timerMs + state.runtimeConfig.graceMs
+          : undefined;
+        const remaining = getRemainingTime(state.currentRound, totalTimeAllowed);
         if (remaining <= 0) {
           // Stop timer to prevent timer:timeout handler from also firing
           timerSystem.stop();
@@ -320,6 +324,7 @@ const init = async () => {
 
     UI.updateLoader(100);
     UI.hideLoader();
+    mapSystem.flyTo(MAP.AURAY_CENTER, MAP.AURAY_ZOOM, { animate: false });
     UI.showStart();
   } catch (error) {
     errorHandler.handle(error instanceof Error ? error : new Error(String(error)), 'init', { showToUser: true, fatal: true });
@@ -328,12 +333,19 @@ const init = async () => {
 
 const startTimer = () => {
   UI.resetTimer();
-  timerSystem.start(); // No callbacks needed!
+  const state = stateManager.getState();
+  timerSystem.start(state.runtimeConfig ?? undefined);
 };
 
 const stopTimer = () => {
   timerSystem.stop();
 };
+
+// Map view transitions (same for classic/daily; use animate: false for instant transitions):
+// - Init: Auray (MAP.AURAY_CENTER, MAP.AURAY_ZOOM) – start screen
+// - handleStart: world view (MAP.CENTER, MAP.ZOOM) – new game, no animation
+// - handleNext: world view – between questions, no animation
+// - handleReplay: Auray – back to start screen, no animation
 
 /**
  * @param {"classic" | "daily"} [gameType="classic"]
@@ -343,8 +355,8 @@ const handleStart = async (gameType = "classic") => {
   // Show loader while fetching game data
   UI.showLoader();
 
-  mapSystem.clearMap(); // Nettoie tous les markers (y compris les capitales)
-  mapSystem.resetView();
+  mapSystem.clearMap();
+  mapSystem.flyTo(MAP.CENTER, MAP.ZOOM, { animate: false });
 
   const newState = await safeAsync(
     () => startGame(stateManager.getState(), gameType),
@@ -367,15 +379,24 @@ const handleStart = async (gameType = "classic") => {
     return;
   }
 
+  console.log('[Game Start]', {
+    gameType: state.gameType,
+    capitals: state.capitals.length,
+    countries: state.countries.length,
+    roundCount: state.runtimeConfig?.roundCount
+  });
+
   // Emit game started event
   eventBus.emit('game:started', {
     gameType,
-    capitalCount: state.capitals.length
+    capitalCount: state.capitals.length || state.countries.length
   });
 
-  const capital = getCurrentCapital(state);
-  if (!capital || !capital.name || !capital.country) {
-    UI.showError("Erreur: capitale introuvable");
+  const target = getCurrentTarget(state);
+  const isCountryMode = state.gameType === 'country';
+
+  if (!target || !target.name) {
+    UI.showError(isCountryMode ? "Erreur: pays introuvable" : "Erreur: capitale introuvable");
     UI.hideQuestion();
     return;
   }
@@ -396,10 +417,15 @@ const handleStart = async (gameType = "classic") => {
   };
 
   // Update modal with real data
+  // For country mode: show country name only
+  // For capital mode: show capital name + country
+  const displayName = target.name;
+  const displaySubtitle = isCountryMode ? "" : target.country;
+
   if (state.currentRoundIndex === 0) {
-    UI.showQuestion(capital.name, capital.country, onReady, { requireButton: true });
+    UI.showQuestion(displayName, displaySubtitle, onReady, { requireButton: true });
   } else {
-    UI.showQuestion(capital.name, capital.country, onReady);
+    UI.showQuestion(displayName, displaySubtitle, onReady);
   }
 };
 
@@ -415,7 +441,7 @@ const handleMapClick = (coords) => {
   onRoundEnd();
 };
 
-const onRoundEnd = () => {
+const onRoundEnd = async () => {
   const state = stateManager.getState();
   
   // Guard: Only process if we're in ROUND_RESULT status (prevents double execution)
@@ -428,15 +454,40 @@ const onRoundEnd = () => {
   stopTimer();
 
   const round = state.currentRound;
-  if (!round || !round.capital) return;
+  const isCountryMode = state.gameType === 'country';
+
+  if (!round) return;
+  if (!isCountryMode && !round.capital) return;
+  if (isCountryMode && !round.country) return;
 
   // Emit round completed event
   eventBus.emit('game:round:completed', { round });
 
   if (round.click && round.click.lat != null && round.click.lng != null) {
     const clickCoords = /** @type {[number, number]} */ ([round.click.lat, round.click.lng]);
-    const capitalCoords = /** @type {[number, number]} */ ([round.capital.lat, round.capital.lng]);
-    mapSystem.showRoundResult(clickCoords, capitalCoords, round.distance || 0);
+
+    if (isCountryMode) {
+      // Country mode: Highlight countries instead of showing markers
+      mapSystem.highlightCountries({
+        correctCountryId: round.correctCountryId,
+        clickedCountryId: round.clickedCountryId
+      });
+
+      // Optional: Show line from click to target (can be simplified)
+      // For now, just highlight countries
+    } else {
+      // Capital mode: Show capital markers and line
+      const capitalCoords = /** @type {[number, number]} */ ([round.capital.lat, round.capital.lng]);
+      await mapSystem.showRoundResult(clickCoords, capitalCoords, round.distance || 0);
+    }
+
+    // Tap/click to continue to modal, or wait RESULT_READ_TIME_MS
+    const userContinued = new Promise((r) => mapSystem.setOnResultContinue(r));
+    await Promise.race([
+      userContinued,
+      new Promise((r) => setTimeout(r, TIMING.RESULT_READ_TIME_MS)),
+    ]);
+    mapSystem.clearOnResultContinue();
 
     // Emit score updated event
     eventBus.emit('score:updated', {
@@ -444,9 +495,7 @@ const onRoundEnd = () => {
       newScore: state.totalScore,
       delta: round.score,
     });
-  }
 
-  setTimeout(() => {
     UI.showRoundResult(
       round.distance,
       round.score,
@@ -455,7 +504,7 @@ const onRoundEnd = () => {
       round.baseScore,
       round.timeBonus
     );
-  }, TIMING.RESULT_DELAY_MS);
+  }
 };
 
 const handleNext = () => {
@@ -463,6 +512,10 @@ const handleNext = () => {
   mapSystem.clearMap(); // Nettoie tous les markers (y compris les capitales)
 
   let state = stateManager.getState();
+
+  console.log('[handleNext] Current round:', state.currentRoundIndex + 1, '/', state.runtimeConfig?.roundCount);
+  console.log('[handleNext] Is last round?', isLastRound(state));
+
   if (isLastRound(state)) {
     UI.showGameOver(state.totalScore);
     return;
@@ -470,11 +523,16 @@ const handleNext = () => {
 
   stateManager.setState(nextRound(state), 'round:next');
   state = stateManager.getState();
-  mapSystem.resetView();
 
-  const capital = getCurrentCapital(state);
-  if (!capital || !capital.name || !capital.country) {
-    UI.showError("Erreur: capitale introuvable");
+  console.log('[handleNext] Next round:', state.currentRoundIndex + 1, '/', state.runtimeConfig?.roundCount);
+
+  mapSystem.flyTo(MAP.CENTER, MAP.ZOOM, { animate: false });
+
+  const target = getCurrentTarget(state);
+  const isCountryMode = state.gameType === 'country';
+
+  if (!target || !target.name) {
+    UI.showError(isCountryMode ? "Erreur: pays introuvable" : "Erreur: capitale introuvable");
     return;
   }
 
@@ -485,7 +543,12 @@ const handleNext = () => {
     state.totalScore
   );
 
-  UI.showQuestion(capital.name, capital.country, () => {
+  // For country mode: show country name only
+  // For capital mode: show capital name + country
+  const displayName = target.name;
+  const displaySubtitle = isCountryMode ? "" : target.country;
+
+  UI.showQuestion(displayName, displaySubtitle, () => {
     startTimer();
     mapSystem.enableClicks(() => {}); // Empty callback, InputSystem handles via EventBus
     inputSystem.enableMapInput(handleMapClick);
@@ -560,8 +623,9 @@ const handleSubmit = async (pseudo) => {
 
 const handleReplay = () => {
   stateManager.setState(resetGame(), 'game:reset');
-  mapSystem.clearMap(); // Nettoyer tous les markers (y compris les capitales) lors du reset
-  mapSystem.resetView();
+  mapSystem.clearMap();
+  mapSystem.flyTo(MAP.AURAY_CENTER, MAP.AURAY_ZOOM, { animate: false });
+  UI.hideGameUI(); // Clear game header and timer from previous game
   UI.hideGameOver();
   // Clean up share button handler
   shareButtonHandler = null;

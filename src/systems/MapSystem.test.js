@@ -23,12 +23,21 @@ const mockLeafletMap = {
   setView: vi.fn().mockReturnThis(),
   on: vi.fn(),
   off: vi.fn(),
+  once: vi.fn((event, cb) => {
+    if (event === 'moveend') cb();
+    return mockLeafletMap;
+  }),
   addLayer: vi.fn(),
   removeLayer: vi.fn(),
   flyTo: vi.fn(),
   flyToBounds: vi.fn(),
   getCenter: vi.fn(() => ({ lat: 0, lng: 0 })),
   getZoom: vi.fn(() => 2),
+  getContainer: vi.fn(() => ({
+    hasAttribute: vi.fn(() => false),
+    setAttribute: vi.fn(),
+  })),
+  invalidateSize: vi.fn(),
   remove: vi.fn(),
   doubleClickZoom: {
     disable: vi.fn(),
@@ -40,10 +49,13 @@ vi.mock('leaflet', () => {
     addTo: vi.fn().mockReturnThis(),
   }));
 
-  const mockPolyline = vi.fn((coords, options) => ({}));
+  const mockPolyline = vi.fn((coords, options) => ({
+    setLatLngs: vi.fn(),
+  }));
 
   const mockLayerGroup = vi.fn((layers) => ({
     addTo: vi.fn().mockReturnThis(),
+    addLayer: vi.fn().mockReturnThis(),
     clearLayers: vi.fn(),
   }));
 
@@ -389,27 +401,36 @@ describe('MapSystem', () => {
   describe('Round Result', () => {
     beforeEach(async () => {
       await system.init('map');
+      vi.useFakeTimers({ shouldAdvanceTime: true });
     });
 
-    it('should show round result with markers and line', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('should show round result with markers and line', async () => {
       const clickCoords = [48.8566, 2.3522];
       const capitalCoords = [51.5074, -0.1278];
 
-      system.showRoundResult(clickCoords, capitalCoords, 344);
+      const resultPromise = system.showRoundResult(clickCoords, capitalCoords, 344);
+      await vi.advanceTimersByTimeAsync(2500);
+      await resultPromise;
 
       expect(system.getMarkerCount()).toBe(2);
       expect(system.getPolylineCount()).toBe(1);
       expect(mockLeafletMap.flyToBounds).toHaveBeenCalled();
     });
 
-    it('should emit map:result-shown event', () => {
+    it('should emit map:result-shown event', async () => {
       const handler = vi.fn();
       eventBus.subscribe('map:result-shown', handler);
 
       const clickCoords = [48.8566, 2.3522];
       const capitalCoords = [51.5074, -0.1278];
 
-      system.showRoundResult(clickCoords, capitalCoords, 344);
+      const resultPromise = system.showRoundResult(clickCoords, capitalCoords, 344);
+      await vi.advanceTimersByTimeAsync(2500);
+      await resultPromise;
 
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -420,23 +441,47 @@ describe('MapSystem', () => {
       );
     });
 
-    it('should use flyToBounds to show both markers', () => {
+    it('should use flyToBounds to show both markers', async () => {
       const clickCoords = [40, 10];
       const capitalCoords = [50, 20];
 
-      system.showRoundResult(clickCoords, capitalCoords, 100);
+      const resultPromise = system.showRoundResult(clickCoords, capitalCoords, 100);
+      await vi.advanceTimersByTimeAsync(2500);
+      await resultPromise;
 
       // Should create bounds with both coordinates
       expect(mockLatLngBounds).toHaveBeenCalledWith([clickCoords, capitalCoords]);
 
-      // Should use flyToBounds instead of flyTo
+      // Should use flyToBounds with options from visual-constants (MAP_ANIMATIONS.SHOW_RESULT + padding/maxZoom)
       expect(mockLeafletMap.flyToBounds).toHaveBeenCalledWith(
         expect.any(Object),
         expect.objectContaining({
-          padding: [80, 80],
-          maxZoom: 10,
+          padding: [60, 60],
+          maxZoom: 14,
+          duration: 1.5,
+          easeLinearity: 0.25,
+          animate: true,
         })
       );
+    });
+
+    it('should remove result line and cancel animation on clearMap', async () => {
+      const resultPromise = system.showRoundResult([48, 2], [51, 0], 344);
+      await vi.advanceTimersByTimeAsync(2500);
+      await resultPromise;
+      expect(system.getPolylineCount()).toBe(1);
+
+      system.clearMap();
+
+      expect(system.getPolylineCount()).toBe(0);
+      expect(system.getMarkerCount()).toBe(0);
+    });
+
+    it('should clear result-continue listener when clearMap is called', async () => {
+      const cb = vi.fn();
+      system.setOnResultContinue(cb);
+      system.clearMap();
+      expect(cb).not.toHaveBeenCalled();
     });
   });
 

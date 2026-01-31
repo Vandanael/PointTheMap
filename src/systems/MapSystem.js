@@ -16,6 +16,7 @@ import {
   polyline,
   layerGroup,
   latLngBounds,
+  geoJSON,
   Browser as L_Browser,
 } from 'leaflet';
 import { MAP } from '../config.js';
@@ -26,9 +27,144 @@ import { logger } from '../utils/logger.js';
 import {
   MARKERS,
   LINES,
+  RESULT_LINES,
   MAP_ANIMATIONS,
   getLineColor,
 } from '../config/visual-constants.js';
+
+/**
+ * Returns a Promise that resolves once after the next map moveend.
+ * Safe when the map is already settled (e.g. fitBounds no-op): moveend still fires in Leaflet.
+ * @param {L.Map} map - Leaflet map instance
+ * @returns {Promise<void>}
+ */
+function waitForMapSettled(map) {
+  if (!map) return Promise.resolve();
+  return new Promise((resolve) => {
+    map.once('moveend', () => resolve());
+  });
+}
+
+/**
+ * Format distance for display on the result line (e.g. "344 km", "1 234 km").
+ * @param {number} distanceKm - Distance in kilometers
+ * @returns {string}
+ */
+function formatDistanceLabel(distanceKm) {
+  const km = Math.round(distanceKm);
+  return `${km} km`;
+}
+
+/**
+ * Precompute interpolated points from start to end (linear lat/lng).
+ * @param {[number, number]} from - [lat, lng]
+ * @param {[number, number]} to - [lat, lng]
+ * @param {number} steps - Number of segments (points length = steps + 1)
+ * @returns {[number, number][]}
+ */
+function interpolatePoints(from, to, steps) {
+  const points = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    points.push([
+      from[0] + (to[0] - from[0]) * t,
+      from[1] + (to[1] - from[1]) * t,
+    ]);
+  }
+  return points;
+}
+
+/**
+ * Animate a result line from start to end using requestAnimationFrame.
+ * Creates outline + main polylines (dashed), distance label at midpoint; updates each frame.
+ * @param {L.Map} map - Leaflet map instance
+ * @param {[number, number]} startLatLng - [lat, lng]
+ * @param {[number, number]} endLatLng - [lat, lng]
+ * @param {number} distanceKm - Distance for line color and label
+ * @param {{ durationMs?: number, steps?: number }} [options] - Override RESULT_LINE defaults
+ * @returns {{ cancel: () => void, layerGroup: L.LayerGroup, ready: Promise<void> }}
+ */
+function animateResultLine(map, startLatLng, endLatLng, distanceKm, options = {}) {
+  const durationMs = options.durationMs ?? MAP_ANIMATIONS.RESULT_LINE.durationMs;
+  const steps = options.steps ?? MAP_ANIMATIONS.RESULT_LINE.steps;
+  const points = interpolatePoints(startLatLng, endLatLng, steps);
+  const lineColor = getLineColor(distanceKm);
+
+  const outlineLine = polyline([startLatLng], {
+    ...RESULT_LINES.OUTLINE,
+  });
+  const mainLine = polyline([startLatLng], {
+    ...RESULT_LINES.MAIN,
+    color: lineColor,
+  });
+
+  const midpoint = points[Math.floor(steps / 2)];
+  const distanceLabel = marker(midpoint, {
+    icon: divIcon({
+      className: 'result-line-distance-marker',
+      html: '<span class="result-line-distance">0 km</span>',
+      iconSize: [48, 24],
+      iconAnchor: [24, 12],
+    }),
+    interactive: false,
+    keyboard: false,
+  });
+
+  const resultLayerGroup = layerGroup([outlineLine, mainLine, distanceLabel]);
+  resultLayerGroup.addTo(map);
+
+  let rafId = null;
+  let startTime = null;
+  let cancelled = false;
+  let resolveReady = null;
+  const ready = new Promise((resolve) => {
+    resolveReady = resolve;
+  });
+
+  const cancel = () => {
+    cancelled = true;
+    if (rafId != null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    startTime = null;
+    resolveReady?.();
+  };
+
+  const updateDistanceLabel = (progress) => {
+    const el = distanceLabel.getElement?.();
+    if (!el) return;
+    const span = el.querySelector('.result-line-distance');
+    if (!span) return;
+    const currentKm = progress >= 1 ? distanceKm : Math.round(progress * distanceKm);
+    span.textContent = `${currentKm} km`;
+  };
+
+  const tick = () => {
+    if (startTime == null) startTime = performance.now();
+    const elapsed = performance.now() - startTime;
+    const progress = Math.min(1, elapsed / durationMs);
+    const currentIndex = 1 + Math.floor(progress * steps);
+    const visiblePoints = points.slice(0, currentIndex);
+
+    outlineLine.setLatLngs(visiblePoints);
+    mainLine.setLatLngs(visiblePoints);
+    updateDistanceLabel(progress);
+
+    if (progress < 1) {
+      rafId = requestAnimationFrame(tick);
+    } else {
+      outlineLine.setLatLngs(points);
+      mainLine.setLatLngs(points);
+      updateDistanceLabel(1);
+      resolveReady?.();
+    }
+  };
+
+  rafId = requestAnimationFrame(tick);
+
+  return { cancel, layerGroup: resultLayerGroup, ready };
+}
 
 export class MapSystem {
   #map = null;
@@ -42,6 +178,14 @@ export class MapSystem {
   #containerId = null;
   #eventUnsubscribers = [];
   #clearCapitalsTimeout = null;
+  #resultLineCancel = null;
+  #resultLineLayerGroup = null;
+  #resultContinueCallback = null;
+  #resultContinueHandler = null;
+  // Country mode support
+  #countriesLayer = null;
+  #countriesGeoJSON = null;
+  #countryHighlights = [];
 
   constructor() {}
 
@@ -223,6 +367,42 @@ export class MapSystem {
   }
 
   /**
+   * Register a one-time tap/click handler to continue after the result line is shown.
+   * Call clearOnResultContinue() when done (e.g. before showing the modal or on timeout).
+   * @param {() => void} callback - Called when the user taps or clicks the map
+   */
+  setOnResultContinue(callback) {
+    if (!this.#map) return;
+    this.clearOnResultContinue();
+    this.#resultContinueCallback = callback;
+    this.#resultContinueHandler = () => {
+      this.#resultContinueCallback?.();
+      this.clearOnResultContinue();
+    };
+    this.#map.once('click', this.#resultContinueHandler);
+    if (L_Browser.mobile || isIOS()) {
+      this.#map.once('tap', this.#resultContinueHandler);
+    }
+  }
+
+  /**
+   * Remove the result-continue listener and callback (call after user continued or timeout).
+   */
+  clearOnResultContinue() {
+    if (!this.#map || !this.#resultContinueHandler) {
+      this.#resultContinueCallback = null;
+      this.#resultContinueHandler = null;
+      return;
+    }
+    this.#map.off('click', this.#resultContinueHandler);
+    if (L_Browser.mobile || isIOS()) {
+      this.#map.off('tap', this.#resultContinueHandler);
+    }
+    this.#resultContinueCallback = null;
+    this.#resultContinueHandler = null;
+  }
+
+  /**
    * Add player click marker
    * @param {[number, number]} coords - [lat, lng]
    * @returns {Object} Leaflet marker instance
@@ -291,43 +471,54 @@ export class MapSystem {
   }
 
   /**
-   * Show round result with markers, line, and animation
+   * Show round result: markers, flyToBounds, then dashed result line + distance label (animated).
+   * Resolves when the line animation is complete. Caller can then wait for tap/continue or timeout.
    * @param {[number, number]} clickCoords - Player click coordinates
    * @param {[number, number]} capitalCoords - Capital coordinates
    * @param {number} distanceKm - Distance in kilometers
+   * @returns {Promise<void>}
    */
-  showRoundResult(clickCoords, capitalCoords, distanceKm) {
-    // Annuler le timeout précédent s'il existe
+  async showRoundResult(clickCoords, capitalCoords, distanceKm) {
     if (this.#clearCapitalsTimeout) {
       clearTimeout(this.#clearCapitalsTimeout);
       this.#clearCapitalsTimeout = null;
     }
 
-    // Nettoyer les markers de capitales précédents AVANT d'ajouter le nouveau
-    this.clearCapitals();
+    // Cancel any previous result-line animation and remove its layer
+    this.#resultLineCancel?.();
+    this.#resultLineCancel = null;
+    if (this.#resultLineLayerGroup) {
+      this.#map.removeLayer(this.#resultLineLayerGroup);
+      this.#polylines = this.#polylines.filter((p) => p !== this.#resultLineLayerGroup);
+      this.#resultLineLayerGroup = null;
+    }
 
+    this.clearCapitals();
     this.addClickMarker(clickCoords);
     this.addCapitalMarker(capitalCoords);
-    this.drawLine(clickCoords, capitalCoords, distanceKm);
 
-    // Créer les bounds contenant les deux points
     const bounds = latLngBounds([clickCoords, capitalCoords]);
-
-    // Options pour fitBounds avec animation fluide
     const fitBoundsOptions = {
       ...MAP_ANIMATIONS.SHOW_RESULT,
-      padding: [80, 80],  // Padding en pixels pour éviter que les marqueurs touchent les bords
-      maxZoom: 10         // Limite supérieure pour éviter un zoom trop proche
+      padding: [60, 60],
+      maxZoom: 14,
     };
-
-    // Animate to result
     this.#map.flyToBounds(bounds, fitBoundsOptions);
 
-    // Ne pas nettoyer automatiquement les markers de capitales
-    // Ils seront nettoyés lors du passage au round suivant (handleNext -> clearMap)
-    // Cela permet de garder le marker visible pendant toute la durée d'affichage du résultat
+    await waitForMapSettled(this.#map);
 
-    // Emit event
+    const { cancel, layerGroup, ready } = animateResultLine(
+      this.#map,
+      clickCoords,
+      capitalCoords,
+      distanceKm,
+    );
+    this.#resultLineCancel = cancel;
+    this.#resultLineLayerGroup = layerGroup;
+    this.#polylines.push(layerGroup);
+
+    await ready;
+
     eventBus.emit('map:result-shown', {
       clickCoords,
       capitalCoords,
@@ -336,15 +527,20 @@ export class MapSystem {
   }
 
   /**
-   * Clear all markers and polylines from the map
+   * Clear all markers and polylines from the map.
+   * Also clears the result-continue listener if set (e.g. when navigating away during result view).
    */
   clearMap() {
     if (!this.#map) return;
 
-    // Clear capital markers first (they're in a layerGroup)
-    this.clearCapitals();
+    this.#resultLineCancel?.();
+    this.#resultLineCancel = null;
+    this.#resultLineLayerGroup = null;
+    this.clearOnResultContinue();
 
-    // Remove other markers directly from the map
+    this.clearCapitals();
+    this.clearCountryHighlights();
+
     this.#markers.forEach((m) => this.#map.removeLayer(m));
     this.#polylines.forEach((p) => this.#map.removeLayer(p));
     this.#markers = [];
@@ -447,6 +643,214 @@ export class MapSystem {
   }
 
   /**
+   * Load countries GeoJSON layer for Country mode
+   * Should be called once during game initialization if Country mode is available
+   * @returns {Promise<boolean>} Success status
+   */
+  async loadCountriesGeoJSON() {
+    if (this.#countriesLayer) {
+      logger.warn('Countries layer already loaded');
+      return true;
+    }
+
+    try {
+      const response = await fetch('/data/countries.geojson');
+      if (!response.ok) {
+        throw new Error(`Failed to load countries.geojson: ${response.status}`);
+      }
+
+      this.#countriesGeoJSON = await response.json();
+
+      // Create GeoJSON layer (invisible by default)
+      this.#countriesLayer = geoJSON(this.#countriesGeoJSON, {
+        style: () => ({
+          fillColor: 'transparent',
+          fillOpacity: 0,
+          color: 'transparent',
+          weight: 0,
+          interactive: false
+        })
+      }).addTo(this.#map);
+
+      logger.info('Countries GeoJSON loaded successfully');
+      eventBus.emit('map:countries-loaded');
+      return true;
+    } catch (error) {
+      logger.error('Failed to load countries GeoJSON:', error);
+      eventBus.emit('map:countries-error', { error: error.message });
+      return false;
+    }
+  }
+
+  /**
+   * Detect which country contains the given coordinates
+   * @param {[number, number]} latlng - [lat, lng] coordinates
+   * @returns {string|null} Country ID (ISO A3) or null if not in any country
+   */
+  getCountryAtLatLng(latlng) {
+    if (!this.#countriesGeoJSON) {
+      logger.warn('Countries GeoJSON not loaded');
+      return null;
+    }
+
+    const [lat, lng] = latlng;
+    const point = { type: 'Point', coordinates: [lng, lat] };
+
+    // Find country containing this point
+    for (const feature of this.#countriesGeoJSON.features) {
+      if (this.#pointInPolygon(point, feature.geometry)) {
+        return feature.properties.ISO_A3 || feature.properties.ADM0_A3;
+      }
+    }
+
+    return null; // Ocean or no match
+  }
+
+  /**
+   * Simple point-in-polygon test using ray casting algorithm
+   * @private
+   * @param {Object} point - GeoJSON point
+   * @param {Object} geometry - GeoJSON geometry (Polygon or MultiPolygon)
+   * @returns {boolean}
+   */
+  #pointInPolygon(point, geometry) {
+    const [x, y] = point.coordinates;
+
+    if (geometry.type === 'Polygon') {
+      return this.#testPolygon(x, y, geometry.coordinates);
+    } else if (geometry.type === 'MultiPolygon') {
+      return geometry.coordinates.some(polygon => this.#testPolygon(x, y, polygon));
+    }
+
+    return false;
+  }
+
+  /**
+   * Test if point is inside polygon using ray casting
+   * @private
+   */
+  #testPolygon(x, y, rings) {
+    // Test exterior ring (first ring)
+    const exterior = rings[0];
+    let inside = false;
+
+    for (let i = 0, j = exterior.length - 1; i < exterior.length; j = i++) {
+      const xi = exterior[i][0], yi = exterior[i][1];
+      const xj = exterior[j][0], yj = exterior[j][1];
+
+      const intersect = ((yi > y) !== (yj > y))
+        && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+
+      if (intersect) inside = !inside;
+    }
+
+    // If inside exterior ring, check holes (remaining rings)
+    if (inside && rings.length > 1) {
+      for (let h = 1; h < rings.length; h++) {
+        const hole = rings[h];
+        let inHole = false;
+
+        for (let i = 0, j = hole.length - 1; i < hole.length; j = i++) {
+          const xi = hole[i][0], yi = hole[i][1];
+          const xj = hole[j][0], yj = hole[j][1];
+
+          const intersect = ((yi > y) !== (yj > y))
+            && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+
+          if (intersect) inHole = !inHole;
+        }
+
+        if (inHole) return false; // Point is in a hole
+      }
+    }
+
+    return inside;
+  }
+
+  /**
+   * Get country feature by ID
+   * @param {string} countryId - Country ID (ISO A3)
+   * @returns {Object|null} GeoJSON feature or null
+   */
+  getCountryFeatureById(countryId) {
+    if (!this.#countriesGeoJSON) return null;
+
+    return this.#countriesGeoJSON.features.find(f =>
+      f.properties.ISO_A3 === countryId || f.properties.ADM0_A3 === countryId
+    );
+  }
+
+  /**
+   * Highlight countries for Country mode result
+   * @param {Object} options - Highlighting options
+   * @param {string} options.correctCountryId - ISO A3 code of correct country
+   * @param {string|null} [options.clickedCountryId] - ISO A3 code of clicked country (null if ocean)
+   */
+  highlightCountries({ correctCountryId, clickedCountryId }) {
+    if (!this.#countriesLayer) {
+      logger.warn('Countries layer not loaded');
+      return;
+    }
+
+    // Clear previous highlights
+    this.clearCountryHighlights();
+
+    const correctFeature = this.getCountryFeatureById(correctCountryId);
+    if (!correctFeature) {
+      logger.warn(`Correct country not found: ${correctCountryId}`);
+      return;
+    }
+
+    const isSameCountry = clickedCountryId === correctCountryId;
+
+    // Highlight correct country (green)
+    const correctStyle = {
+      fillColor: '#22c55e',
+      fillOpacity: isSameCountry ? 0.45 : 0.35,
+      color: '#16a34a',
+      weight: 2,
+      interactive: false
+    };
+
+    const correctHighlight = geoJSON(correctFeature, { style: () => correctStyle })
+      .addTo(this.#map);
+    this.#countryHighlights.push(correctHighlight);
+
+    // Highlight clicked country if different (orange/red)
+    if (clickedCountryId && !isSameCountry) {
+      const clickedFeature = this.getCountryFeatureById(clickedCountryId);
+      if (clickedFeature) {
+        const clickedStyle = {
+          fillColor: '#f97316',
+          fillOpacity: 0.3,
+          color: '#ea580c',
+          weight: 2,
+          interactive: false
+        };
+
+        const clickedHighlight = geoJSON(clickedFeature, { style: () => clickedStyle })
+          .addTo(this.#map);
+        this.#countryHighlights.push(clickedHighlight);
+      }
+    }
+
+    eventBus.emit('map:countries-highlighted', { correctCountryId, clickedCountryId });
+  }
+
+  /**
+   * Clear all country highlights
+   */
+  clearCountryHighlights() {
+    this.#countryHighlights.forEach(layer => {
+      if (this.#map) {
+        this.#map.removeLayer(layer);
+      }
+    });
+    this.#countryHighlights = [];
+    eventBus.emit('map:country-highlights-cleared');
+  }
+
+  /**
    * Destroy the map system
    * Clean up all resources
    */
@@ -480,6 +884,13 @@ export class MapSystem {
       this.#map.removeLayer(this.#capitalsLayer);
       this.#capitalsLayer = null;
     }
+
+    // Remove countries layer
+    if (this.#countriesLayer) {
+      this.#map.removeLayer(this.#countriesLayer);
+      this.#countriesLayer = null;
+    }
+    this.#countriesGeoJSON = null;
 
     // Destroy Leaflet map
     if (this.#map) {

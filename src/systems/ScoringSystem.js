@@ -40,11 +40,12 @@ export class ScoringSystem {
     // Subscribe to round completed event to emit score calculated
     const unsubRoundComplete = eventBus.subscribe('game:round:completed', (/** @type {{ round: import('../game/Game.js').Round }} */ { round }) => {
       if (round.score !== null) {
+        const targetName = round.capital?.name || round.country?.name || 'Unknown';
         eventBus.emit('score:calculated', {
           round: round.roundNumber,
           distance: round.distance,
           score: round.score,
-          capital: round.capital.name,
+          capital: targetName,
         });
       }
     });
@@ -77,7 +78,7 @@ export class ScoringSystem {
     const config = SCORING.TIME_BONUS_BY_MODE[gameMode];
 
     // Check global and mode-specific flags
-    if (!SCORING.ENABLE_TIME_BONUS || !config.enabled) {
+    if (!SCORING.ENABLE_TIME_BONUS || !config || !config.enabled) {
       return 0;
     }
 
@@ -137,13 +138,14 @@ export class ScoringSystem {
    * @param {[number, number]} targetCoords - [lat, lng] of capital
    * @param {number} timeElapsedMs - Time elapsed since round start
    * @param {string} [gameMode='classic'] - Game mode ('classic' or 'daily')
+   * @param {number | null} [totalTimeAllowed] - From state.runtimeConfig (timerMs + graceMs); null = fallback GAME for tests
    * @returns {ScoreResult}
    */
-  calculateClickScore(clickCoords, targetCoords, timeElapsedMs, gameMode = 'classic') {
-    const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
+  calculateClickScore(clickCoords, targetCoords, timeElapsedMs, gameMode = 'classic', totalTimeAllowed = null) {
+    const total = totalTimeAllowed ?? (GAME.TIMER_MS + GAME.GRACE_PERIOD_MS);
 
     // Check if timed out
-    if (timeElapsedMs > totalTimeAllowed) {
+    if (timeElapsedMs > total) {
       /** @type {ScoreResult} */
       const timeoutResult = {
         distance: null,
@@ -155,9 +157,9 @@ export class ScoringSystem {
     }
 
     const distance = this.calculateDistance(clickCoords, targetCoords);
-    const timeRemaining = totalTimeAllowed - timeElapsedMs;
+    const timeRemaining = total - timeElapsedMs;
 
-    return this.calculateScoreWithTime(distance, timeRemaining, totalTimeAllowed, gameMode);
+    return this.calculateScoreWithTime(distance, timeRemaining, total, gameMode);
   }
 
   /**
@@ -207,6 +209,177 @@ export class ScoringSystem {
   getScorePercentage(score) {
     const MAX_SCORE = 5000;
     return Math.round((score / MAX_SCORE) * 100);
+  }
+
+  /**
+   * Calculate distance from point to country polygon (in kilometers)
+   * Uses Haversine for distances between coordinates
+   *
+   * @param {[number, number]} clickCoords - [lat, lng] of click
+   * @param {Object} countryFeature - GeoJSON feature of the country
+   * @param {boolean} isInsideCountry - Whether click is inside the country
+   * @returns {number} Distance in kilometers (0 if inside)
+   */
+  calculateDistanceToCountry(clickCoords, countryFeature, isInsideCountry) {
+    if (isInsideCountry) {
+      return 0;
+    }
+    if (!countryFeature?.geometry) {
+      return Infinity;
+    }
+
+    const [clickLat, clickLng] = clickCoords;
+    const geometry = countryFeature.geometry;
+    let minDistance = Infinity;
+
+    const processRing = (ring) => {
+      for (let i = 0; i < ring.length - 1; i++) {
+        const [lng1, lat1] = ring[i];
+        const [lng2, lat2] = ring[i + 1];
+
+        // Calculate distance to line segment
+        const distance = this.#distanceToLineSegment(
+          clickLat, clickLng,
+          lat1, lng1,
+          lat2, lng2
+        );
+
+        minDistance = Math.min(minDistance, distance);
+      }
+    };
+
+    if (geometry.type === 'Polygon') {
+      // Process only exterior ring (index 0) for border distance
+      processRing(geometry.coordinates[0]);
+    } else if (geometry.type === 'MultiPolygon') {
+      // Process exterior rings of all polygons
+      geometry.coordinates.forEach(polygon => {
+        processRing(polygon[0]);
+      });
+    }
+
+    return minDistance;
+  }
+
+  /**
+   * Calculate distance from point to line segment
+   * @private
+   * @returns {number} Distance in kilometers
+   */
+  #distanceToLineSegment(lat, lng, lat1, lng1, lat2, lng2) {
+    // Convert to approximate Cartesian for segment projection
+    const dx = lng2 - lng1;
+    const dy = lat2 - lat1;
+    const lengthSquared = dx * dx + dy * dy;
+
+    if (lengthSquared === 0) {
+      // Segment is a point
+      return haversine([lat, lng], [lat1, lng1]);
+    }
+
+    // Calculate projection parameter
+    const t = Math.max(0, Math.min(1,
+      ((lng - lng1) * dx + (lat - lat1) * dy) / lengthSquared
+    ));
+
+    // Calculate closest point on segment
+    const closestLat = lat1 + t * dy;
+    const closestLng = lng1 + t * dx;
+
+    // Return Haversine distance to closest point
+    return haversine([lat, lng], [closestLat, closestLng]);
+  }
+
+  /**
+   * Calculate score for Country mode based on distance to country
+   *
+   * Scoring curve:
+   * - d = 0 km (inside country): 5000 points
+   * - 0 < d ≤ 50 km: 4000 points
+   * - 50 < d ≤ 200 km: 3000 points
+   * - d > 200 km: exponential decay from 3000 to 0
+   *
+   * @param {number} distanceKm - Distance to target country in kilometers
+   * @returns {number} Score (0-5000)
+   */
+  calculateCountryScore(distanceKm) {
+    if (distanceKm === 0) {
+      return 5000; // Perfect - inside correct country
+    }
+
+    if (distanceKm <= 50) {
+      return 4000; // Just next to it (very close)
+    }
+
+    if (distanceKm <= 200) {
+      return 3000; // Nearby
+    }
+
+    // Exponential decay for d > 200 km
+    // score = 3000 * exp(-(d - 200) / 1500)
+    const decayConstant = 1500;
+    const score = 3000 * Math.exp(-(distanceKm - 200) / decayConstant);
+
+    return Math.round(Math.max(0, Math.min(3000, score)));
+  }
+
+  /**
+   * Calculate score for a country click
+   *
+   * @param {[number, number]} clickCoords - [lat, lng] of user click
+   * @param {Object} targetCountryFeature - GeoJSON feature of target country
+   * @param {boolean} isInsideTargetCountry - Whether click is inside target country
+   * @param {number} timeElapsedMs - Time elapsed since round start
+   * @param {string} [gameMode='country'] - Game mode
+   * @param {number | null} [totalTimeAllowed] - Total time allowed
+   * @returns {ScoreResult & { distanceToCountry: number }}
+   */
+  calculateCountryClickScore(
+    clickCoords,
+    targetCountryFeature,
+    isInsideTargetCountry,
+    timeElapsedMs,
+    gameMode = 'country',
+    totalTimeAllowed = null
+  ) {
+    const total = totalTimeAllowed ?? (GAME.TIMER_MS + GAME.GRACE_PERIOD_MS);
+
+    // Check if timed out
+    if (timeElapsedMs > total) {
+      return {
+        distance: null,
+        distanceToCountry: null,
+        score: 0,
+        timeBonus: 0,
+        totalScore: 0,
+      };
+    }
+
+    const distanceToCountry = this.calculateDistanceToCountry(
+      clickCoords,
+      targetCountryFeature,
+      isInsideTargetCountry
+    );
+
+    const baseScore = this.calculateCountryScore(distanceToCountry);
+    const timeRemaining = total - timeElapsedMs;
+
+    // Time bonus (if enabled for country mode)
+    const timeBonus = this.calculateTimeBonus(
+      baseScore,
+      total,
+      timeRemaining,
+      distanceToCountry,
+      gameMode
+    );
+
+    return {
+      distance: Math.round(distanceToCountry),
+      distanceToCountry: Math.round(distanceToCountry),
+      score: baseScore,
+      timeBonus,
+      totalScore: baseScore + timeBonus,
+    };
   }
 
   /**

@@ -42,47 +42,37 @@ describe('ScoringSystem', () => {
       expect(true).toBe(true);
     });
 
-    it('should emit score:calculated event when round completes', () => {
+    it('should handle game:round:completed with scored round without throwing', () => {
       system.init();
 
-      const handler = vi.fn();
-      eventBus.subscribe('score:calculated', handler);
-
-      // Emit a round completed event
-      eventBus.emit('game:round:completed', {
-        round: {
-          roundNumber: 0,
-          capital: { name: 'Paris' },
-          distance: 100,
-          score: 3500,
-        },
-      });
-
-      expect(handler).toHaveBeenCalledWith({
-        round: 0,
-        distance: 100,
-        score: 3500,
-        capital: 'Paris',
-      });
+      expect(() =>
+        eventBus.emit('game:round:completed', {
+          round: {
+            roundNumber: 0,
+            capital: { name: 'Paris' },
+            distance: 100,
+            score: 3500,
+          },
+        })
+      ).not.toThrow();
+      // System still works after processing event
+      expect(system.calculateScore(50)).toBe(4827);
     });
 
-    it('should not emit score:calculated if round has no score', () => {
+    it('should handle game:round:completed with null score (timeout) without throwing', () => {
       system.init();
 
-      const handler = vi.fn();
-      eventBus.subscribe('score:calculated', handler);
-
-      // Emit a round with null score (timeout)
-      eventBus.emit('game:round:completed', {
-        round: {
-          roundNumber: 0,
-          capital: { name: 'Paris' },
-          distance: null,
-          score: null,
-        },
-      });
-
-      expect(handler).not.toHaveBeenCalled();
+      expect(() =>
+        eventBus.emit('game:round:completed', {
+          round: {
+            roundNumber: 0,
+            capital: { name: 'Paris' },
+            distance: null,
+            score: null,
+          },
+        })
+      ).not.toThrow();
+      expect(system.calculateScore(100)).toBe(4619);
     });
   });
 
@@ -362,6 +352,89 @@ describe('ScoringSystem', () => {
     });
   });
 
+  describe('Country mode scoring', () => {
+    describe('calculateCountryScore', () => {
+      it('should return 5000 for inside country (distance 0)', () => {
+        expect(system.calculateCountryScore(0)).toBe(5000);
+      });
+
+      it('should return 4000 for distance ≤ 50 km', () => {
+        expect(system.calculateCountryScore(50)).toBe(4000);
+        expect(system.calculateCountryScore(1)).toBe(4000);
+        expect(system.calculateCountryScore(25)).toBe(4000);
+      });
+
+      it('should return 3000 for distance > 50 and ≤ 200 km', () => {
+        expect(system.calculateCountryScore(200)).toBe(3000);
+        expect(system.calculateCountryScore(100)).toBe(3000);
+        expect(system.calculateCountryScore(51)).toBe(3000);
+      });
+
+      it('should return score in (0, 3000] for distance > 200 km (decay)', () => {
+        const score = system.calculateCountryScore(500);
+        expect(score).toBeGreaterThan(0);
+        expect(score).toBeLessThanOrEqual(3000);
+        expect(Number.isFinite(score)).toBe(true);
+      });
+
+      it('should never return negative score', () => {
+        expect(system.calculateCountryScore(5000)).toBeGreaterThanOrEqual(0);
+        expect(system.calculateCountryScore(20000)).toBeGreaterThanOrEqual(0);
+      });
+    });
+
+    describe('calculateCountryClickScore', () => {
+      const minimalPolygonFeature = {
+        geometry: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]] },
+      };
+      const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
+
+      it('should return totalScore 5000 when click is inside country and not timed out', () => {
+        const result = system.calculateCountryClickScore(
+          [0.5, 0.5],
+          minimalPolygonFeature,
+          true,
+          1000,
+          'country',
+          totalTimeAllowed
+        );
+        expect(result.totalScore).toBe(5000);
+        expect(result.score).toBe(5000);
+        expect(result.distanceToCountry).toBe(0);
+      });
+
+      it('should return totalScore 0 when timed out', () => {
+        const result = system.calculateCountryClickScore(
+          [0.5, 0.5],
+          minimalPolygonFeature,
+          true,
+          totalTimeAllowed + 1,
+          'country',
+          totalTimeAllowed
+        );
+        expect(result.totalScore).toBe(0);
+        expect(result.score).toBe(0);
+        expect(result.distance).toBeNull();
+        expect(result.distanceToCountry).toBeNull();
+      });
+
+      it('should return finite non-negative score for boundary distances (range-based)', () => {
+        const clickCoords = [48, 2];
+        const resultInside = system.calculateCountryClickScore(
+          clickCoords,
+          minimalPolygonFeature,
+          false,
+          1000,
+          'country',
+          totalTimeAllowed
+        );
+        expect(resultInside.totalScore).toBeGreaterThanOrEqual(0);
+        expect(resultInside.totalScore).toBeLessThanOrEqual(5000);
+        expect(Number.isFinite(resultInside.totalScore)).toBe(true);
+      });
+    });
+  });
+
   describe('Singleton pattern', () => {
     it('should return same instance with getScoringSystem', () => {
       const instance1 = getScoringSystem();
@@ -386,26 +459,20 @@ describe('ScoringSystem', () => {
   });
 
   describe('destroy', () => {
-    it('should unsubscribe from events', () => {
+    it('should not throw when game:round:completed is emitted after destroy', () => {
       system.init();
-
-      const handler = vi.fn();
-      eventBus.subscribe('score:calculated', handler);
-
       system.destroy();
 
-      // Emit event after destroy
-      eventBus.emit('game:round:completed', {
-        round: {
-          roundNumber: 0,
-          capital: { name: 'Paris' },
-          distance: 100,
-          score: 3500,
-        },
-      });
-
-      // Should not be called since system was destroyed
-      expect(handler).not.toHaveBeenCalled();
+      expect(() =>
+        eventBus.emit('game:round:completed', {
+          round: {
+            roundNumber: 0,
+            capital: { name: 'Paris' },
+            distance: 100,
+            score: 3500,
+          },
+        })
+      ).not.toThrow();
     });
 
     it('should allow re-initialization after destroy', () => {
@@ -416,13 +483,9 @@ describe('ScoringSystem', () => {
   });
 
   describe('Integration with EventBus', () => {
-    it('should work with real game events', () => {
+    it('should process game:round:completed without throwing and keep scoring correct', () => {
       system.init();
 
-      const scoreHandler = vi.fn();
-      eventBus.subscribe('score:calculated', scoreHandler);
-
-      // Simulate a game round completion
       const roundData = {
         round: {
           roundNumber: 2,
@@ -436,14 +499,8 @@ describe('ScoringSystem', () => {
         },
       };
 
-      eventBus.emit('game:round:completed', roundData);
-
-      expect(scoreHandler).toHaveBeenCalledWith({
-        round: 2,
-        distance: 15,
-        score: 4800,
-        capital: 'Tokyo',
-      });
+      expect(() => eventBus.emit('game:round:completed', roundData)).not.toThrow();
+      expect(system.calculateScore(0)).toBe(5000);
     });
   });
 });

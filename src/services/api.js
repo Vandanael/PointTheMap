@@ -3,7 +3,8 @@
 /**
  * @typedef {Object} StartSessionResponse
  * @property {string} token
- * @property {import('../game/Game.js').Capital[]} capitals
+ * @property {import('../game/Game.js').Capital[]} [capitals]
+ * @property {import('../game/Game.js').Country[]} [countries]
  * @property {number} startTime
  * @property {string} csrfToken
  */
@@ -26,10 +27,10 @@
  * @property {number} attempts
  */
 
-import { capitals, GAME } from "../config.js";
+import { GAME } from "../config.js";
 import { generateId } from "../utils.js";
 import { logger } from "../utils/logger.js";
-import { selectBalancedCapitals } from "../../capitals.js";
+import { loadCapitals, loadSelectBalancedCapitals } from "../data/capitals-loader.js";
 import { APIError, GameError } from "../core/ErrorHandler.js";
 import {
   getRetryQueue,
@@ -47,9 +48,51 @@ let currentCsrfToken = null;
 
 /**
  * Mock implementation of start API
- * @returns {StartSessionResponse}
+ * @param {string} [gameType='classic']
+ * @returns {Promise<StartSessionResponse>}
  */
-const mockStart = () => {
+const mockStart = async (gameType = 'classic') => {
+  if (gameType === 'country') {
+    // Load capitals and extract unique countries with valid countryId
+    const capitals = await loadCapitals();
+    const { RandomSelector } = await import('@lib/capital-selection/index.js');
+
+    // Create unique countries list from capitals, filtering out UNK
+    const countryMap = new Map();
+    capitals.forEach(cap => {
+      if (cap.countryId && cap.countryId !== 'UNK' && !countryMap.has(cap.countryId)) {
+        countryMap.set(cap.countryId, {
+          name: cap.country,
+          countryId: cap.countryId,
+          popular: cap.popular
+        });
+      }
+    });
+    const countries = Array.from(countryMap.values());
+
+    const selector = new RandomSelector();
+    const selected = selector.select(countries, { count: 5, balancing: { popular: 2, obscure: 3 } });
+
+    console.log('[API Mock] Country mode: selected', selected.length, 'countries:', selected.map(c => c.name));
+
+    return {
+      token: generateId(),
+      countries: selected.map(c => ({
+        name: c.name,
+        countryId: c.countryId,
+        popular: c.popular
+      })),
+      startTime: Date.now(),
+      csrfToken: generateId(),
+    };
+  }
+
+  // Lazy load capitals data (only loaded when needed)
+  const [capitals, selectBalancedCapitals] = await Promise.all([
+    loadCapitals(),
+    loadSelectBalancedCapitals()
+  ]);
+
   const selected = selectBalancedCapitals(capitals);
   return {
     token: generateId(),
@@ -152,22 +195,40 @@ const fetchApi = async (endpoint, options = {}) => {
 /**
  * Format rounds for API submission
  * @param {import('../game/Game.js').Round[]} rounds
- * @returns {Array<{capital: string, click: {lat: number, lng: number} | null, status: string, score: number, timeElapsed?: number}>}
+ * @param {string} [gameType='classic']
+ * @returns {Array<Object>}
  */
-const formatRoundsForSubmit = (rounds) =>
-  rounds.map((r) => ({
-    capital: r.capital.name,
-    click: r.click,
-    status: r.status,
-    score: r.score || 0,
-    timeElapsed: r.endTime && r.startTime ? r.endTime - r.startTime : undefined,
-  }));
+const formatRoundsForSubmit = (rounds, gameType = 'classic') =>
+  rounds.map((r) => {
+    const base = {
+      click: r.click,
+      status: r.status,
+      score: r.score || 0,
+      timeElapsed: r.endTime && r.startTime ? r.endTime - r.startTime : undefined,
+    };
+
+    if (gameType === 'country' || r.gameType === 'country') {
+      return {
+        ...base,
+        country: r.country?.name,
+        countryId: r.country?.countryId,
+        correctCountryId: r.correctCountryId,
+        clickedCountryId: r.clickedCountryId,
+        distanceToTargetKm: r.distanceToTargetKm,
+      };
+    }
+
+    return {
+      ...base,
+      capital: r.capital?.name,
+    };
+  });
 
 export const api = {
   start: async (gameType = "classic") => {
     if (USE_MOCK) {
       logger.log("[API] Mode mock activé");
-      const session = mockStart();
+      const session = await mockStart(gameType);
       currentCsrfToken = session.csrfToken; // Store CSRF token
       return session;
     }
@@ -187,7 +248,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({
         token,
-        rounds: formatRoundsForSubmit(rounds),
+        rounds: formatRoundsForSubmit(rounds, gameType),
         pseudo,
         gameType,
       }),

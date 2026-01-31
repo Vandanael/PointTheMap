@@ -6,6 +6,7 @@
  * Structure:
  * - name: Nom de la capitale
  * - country: Nom du pays
+ * - countryId: Code ISO 3166-1 alpha-3 du pays
  * - lat: Latitude (format décimal, précision 4 décimales)
  * - lng: Longitude (format décimal, précision 4 décimales)
  * - popular: true = capitale majeure connue mondialement (50 villes)
@@ -13,291 +14,213 @@
  *
  * Coordonnées GPS: Centre-ville administratif ou monument emblématique
  * Source: OpenStreetMap, GeoNames
+ *
+ * @typedef {{ name: string, country: string, countryId: string, lat: number, lng: number, popular: boolean }} CapitalEntry
  */
 
 export const capitals = [
-  // ========================================
-  // CAPITALES POPULAIRES (popular: true)
-  // 50 capitales majeures connues mondialement
-  // ========================================
-
-  // Europe Occidentale
-  { name: "Paris", country: "France", lat: 48.8566, lng: 2.3522, popular: true },
-  { name: "Londres", country: "Royaume-Uni", lat: 51.5074, lng: -0.1278, popular: true },
-  { name: "Berlin", country: "Allemagne", lat: 52.52, lng: 13.405, popular: true },
-  { name: "Rome", country: "Italie", lat: 41.9028, lng: 12.4964, popular: true },
-  { name: "Madrid", country: "Espagne", lat: 40.4168, lng: -3.7038, popular: true },
-  { name: "Amsterdam", country: "Pays-Bas", lat: 52.3676, lng: 4.9041, popular: true },
-  { name: "Bruxelles", country: "Belgique", lat: 50.8503, lng: 4.3517, popular: true },
-  { name: "Vienne", country: "Autriche", lat: 48.2082, lng: 16.3738, popular: true },
-  { name: "Lisbonne", country: "Portugal", lat: 38.7223, lng: -9.1393, popular: true },
-  { name: "Athènes", country: "Grèce", lat: 37.9838, lng: 23.7275, popular: true },
-
-  // Europe du Nord
-  { name: "Stockholm", country: "Suède", lat: 59.3293, lng: 18.0686, popular: true },
-  { name: "Oslo", country: "Norvège", lat: 59.9139, lng: 10.7522, popular: true },
-  { name: "Copenhague", country: "Danemark", lat: 55.6761, lng: 12.5683, popular: true },
-  { name: "Helsinki", country: "Finlande", lat: 60.1695, lng: 24.9354, popular: true },
-
-  // Europe de l'Est
-  { name: "Moscou", country: "Russie", lat: 55.7558, lng: 37.6173, popular: true },
-  { name: "Varsovie", country: "Pologne", lat: 52.2297, lng: 21.0122, popular: true },
-  { name: "Prague", country: "Tchéquie", lat: 50.0755, lng: 14.4378, popular: true },
-  { name: "Budapest", country: "Hongrie", lat: 47.4979, lng: 19.0402, popular: true },
-  { name: "Bucarest", country: "Roumanie", lat: 44.4268, lng: 26.1025, popular: true },
-
-  // Amériques
-  { name: "Washington D.C.", country: "États-Unis", lat: 38.9072, lng: -77.0369, popular: true },
-  { name: "Ottawa", country: "Canada", lat: 45.4215, lng: -75.6972, popular: true },
-  { name: "Mexico", country: "Mexique", lat: 19.4326, lng: -99.1332, popular: true },
-  { name: "Brasilia", country: "Brésil", lat: -15.8267, lng: -47.9218, popular: true },
-  { name: "Buenos Aires", country: "Argentine", lat: -34.6037, lng: -58.3816, popular: true },
-  { name: "Lima", country: "Pérou", lat: -12.0464, lng: -77.0428, popular: true },
-  { name: "Bogota", country: "Colombie", lat: 4.711, lng: -74.0721, popular: true },
-  { name: "Santiago", country: "Chili", lat: -33.4489, lng: -70.6693, popular: true },
-  { name: "Caracas", country: "Venezuela", lat: 10.4806, lng: -66.9036, popular: true },
-
-  // Asie
-  { name: "Tokyo", country: "Japon", lat: 35.6762, lng: 139.6503, popular: true },
-  { name: "Pékin", country: "Chine", lat: 39.9042, lng: 116.4074, popular: true },
-  { name: "Séoul", country: "Corée du Sud", lat: 37.5665, lng: 126.978, popular: true },
-  { name: "New Delhi", country: "Inde", lat: 28.6139, lng: 77.209, popular: true },
-  { name: "Bangkok", country: "Thaïlande", lat: 13.7563, lng: 100.5018, popular: true },
-  { name: "Singapour", country: "Singapour", lat: 1.3521, lng: 103.8198, popular: true },
-  { name: "Kuala Lumpur", country: "Malaisie", lat: 3.139, lng: 101.6869, popular: true },
-  { name: "Jakarta", country: "Indonésie", lat: -6.2088, lng: 106.8456, popular: true },
-  { name: "Manille", country: "Philippines", lat: 14.5995, lng: 120.9842, popular: true },
-  { name: "Hanoï", country: "Vietnam", lat: 21.0285, lng: 105.8542, popular: true },
-  { name: "Téhéran", country: "Iran", lat: 35.6892, lng: 51.389, popular: true },
-  { name: "Tel Aviv", country: "Israël", lat: 32.0853, lng: 34.7818, popular: true },
-
-  // Moyen-Orient
-  { name: "Riyad", country: "Arabie Saoudite", lat: 24.7136, lng: 46.6753, popular: true },
-  { name: "Dubaï", country: "Émirats Arabes Unis", lat: 25.2048, lng: 55.2708, popular: true },
-  { name: "Doha", country: "Qatar", lat: 25.2854, lng: 51.531, popular: true },
-  { name: "Ankara", country: "Turquie", lat: 39.9334, lng: 32.8597, popular: true },
-
-  // Afrique
-  { name: "Le Caire", country: "Égypte", lat: 30.0444, lng: 31.2357, popular: true },
-  { name: "Nairobi", country: "Kenya", lat: -1.2864, lng: 36.8172, popular: true },
-  { name: "Le Cap", country: "Afrique du Sud", lat: -33.9249, lng: 18.4241, popular: true },
-  { name: "Lagos", country: "Nigeria", lat: 6.5244, lng: 3.3792, popular: true },
-
-  // Océanie
-  { name: "Canberra", country: "Australie", lat: -35.2809, lng: 149.13, popular: true },
-  { name: "Wellington", country: "Nouvelle-Zélande", lat: -41.2865, lng: 174.7762, popular: true },
-
-  // ========================================
-  // CAPITALES NON-POPULAIRES (popular: false)
-  // 147 capitales moins connues
-  // ========================================
-
-  // Europe
-  { name: "Reykjavik", country: "Islande", lat: 64.1466, lng: -21.9426, popular: false },
-  { name: "Dublin", country: "Irlande", lat: 53.3498, lng: -6.2603, popular: false },
-  { name: "Berne", country: "Suisse", lat: 46.9481, lng: 7.4474, popular: false },
-  { name: "Luxembourg", country: "Luxembourg", lat: 49.6116, lng: 6.1319, popular: false },
-  { name: "Monaco", country: "Monaco", lat: 43.7384, lng: 7.4246, popular: false },
-  { name: "Vaduz", country: "Liechtenstein", lat: 47.141, lng: 9.5209, popular: false },
-  { name: "Andorre-la-Vieille", country: "Andorre", lat: 42.5063, lng: 1.5218, popular: false },
-  { name: "Saint-Marin", country: "Saint-Marin", lat: 43.9424, lng: 12.4578, popular: false },
-  { name: "Cité du Vatican", country: "Vatican", lat: 41.9029, lng: 12.4534, popular: false },
-  { name: "Valletta", country: "Malte", lat: 35.8989, lng: 14.5146, popular: false },
-  { name: "Nicosie", country: "Chypre", lat: 35.1856, lng: 33.3823, popular: false },
-  { name: "Zagreb", country: "Croatie", lat: 45.815, lng: 15.9819, popular: false },
-  { name: "Ljubljana", country: "Slovénie", lat: 46.0569, lng: 14.5058, popular: false },
-  { name: "Bratislava", country: "Slovaquie", lat: 48.1486, lng: 17.1077, popular: false },
-  { name: "Sofia", country: "Bulgarie", lat: 42.6977, lng: 23.3219, popular: false },
-  { name: "Belgrade", country: "Serbie", lat: 44.7866, lng: 20.4489, popular: false },
-  { name: "Sarajevo", country: "Bosnie-Herzégovine", lat: 43.8563, lng: 18.4131, popular: false },
-  { name: "Podgorica", country: "Monténégro", lat: 42.4304, lng: 19.2594, popular: false },
-  { name: "Skopje", country: "Macédoine du Nord", lat: 41.9973, lng: 21.428, popular: false },
-  { name: "Tirana", country: "Albanie", lat: 41.3275, lng: 19.8187, popular: false },
-  { name: "Pristina", country: "Kosovo", lat: 42.6629, lng: 21.1655, popular: false },
-  { name: "Chisinau", country: "Moldavie", lat: 47.0105, lng: 28.8638, popular: false },
-  { name: "Kiev", country: "Ukraine", lat: 50.4501, lng: 30.5234, popular: false },
-  { name: "Minsk", country: "Biélorussie", lat: 53.9045, lng: 27.5615, popular: false },
-  { name: "Vilnius", country: "Lituanie", lat: 54.6872, lng: 25.2797, popular: false },
-  { name: "Riga", country: "Lettonie", lat: 56.9496, lng: 24.1052, popular: false },
-  { name: "Tallinn", country: "Estonie", lat: 59.437, lng: 24.7536, popular: false },
-
-  // Asie Centrale & Caucase
-  { name: "Astana", country: "Kazakhstan", lat: 51.1694, lng: 71.4491, popular: false },
-  { name: "Tachkent", country: "Ouzbékistan", lat: 41.2995, lng: 69.2401, popular: false },
-  { name: "Bichkek", country: "Kirghizistan", lat: 42.8746, lng: 74.5698, popular: false },
-  { name: "Douchanbé", country: "Tadjikistan", lat: 38.5598, lng: 68.7738, popular: false },
-  { name: "Achgabat", country: "Turkménistan", lat: 37.9601, lng: 58.3261, popular: false },
-  { name: "Tbilissi", country: "Géorgie", lat: 41.7151, lng: 44.8271, popular: false },
-  { name: "Erevan", country: "Arménie", lat: 40.1792, lng: 44.4991, popular: false },
-  { name: "Bakou", country: "Azerbaïdjan", lat: 40.4093, lng: 49.8671, popular: false },
-
-  // Asie du Sud & Sud-Est
-  { name: "Kaboul", country: "Afghanistan", lat: 34.5553, lng: 69.2075, popular: false },
-  { name: "Islamabad", country: "Pakistan", lat: 33.6844, lng: 73.0479, popular: false },
-  { name: "Dacca", country: "Bangladesh", lat: 23.8103, lng: 90.4125, popular: false },
-  { name: "Katmandou", country: "Népal", lat: 27.7172, lng: 85.324, popular: false },
-  { name: "Thimphou", country: "Bhoutan", lat: 27.4728, lng: 89.6393, popular: false },
-  { name: "Colombo", country: "Sri Lanka", lat: 6.9271, lng: 79.8612, popular: false },
-  { name: "Malé", country: "Maldives", lat: 4.1755, lng: 73.5093, popular: false },
-  { name: "Naypyidaw", country: "Myanmar", lat: 19.7633, lng: 96.0785, popular: false },
-  { name: "Vientiane", country: "Laos", lat: 17.9757, lng: 102.6331, popular: false },
-  { name: "Phnom Penh", country: "Cambodge", lat: 11.5564, lng: 104.9282, popular: false },
-  { name: "Bandar Seri Begawan", country: "Brunei", lat: 4.9031, lng: 114.9398, popular: false },
-  { name: "Dili", country: "Timor Oriental", lat: -8.5569, lng: 125.5603, popular: false },
-
-  // Asie de l'Est
-  { name: "Pyongyang", country: "Corée du Nord", lat: 39.0392, lng: 125.7625, popular: false },
-  { name: "Oulan-Bator", country: "Mongolie", lat: 47.8864, lng: 106.9057, popular: false },
-  { name: "Taipei", country: "Taïwan", lat: 25.033, lng: 121.5654, popular: false },
-
-  // Moyen-Orient
-  { name: "Bagdad", country: "Irak", lat: 33.3152, lng: 44.3661, popular: false },
-  { name: "Damas", country: "Syrie", lat: 33.5138, lng: 36.2765, popular: false },
-  { name: "Beyrouth", country: "Liban", lat: 33.8886, lng: 35.4955, popular: false },
-  { name: "Amman", country: "Jordanie", lat: 31.9454, lng: 35.9284, popular: false },
-  { name: "Jérusalem", country: "Palestine", lat: 31.7683, lng: 35.2137, popular: false },
-  { name: "Sanaa", country: "Yémen", lat: 15.3694, lng: 44.191, popular: false },
-  { name: "Mascate", country: "Oman", lat: 23.588, lng: 58.3829, popular: false },
-  { name: "Manama", country: "Bahreïn", lat: 26.2285, lng: 50.586, popular: false },
-  { name: "Koweït", country: "Koweït", lat: 29.3759, lng: 47.9774, popular: false },
-
-  // Afrique du Nord
-  { name: "Rabat", country: "Maroc", lat: 34.0209, lng: -6.8416, popular: false },
-  { name: "Alger", country: "Algérie", lat: 36.7538, lng: 3.0588, popular: false },
-  { name: "Tunis", country: "Tunisie", lat: 36.8065, lng: 10.1815, popular: false },
-  { name: "Tripoli", country: "Libye", lat: 32.8872, lng: 13.1913, popular: false },
-  { name: "Khartoum", country: "Soudan", lat: 15.5007, lng: 32.5599, popular: false },
-  { name: "Djouba", country: "Soudan du Sud", lat: 4.8517, lng: 31.5825, popular: false },
-
-  // Afrique de l'Ouest
-  { name: "Dakar", country: "Sénégal", lat: 14.7167, lng: -17.4677, popular: false },
-  { name: "Bamako", country: "Mali", lat: 12.6392, lng: -8.0029, popular: false },
-  { name: "Ouagadougou", country: "Burkina Faso", lat: 12.3714, lng: -1.5197, popular: false },
-  { name: "Niamey", country: "Niger", lat: 13.5127, lng: 2.1128, popular: false },
-  { name: "Abuja", country: "Nigeria", lat: 9.0765, lng: 7.3986, popular: false },
-  { name: "Ndjamena", country: "Tchad", lat: 12.1348, lng: 15.0557, popular: false },
-  { name: "Conakry", country: "Guinée", lat: 9.6412, lng: -13.5784, popular: false },
-  { name: "Freetown", country: "Sierra Leone", lat: 8.4657, lng: -13.2317, popular: false },
-  { name: "Monrovia", country: "Liberia", lat: 6.3156, lng: -10.8074, popular: false },
-  { name: "Yamoussoukro", country: "Côte d'Ivoire", lat: 6.8276, lng: -5.2893, popular: false },
-  { name: "Accra", country: "Ghana", lat: 5.6037, lng: -0.187, popular: false },
-  { name: "Lomé", country: "Togo", lat: 6.1256, lng: 1.2223, popular: false },
-  { name: "Porto-Novo", country: "Bénin", lat: 6.4969, lng: 2.6289, popular: false },
-  { name: "Banjul", country: "Gambie", lat: 13.4549, lng: -16.579, popular: false },
-  { name: "Bissau", country: "Guinée-Bissau", lat: 11.8636, lng: -15.5989, popular: false },
-  { name: "Praia", country: "Cap-Vert", lat: 14.933, lng: -23.5133, popular: false },
-  { name: "Nouakchott", country: "Mauritanie", lat: 18.0735, lng: -15.9582, popular: false },
-
-  // Afrique Centrale
-  { name: "Yaoundé", country: "Cameroun", lat: 3.848, lng: 11.5021, popular: false },
-  { name: "Bangui", country: "Centrafrique", lat: 4.3947, lng: 18.5582, popular: false },
-  { name: "Libreville", country: "Gabon", lat: 0.4162, lng: 9.4673, popular: false },
-  { name: "Malabo", country: "Guinée équatoriale", lat: 3.7504, lng: 8.7371, popular: false },
-  { name: "Brazzaville", country: "Congo", lat: -4.2634, lng: 15.2429, popular: false },
-  { name: "Kinshasa", country: "RD Congo", lat: -4.4419, lng: 15.2663, popular: false },
-  { name: "Sao Tomé", country: "Sao Tomé-et-Principe", lat: 0.3365, lng: 6.7273, popular: false },
-
-  // Afrique de l'Est
-  { name: "Addis-Abeba", country: "Éthiopie", lat: 9.032, lng: 38.7469, popular: false },
-  { name: "Asmara", country: "Érythrée", lat: 15.3229, lng: 38.9251, popular: false },
-  { name: "Djibouti", country: "Djibouti", lat: 11.8251, lng: 42.5903, popular: false },
-  { name: "Mogadiscio", country: "Somalie", lat: 2.0469, lng: 45.3182, popular: false },
-  { name: "Kampala", country: "Ouganda", lat: 0.3476, lng: 32.5825, popular: false },
-  { name: "Kigali", country: "Rwanda", lat: -1.9441, lng: 30.0619, popular: false },
-  { name: "Bujumbura", country: "Burundi", lat: -3.3614, lng: 29.3599, popular: false },
-  { name: "Dodoma", country: "Tanzanie", lat: -6.163, lng: 35.7516, popular: false },
-  { name: "Moroni", country: "Comores", lat: -11.7172, lng: 43.2473, popular: false },
-  { name: "Antananarivo", country: "Madagascar", lat: -18.8792, lng: 47.5079, popular: false },
-  { name: "Port-Louis", country: "Maurice", lat: -20.1609, lng: 57.5012, popular: false },
-  { name: "Victoria", country: "Seychelles", lat: -4.6191, lng: 55.4513, popular: false },
-
-  // Afrique Australe
-  { name: "Luanda", country: "Angola", lat: -8.8383, lng: 13.2344, popular: false },
-  { name: "Lusaka", country: "Zambie", lat: -15.3875, lng: 28.3228, popular: false },
-  { name: "Harare", country: "Zimbabwe", lat: -17.8252, lng: 31.0335, popular: false },
-  { name: "Maputo", country: "Mozambique", lat: -25.9655, lng: 32.5832, popular: false },
-  { name: "Gaborone", country: "Botswana", lat: -24.6282, lng: 25.9231, popular: false },
-  { name: "Windhoek", country: "Namibie", lat: -22.5597, lng: 17.0832, popular: false },
-  { name: "Pretoria", country: "Afrique du Sud", lat: -25.7479, lng: 28.2293, popular: false },
-  { name: "Mbabane", country: "Eswatini", lat: -26.3054, lng: 31.1367, popular: false },
-  { name: "Maseru", country: "Lesotho", lat: -29.3167, lng: 27.4833, popular: false },
-
-  // Amériques Centrale & Caraïbes
-  { name: "Belmopan", country: "Belize", lat: 17.251, lng: -88.759, popular: false },
-  { name: "Guatemala", country: "Guatemala", lat: 14.6349, lng: -90.5069, popular: false },
-  { name: "Tegucigalpa", country: "Honduras", lat: 14.0723, lng: -87.1921, popular: false },
-  { name: "Managua", country: "Nicaragua", lat: 12.115, lng: -86.2362, popular: false },
-  { name: "San José", country: "Costa Rica", lat: 9.9281, lng: -84.0907, popular: false },
-  { name: "Panama", country: "Panama", lat: 8.9824, lng: -79.5199, popular: false },
-  { name: "San Salvador", country: "Salvador", lat: 13.6929, lng: -89.2182, popular: false },
-  { name: "La Havane", country: "Cuba", lat: 23.1136, lng: -82.3666, popular: false },
-  { name: "Kingston", country: "Jamaïque", lat: 17.9714, lng: -76.7931, popular: false },
-  { name: "Port-au-Prince", country: "Haïti", lat: 18.5944, lng: -72.3074, popular: false },
-  {
-    name: "Saint-Domingue",
-    country: "Rép. Dominicaine",
-    lat: 18.4861,
-    lng: -69.9312,
-    popular: false,
-  },
-  { name: "Nassau", country: "Bahamas", lat: 25.0443, lng: -77.3504, popular: false },
-  { name: "Bridgetown", country: "Barbade", lat: 13.0969, lng: -59.6145, popular: false },
-  {
-    name: "Port-d'Espagne",
-    country: "Trinité-et-Tobago",
-    lat: 10.6918,
-    lng: -61.2225,
-    popular: false,
-  },
-  { name: "Saint-Georges", country: "Grenade", lat: 12.0565, lng: -61.7488, popular: false },
-  { name: "Castries", country: "Sainte-Lucie", lat: 14.0101, lng: -60.9875, popular: false },
-  { name: "Kingstown", country: "Saint-Vincent", lat: 13.1579, lng: -61.2248, popular: false },
-  {
-    name: "Saint John's",
-    country: "Antigua-et-Barbuda",
-    lat: 17.1274,
-    lng: -61.8468,
-    popular: false,
-  },
-  { name: "Roseau", country: "Dominique", lat: 15.301, lng: -61.387, popular: false },
-  { name: "Basseterre", country: "Saint-Christophe", lat: 17.3026, lng: -62.7177, popular: false },
-
-  // Amérique du Sud
-  { name: "Quito", country: "Équateur", lat: -0.1807, lng: -78.4678, popular: false },
-  { name: "La Paz", country: "Bolivie", lat: -16.5, lng: -68.15, popular: false },
-  { name: "Asunción", country: "Paraguay", lat: -25.2637, lng: -57.5759, popular: false },
-  { name: "Montevideo", country: "Uruguay", lat: -34.9011, lng: -56.1645, popular: false },
-  { name: "Georgetown", country: "Guyana", lat: 6.8013, lng: -58.1551, popular: false },
-  { name: "Paramaribo", country: "Suriname", lat: 5.852, lng: -55.2038, popular: false },
-  { name: "Cayenne", country: "Guyane", lat: 4.9333, lng: -52.3333, popular: false },
-
-  // Océanie & Pacifique
-  {
-    name: "Port Moresby",
-    country: "Papouasie-Nouvelle-Guinée",
-    lat: -9.4438,
-    lng: 147.1803,
-    popular: false,
-  },
-  { name: "Suva", country: "Fidji", lat: -18.1416, lng: 178.4419, popular: false },
-  { name: "Port-Vila", country: "Vanuatu", lat: -17.7333, lng: 168.3273, popular: false },
-  { name: "Honiara", country: "Îles Salomon", lat: -9.4456, lng: 159.9729, popular: false },
-  { name: "Apia", country: "Samoa", lat: -13.8333, lng: -171.7667, popular: false },
-  { name: "Nuku'alofa", country: "Tonga", lat: -21.139, lng: -175.2018, popular: false },
-  { name: "Funafuti", country: "Tuvalu", lat: -8.5211, lng: 179.1962, popular: false },
-  { name: "Tarawa", country: "Kiribati", lat: 1.3382, lng: 173.0176, popular: false },
-  { name: "Majuro", country: "Îles Marshall", lat: 7.1315, lng: 171.1845, popular: false },
-  { name: "Palikir", country: "Micronésie", lat: 6.9177, lng: 158.161, popular: false },
-  { name: "Ngerulmud", country: "Palaos", lat: 7.5006, lng: 134.6242, popular: false },
-  { name: "Yaren", country: "Nauru", lat: -0.5477, lng: 166.9209, popular: false },
+  { name: "Paris", country: "France", countryId: "FRA", lat: 48.8566, lng: 2.3522, popular: true },
+  { name: "Londres", country: "Royaume-Uni", countryId: "GBR", lat: 51.5074, lng: -0.1278, popular: true },
+  { name: "Berlin", country: "Allemagne", countryId: "DEU", lat: 52.52, lng: 13.405, popular: true },
+  { name: "Rome", country: "Italie", countryId: "ITA", lat: 41.9028, lng: 12.4964, popular: true },
+  { name: "Madrid", country: "Espagne", countryId: "ESP", lat: 40.4168, lng: -3.7038, popular: true },
+  { name: "Amsterdam", country: "Pays-Bas", countryId: "NLD", lat: 52.3676, lng: 4.9041, popular: true },
+  { name: "Bruxelles", country: "Belgique", countryId: "BEL", lat: 50.8503, lng: 4.3517, popular: true },
+  { name: "Vienne", country: "Autriche", countryId: "AUT", lat: 48.2082, lng: 16.3738, popular: true },
+  { name: "Lisbonne", country: "Portugal", countryId: "PRT", lat: 38.7223, lng: -9.1393, popular: true },
+  { name: "Athènes", country: "Grèce", countryId: "GRC", lat: 37.9838, lng: 23.7275, popular: true },
+  { name: "Stockholm", country: "Suède", countryId: "SWE", lat: 59.3293, lng: 18.0686, popular: true },
+  { name: "Oslo", country: "Norvège", countryId: "NOR", lat: 59.9139, lng: 10.7522, popular: true },
+  { name: "Copenhague", country: "Danemark", countryId: "DNK", lat: 55.6761, lng: 12.5683, popular: true },
+  { name: "Helsinki", country: "Finlande", countryId: "FIN", lat: 60.1695, lng: 24.9354, popular: true },
+  { name: "Moscou", country: "Russie", countryId: "RUS", lat: 55.7558, lng: 37.6173, popular: true },
+  { name: "Varsovie", country: "Pologne", countryId: "POL", lat: 52.2297, lng: 21.0122, popular: true },
+  { name: "Prague", country: "Tchéquie", countryId: "CZE", lat: 50.0755, lng: 14.4378, popular: true },
+  { name: "Budapest", country: "Hongrie", countryId: "HUN", lat: 47.4979, lng: 19.0402, popular: true },
+  { name: "Bucarest", country: "Roumanie", countryId: "ROU", lat: 44.4268, lng: 26.1025, popular: true },
+  { name: "Washington D.C.", country: "États-Unis", countryId: "USA", lat: 38.9072, lng: -77.0369, popular: true },
+  { name: "Ottawa", country: "Canada", countryId: "CAN", lat: 45.4215, lng: -75.6972, popular: true },
+  { name: "Mexico", country: "Mexique", countryId: "MEX", lat: 19.4326, lng: -99.1332, popular: true },
+  { name: "Brasilia", country: "Brésil", countryId: "BRA", lat: -15.8267, lng: -47.9218, popular: true },
+  { name: "Buenos Aires", country: "Argentine", countryId: "ARG", lat: -34.6037, lng: -58.3816, popular: true },
+  { name: "Lima", country: "Pérou", countryId: "PER", lat: -12.0464, lng: -77.0428, popular: true },
+  { name: "Bogota", country: "Colombie", countryId: "COL", lat: 4.711, lng: -74.0721, popular: true },
+  { name: "Santiago", country: "Chili", countryId: "CHL", lat: -33.4489, lng: -70.6693, popular: true },
+  { name: "Caracas", country: "Venezuela", countryId: "VEN", lat: 10.4806, lng: -66.9036, popular: true },
+  { name: "Tokyo", country: "Japon", countryId: "JPN", lat: 35.6762, lng: 139.6503, popular: true },
+  { name: "Pékin", country: "Chine", countryId: "CHN", lat: 39.9042, lng: 116.4074, popular: true },
+  { name: "Séoul", country: "Corée du Sud", countryId: "KOR", lat: 37.5665, lng: 126.978, popular: true },
+  { name: "New Delhi", country: "Inde", countryId: "IND", lat: 28.6139, lng: 77.209, popular: true },
+  { name: "Bangkok", country: "Thaïlande", countryId: "THA", lat: 13.7563, lng: 100.5018, popular: true },
+  { name: "Singapour", country: "Singapour", countryId: "UNK", lat: 1.3521, lng: 103.8198, popular: true },
+  { name: "Kuala Lumpur", country: "Malaisie", countryId: "MYS", lat: 3.139, lng: 101.6869, popular: true },
+  { name: "Jakarta", country: "Indonésie", countryId: "IDN", lat: -6.2088, lng: 106.8456, popular: true },
+  { name: "Manille", country: "Philippines", countryId: "PHL", lat: 14.5995, lng: 120.9842, popular: true },
+  { name: "Hanoï", country: "Vietnam", countryId: "VNM", lat: 21.0285, lng: 105.8542, popular: true },
+  { name: "Téhéran", country: "Iran", countryId: "IRN", lat: 35.6892, lng: 51.389, popular: true },
+  { name: "Tel Aviv", country: "Israël", countryId: "ISR", lat: 32.0853, lng: 34.7818, popular: true },
+  { name: "Riyad", country: "Arabie Saoudite", countryId: "SAU", lat: 24.7136, lng: 46.6753, popular: true },
+  { name: "Dubaï", country: "Émirats Arabes Unis", countryId: "ARE", lat: 25.2048, lng: 55.2708, popular: true },
+  { name: "Doha", country: "Qatar", countryId: "QAT", lat: 25.2854, lng: 51.531, popular: true },
+  { name: "Ankara", country: "Turquie", countryId: "TUR", lat: 39.9334, lng: 32.8597, popular: true },
+  { name: "Le Caire", country: "Égypte", countryId: "EGY", lat: 30.0444, lng: 31.2357, popular: true },
+  { name: "Nairobi", country: "Kenya", countryId: "KEN", lat: -1.2864, lng: 36.8172, popular: true },
+  { name: "Le Cap", country: "Afrique du Sud", countryId: "ZAF", lat: -33.9249, lng: 18.4241, popular: true },
+  { name: "Lagos", country: "Nigeria", countryId: "NGA", lat: 6.5244, lng: 3.3792, popular: true },
+  { name: "Canberra", country: "Australie", countryId: "AUS", lat: -35.2809, lng: 149.13, popular: true },
+  { name: "Wellington", country: "Nouvelle-Zélande", countryId: "NZL", lat: -41.2865, lng: 174.7762, popular: true },
+  { name: "Reykjavik", country: "Islande", countryId: "ISL", lat: 64.1466, lng: -21.9426, popular: false },
+  { name: "Dublin", country: "Irlande", countryId: "IRL", lat: 53.3498, lng: -6.2603, popular: false },
+  { name: "Berne", country: "Suisse", countryId: "CHE", lat: 46.9481, lng: 7.4474, popular: false },
+  { name: "Luxembourg", country: "Luxembourg", countryId: "LUX", lat: 49.6116, lng: 6.1319, popular: false },
+  { name: "Monaco", country: "Monaco", countryId: "UNK", lat: 43.7384, lng: 7.4246, popular: false },
+  { name: "Vaduz", country: "Liechtenstein", countryId: "UNK", lat: 47.141, lng: 9.5209, popular: false },
+  { name: "Andorre-la-Vieille", country: "Andorre", countryId: "UNK", lat: 42.5063, lng: 1.5218, popular: false },
+  { name: "Saint-Marin", country: "Saint-Marin", countryId: "UNK", lat: 43.9424, lng: 12.4578, popular: false },
+  { name: "Cité du Vatican", country: "Vatican", countryId: "UNK", lat: 41.9029, lng: 12.4534, popular: false },
+  { name: "Valletta", country: "Malte", countryId: "UNK", lat: 35.8989, lng: 14.5146, popular: false },
+  { name: "Nicosie", country: "Chypre", countryId: "CYP", lat: 35.1856, lng: 33.3823, popular: false },
+  { name: "Zagreb", country: "Croatie", countryId: "HRV", lat: 45.815, lng: 15.9819, popular: false },
+  { name: "Ljubljana", country: "Slovénie", countryId: "SVN", lat: 46.0569, lng: 14.5058, popular: false },
+  { name: "Bratislava", country: "Slovaquie", countryId: "SVK", lat: 48.1486, lng: 17.1077, popular: false },
+  { name: "Sofia", country: "Bulgarie", countryId: "BGR", lat: 42.6977, lng: 23.3219, popular: false },
+  { name: "Belgrade", country: "Serbie", countryId: "SRB", lat: 44.7866, lng: 20.4489, popular: false },
+  { name: "Sarajevo", country: "Bosnie-Herzégovine", countryId: "BIH", lat: 43.8563, lng: 18.4131, popular: false },
+  { name: "Podgorica", country: "Monténégro", countryId: "MNE", lat: 42.4304, lng: 19.2594, popular: false },
+  { name: "Skopje", country: "Macédoine du Nord", countryId: "MKD", lat: 41.9973, lng: 21.428, popular: false },
+  { name: "Tirana", country: "Albanie", countryId: "ALB", lat: 41.3275, lng: 19.8187, popular: false },
+  { name: "Pristina", country: "Kosovo", countryId: "-99", lat: 42.6629, lng: 21.1655, popular: false },
+  { name: "Chisinau", country: "Moldavie", countryId: "MDA", lat: 47.0105, lng: 28.8638, popular: false },
+  { name: "Kiev", country: "Ukraine", countryId: "UKR", lat: 50.4501, lng: 30.5234, popular: false },
+  { name: "Minsk", country: "Biélorussie", countryId: "BLR", lat: 53.9045, lng: 27.5615, popular: false },
+  { name: "Vilnius", country: "Lituanie", countryId: "LTU", lat: 54.6872, lng: 25.2797, popular: false },
+  { name: "Riga", country: "Lettonie", countryId: "LVA", lat: 56.9496, lng: 24.1052, popular: false },
+  { name: "Tallinn", country: "Estonie", countryId: "EST", lat: 59.437, lng: 24.7536, popular: false },
+  { name: "Astana", country: "Kazakhstan", countryId: "KAZ", lat: 51.1694, lng: 71.4491, popular: false },
+  { name: "Tachkent", country: "Ouzbékistan", countryId: "UZB", lat: 41.2995, lng: 69.2401, popular: false },
+  { name: "Bichkek", country: "Kirghizistan", countryId: "KGZ", lat: 42.8746, lng: 74.5698, popular: false },
+  { name: "Douchanbé", country: "Tadjikistan", countryId: "TJK", lat: 38.5598, lng: 68.7738, popular: false },
+  { name: "Achgabat", country: "Turkménistan", countryId: "TKM", lat: 37.9601, lng: 58.3261, popular: false },
+  { name: "Tbilissi", country: "Géorgie", countryId: "GEO", lat: 41.7151, lng: 44.8271, popular: false },
+  { name: "Erevan", country: "Arménie", countryId: "ARM", lat: 40.1792, lng: 44.4991, popular: false },
+  { name: "Bakou", country: "Azerbaïdjan", countryId: "AZE", lat: 40.4093, lng: 49.8671, popular: false },
+  { name: "Kaboul", country: "Afghanistan", countryId: "AFG", lat: 34.5553, lng: 69.2075, popular: false },
+  { name: "Islamabad", country: "Pakistan", countryId: "PAK", lat: 33.6844, lng: 73.0479, popular: false },
+  { name: "Dacca", country: "Bangladesh", countryId: "BGD", lat: 23.8103, lng: 90.4125, popular: false },
+  { name: "Katmandou", country: "Népal", countryId: "NPL", lat: 27.7172, lng: 85.324, popular: false },
+  { name: "Thimphou", country: "Bhoutan", countryId: "BTN", lat: 27.4728, lng: 89.6393, popular: false },
+  { name: "Colombo", country: "Sri Lanka", countryId: "LKA", lat: 6.9271, lng: 79.8612, popular: false },
+  { name: "Malé", country: "Maldives", countryId: "UNK", lat: 4.1755, lng: 73.5093, popular: false },
+  { name: "Naypyidaw", country: "Myanmar", countryId: "MMR", lat: 19.7633, lng: 96.0785, popular: false },
+  { name: "Vientiane", country: "Laos", countryId: "LAO", lat: 17.9757, lng: 102.6331, popular: false },
+  { name: "Phnom Penh", country: "Cambodge", countryId: "KHM", lat: 11.5564, lng: 104.9282, popular: false },
+  { name: "Bandar Seri Begawan", country: "Brunei", countryId: "BRN", lat: 4.9031, lng: 114.9398, popular: false },
+  { name: "Dili", country: "Timor Oriental", countryId: "TLS", lat: -8.5569, lng: 125.5603, popular: false },
+  { name: "Pyongyang", country: "Corée du Nord", countryId: "PRK", lat: 39.0392, lng: 125.7625, popular: false },
+  { name: "Oulan-Bator", country: "Mongolie", countryId: "MNG", lat: 47.8864, lng: 106.9057, popular: false },
+  { name: "Taipei", country: "Taïwan", countryId: "TWN", lat: 25.033, lng: 121.5654, popular: false },
+  { name: "Bagdad", country: "Irak", countryId: "IRQ", lat: 33.3152, lng: 44.3661, popular: false },
+  { name: "Damas", country: "Syrie", countryId: "SYR", lat: 33.5138, lng: 36.2765, popular: false },
+  { name: "Beyrouth", country: "Liban", countryId: "LBN", lat: 33.8886, lng: 35.4955, popular: false },
+  { name: "Amman", country: "Jordanie", countryId: "JOR", lat: 31.9454, lng: 35.9284, popular: false },
+  { name: "Jérusalem", country: "Palestine", countryId: "PSE", lat: 31.7683, lng: 35.2137, popular: false },
+  { name: "Sanaa", country: "Yémen", countryId: "YEM", lat: 15.3694, lng: 44.191, popular: false },
+  { name: "Mascate", country: "Oman", countryId: "OMN", lat: 23.588, lng: 58.3829, popular: false },
+  { name: "Manama", country: "Bahreïn", countryId: "UNK", lat: 26.2285, lng: 50.586, popular: false },
+  { name: "Koweït", country: "Koweït", countryId: "KWT", lat: 29.3759, lng: 47.9774, popular: false },
+  { name: "Rabat", country: "Maroc", countryId: "MAR", lat: 34.0209, lng: -6.8416, popular: false },
+  { name: "Alger", country: "Algérie", countryId: "DZA", lat: 36.7538, lng: 3.0588, popular: false },
+  { name: "Tunis", country: "Tunisie", countryId: "TUN", lat: 36.8065, lng: 10.1815, popular: false },
+  { name: "Tripoli", country: "Libye", countryId: "LBY", lat: 32.8872, lng: 13.1913, popular: false },
+  { name: "Khartoum", country: "Soudan", countryId: "SDN", lat: 15.5007, lng: 32.5599, popular: false },
+  { name: "Djouba", country: "Soudan du Sud", countryId: "SSD", lat: 4.8517, lng: 31.5825, popular: false },
+  { name: "Dakar", country: "Sénégal", countryId: "SEN", lat: 14.7167, lng: -17.4677, popular: false },
+  { name: "Bamako", country: "Mali", countryId: "MLI", lat: 12.6392, lng: -8.0029, popular: false },
+  { name: "Ouagadougou", country: "Burkina Faso", countryId: "BFA", lat: 12.3714, lng: -1.5197, popular: false },
+  { name: "Niamey", country: "Niger", countryId: "NER", lat: 13.5127, lng: 2.1128, popular: false },
+  { name: "Abuja", country: "Nigeria", countryId: "NGA", lat: 9.0765, lng: 7.3986, popular: false },
+  { name: "Ndjamena", country: "Tchad", countryId: "TCD", lat: 12.1348, lng: 15.0557, popular: false },
+  { name: "Conakry", country: "Guinée", countryId: "GIN", lat: 9.6412, lng: -13.5784, popular: false },
+  { name: "Freetown", country: "Sierra Leone", countryId: "SLE", lat: 8.4657, lng: -13.2317, popular: false },
+  { name: "Monrovia", country: "Liberia", countryId: "LBR", lat: 6.3156, lng: -10.8074, popular: false },
+  { name: "Yamoussoukro", country: "Côte d'Ivoire", countryId: "CIV", lat: 6.8276, lng: -5.2893, popular: false },
+  { name: "Accra", country: "Ghana", countryId: "GHA", lat: 5.6037, lng: -0.187, popular: false },
+  { name: "Lomé", country: "Togo", countryId: "TGO", lat: 6.1256, lng: 1.2223, popular: false },
+  { name: "Porto-Novo", country: "Bénin", countryId: "BEN", lat: 6.4969, lng: 2.6289, popular: false },
+  { name: "Banjul", country: "Gambie", countryId: "GMB", lat: 13.4549, lng: -16.579, popular: false },
+  { name: "Bissau", country: "Guinée-Bissau", countryId: "GNB", lat: 11.8636, lng: -15.5989, popular: false },
+  { name: "Praia", country: "Cap-Vert", countryId: "UNK", lat: 14.933, lng: -23.5133, popular: false },
+  { name: "Nouakchott", country: "Mauritanie", countryId: "MRT", lat: 18.0735, lng: -15.9582, popular: false },
+  { name: "Yaoundé", country: "Cameroun", countryId: "CMR", lat: 3.848, lng: 11.5021, popular: false },
+  { name: "Bangui", country: "Centrafrique", countryId: "CAF", lat: 4.3947, lng: 18.5582, popular: false },
+  { name: "Libreville", country: "Gabon", countryId: "GAB", lat: 0.4162, lng: 9.4673, popular: false },
+  { name: "Malabo", country: "Guinée équatoriale", countryId: "GNQ", lat: 3.7504, lng: 8.7371, popular: false },
+  { name: "Brazzaville", country: "Congo", countryId: "COG", lat: -4.2634, lng: 15.2429, popular: false },
+  { name: "Kinshasa", country: "RD Congo", countryId: "COD", lat: -4.4419, lng: 15.2663, popular: false },
+  { name: "Sao Tomé", country: "Sao Tomé-et-Principe", countryId: "UNK", lat: 0.3365, lng: 6.7273, popular: false },
+  { name: "Addis-Abeba", country: "Éthiopie", countryId: "ETH", lat: 9.032, lng: 38.7469, popular: false },
+  { name: "Asmara", country: "Érythrée", countryId: "ERI", lat: 15.3229, lng: 38.9251, popular: false },
+  { name: "Djibouti", country: "Djibouti", countryId: "DJI", lat: 11.8251, lng: 42.5903, popular: false },
+  { name: "Mogadiscio", country: "Somalie", countryId: "SOM", lat: 2.0469, lng: 45.3182, popular: false },
+  { name: "Kampala", country: "Ouganda", countryId: "UGA", lat: 0.3476, lng: 32.5825, popular: false },
+  { name: "Kigali", country: "Rwanda", countryId: "RWA", lat: -1.9441, lng: 30.0619, popular: false },
+  { name: "Bujumbura", country: "Burundi", countryId: "BDI", lat: -3.3614, lng: 29.3599, popular: false },
+  { name: "Dodoma", country: "Tanzanie", countryId: "TZA", lat: -6.163, lng: 35.7516, popular: false },
+  { name: "Moroni", country: "Comores", countryId: "UNK", lat: -11.7172, lng: 43.2473, popular: false },
+  { name: "Antananarivo", country: "Madagascar", countryId: "MDG", lat: -18.8792, lng: 47.5079, popular: false },
+  { name: "Port-Louis", country: "Maurice", countryId: "UNK", lat: -20.1609, lng: 57.5012, popular: false },
+  { name: "Victoria", country: "Seychelles", countryId: "UNK", lat: -4.6191, lng: 55.4513, popular: false },
+  { name: "Luanda", country: "Angola", countryId: "AGO", lat: -8.8383, lng: 13.2344, popular: false },
+  { name: "Lusaka", country: "Zambie", countryId: "ZMB", lat: -15.3875, lng: 28.3228, popular: false },
+  { name: "Harare", country: "Zimbabwe", countryId: "ZWE", lat: -17.8252, lng: 31.0335, popular: false },
+  { name: "Maputo", country: "Mozambique", countryId: "MOZ", lat: -25.9655, lng: 32.5832, popular: false },
+  { name: "Gaborone", country: "Botswana", countryId: "BWA", lat: -24.6282, lng: 25.9231, popular: false },
+  { name: "Windhoek", country: "Namibie", countryId: "NAM", lat: -22.5597, lng: 17.0832, popular: false },
+  { name: "Pretoria", country: "Afrique du Sud", countryId: "ZAF", lat: -25.7479, lng: 28.2293, popular: false },
+  { name: "Mbabane", country: "Eswatini", countryId: "UNK", lat: -26.3054, lng: 31.1367, popular: false },
+  { name: "Maseru", country: "Lesotho", countryId: "LSO", lat: -29.3167, lng: 27.4833, popular: false },
+  { name: "Belmopan", country: "Belize", countryId: "BLZ", lat: 17.251, lng: -88.759, popular: false },
+  { name: "Guatemala", country: "Guatemala", countryId: "GTM", lat: 14.6349, lng: -90.5069, popular: false },
+  { name: "Tegucigalpa", country: "Honduras", countryId: "HND", lat: 14.0723, lng: -87.1921, popular: false },
+  { name: "Managua", country: "Nicaragua", countryId: "NIC", lat: 12.115, lng: -86.2362, popular: false },
+  { name: "San José", country: "Costa Rica", countryId: "CRI", lat: 9.9281, lng: -84.0907, popular: false },
+  { name: "Panama", country: "Panama", countryId: "PAN", lat: 8.9824, lng: -79.5199, popular: false },
+  { name: "San Salvador", country: "Salvador", countryId: "SLV", lat: 13.6929, lng: -89.2182, popular: false },
+  { name: "La Havane", country: "Cuba", countryId: "CUB", lat: 23.1136, lng: -82.3666, popular: false },
+  { name: "Kingston", country: "Jamaïque", countryId: "JAM", lat: 17.9714, lng: -76.7931, popular: false },
+  { name: "Port-au-Prince", country: "Haïti", countryId: "HTI", lat: 18.5944, lng: -72.3074, popular: false },
+  { name: "Nassau", country: "Bahamas", countryId: "BHS", lat: 25.0443, lng: -77.3504, popular: false },
+  { name: "Bridgetown", country: "Barbade", countryId: "UNK", lat: 13.0969, lng: -59.6145, popular: false },
+  { name: "Saint-Georges", country: "Grenade", countryId: "UNK", lat: 12.0565, lng: -61.7488, popular: false },
+  { name: "Castries", country: "Sainte-Lucie", countryId: "UNK", lat: 14.0101, lng: -60.9875, popular: false },
+  { name: "Kingstown", country: "Saint-Vincent", countryId: "UNK", lat: 13.1579, lng: -61.2248, popular: false },
+  { name: "Roseau", country: "Dominique", countryId: "UNK", lat: 15.301, lng: -61.387, popular: false },
+  { name: "Basseterre", country: "Saint-Christophe", countryId: "UNK", lat: 17.3026, lng: -62.7177, popular: false },
+  { name: "Quito", country: "Équateur", countryId: "ECU", lat: -0.1807, lng: -78.4678, popular: false },
+  { name: "La Paz", country: "Bolivie", countryId: "BOL", lat: -16.5, lng: -68.15, popular: false },
+  { name: "Asunción", country: "Paraguay", countryId: "PRY", lat: -25.2637, lng: -57.5759, popular: false },
+  { name: "Montevideo", country: "Uruguay", countryId: "URY", lat: -34.9011, lng: -56.1645, popular: false },
+  { name: "Georgetown", country: "Guyana", countryId: "GUY", lat: 6.8013, lng: -58.1551, popular: false },
+  { name: "Paramaribo", country: "Suriname", countryId: "SUR", lat: 5.852, lng: -55.2038, popular: false },
+  { name: "Cayenne", country: "Guyane", countryId: "GUY", lat: 4.9333, lng: -52.3333, popular: false },
+  { name: "Suva", country: "Fidji", countryId: "FJI", lat: -18.1416, lng: 178.4419, popular: false },
+  { name: "Port-Vila", country: "Vanuatu", countryId: "VUT", lat: -17.7333, lng: 168.3273, popular: false },
+  { name: "Honiara", country: "Îles Salomon", countryId: "SLB", lat: -9.4456, lng: 159.9729, popular: false },
+  { name: "Apia", country: "Samoa", countryId: "UNK", lat: -13.8333, lng: -171.7667, popular: false },
+  { name: "Nuku'alofa", country: "Tonga", countryId: "UNK", lat: -21.139, lng: -175.2018, popular: false },
+  { name: "Funafuti", country: "Tuvalu", countryId: "UNK", lat: -8.5211, lng: 179.1962, popular: false },
+  { name: "Tarawa", country: "Kiribati", countryId: "UNK", lat: 1.3382, lng: 173.0176, popular: false },
+  { name: "Majuro", country: "Îles Marshall", countryId: "UNK", lat: 7.1315, lng: 171.1845, popular: false },
+  { name: "Palikir", country: "Micronésie", countryId: "UNK", lat: 6.9177, lng: 158.161, popular: false },
+  { name: "Ngerulmud", country: "Palaos", countryId: "UNK", lat: 7.5006, lng: 134.6242, popular: false },
+  { name: "Yaren", country: "Nauru", countryId: "UNK", lat: -0.5477, lng: 166.9209, popular: false }
 ];
 
 /**
- * Algorithme de sélection 'Balanced Challenge'
  * Sélectionne 5 capitales pour une session : 2 populaires + 3 non-populaires, puis mélange
  *
- * @param {Array} allCapitals - Liste complète des capitales
- * @returns {Array} - 5 capitales mélangées pour la session
+ * @param {CapitalEntry[]} allCapitals - Liste complète des capitales
+ * @returns {CapitalEntry[]} - 5 capitales mélangées pour la session
  */
 export function selectBalancedCapitals(allCapitals) {
   // Séparer les capitales par popularité
@@ -327,9 +250,9 @@ export function selectBalancedCapitals(allCapitals) {
 /**
  * Sélectionne N éléments aléatoires d'un array sans doublons
  *
- * @param {Array} array - Array source
+ * @param {any[]} array - Array source
  * @param {number} n - Nombre d'éléments à sélectionner
- * @returns {Array} - N éléments aléatoires
+ * @returns {any[]} - N éléments aléatoires
  */
 function getRandomItems(array, n) {
   const result = [];
@@ -348,8 +271,8 @@ function getRandomItems(array, n) {
  * Algorithme de mélange Fisher-Yates (optimal O(n))
  * Garantit une distribution uniforme
  *
- * @param {Array} array - Array à mélanger
- * @returns {Array} - Array mélangé
+ * @param {any[]} array - Array à mélanger
+ * @returns {any[]} - Array mélangé
  */
 function shuffleArray(array) {
   const shuffled = [...array];

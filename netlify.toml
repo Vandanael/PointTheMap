@@ -1,26 +1,79 @@
+# Netlify Configuration
+# Production-ready security headers and build configuration
+
 [build]
-  publish = "dist"
   command = "npm run build"
+  publish = "dist"
   functions = "netlify/functions"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-[dev]
-  framework = "#static"
-  command = "npm run dev"
-
-# Security Headers
+# Security Headers - Applied to all routes
 [[headers]]
   for = "/*"
   [headers.values]
-    # Content Security Policy
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; style-src 'self' 'unsafe-inline' https://unpkg.com https://fonts.googleapis.com; img-src 'self' data: https://*.openstreetmap.org https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://*.basemaps.cartocdn.com; connect-src 'self' https://*.netlify.app https://unpkg.com https://*.openstreetmap.org https://tile.openstreetmap.org https://ingesteer.services-prod.nsvcs.net; font-src 'self' https://fonts.gstatic.com data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
-    # Additional security headers
-    X-Content-Type-Options = "nosniff"
+    # CORS Configuration
+    # In production, restrict to your actual domain
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, X-CSRF-Token, Authorization"
+    Access-Control-Max-Age = "86400"
+
+    # Content Security Policy (CSP)
+    # Restricts resource loading to prevent XSS attacks
+    Content-Security-Policy = """
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' https://unpkg.com;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com;
+      img-src 'self' data: https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com;
+      connect-src 'self' https://*.netlify.app;
+      frame-ancestors 'none';
+      base-uri 'self';
+      form-action 'self';
+    """
+
+    # Security Headers
     X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+
+    # HTTPS Enforcement
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+
+# API Function Headers - Additional security for serverless functions
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    # Rate limiting hints (actual enforcement in code)
+    X-RateLimit-Limit = "50"
+
+    # Prevent caching of API responses
+    Cache-Control = "no-store, no-cache, must-revalidate, proxy-revalidate"
+    Pragma = "no-cache"
+    Expires = "0"
+
+# Static Asset Caching - Optimize for performance
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Index HTML - No cache for entry point
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+# Redirects
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# Environment-specific configuration can be added here
+# [context.production.environment]
+#   NODE_ENV = "production"
+
+# [context.deploy-preview.environment]
+#   NODE_ENV = "development"

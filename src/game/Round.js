@@ -4,14 +4,21 @@ import { validationSystem } from "../systems/ValidationSystem.js";
 import { scoringSystem } from "../systems/ScoringSystem.js";
 import { logger } from "../utils/logger.js";
 
+/** @param {number} [totalTimeAllowed] - From state.runtimeConfig (timerMs + graceMs); fallback GAME for tests */
+function getTotalTimeAllowed(totalTimeAllowed) {
+  return totalTimeAllowed ?? (GAME.TIMER_MS + GAME.GRACE_PERIOD_MS);
+}
+
 /**
  * Create a new round
- * @param {import('./Game.js').Capital} capital - Capital to find
+ * @param {import('./Game.js').Capital|import('./Game.js').Country} target - Capital or Country to find
  * @param {number} roundNumber - Round number (0-indexed)
+ * @param {string} [gameType='capital'] - 'capital' or 'country'
  * @returns {import('./Game.js').Round}
  */
-export const createRound = (capital, roundNumber) => ({
-  capital,
+export const createRound = (target, roundNumber, gameType = 'capital') => ({
+  capital: gameType === 'capital' ? target : null,
+  country: gameType === 'country' ? target : null,
   roundNumber,
   startTime: Date.now(),
   endTime: null,
@@ -19,19 +26,25 @@ export const createRound = (capital, roundNumber) => ({
   distance: null,
   score: null,
   status: "playing",
+  gameType,
 });
 
 /**
  * Record user click and calculate score
  * @param {import('./Game.js').Round} round - Current round
  * @param {[number, number]} clickCoords - [lat, lng] of user click
- * @param {string} [gameMode='classic'] - Game mode ('classic' or 'daily')
+ * @param {string} [gameMode='classic'] - Game mode ('classic', 'daily', or 'country')
+ * @param {number} [totalTimeAllowed] - From state.runtimeConfig (timerMs + graceMs); fallback GAME for tests
+ * @param {Object} [countryData] - Country-specific data for country mode
+ * @param {Object} [countryData.targetCountryFeature] - GeoJSON feature of target country
+ * @param {boolean} [countryData.isInsideTargetCountry] - Whether click is inside target country
+ * @param {string|null} [countryData.clickedCountryId] - ID of clicked country (null if ocean)
  * @returns {import('./Game.js').Round}
  */
-export const recordClick = (round, clickCoords, gameMode = 'classic') => {
+export const recordClick = (round, clickCoords, gameMode = 'classic', totalTimeAllowed = undefined, countryData = null) => {
   const endTime = Date.now();
   const elapsed = endTime - round.startTime;
-  const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
+  const total = getTotalTimeAllowed(totalTimeAllowed);
 
   // Validate coordinates before processing
   const coordValidation = validationSystem.validateCoordinates(clickCoords[0], clickCoords[1]);
@@ -44,10 +57,8 @@ export const recordClick = (round, clickCoords, gameMode = 'classic') => {
   const normalizedCoords = normalizeCoords(clickCoords);
   const [normalizedLat, normalizedLng] = normalizedCoords;
 
-  const capitalCoords = [round.capital.lat, round.capital.lng];
-
   // Check timeout first (before calculating score)
-  if (elapsed > totalTimeAllowed) {
+  if (elapsed > total) {
     return {
       ...round,
       endTime,
@@ -58,12 +69,40 @@ export const recordClick = (round, clickCoords, gameMode = 'classic') => {
     };
   }
 
-  // Use ScoringSystem for consistent architecture (pass gameMode for time bonus)
+  // Handle country mode
+  if (round.gameType === 'country' && countryData) {
+    const scoreResult = scoringSystem.calculateCountryClickScore(
+      normalizedCoords,
+      countryData.targetCountryFeature,
+      countryData.isInsideTargetCountry,
+      elapsed,
+      gameMode,
+      total
+    );
+
+    return {
+      ...round,
+      endTime,
+      click: { lat: normalizedLat, lng: normalizedLng },
+      distance: scoreResult.distance,
+      distanceToTargetKm: scoreResult.distanceToCountry,
+      score: Math.round(scoreResult.totalScore),
+      baseScore: Math.round(scoreResult.score),
+      timeBonus: Math.round(scoreResult.timeBonus),
+      correctCountryId: round.country.countryId,
+      clickedCountryId: countryData.clickedCountryId,
+      status: "completed",
+    };
+  }
+
+  // Handle capital mode (default)
+  const capitalCoords = [round.capital.lat, round.capital.lng];
   const scoreResult = scoringSystem.calculateClickScore(
     normalizedCoords,
     capitalCoords,
     elapsed,
-    gameMode
+    gameMode,
+    total
   );
 
   return {
@@ -97,10 +136,11 @@ export const timeoutRound = (round) => ({
 /**
  * Get remaining time for current round
  * @param {import('./Game.js').Round} round - Current round
+ * @param {number} [totalTimeAllowed] - From state.runtimeConfig (timerMs + graceMs); fallback GAME for tests
  * @returns {number} Remaining time in milliseconds
  */
-export const getRemainingTime = (round) => {
+export const getRemainingTime = (round, totalTimeAllowed = undefined) => {
   const elapsed = Date.now() - round.startTime;
-  const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
-  return Math.max(0, totalTimeAllowed - elapsed);
+  const total = getTotalTimeAllowed(totalTimeAllowed);
+  return Math.max(0, total - elapsed);
 };

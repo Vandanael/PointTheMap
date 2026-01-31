@@ -9,8 +9,24 @@ const translations = {
     challenge: "5s Challenge",
     capitalsInfo: "5 capitales · 5 secondes par ville",
     clickToWin: "Clique sur la carte, gagne des points",
+    comingSoon: "Bientôt disponible",
     start: "COMMENCER",
     madeBy: "Made by",
+
+    // Game Lobby
+    selectCategory: "Choisissez une catégorie",
+    capitals: "Capitales",
+    countries: "Pays",
+    monuments: "Monuments",
+    stadiums: "Stades",
+    selectMode: "Choisissez un mode",
+    play: "JOUER",
+    startGame: "COMMENCER LA PARTIE",
+
+    // Category info
+    countriesInfo: "5 pays · 5 secondes par pays",
+    monumentsInfo: "5 monuments · 5 secondes par monument",
+    stadiumsInfo: "5 stades · 5 secondes par stade",
 
     // Share
     share: "Partager",
@@ -96,6 +112,7 @@ const translations = {
     close: "FERMER",
     classic: "Classique",
     daily: "Quotidien",
+    countries: "Pays",
 
     // Errors
     error: {
@@ -124,8 +141,24 @@ const translations = {
     challenge: "5s Challenge",
     capitalsInfo: "5 capitals · 5 seconds per city",
     clickToWin: "Click on the map, earn points",
+    comingSoon: "Coming soon",
     start: "START",
     madeBy: "Made by",
+
+    // Game Lobby
+    selectCategory: "Select a category",
+    capitals: "Capitals",
+    countries: "Countries",
+    monuments: "Monuments",
+    stadiums: "Stadiums",
+    selectMode: "Select a mode",
+    play: "PLAY",
+    startGame: "START GAME",
+
+    // Category info
+    countriesInfo: "5 countries · 5 seconds per country",
+    monumentsInfo: "5 monuments · 5 seconds per monument",
+    stadiumsInfo: "5 stadiums · 5 seconds per stadium",
 
     // Share
     share: "Share",
@@ -211,6 +244,7 @@ const translations = {
     close: "CLOSE",
     classic: "Classic",
     daily: "Daily",
+    countries: "Countries",
 
     // Errors
     error: {

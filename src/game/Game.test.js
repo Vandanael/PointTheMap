@@ -22,8 +22,9 @@ vi.mock("../services/api.js", () => ({
 }));
 
 vi.mock("./Round.js", () => ({
-  createRound: vi.fn((capital, roundNumber) => ({
-    capital,
+  createRound: vi.fn((target, roundNumber, gameType = "capital") => ({
+    capital: gameType === "capital" ? target : null,
+    country: gameType === "country" ? target : null,
     roundNumber,
     startTime: Date.now(),
     endTime: null,
@@ -31,6 +32,7 @@ vi.mock("./Round.js", () => ({
     distance: null,
     score: null,
     status: "playing",
+    gameType,
   })),
   recordClick: vi.fn((round, clickCoords) => ({
     ...round,
@@ -49,11 +51,26 @@ vi.mock("./Round.js", () => ({
   })),
 }));
 
-vi.mock("../config.js", () => ({
-  GAME: {
-    ROUNDS: 10,
+vi.mock("../systems/MapSystem.js", () => ({
+  mapSystem: {
+    getCountryAtLatLng: vi.fn(() => "FRA"),
+    getCountryFeatureById: vi.fn(() => ({
+      geometry: { type: "Polygon", coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]] },
+    })),
   },
 }));
+
+vi.mock("../features/StatsManager.js", () => ({
+  getStats: vi.fn(() => ({ bestScoreClassic: 0, bestScoreDaily: 0, bestScoreCountry: 0 })),
+}));
+
+vi.mock("../config.js", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    GAME: { ...actual.GAME, ROUNDS: 10 },
+  };
+});
 
 import { api } from "../services/api.js";
 import { createRound, recordClick, timeoutRound } from "./Round.js";
@@ -71,6 +88,7 @@ describe("Game.js", () => {
         status: GameStatus.IDLE,
         token: null,
         capitals: [],
+        countries: [],
         rounds: [],
         currentRoundIndex: 0,
         currentRound: null,
@@ -80,6 +98,7 @@ describe("Game.js", () => {
         error: null,
         sessionBestScore: 0,
         gameType: "classic",
+        runtimeConfig: null,
       });
     });
   });
@@ -105,7 +124,7 @@ describe("Game.js", () => {
       expect(newState.capitals).toEqual(mockCapitals);
       expect(newState.gameType).toBe("classic");
       expect(newState.currentRound).toBeDefined();
-      expect(createRound).toHaveBeenCalledWith(mockCapitals[0], 0);
+      expect(createRound).toHaveBeenCalledWith(mockCapitals[0], 0, "capital");
     });
 
     it("should start a new game session with daily mode", async () => {
@@ -176,6 +195,33 @@ describe("Game.js", () => {
       expect(api.start).toHaveBeenCalledWith("classic");
       expect(newState.gameType).toBe("classic");
     });
+
+    it("should start a new game session with country mode and return playable state", async () => {
+      const mockCountries = [
+        { name: "France", countryId: "FRA", popular: true },
+        { name: "Germany", countryId: "DEU", popular: true },
+      ];
+
+      api.start.mockResolvedValue({
+        token: "country-token",
+        countries: mockCountries,
+      });
+
+      const initialState = createGameState();
+      const newState = await startGame(initialState, "country");
+
+      expect(api.start).toHaveBeenCalledWith("country");
+      expect(newState.status).toBe(GameStatus.PLAYING);
+      expect(newState.gameType).toBe("country");
+      expect(newState.token).toBe("country-token");
+      expect(newState.countries).toEqual(mockCountries);
+      expect(newState.capitals).toEqual([]);
+      expect(newState.currentRound).toBeDefined();
+      expect(newState.currentRound.country).toEqual(mockCountries[0]);
+      expect(newState.currentRound.capital).toBeNull();
+      expect(newState.runtimeConfig).toBeDefined();
+      expect(newState.runtimeConfig.roundCount).toBe(5);
+    });
   });
 
   describe("playRound", () => {
@@ -202,7 +248,7 @@ describe("Game.js", () => {
       const clickCoords = [48.8, 2.3];
       const newState = playRound(state, clickCoords);
 
-      expect(recordClick).toHaveBeenCalledWith(currentRound, clickCoords, state.gameType);
+      expect(recordClick).toHaveBeenCalledWith(currentRound, clickCoords, state.gameType, undefined, null);
       expect(newState.status).toBe(GameStatus.ROUND_RESULT);
       expect(newState.rounds).toHaveLength(1);
       expect(newState.currentRound.status).toBe("completed");
@@ -261,6 +307,38 @@ describe("Game.js", () => {
       const newState = playRound(state, clickCoords);
 
       expect(newState.totalScore).toBe(1500); // 1000 + 500
+    });
+
+    it("should end round with ROUND_RESULT when playing in country mode", () => {
+      const country = { name: "France", countryId: "FRA", popular: true };
+      const currentRound = {
+        capital: null,
+        country,
+        roundNumber: 0,
+        startTime: Date.now(),
+        endTime: null,
+        click: null,
+        distance: null,
+        score: null,
+        status: "playing",
+        gameType: "country",
+      };
+      const state = {
+        ...createGameState(),
+        status: GameStatus.PLAYING,
+        gameType: "country",
+        countries: [country],
+        currentRound,
+        runtimeConfig: { roundCount: 5, timerMs: 5000, graceMs: 500, dangerZoneMs: 1500 },
+        rounds: [],
+      };
+
+      const newState = playRound(state, [48, 2]);
+
+      expect(newState.status).toBe(GameStatus.ROUND_RESULT);
+      expect(newState.rounds).toHaveLength(1);
+      expect(newState.currentRound.status).toBe("completed");
+      expect(recordClick).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -340,7 +418,7 @@ describe("Game.js", () => {
 
       expect(newState.status).toBe(GameStatus.PLAYING);
       expect(newState.currentRoundIndex).toBe(1);
-      expect(createRound).toHaveBeenCalledWith(capitals[1], 1);
+      expect(createRound).toHaveBeenCalledWith(capitals[1], 1, "capital");
       expect(newState.currentRound).toBeDefined();
     });
 
@@ -628,7 +706,9 @@ describe("Game.js", () => {
 
   describe("Integration: Full game flow", () => {
     it("should handle complete game flow from start to finish", async () => {
-      const mockCapitals = Array(10).fill(null).map((_, i) => ({
+      // Classic mode has 5 rounds (from getRuntimeGameConfig)
+      const roundCount = 5;
+      const mockCapitals = Array(roundCount).fill(null).map((_, i) => ({
         name: `Capital${i}`,
         country: `Country${i}`,
         lat: 48 + i,
@@ -646,9 +726,10 @@ describe("Game.js", () => {
 
       expect(state.status).toBe(GameStatus.PLAYING);
       expect(state.currentRoundIndex).toBe(0);
+      expect(state.runtimeConfig?.roundCount).toBe(roundCount);
 
-      // Play 10 rounds
-      for (let i = 0; i < 10; i++) {
+      // Play all rounds
+      for (let i = 0; i < roundCount; i++) {
         expect(state.status).toBe(GameStatus.PLAYING);
         expect(state.currentRoundIndex).toBe(i);
 
@@ -661,8 +742,8 @@ describe("Game.js", () => {
       }
 
       expect(state.status).toBe(GameStatus.GAME_OVER);
-      expect(state.rounds).toHaveLength(10);
-      expect(state.totalScore).toBe(5000); // 10 rounds * 500 points
+      expect(state.rounds).toHaveLength(roundCount);
+      expect(state.totalScore).toBe(roundCount * 500); // 5 rounds * 500 points
     });
 
     it("should handle timeout in middle of game", async () => {
