@@ -21,6 +21,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
+  <!-- LCP: first map tile (Auray start screen) discoverable in initial document, high priority, no lazy-load -->
+  <link rel="preload" as="image" href="https://a.basemaps.cartocdn.com/dark_nolabels/14/8044/5670.png" fetchpriority="high">
+
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="Point The Map">
@@ -35,9 +38,8 @@
   <meta name="twitter:description" content="5 capitales · 5 secondes par ville. Cliquez sur la carte, gagnez des points !">
   <meta name="twitter:image" content="/og-image.png">
 
-  <!-- Google Fonts - Optimized async loading -->
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" as="style">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+  <!-- Google Fonts - Deferred (media=print then media=all) to avoid chaining on critical path -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"></noscript>
 
   <!-- Preload main module for faster execution -->
