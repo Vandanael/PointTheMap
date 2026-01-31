@@ -47,17 +47,17 @@ export function withDatabase(handler) {
     // Attach to context for handler access
     context.sql = sql;
 
-    // Execute handler with database available
+    // Execute handler with database available - never re-throw to avoid 502
     try {
       return await handler(req, context);
     } catch (error) {
-      // If error is database-related, handle it centrally
       const err = /** @type {Error & { code?: string }} */ (error);
       if (err?.code || err?.message?.includes('database')) {
         return handleDatabaseError(err, 'middleware');
       }
-      // Re-throw non-database errors
-      throw error;
+      // Log and return 500 instead of re-throwing (unhandled exceptions → 502 in production)
+      console.error('[middleware] Unhandled error:', err?.message, err?.stack);
+      return errorResponse("An error occurred. Please try again later.", 500);
     }
   };
 }

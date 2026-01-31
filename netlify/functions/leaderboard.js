@@ -1,8 +1,10 @@
 // GET /.netlify/functions/leaderboard
+// Self-contained: no imports outside netlify/functions/ to avoid 502 at cold start in production
 
-import { API } from "../../src/config.js";
 import { withDatabase, withMethod, compose } from "./_middleware.js";
-import { successResponse, handleDatabaseError } from "./_utils.js";
+import { successResponse, errorResponse, handleDatabaseError } from "./_utils.js";
+
+const LEADERBOARD_TOP_LIMIT = 50;
 
 /**
  * Get leaderboard for a game mode
@@ -48,10 +50,11 @@ const handler = async (req, context) => {
         FROM ranked_scores
         WHERE rank = 1
         ORDER BY score DESC, time ASC
-        LIMIT ${API.LEADERBOARD_TOP_LIMIT}
+        LIMIT ${LEADERBOARD_TOP_LIMIT}
       `;
     } else {
-      // Classic mode: same window function approach
+      // Classic or country mode: same window function approach
+      const gameType = type === "country" ? "country" : "classic";
       query = sql`
         WITH ranked_scores AS (
           SELECT
@@ -64,13 +67,13 @@ const handler = async (req, context) => {
               ORDER BY score DESC, time ASC
             ) as rank
           FROM scores
-          WHERE game_type = 'classic'
+          WHERE game_type = ${gameType}
         )
         SELECT pseudo, score, time, timestamp
         FROM ranked_scores
         WHERE rank = 1
         ORDER BY score DESC, time ASC
-        LIMIT ${API.LEADERBOARD_TOP_LIMIT}
+        LIMIT ${LEADERBOARD_TOP_LIMIT}
       `;
     }
 
@@ -93,7 +96,17 @@ const handler = async (req, context) => {
 };
 
 // Apply middleware: GET method validation + database connection
-export default compose(
+const composedHandler = compose(
   withMethod('GET'),
   withDatabase
 )(handler);
+
+// Safety wrapper: never leave request without response (avoids 502 from uncaught errors)
+export default async (req, context) => {
+  try {
+    return await composedHandler(req, context);
+  } catch (err) {
+    console.error("[leaderboard] Uncaught error:", err?.message, err?.stack);
+    return errorResponse("An error occurred. Please try again later.", 500);
+  }
+};

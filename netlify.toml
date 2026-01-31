@@ -6,6 +6,10 @@
   publish = "dist"
   functions = "netlify/functions"
 
+# Ensure functions can resolve imports from repo root (capitals.js, src/, lib/)
+[functions]
+  included_files = ["./capitals.js", "./src/**", "./lib/**"]
+
 # Security Headers - Applied to all routes
 [[headers]]
   for = "/*"
