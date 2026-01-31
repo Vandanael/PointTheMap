@@ -84,8 +84,8 @@ export const MAP = {
   AURAY_CENTER: [47.6706, -2.9833],
   AURAY_ZOOM: 14,
   // Tuiles CartoDB sans labels (minimaliste)
-  TILE_URL_DARK: "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png",
-  TILE_URL_LIGHT: "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
+  TILE_URL_DARK: "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
+  TILE_URL_LIGHT: "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png",
   ATTRIBUTION: "",
 };
 

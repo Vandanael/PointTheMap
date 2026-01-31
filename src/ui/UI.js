@@ -494,6 +494,9 @@ export const UI = {
       // Load data in background
       const scores = await loadLeaderboard(type);
 
+      // Modal may have been closed while loading; do not update or bind
+      if (!document.getElementById("leaderboard-modal")) return;
+
       // Update content with real data
       const contentEl = _domCache.get("leaderboard-content");
       if (contentEl) {
