@@ -30,7 +30,7 @@
       style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
       font-src 'self' https://fonts.gstatic.com;
       img-src 'self' data: https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com;
-      connect-src 'self' https://*.netlify.app;
+      connect-src 'self' https://*.netlify.app https://*.services-prod.nsvcs.net;
       frame-ancestors 'none';
       base-uri 'self';
       form-action 'self';

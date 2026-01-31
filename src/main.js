@@ -496,8 +496,12 @@ const onRoundEnd = async () => {
       delta: round.score,
     });
 
+    // For country mode, distance is always computed (including when clicking water)
+    const displayDistance = isCountryMode
+      ? (round.distance ?? round.distanceToTargetKm ?? 0)
+      : round.distance;
     UI.showRoundResult(
-      round.distance,
+      displayDistance,
       round.score,
       round.status === "timeout",
       isLastRound(state),
@@ -513,9 +517,6 @@ const handleNext = () => {
 
   let state = stateManager.getState();
 
-  console.log('[handleNext] Current round:', state.currentRoundIndex + 1, '/', state.runtimeConfig?.roundCount);
-  console.log('[handleNext] Is last round?', isLastRound(state));
-
   if (isLastRound(state)) {
     UI.showGameOver(state.totalScore);
     return;
@@ -523,8 +524,6 @@ const handleNext = () => {
 
   stateManager.setState(nextRound(state), 'round:next');
   state = stateManager.getState();
-
-  console.log('[handleNext] Next round:', state.currentRoundIndex + 1, '/', state.runtimeConfig?.roundCount);
 
   mapSystem.flyTo(MAP.CENTER, MAP.ZOOM, { animate: false });
 
