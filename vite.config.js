@@ -2,8 +2,38 @@ import { defineConfig } from "vite";
 import { resolve } from "path";
 import { visualizer } from "rollup-plugin-visualizer";
 
+/** Injects preload hints and moves critical CSS to the start of <head> to shorten the critical request chain. */
+function criticalCssPreload() {
+  return {
+    name: "critical-css-preload",
+    transformIndexHtml: {
+      order: "post",
+      handler(html) {
+        const styleTagRe = /<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"[^>]*>/g;
+        const tags = [];
+        let m;
+        while ((m = styleTagRe.exec(html)) !== null) tags.push({ full: m[0], href: m[1] });
+        if (!tags.length) return html;
+        const local = tags.filter((t) => t.href.startsWith("/"));
+        if (!local.length) return html;
+        const preloads = local.map((t) => `<link rel="preload" href="${t.href}" as="style">`).join("\n  ");
+        const stylesheets = local.map((t) => t.full).join("\n  ");
+        let out = html;
+        for (const t of local) out = out.replace(t.full, "");
+        out = out.replace(/(<head[^>]*>)/i, `$1\n  ${preloads}\n  ${stylesheets}`);
+        return out;
+      },
+    },
+  };
+}
+
 export default defineConfig({
   publicDir: "public",
+  server: {
+    // Disable HMR when WebSocket gets 400 (e.g. Cursor browser, embedded iframes).
+    // Use: DISABLE_HMR=1 npm run dev
+    hmr: process.env.DISABLE_HMR === "1" ? false : true,
+  },
   build: {
     outDir: "dist",
     // Enable minification and compression
@@ -84,6 +114,7 @@ export default defineConfig({
     // Increase chunk size warning limit (for better code splitting)
     chunkSizeWarningLimit: 1000,
   },
+  plugins: [criticalCssPreload()],
   resolve: {
     alias: {
       '@lib': resolve(__dirname, './lib'),

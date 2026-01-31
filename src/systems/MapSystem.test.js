@@ -63,18 +63,24 @@ vi.mock('leaflet', () => {
     extend: vi.fn().mockReturnThis(),
   }));
 
-  return {
+  const mockGeoJSON = vi.fn((data, options) => ({
+    addTo: vi.fn().mockReturnThis(),
+  }));
+
+  const mock = {
     map: vi.fn(() => mockLeafletMap),
     tileLayer: vi.fn(() => mockTileLayer),
     marker: mockMarker,
     polyline: mockPolyline,
     layerGroup: mockLayerGroup,
     latLngBounds: mockLatLngBounds,
+    geoJSON: mockGeoJSON,
     divIcon: vi.fn((options) => options),
     Browser: {
       mobile: false, // Default to desktop
     },
   };
+  return { default: mock, ...mock };
 });
 
 // Get mocked functions for use in tests

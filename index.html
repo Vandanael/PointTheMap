@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
 
+  <!-- Critical CSS from document to avoid JS→CSS chain (discovered in initial parse) -->
+  <link rel="stylesheet" href="/src/styles.css">
+
   <!-- SEO Meta Description -->
   <meta name="description" content="Jeu de géographie addictif : localisez 5 capitales mondiales en 5 secondes par ville. Testez vos connaissances géographiques, gagnez des points et défiez vos amis !">
 

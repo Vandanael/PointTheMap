@@ -6,19 +6,26 @@
  * - Provide clean API for map operations
  * - Emit events via EventBus
  * - Testable without DOM
+ *
+ * Leaflet is loaded lazily on first init() to reduce initial JS and defer until the map is required.
  */
 
-import {
-  map,
-  tileLayer,
-  marker,
-  divIcon,
-  polyline,
-  layerGroup,
-  latLngBounds,
-  geoJSON,
-  Browser as L_Browser,
-} from 'leaflet';
+/** @type {typeof import('leaflet') | null} */
+let L = null;
+
+/**
+ * Load Leaflet and its CSS when the map is first initialized (deferred to avoid unused JS on initial load).
+ * @returns {Promise<typeof import('leaflet')>}
+ */
+async function loadLeaflet() {
+  if (L) return L;
+  await import('leaflet/dist/leaflet.css');
+  const leaflet = await import('leaflet');
+  // Support both default export (real Leaflet) and namespace (e.g. Vitest mock)
+  L = leaflet.default ?? leaflet;
+  return L;
+}
+
 import { MAP } from '../config.js';
 import { getTheme } from '../services/storage.js';
 import { isIOS } from '../utils.js';
@@ -85,22 +92,23 @@ function interpolatePoints(from, to, steps) {
  * @returns {{ cancel: () => void, layerGroup: L.LayerGroup, ready: Promise<void> }}
  */
 function animateResultLine(map, startLatLng, endLatLng, distanceKm, options = {}) {
+  if (!L) throw new Error('Leaflet not loaded');
   const durationMs = options.durationMs ?? MAP_ANIMATIONS.RESULT_LINE.durationMs;
   const steps = options.steps ?? MAP_ANIMATIONS.RESULT_LINE.steps;
   const points = interpolatePoints(startLatLng, endLatLng, steps);
   const lineColor = getLineColor(distanceKm);
 
-  const outlineLine = polyline([startLatLng], {
+  const outlineLine = L.polyline([startLatLng], {
     ...RESULT_LINES.OUTLINE,
   });
-  const mainLine = polyline([startLatLng], {
+  const mainLine = L.polyline([startLatLng], {
     ...RESULT_LINES.MAIN,
     color: lineColor,
   });
 
   const midpoint = points[Math.floor(steps / 2)];
-  const distanceLabel = marker(midpoint, {
-    icon: divIcon({
+  const distanceLabel = L.marker(midpoint, {
+    icon: L.divIcon({
       className: 'result-line-distance-marker',
       html: '<span class="result-line-distance">0 km</span>',
       iconSize: [48, 24],
@@ -110,7 +118,7 @@ function animateResultLine(map, startLatLng, endLatLng, distanceKm, options = {}
     keyboard: false,
   });
 
-  const resultLayerGroup = layerGroup([outlineLine, mainLine, distanceLabel]);
+  const resultLayerGroup = L.layerGroup([outlineLine, mainLine, distanceLabel]);
   resultLayerGroup.addTo(map);
 
   let rafId = null;
@@ -201,6 +209,7 @@ export class MapSystem {
     }
 
     try {
+      await loadLeaflet();
       this.#containerId = containerId;
       this.#createMap(containerId);
       this.#setupTileLayer();
@@ -220,7 +229,7 @@ export class MapSystem {
    * @private
    */
   #createMap(containerId) {
-    this.#map = map(containerId, {
+    this.#map = L.map(containerId, {
       center: MAP.CENTER,
       zoom: MAP.ZOOM,
       minZoom: MAP.MIN_ZOOM,
@@ -245,7 +254,7 @@ export class MapSystem {
     }
 
     // Créer un layerGroup dédié aux markers de capitales
-    this.#capitalsLayer = layerGroup().addTo(this.#map);
+    this.#capitalsLayer = L.layerGroup().addTo(this.#map);
 
     // Désactiver l'antialiasing du Canvas pour des lignes en pointillés plus nettes
     if (this.#map._renderer && this.#map._renderer._ctx) {
@@ -294,7 +303,7 @@ export class MapSystem {
     const theme = getTheme();
     const tileUrl = theme === 'light' ? MAP.TILE_URL_LIGHT : MAP.TILE_URL_DARK;
 
-    this.#tileLayer = tileLayer(tileUrl, {
+    this.#tileLayer = L.tileLayer(tileUrl, {
       maxZoom: MAP.MAX_ZOOM,
       attribution: MAP.ATTRIBUTION,
       keepBuffer: 4,
@@ -343,7 +352,7 @@ export class MapSystem {
 
     // Mobile: Add tap support for better responsiveness on all mobile devices
     // Prevents 300ms click delay on Android and other mobile browsers
-    if (L_Browser.mobile || isIOS()) {
+    if (L.Browser.mobile || isIOS()) {
       this.#map.on('tap', this.#clickHandler);
     }
   }
@@ -359,7 +368,7 @@ export class MapSystem {
     this.#map.off('click', this.#clickHandler);
 
     // Mobile: Disable tap events too (for all mobile devices)
-    if (L_Browser.mobile || isIOS()) {
+    if (L.Browser.mobile || isIOS()) {
       this.#map.off('tap', this.#clickHandler);
     }
 
@@ -380,7 +389,7 @@ export class MapSystem {
       this.clearOnResultContinue();
     };
     this.#map.once('click', this.#resultContinueHandler);
-    if (L_Browser.mobile || isIOS()) {
+    if (L.Browser.mobile || isIOS()) {
       this.#map.once('tap', this.#resultContinueHandler);
     }
   }
@@ -395,7 +404,7 @@ export class MapSystem {
       return;
     }
     this.#map.off('click', this.#resultContinueHandler);
-    if (L_Browser.mobile || isIOS()) {
+    if (L.Browser.mobile || isIOS()) {
       this.#map.off('tap', this.#resultContinueHandler);
     }
     this.#resultContinueCallback = null;
@@ -408,8 +417,8 @@ export class MapSystem {
    * @returns {Object} Leaflet marker instance
    */
   addClickMarker(coords) {
-    const markerInstance = marker(coords, {
-      icon: divIcon({
+    const markerInstance = L.marker(coords, {
+      icon: L.divIcon({
         className: '',
         html: `<div class="marker-player"></div>`,
         iconSize: MARKERS.PLAYER.iconSize,
@@ -431,8 +440,8 @@ export class MapSystem {
       throw new Error('Map not initialized');
     }
 
-    const markerInstance = marker(coords, {
-      icon: divIcon({
+    const markerInstance = L.marker(coords, {
+      icon: L.divIcon({
         className: '',
         html: `<div class="marker-target"></div>`,
         iconSize: MARKERS.CAPITAL.iconSize,
@@ -456,16 +465,16 @@ export class MapSystem {
     const lineColor = getLineColor(distanceKm);
     const coords = [from, to];
 
-    const outlineLine = polyline(coords, {
+    const outlineLine = L.polyline(coords, {
       ...LINES.OUTLINE,
     });
 
-    const mainLine = polyline(coords, {
+    const mainLine = L.polyline(coords, {
       ...LINES.MAIN,
       color: lineColor,
     });
 
-    const lineGroup = layerGroup([outlineLine, mainLine]).addTo(this.#map);
+    const lineGroup = L.layerGroup([outlineLine, mainLine]).addTo(this.#map);
     this.#polylines.push(lineGroup);
     return lineGroup;
   }
@@ -497,7 +506,7 @@ export class MapSystem {
     this.addClickMarker(clickCoords);
     this.addCapitalMarker(capitalCoords);
 
-    const bounds = latLngBounds([clickCoords, capitalCoords]);
+    const bounds = L.latLngBounds([clickCoords, capitalCoords]);
     const fitBoundsOptions = {
       ...MAP_ANIMATIONS.SHOW_RESULT,
       padding: [60, 60],
@@ -662,7 +671,7 @@ export class MapSystem {
       this.#countriesGeoJSON = await response.json();
 
       // Create GeoJSON layer (invisible by default)
-      this.#countriesLayer = geoJSON(this.#countriesGeoJSON, {
+      this.#countriesLayer = L.geoJSON(this.#countriesGeoJSON, {
         style: () => ({
           fillColor: 'transparent',
           fillOpacity: 0,
@@ -812,7 +821,7 @@ export class MapSystem {
       interactive: false
     };
 
-    const correctHighlight = geoJSON(correctFeature, { style: () => correctStyle })
+    const correctHighlight = L.geoJSON(correctFeature, { style: () => correctStyle })
       .addTo(this.#map);
     this.#countryHighlights.push(correctHighlight);
 
@@ -828,7 +837,7 @@ export class MapSystem {
           interactive: false
         };
 
-        const clickedHighlight = geoJSON(clickedFeature, { style: () => clickedStyle })
+        const clickedHighlight = L.geoJSON(clickedFeature, { style: () => clickedStyle })
           .addTo(this.#map);
         this.#countryHighlights.push(clickedHighlight);
       }
