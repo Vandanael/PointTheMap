@@ -444,7 +444,8 @@ export const UI = {
         UI.showToast(
           `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} mode coming soon!`,
           "info",
-          3000
+          3000,
+          { compact: true, center: true }
         );
         return;
       }
@@ -760,7 +761,7 @@ export const UI = {
    * @param {string} message - Message to display
    * @param {string} type - Type: 'info', 'warning', 'error', 'success'
    * @param {number} duration - Duration in ms (default: 5000, 0 = no auto-close)
-   * @param {{ compact?: boolean }} [options] - compact: smaller, no emoji, text only
+   * @param {{ compact?: boolean, center?: boolean }} [options] - compact: smaller, no emoji, text only; center: center text horizontally
    * @returns {string} Toast ID
    */
   showToast(message, type = "info", duration = 5000, options = {}) {

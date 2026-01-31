@@ -1,11 +1,12 @@
 // POST /.netlify/functions/start
+// Flat handler (no compose) to avoid "w is not a function" after esbuild minification
 
 import { randomUUID } from "crypto";
 import { capitals } from "../../capitals.js";
 import { selectCapitals, selectCountries } from "../../lib/capital-selection/index.js";
 import { getGameMode, isValidMode } from "../../src/config/game-modes.js";
 import { API } from "../../src/config.js";
-import { withDatabase, withMethod, compose } from "./_middleware.js";
+import { getDatabase } from "./db.js";
 import { errorResponse, successResponse, parseJsonBody, handleDatabaseError } from "./_utils.js";
 import jwt from "jsonwebtoken";
 
@@ -24,20 +25,24 @@ capitals.forEach(cap => {
 });
 const countries = Array.from(countryMap.values());
 
-/**
- * Start a new game session
- * @param {Request} req
- * @param {any} context - Context with sql attached by middleware
- * @returns {Promise<Response>}
- */
-const handler = async (req, context) => {
-  const sql = context.sql; // Database connection from middleware
-
+export default async function startHandler(req, context) {
   try {
+    if (req.method !== 'POST') {
+      return errorResponse("Method not allowed", 405);
+    }
+
+    let sql;
+    try {
+      sql = getDatabase(context);
+    } catch (dbError) {
+      console.error("Database connection failed:", dbError?.message);
+      return errorResponse("Database connection failed. Please try again later.", 503);
+    }
+    context.sql = sql;
+
     const body = await parseJsonBody(req);
     const gameType = body.gameType || "classic";
 
-    // Validate game mode
     if (!isValidMode(gameType)) {
       return errorResponse(`Invalid game mode: ${gameType}`, 400);
     }
@@ -45,7 +50,6 @@ const handler = async (req, context) => {
     const token = randomUUID();
     const csrfToken = randomUUID();
 
-    // Extract and validate player token
     let player_id = null;
     const authHeader = req.headers.get('authorization');
 
@@ -53,11 +57,8 @@ const handler = async (req, context) => {
       const playerToken = authHeader.substring(7);
       try {
         const decoded = jwt.verify(playerToken, JWT_SECRET);
-        // Type guard: jwt.verify returns string | JwtPayload
         if (typeof decoded !== 'string' && decoded.player_id) {
           player_id = decoded.player_id;
-
-          // Update last_seen for this player
           await sql`
             UPDATE players
             SET last_seen = NOW()
@@ -65,13 +66,10 @@ const handler = async (req, context) => {
           `;
         }
       } catch (jwtError) {
-        // Invalid token - log but continue without player_id
-        const errorMessage = jwtError instanceof Error ? jwtError.message : String(jwtError);
-        console.warn('Invalid player token:', errorMessage);
+        console.warn('Invalid player token:', jwtError?.message);
       }
     }
 
-    // Get mode configuration and select targets
     const mode = getGameMode(gameType);
     const isCountryMode = gameType === 'country';
 
@@ -102,7 +100,6 @@ const handler = async (req, context) => {
     const startTime = Date.now();
     const expiresAt = new Date(startTime + API.SESSION_EXPIRY_MS);
 
-    // Store targets in appropriate column (reuse 'capitals' column for both types)
     await sql`
       INSERT INTO sessions (token, capitals, start_time, used, game_type, expires_at, csrf_token, player_id)
       VALUES (${token}, ${JSON.stringify(selectedTargets)}::jsonb, ${startTime}, false, ${gameType}, ${expiresAt}, ${csrfToken}, ${player_id})
@@ -115,12 +112,11 @@ const handler = async (req, context) => {
       csrfToken,
     });
   } catch (error) {
-    return handleDatabaseError(error, 'start');
+    const err = /** @type {Error & { code?: string }} */ (error);
+    if (err?.code || (err?.message && err.message.includes('database'))) {
+      return handleDatabaseError(err, 'start');
+    }
+    console.error("[start] Uncaught error:", err?.message, err?.stack);
+    return errorResponse("An error occurred. Please try again later.", 500);
   }
-};
-
-// Apply middleware: POST method validation + database connection
-export default compose(
-  withMethod('POST'),
-  withDatabase
-)(handler);
+}

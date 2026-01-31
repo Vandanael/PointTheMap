@@ -580,11 +580,11 @@ export const PseudoLockedDialog = (pseudo) => {
  * @param {string} id - Toast ID
  * @param {string} message - Message to display
  * @param {string} type - Type of toast: 'info', 'warning', 'error', 'success'
- * @param {{ compact?: boolean }} [options] - compact: smaller modal, no emoji, text only
+ * @param {{ compact?: boolean, center?: boolean }} [options] - compact: smaller modal, no emoji, text only; center: center text horizontally
  * @returns {string} HTML string
  */
 export const Toast = (id, message, type = "info", options = {}) => {
-  const { compact = false } = options;
+  const { compact = false, center = false } = options;
 
   /** @type {Record<"info" | "warning" | "error" | "success", string>} */
   const icons = {
@@ -608,9 +608,11 @@ export const Toast = (id, message, type = "info", options = {}) => {
     ? "fixed bottom-8 left-1/2 -translate-x-1/2 max-w-xs w-full px-3 toast-slide-up"
     : "fixed bottom-8 left-1/2 -translate-x-1/2 max-w-md w-full px-4 toast-slide-up";
   const innerClass = compact
-    ? `${color} text-white rounded-lg shadow-lg py-2.5 px-3 flex items-center gap-2`
+    ? `${color} text-white rounded-lg shadow-lg py-2.5 px-3 flex items-center gap-2 ${center ? "justify-center" : ""}`
     : `${color} text-white rounded-xl shadow-lg p-4 flex items-start gap-3`;
-  const textClass = compact ? "flex-1 text-sm font-medium" : "flex-1 text-sm font-medium";
+  const textClass = compact
+    ? `flex-1 text-sm font-medium ${center ? "text-center" : ""}`
+    : "flex-1 text-sm font-medium";
   const closeClass = compact
     ? "shrink-0 text-white hover:text-gray-200 text-lg leading-none"
     : "shrink-0 text-white hover:text-gray-200 text-xl leading-none";

@@ -1,6 +1,7 @@
 // POST /.netlify/functions/submit
+// Flat handler (no compose) to avoid "w is not a function" after esbuild minification
 
-import { compose, withDatabase, withMethod } from "./_middleware.js";
+import { getDatabase } from "./db.js";
 import {
   jsonResponse,
   errorResponse,
@@ -141,14 +142,22 @@ const validateRounds = (rounds, sessionTargets, gameType) => {
  * @param {any} context
  * @returns {Promise<Response>}
  */
-const handler = async (req, context) => {
-  // Wrap entire function in try-catch to catch any unhandled errors
+export default async function submitHandler(req, context) {
   try {
-    console.log("[submit] Function invoked");
+    if (req.method !== 'POST') {
+      return errorResponse("Method not allowed", 405);
+    }
 
-    // Database connection already established by withDatabase middleware
-    const sql = context.sql;
-    console.log("[submit] Database connection established");
+    let sql;
+    try {
+      sql = getDatabase(context);
+    } catch (dbError) {
+      console.error("Database connection failed:", dbError?.message);
+      return errorResponse("Database connection failed. Please try again later.", 503);
+    }
+    context.sql = sql;
+
+    console.log("[submit] Function invoked");
 
     const ip = getClientIp(req, context);
 
@@ -545,9 +554,3 @@ const handler = async (req, context) => {
   }
 };
 
-// Export handler wrapped with middleware
-// compose applies middleware right-to-left: first withDatabase, then withMethod
-export default compose(
-  withMethod('POST'),
-  withDatabase
-)(handler);
