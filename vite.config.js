@@ -16,7 +16,8 @@ function criticalCssPreload() {
         if (!tags.length) return html;
         const local = tags.filter((t) => t.href.startsWith("/"));
         if (!local.length) return html;
-        const preloads = local.map((t) => `<link rel="preload" href="${t.href}" as="style">`).join("\n  ");
+        // Match credentials mode of stylesheet request so preload is used (crossorigin = CORS mode)
+        const preloads = local.map((t) => `<link rel="preload" href="${t.href}" as="style" crossorigin>`).join("\n  ");
         const stylesheets = local.map((t) => t.full).join("\n  ");
         let out = html;
         for (const t of local) out = out.replace(t.full, "");
