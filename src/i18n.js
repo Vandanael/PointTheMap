@@ -71,6 +71,7 @@ const translations = {
     round: "Round",
     score: "Score",
     find: "Trouvez",
+    getReady: "Prêt ?",
     clickOnMap: "📍 Cliquez sur la carte",
 
     // Results
@@ -220,6 +221,7 @@ const translations = {
     round: "Round",
     score: "Score",
     find: "Find",
+    getReady: "Get Ready!",
     clickOnMap: "📍 Click on the map",
 
     // Results

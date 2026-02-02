@@ -13,6 +13,7 @@
 import { eventBus } from '../core/EventBus.js';
 import { UI } from '../ui/UI.js';
 import { GAME, TIMING } from '../config.js';
+import { t } from '../i18n.js';
 import { formatScore } from '../utils.js';
 import { animateValue } from './AnimationController.js';
 import { logger } from '../utils/logger.js';
@@ -31,6 +32,18 @@ export class UISystem {
    */
   #setupEventListeners() {
     // Timer UI events
+    this.#unsubscribers.push(
+      eventBus.subscribe('timer:grace-start', (/** @type {{ graceMs?: number } | undefined } */ payload) => {
+        this.#onGraceStart(payload);
+      })
+    );
+
+    this.#unsubscribers.push(
+      eventBus.subscribe('timer:grace-end', () => {
+        this.#onGraceEnd();
+      })
+    );
+
     this.#unsubscribers.push(
       eventBus.subscribe('timer:started', (/** @type {{ timerMs?: number } | undefined } */ payload) => {
         this.#onTimerStarted(payload);
@@ -51,6 +64,47 @@ export class UISystem {
     );
 
     logger.debug('UISystem: Event listeners setup complete');
+  }
+
+  /**
+   * Grace period started - show "Get Ready" overlay
+   * @private
+   * @param {{ graceMs?: number } | undefined} payload - Grace period duration
+   */
+  #onGraceStart(payload) {
+    const timerBar = document.getElementById("timer-bar");
+    if (timerBar) {
+      timerBar.classList.add('timer-grace');
+    }
+
+    // Show "Get Ready" overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'grace-overlay';
+    overlay.className = 'fixed inset-0 flex items-center justify-center';
+    overlay.style.zIndex = 'var(--z-base)';
+    overlay.style.pointerEvents = 'none';
+    overlay.innerHTML = `
+      <div class="text-4xl font-black text-yellow-400 animate-pulse">
+        ${t('getReady')}
+      </div>
+    `;
+    document.body.appendChild(overlay);
+  }
+
+  /**
+   * Grace period ended - remove overlay and prepare for timer
+   * @private
+   */
+  #onGraceEnd() {
+    const timerBar = document.getElementById("timer-bar");
+    if (timerBar) {
+      timerBar.classList.remove('timer-grace');
+    }
+
+    const overlay = document.getElementById('grace-overlay');
+    if (overlay) {
+      overlay.remove();
+    }
   }
 
   /**

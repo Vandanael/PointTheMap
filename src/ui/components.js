@@ -57,6 +57,21 @@ export const TimerBar = () => `
  * @param {number} totalRounds
  * @param {number} totalScore
  */
+export const GameHeaderSkeleton = () => {
+  return `
+  <div id="game-header" class="game-header fixed top-0 left-0 right-0" style="z-index: var(--z-base);">
+    <div class="px-6 py-2 flex justify-between items-center" style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
+      <div class="flex items-center gap-2">
+        <div class="w-20 h-6 rounded skeleton-pulse"></div>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-24 h-6 rounded skeleton-pulse"></div>
+      </div>
+    </div>
+  </div>
+  `;
+};
+
 export const GameHeader = (roundNum, totalRounds, totalScore) => {
   return `
   <div id="game-header" class="game-header fixed top-0 left-0 right-0" style="z-index: var(--z-base);">
@@ -196,8 +211,8 @@ export const RoundResult = (distance, score, isTimeout, isLast, baseScore, timeB
         ${hasTimeBonus ? `
           <div class="mb-4">
             <div class="text-2xl font-bold text-primary mb-1">${t("base")}: ${formatScore(baseScore || 0)}</div>
-            <div class="text-2xl font-bold text-green-400 mb-2">⚡ ${t("speedBonus")}: +${formatScore(timeBonus)}</div>
-            <div class="text-5xl font-black text-yellow-400" id="pointsDisplay">${formatScore(score)}</div>
+            <div class="text-3xl font-black text-green-400 mb-2 animate-bounce">⚡ ${t("speedBonus")}: +${formatScore(timeBonus)}</div>
+            <div class="text-5xl font-black text-yellow-400 animate-pulse" id="pointsDisplay">${formatScore(score)}</div>
           </div>
         ` : `
           <div class="text-6xl font-black text-yellow-400 mb-2" id="pointsDisplay">${formatScore(score)}</div>

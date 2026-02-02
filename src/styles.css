@@ -251,6 +251,11 @@ body.light-theme .result-line-distance {
   transition: width 0.1s linear;
 }
 
+.timer-grace #timer-progress {
+  background: var(--text-tertiary);
+  opacity: 0.5;
+}
+
 /* Danger shake animation */
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
@@ -280,6 +285,12 @@ body.light-theme .result-line-distance {
   50% {
     opacity: 0.5;
   }
+}
+
+.skeleton-pulse {
+  background: var(--bg-primary);
+  opacity: 0.3;
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
 @keyframes pulse-button {
@@ -353,6 +364,15 @@ body.light-theme .result-line-distance {
 .modal-card {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
+}
+
+/* Prevent text overflow in UI elements */
+.mode-label,
+.challenge-title,
+.category-btn span {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 /* Classes utilitaires pour les couleurs */
@@ -703,6 +723,13 @@ body.light-theme .challenge-info {
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
   align-items: start; /* don't stretch buttons so they stay same height */
+}
+
+/* Increase gap on mobile for better touch targets */
+@media (max-width: 640px) {
+  .category-grid {
+    gap: 1rem;
+  }
 }
 
 .category-btn {

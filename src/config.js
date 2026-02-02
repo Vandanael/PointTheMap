@@ -73,8 +73,8 @@ export const SCORING = {
 /** Global timing constants. Mode-specific timing (e.g. timer) lives in GAME / game-modes. */
 export const TIMING = {
   SCORE_ANIMATION_MS: 800,
-  /** Max wait before showing answer modal after result line; user can tap/click to continue earlier. */
-  RESULT_READ_TIME_MS: 2500,
+  /** Max wait before showing answer modal after result line; user can tap/click to continue earlier. Reduced from 2500ms to 1.5s for better game feel. */
+  RESULT_READ_TIME_MS: 1500,
 };
 
 

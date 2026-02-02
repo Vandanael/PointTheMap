@@ -15,6 +15,7 @@ import {
   Modal,
   TimerBar,
   GameHeader,
+  GameHeaderSkeleton,
   QuestionModal,
   QuestionModalWithButton,
   RoundResult,
