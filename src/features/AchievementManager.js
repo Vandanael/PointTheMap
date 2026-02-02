@@ -7,6 +7,7 @@
 import { storageManager } from "../storage/StorageManager.js";
 import { logger } from "../utils/logger.js";
 import { eventBus } from "../core/EventBus.js";
+import { SCORING_THRESHOLDS } from "../config.js";
 
 /**
  * Achievement definitions
@@ -116,7 +117,9 @@ export const checkAchievements = (rounds, stats, rank) => {
 
     // Calculate game metrics
     const avgDistance = rounds.reduce((sum, r) => sum + (r.distance || 0), 0) / rounds.length;
-    const perfectRounds = rounds.filter(r => r.distance < 1).length;
+    const perfectRounds = rounds.filter(r =>
+      r.distance != null && r.distance < SCORING_THRESHOLDS.ACHIEVEMENT_PERFECT
+    ).length;
     const allPerfect = perfectRounds === rounds.length && rounds.length > 0;
 
     // Check: perfectRound - Any round < 1km

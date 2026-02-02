@@ -34,6 +34,9 @@ export const SCORING_THRESHOLDS = {
   FAIR_MAX: 1000,        // 200-1000km = Fair
   // > 1000km = Poor
 
+  // Achievement thresholds (more generous for gameplay satisfaction)
+  ACHIEVEMENT_PERFECT: 1,     // < 1km = Achievement-worthy perfect round
+
   // Visual/UI thresholds (can differ from category boundaries)
   VISUAL_EXCELLENT: 100,  // Green line color
   VISUAL_GOOD: 500,       // Yellow line color

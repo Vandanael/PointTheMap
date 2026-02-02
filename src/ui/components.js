@@ -473,14 +473,30 @@ export const LeaderboardSkeletonRow = () => `
  * @param {string | null} [highlightPseudo=null]
  * @param {boolean} [loading=false]
  */
-export const Leaderboard = (scores, highlightPseudo = null, loading = false) => `
+export const Leaderboard = (scores, highlightPseudo = null, loading = false, error = null) => `
   <div id="leaderboard-content" class="rounded-xl max-h-[400px]" style="background: var(--bg-tertiary); overflow: hidden;">
     ${loading ?
-      // Show skeleton while loading
+      // Skeleton loading
       Array(10).fill(0).map(() => LeaderboardSkeletonRow()).join('')
-      : scores.length === 0 ? `
-        <p class="text-center py-8 text-tertiary">${t("noScores")}</p>
-      ` : scores.map((/** @type {{rank: number, pseudo: string, score: number, time: number}} */ s) => LeaderboardRow(s.rank, s.pseudo, s.score, s.time, s.pseudo === highlightPseudo)).join("")
+    : error ? `
+      <!-- Network/server error -->
+      <div class="text-center py-8">
+        <div class="text-4xl mb-4">⚠️</div>
+        <p class="text-tertiary mb-4">${t('error.leaderboardRetry')}</p>
+        <button id="btn-retry-leaderboard" class="text-yellow-400 hover:text-yellow-300 font-bold">
+          ${t('error.retry')}
+        </button>
+      </div>
+    ` : scores.length === 0 ? `
+      <!-- No scores yet (empty state) -->
+      <div class="text-center py-8">
+        <div class="text-4xl mb-4">🏆</div>
+        <p class="text-primary font-bold mb-2">${t('leaderboard.empty.title')}</p>
+        <p class="text-tertiary text-sm">${t('leaderboard.empty.description')}</p>
+      </div>
+    ` :
+      // Normal leaderboard display
+      scores.map((/** @type {{rank: number, pseudo: string, score: number, time: number}} */ s) => LeaderboardRow(s.rank, s.pseudo, s.score, s.time, s.pseudo === highlightPseudo)).join("")
     }
   </div>
 `;
@@ -499,7 +515,7 @@ export const LeaderboardModal = (scores, currentType = "classic", loading = fals
     <div id="leaderboard-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-overlay);" role="dialog" aria-modal="true">
       <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
         <h2 class="text-3xl font-black text-primary mb-6 text-center tracking-tight uppercase" id="leaderboardTitle">
-          ${t("leaderboard")}
+          ${t("leaderboardTitle")}
         </h2>
 
         <!-- Boutons de switch -->
@@ -548,41 +564,21 @@ export const LeaderboardModal = (scores, currentType = "classic", loading = fals
   `;
 };
 
-const getPseudoLockedTexts = () => {
-  const lang = getLang();
-  if (lang === "fr") {
-    return {
-      title: "Déjà enregistré !",
-      message: "Cette machine joue sous le nom {{pseudo}}.",
-      rule: "Règle du leaderboard : un pseudo par joueur.",
-      button: "OK",
-    };
-  }
-  return {
-    title: "Already registered!",
-    message: "This machine plays under the name {{pseudo}}.",
-    rule: "Leaderboard rule: one nickname per player.",
-    button: "OK",
-  };
-};
-
 /**
  * @param {string} pseudo
  */
 export const PseudoLockedDialog = (pseudo) => {
-  const texts = getPseudoLockedTexts();
   const escapedPseudo = escapeHtml(pseudo);
-  const message = texts.message.replace("{{pseudo}}", escapedPseudo);
 
   return `
     <div id="pseudo-locked-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-modal);" role="dialog" aria-modal="true">
       <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
         <div class="text-center mb-6">
-          <div class="text-5xl font-black text-primary mb-4">${texts.title}</div>
-          <div class="text-secondary text-lg mb-2">${message}</div>
-          <div class="text-tertiary text-sm">${texts.rule}</div>
+          <div class="text-5xl font-black text-primary mb-4">${t('pseudoLocked.title')}</div>
+          <div class="text-secondary text-lg mb-2">${t('pseudoLocked.message', { pseudo: escapedPseudo })}</div>
+          <div class="text-tertiary text-sm">${t('pseudoLocked.rule')}</div>
         </div>
-        ${Button("btn-pseudo-locked-ok", texts.button, "primary")}
+        ${Button("btn-pseudo-locked-ok", t('ok'), "primary")}
       </div>
     </div>
   `;

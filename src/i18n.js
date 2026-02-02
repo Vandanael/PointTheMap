@@ -107,12 +107,28 @@ const translations = {
     rank: "Rang",
 
     // Leaderboard
-    leaderboard: "🏆 Classement",
+    leaderboardTitle: "🏆 Classement",
     noScores: "Aucun score enregistré",
     close: "FERMER",
     classic: "Classique",
     daily: "Quotidien",
     countries: "Pays",
+
+    // Leaderboard empty state
+    leaderboard: {
+      empty: {
+        title: "Aucun score",
+        description: "Soyez le premier à jouer !",
+      },
+    },
+
+    // Pseudo locked dialog
+    pseudoLocked: {
+      title: "Déjà enregistré !",
+      message: "Cette machine joue sous le nom {{pseudo}}.",
+      rule: "Règle du leaderboard : un pseudo par joueur.",
+    },
+    ok: "OK",
 
     // Errors
     error: {
@@ -240,12 +256,28 @@ const translations = {
     rank: "Rank",
 
     // Leaderboard
-    leaderboard: "🏆 Leaderboard",
+    leaderboardTitle: "🏆 Leaderboard",
     noScores: "No scores recorded",
     close: "CLOSE",
     classic: "Classic",
     daily: "Daily",
     countries: "Countries",
+
+    // Leaderboard empty state
+    leaderboard: {
+      empty: {
+        title: "No scores yet",
+        description: "Be the first to play!",
+      },
+    },
+
+    // Pseudo locked dialog
+    pseudoLocked: {
+      title: "Already registered!",
+      message: "This machine plays under the name {{pseudo}}.",
+      rule: "Leaderboard rule: one nickname per player.",
+    },
+    ok: "OK",
 
     // Errors
     error: {
@@ -279,21 +311,30 @@ const initLang = () => {
   }
 };
 
-export const t = (key) => {
+export const t = (key, vars = {}) => {
   initLang();
 
   // Handle nested keys (e.g., "stats.gamesPlayed")
+  let value;
   if (key.includes('.')) {
     const parts = key.split('.');
-    let value = translations[currentLang];
+    value = translations[currentLang];
     for (const part of parts) {
       value = value?.[part];
       if (value === undefined) return key;
     }
-    return value;
+  } else {
+    value = translations[currentLang][key] || key;
   }
 
-  return translations[currentLang][key] || key;
+  // Replace {{variable}} with vars
+  if (typeof value === 'string') {
+    return value.replace(/\{\{(\w+)\}\}/g, (match, varName) => {
+      return vars[varName] !== undefined ? vars[varName] : match;
+    });
+  }
+
+  return value;
 };
 
 export const getLang = () => {
