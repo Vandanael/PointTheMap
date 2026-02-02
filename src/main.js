@@ -28,6 +28,8 @@ import { timerSystem } from "./systems/TimerSystem.js";
 import { uiSystem } from "./systems/UISystem.js";
 import { inputSystem } from "./systems/InputSystem.js";
 import { scoringSystem } from "./systems/ScoringSystem.js";
+import { analytics } from "./services/Analytics.js";
+import { errorMonitoring } from "./services/ErrorMonitoring.js";
 import { errorHandler, APIError, safeAsync } from "./core/ErrorHandler.js";
 import { updateStats } from "./features/StatsManager.js";
 import { checkAchievements } from "./features/AchievementManager.js";
@@ -120,6 +122,10 @@ const init = async () => {
   try {
     // iOS: Configurer le viewport height dynamique en premier
     setIOSViewportHeight();
+
+    // Initialize monitoring services (production only)
+    errorMonitoring.init();
+    analytics.init();
 
     // Register state validators
     stateManager.registerValidator('totalScore', (/** @type {unknown} */ value) => {
@@ -377,6 +383,12 @@ const handleStart = async (gameType = "classic") => {
     return;
   }
 
+  // Track game start
+  analytics.track('game_started', {
+    gameType,
+    roundCount: state.runtimeConfig?.roundCount || 5,
+  });
+
   console.log('[Game Start]', {
     gameType: state.gameType,
     capitals: state.capitals.length,
@@ -572,6 +584,16 @@ const handleSubmit = async (pseudo) => {
     checkAchievements(state.rounds, updatedStats, result.rank);
 
     UI.showFinalResults(result.score, pseudo, result, isNewBest);
+
+    // Track game completion
+    analytics.track('game_completed', {
+      totalScore: result.score,
+      gameType: state.gameType,
+      rounds: state.rounds.length,
+      rank: result.rank,
+      isTopFifty: result.isTopFifty,
+      isNewSessionBest: isNewBest,
+    });
 
     // Bind share button (after UI.showFinalResults renders the button)
     // Remove any existing listener first to prevent duplicates
