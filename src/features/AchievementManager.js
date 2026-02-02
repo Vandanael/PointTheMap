@@ -213,3 +213,85 @@ export const resetAchievements = () => {
     return false;
   }
 };
+
+/**
+ * Get progress for a specific achievement
+ * @param {string} achievementId - Achievement ID to check
+ * @param {object} stats - Current stats from StatsManager
+ * @param {Array<{distance: number, score: number}>} [rounds] - Round results (for game-specific achievements)
+ * @param {number} [rank] - Current leaderboard rank (for ranking achievements)
+ * @returns {{ current: number, target: number, percent: number }} Progress information
+ */
+export const getAchievementProgress = (achievementId, stats, rounds = null, rank = null) => {
+  try {
+    const defaultProgress = { current: 0, target: 1, percent: 0 };
+
+    if (!ACHIEVEMENTS[achievementId]) {
+      return defaultProgress;
+    }
+
+    switch (achievementId) {
+      case 'perfectRound':
+      case 'perfectGame':
+        // These are binary achievements, no partial progress
+        return { current: stats.perfectCount, target: 1, percent: stats.perfectCount > 0 ? 100 : 0 };
+
+      case 'avgUnder10':
+        return {
+          current: Math.round(stats.averageDistance * 10) / 10, // Round to 1 decimal
+          target: 10,
+          percent: Math.min(100, ((10 - stats.averageDistance) / 10) * 100)
+        };
+
+      case 'play10':
+        return {
+          current: stats.playCount,
+          target: 10,
+          percent: Math.min(100, (stats.playCount / 10) * 100)
+        };
+
+      case 'play50':
+        return {
+          current: stats.playCount,
+          target: 50,
+          percent: Math.min(100, (stats.playCount / 50) * 100)
+        };
+
+      case 'streak3':
+        return {
+          current: stats.streakDaily,
+          target: 3,
+          percent: Math.min(100, (stats.streakDaily / 3) * 100)
+        };
+
+      case 'top1pct':
+        // Rank-based achievement (lower is better)
+        if (rank === null || rank === undefined) {
+          return { current: 999, target: 5, percent: 0 };
+        }
+        return {
+          current: rank,
+          target: 5,
+          percent: rank <= 5 ? 100 : Math.max(0, ((50 - rank) / 45) * 100)
+        };
+
+      case 'speedDemon':
+        // Game-specific achievement
+        if (!rounds || rounds.length === 0) {
+          return defaultProgress;
+        }
+        const fastRounds = rounds.filter(r => r.timeBonus && r.timeBonus > 500).length;
+        return {
+          current: fastRounds,
+          target: 5,
+          percent: Math.min(100, (fastRounds / 5) * 100)
+        };
+
+      default:
+        return defaultProgress;
+    }
+  } catch (error) {
+    logger.error(`Achievements: Failed to get progress for ${achievementId}`, error);
+    return { current: 0, target: 1, percent: 0 };
+  }
+};
