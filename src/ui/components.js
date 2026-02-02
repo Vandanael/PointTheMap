@@ -745,8 +745,8 @@ export const AchievementUnlockModal = (achievementId, achievement) => {
 export const HelpModal = () => {
   return `
     <div id="help-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4"
-         style="z-index: var(--z-overlay);" role="dialog" aria-modal="true">
-      <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content" style="max-height: 80vh; overflow-y: auto;">
+         style="z-index: var(--z-overlay); overflow-y: auto;" role="dialog" aria-modal="true">
+      <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content my-8">
         <h2 class="text-3xl font-black text-primary mb-6 text-center">${t('help.title')}</h2>
 
         <div class="space-y-6 text-secondary">
