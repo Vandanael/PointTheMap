@@ -131,6 +131,14 @@ const translations = {
     },
     ok: "OK",
 
+    // Offline/Online status
+    offline: {
+      message: "Vous êtes hors ligne. Certaines fonctionnalités peuvent ne pas fonctionner.",
+    },
+    online: {
+      message: "Vous êtes de retour en ligne !",
+    },
+
     // Errors
     error: {
       tooFast: "⏳ Veuillez attendre avant de soumettre à nouveau",
@@ -280,6 +288,14 @@ const translations = {
       rule: "Leaderboard rule: one nickname per player.",
     },
     ok: "OK",
+
+    // Offline/Online status
+    offline: {
+      message: "You are offline. Some features may not work.",
+    },
+    online: {
+      message: "You are back online!",
+    },
 
     // Errors
     error: {

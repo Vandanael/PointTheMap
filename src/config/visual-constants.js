@@ -70,6 +70,10 @@ export const MAP_ANIMATIONS = {
 export const UI_TIMING = {
   QUESTION_AUTO_CLOSE: 1000,        // Auto-close question modal after 1s
   ERROR_DISPLAY: 4000,              // Error message display duration
+  CHALLENGE_CARD_FADE: 200,         // Challenge card fade transition duration
+  INPUT_ERROR_SHAKE: 500,           // Duration to keep shake animation class
+  TOAST_SLIDE_OUT: 300,             // Toast slide-out animation duration
+  DEBOUNCE_SUBMIT: 1000,            // Debounce delay for submit button
 };
 
 /**

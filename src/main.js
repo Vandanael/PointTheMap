@@ -643,3 +643,12 @@ document.addEventListener("DOMContentLoaded", () => {
     errorHandler.handle(e, 'dom-ready', { showToUser: true, fatal: true });
   });
 });
+
+// Offline/Online status indicators
+window.addEventListener('offline', () => {
+  UI.showToast(t('offline.message') || 'You are offline. Some features may not work.', 'warning', 5000);
+});
+
+window.addEventListener('online', () => {
+  UI.showToast(t('online.message') || 'You are back online!', 'success', 2000);
+});

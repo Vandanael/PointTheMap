@@ -957,6 +957,24 @@ body.light-theme .challenge-info {
    ACCESSIBILITY ENHANCEMENTS
    =================================== */
 
+/* Skip to content link for keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--accent);
+  color: #000;
+  padding: 8px 16px;
+  text-decoration: none;
+  z-index: 9999;
+  font-weight: bold;
+  border-radius: 0 0 4px 0;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
 /* Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   *,

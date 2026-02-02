@@ -388,7 +388,7 @@ export const UI = {
         // Fade in
         card.classList.remove("fade-out");
         card.classList.add("fade-in");
-      }, 200);
+      }, UI_TIMING.CHALLENGE_CARD_FADE);
     };
 
     // Category selection handlers
@@ -782,7 +782,7 @@ export const UI = {
         // Remove shake class after animation
         setTimeout(() => {
           input?.classList.remove("input-error-shake");
-        }, 500);
+        }, UI_TIMING.INPUT_ERROR_SHAKE);
         return;
       }
       input?.setAttribute("aria-invalid", "false");
@@ -791,7 +791,7 @@ export const UI = {
 
       lastSubmitTime = now; // Update last submit time
       inputSystem.handleSubmit(pseudo);
-    }, 1000)); // Debounce with 1 second delay
+    }, UI_TIMING.DEBOUNCE_SUBMIT)); // Debounce delay
 
     bindClick("btn-replay", () => inputSystem.handleReplay());
   },
@@ -887,6 +887,6 @@ export const UI = {
     // Remove after animation
     setTimeout(() => {
       remove(toastId);
-    }, 300);
+    }, UI_TIMING.TOAST_SLIDE_OUT);
   },
 };
