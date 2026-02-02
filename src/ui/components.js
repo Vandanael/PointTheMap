@@ -82,8 +82,8 @@ export const QuestionModal = (capitalName, country) => {
   const escapedCapital = escapeHtml(capitalName);
   const escapedCountry = escapeHtml(country);
   return `
-  <div id="question-modal" class="fixed inset-0 flex items-center justify-center p-4" style="background: transparent; z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="capitalName">
-    <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content" style="box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
+  <div id="question-modal" class="fixed inset-0 flex items-center justify-center p-4" style="background: transparent; z-index: var(--z-modal); pointer-events: none;" role="dialog" aria-modal="true" aria-labelledby="capitalName">
+    <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content" style="box-shadow: 0 8px 32px rgba(0,0,0,0.4); pointer-events: auto;">
       <div class="text-center">
         <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-3" id="findLabel">${t("find")}</div>
         <h2 class="text-5xl font-black text-primary mb-2" id="capitalName">${escapedCapital}</h2>
@@ -105,8 +105,8 @@ export const QuestionModalWithButton = (capitalName, country) => {
   const escapedCapital = escapeHtml(capitalName);
   const escapedCountry = escapeHtml(country);
   return `
-  <div id="question-modal" class="fixed inset-0 flex items-center justify-center p-4" style="background: transparent; z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="capitalName">
-    <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content" style="box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
+  <div id="question-modal" class="fixed inset-0 flex items-center justify-center p-4" style="background: transparent; z-index: var(--z-modal); pointer-events: none;" role="dialog" aria-modal="true" aria-labelledby="capitalName">
+    <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content" style="box-shadow: 0 8px 32px rgba(0,0,0,0.4); pointer-events: auto;">
       <div class="text-center">
         <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-3" id="findLabel">${t("find")}</div>
         <h2 class="text-5xl font-black text-primary mb-2" id="capitalName">${escapedCapital}</h2>
@@ -259,29 +259,39 @@ export const StartScreen = () => `
                 id="category-capitals"
                 class="category-btn category-active"
                 data-category="capitals"
+                aria-label="${t('capitals')}"
+                aria-pressed="true"
               >
-                <span>${t("capitals")}</span>
+                <span aria-hidden="true">${t("capitals")}</span>
               </button>
               <button
                 id="category-countries"
                 class="category-btn"
                 data-category="countries"
+                aria-label="${t('countries')}"
+                aria-pressed="false"
               >
-                <span>${t("countries")}</span>
+                <span aria-hidden="true">${t("countries")}</span>
               </button>
               <button
                 id="category-monuments"
-                class="category-btn"
+                class="category-btn category-disabled"
                 data-category="monuments"
+                disabled
+                aria-label="${t('monuments')} - ${t('comingSoon')}"
               >
-                <span>${t("monuments")}</span>
+                <span aria-hidden="true">${t("monuments")}</span>
+                <span class="category-coming-soon-wrap"><span class="category-coming-soon" style="color:#facc15">${t("comingSoon")}</span></span>
               </button>
               <button
                 id="category-stadiums"
-                class="category-btn"
+                class="category-btn category-disabled"
                 data-category="stadiums"
+                disabled
+                aria-label="${t('stadiums')} - ${t('comingSoon')}"
               >
-                <span>${t("stadiums")}</span>
+                <span aria-hidden="true">${t("stadiums")}</span>
+                <span class="category-coming-soon-wrap"><span class="category-coming-soon" style="color:#facc15">${t("comingSoon")}</span></span>
               </button>
             </div>
           </div>
@@ -355,7 +365,7 @@ export const GameOverScreen = (totalScore, lastPseudo = "") => {
 
       <!-- Pseudo input -->
       <div class="mb-6" style="overflow: hidden;">
-        <label class="text-secondary text-sm uppercase tracking-widest mb-2 block" id="pseudoLabel">
+        <label for="pseudo-input" class="text-secondary text-sm uppercase tracking-widest mb-2 block" id="pseudoLabel">
           ${t("yourPseudo")}
         </label>
         <div style="width: 100%; overflow: hidden; box-sizing: border-box;">
@@ -367,12 +377,15 @@ export const GameOverScreen = (totalScore, lastPseudo = "") => {
             value="${escapedPseudo}"
             placeholder="ABC"
             autocomplete="off"
+            aria-labelledby="pseudoLabel"
+            aria-describedby="pseudoHint pseudo-error"
+            aria-invalid="false"
             class="bg-transparent border-2 border-yellow-400 text-primary text-xl font-black uppercase tracking-widest py-4 px-4 rounded-xl text-center"
-            style="width: 100%; letter-spacing: 0.1em; box-sizing: border-box; overflow: hidden; text-overflow: clip; max-width: 100%; outline: none !important; border: 2px solid var(--accent);"
+            style="width: 100%; letter-spacing: 0.1em; box-sizing: border-box; overflow: hidden; text-overflow: clip; max-width: 100%; border: 2px solid var(--accent);"
           />
         </div>
         <p class="text-tertiary text-xs mt-2 text-center" id="pseudoHint">${t("pseudoHint")}</p>
-        <p id="pseudo-error" class="text-red-400 text-sm mt-2 hidden">${t("pseudoError")}</p>
+        <p id="pseudo-error" class="text-red-400 text-sm mt-2 hidden" role="alert">${t("pseudoError")}</p>
       </div>
 
       <div class="space-y-3">
@@ -594,22 +607,14 @@ export const Toast = (id, message, type = "info", options = {}) => {
     success: "",
   };
 
-  /** @type {Record<"info" | "warning" | "error" | "success", string>} */
-  const colors = {
-    info: "bg-blue-500",
-    warning: "bg-yellow-500",
-    error: "bg-red-500",
-    success: "bg-green-500",
-  };
-
   const icon = compact ? "" : (icons[type] || icons.info);
-  const color = colors[type] || colors.info;
+  const colorClass = `toast-${type}`;
   const wrapperClass = compact
     ? "fixed bottom-8 left-1/2 -translate-x-1/2 max-w-xs w-full px-3 toast-slide-up"
     : "fixed bottom-8 left-1/2 -translate-x-1/2 max-w-md w-full px-4 toast-slide-up";
   const innerClass = compact
-    ? `${color} text-white rounded-lg shadow-lg py-2.5 px-3 flex items-center gap-2 ${center ? "justify-center" : ""}`
-    : `${color} text-white rounded-xl shadow-lg p-4 flex items-start gap-3`;
+    ? `${colorClass} text-white rounded-lg shadow-lg py-2.5 px-3 flex items-center gap-2 ${center ? "justify-center" : ""}`
+    : `${colorClass} text-white rounded-xl shadow-lg p-4 flex items-start gap-3`;
   const textClass = compact
     ? `flex-1 text-sm font-medium ${center ? "text-center" : ""}`
     : "flex-1 text-sm font-medium";

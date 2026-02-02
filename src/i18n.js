@@ -133,6 +133,7 @@ const translations = {
       startFailed: "Impossible de démarrer la partie. Veuillez réessayer.",
       retry: "Réessayer",
       leaderboardRetry: "Le classement est temporairement indisponible.",
+      countriesLoadFailed: "Impossible de charger les données des pays. Veuillez réessayer.",
     },
   },
 
@@ -265,6 +266,7 @@ const translations = {
       startFailed: "Unable to start the game. Please try again.",
       retry: "Retry",
       leaderboardRetry: "The leaderboard is temporarily unavailable.",
+      countriesLoadFailed: "Failed to load countries data. Please try again.",
     },
   },
 };

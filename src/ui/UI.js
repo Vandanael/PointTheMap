@@ -45,6 +45,12 @@ let _pseudoInputHandler = null;
 let _pseudoKeypressHandler = null;
 let _pseudoFocusHandler = null;
 
+// Track start screen listeners for cleanup
+let _startScreenListeners = [];
+
+// Track toast timers for cleanup
+const _toastTimers = new Map();
+
 // Store click handlers to allow removal before adding new ones
 const _clickHandlers = new Map();
 
@@ -157,15 +163,69 @@ export const loadLeaderboard = async (type) => {
 
 const setupLeaderboardTabs = () => {
   bindClick("btn-leaderboard-classic", async () => {
-    UI.showLeaderboardModal([], "classic", true);
+    try {
+      await UI.showLeaderboardModal([], "classic", true);
+    } catch (error) {
+      console.error('Failed to load classic leaderboard:', error);
+      const content = _domCache.get("leaderboard-content");
+      if (content) {
+        content.innerHTML = `
+          <div class="text-center py-8">
+            <p class="text-tertiary mb-4">${t('error.leaderboardRetry')}</p>
+            <button id="btn-retry-leaderboard" class="text-yellow-400 hover:text-yellow-300 font-bold">
+              ${t('error.retry')}
+            </button>
+          </div>
+        `;
+        bindClick("btn-retry-leaderboard", () => {
+          UI.showLeaderboardModal([], "classic", true);
+        });
+      }
+    }
   });
 
   bindClick("btn-leaderboard-daily", async () => {
-    UI.showLeaderboardModal([], "daily", true);
+    try {
+      await UI.showLeaderboardModal([], "daily", true);
+    } catch (error) {
+      console.error('Failed to load daily leaderboard:', error);
+      const content = _domCache.get("leaderboard-content");
+      if (content) {
+        content.innerHTML = `
+          <div class="text-center py-8">
+            <p class="text-tertiary mb-4">${t('error.leaderboardRetry')}</p>
+            <button id="btn-retry-leaderboard" class="text-yellow-400 hover:text-yellow-300 font-bold">
+              ${t('error.retry')}
+            </button>
+          </div>
+        `;
+        bindClick("btn-retry-leaderboard", () => {
+          UI.showLeaderboardModal([], "daily", true);
+        });
+      }
+    }
   });
 
   bindClick("btn-leaderboard-country", async () => {
-    UI.showLeaderboardModal([], "country", true);
+    try {
+      await UI.showLeaderboardModal([], "country", true);
+    } catch (error) {
+      console.error('Failed to load country leaderboard:', error);
+      const content = _domCache.get("leaderboard-content");
+      if (content) {
+        content.innerHTML = `
+          <div class="text-center py-8">
+            <p class="text-tertiary mb-4">${t('error.leaderboardRetry')}</p>
+            <button id="btn-retry-leaderboard" class="text-yellow-400 hover:text-yellow-300 font-bold">
+              ${t('error.retry')}
+            </button>
+          </div>
+        `;
+        bindClick("btn-retry-leaderboard", () => {
+          UI.showLeaderboardModal([], "country", true);
+        });
+      }
+    }
   });
 };
 
@@ -335,7 +395,7 @@ export const UI = {
     categoryButtons.forEach(category => {
       const btn = document.getElementById(`category-${category}`);
       if (btn) {
-        btn.addEventListener("click", () => {
+        const categoryListener = () => {
           selectedCategory = category;
 
           // Update challenge card
@@ -366,7 +426,9 @@ export const UI = {
               }
             }
           });
-        });
+        };
+        btn.addEventListener("click", categoryListener);
+        _startScreenListeners.push({ element: btn, listener: categoryListener });
       }
     });
 
@@ -377,7 +439,7 @@ export const UI = {
     modeButtons.forEach(mode => {
       const btn = document.getElementById(`mode-${mode}`);
       if (btn) {
-        btn.addEventListener("click", () => {
+        const modeListener = () => {
           selectedMode = mode;
 
           // Update slider position
@@ -400,7 +462,9 @@ export const UI = {
               }
             }
           });
-        });
+        };
+        btn.addEventListener("click", modeListener);
+        _startScreenListeners.push({ element: btn, listener: modeListener });
       }
     });
 
@@ -427,27 +491,20 @@ export const UI = {
 
           if (!loaded) {
             UI.hideLoader();
-            UI.showToast("Failed to load countries data. Please try again.", "error", 4000);
+            UI.showToast(t('error.countriesLoadFailed') || "Failed to load countries data. Please try again.", "error", 4000);
             return;
           }
 
           console.log('Countries GeoJSON loaded successfully');
+          UI.hideLoader();
         } catch (error) {
           console.error('Error loading countries:', error);
           UI.hideLoader();
-          UI.showToast("Error loading countries: " + error.message, "error", 4000);
+          UI.showToast(t('error.countriesLoadFailed') || "Error loading countries: " + error.message, "error", 4000);
           return;
         }
-
-        UI.hideLoader();
       } else {
-        // monuments, stadiums, etc.
-        UI.showToast(
-          `${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} mode coming soon!`,
-          "info",
-          3000,
-          { compact: true, center: true }
-        );
+        // monuments, stadiums are disabled, so this shouldn't be reached
         return;
       }
 
@@ -474,6 +531,13 @@ export const UI = {
   },
   hideStart() {
     document.body.classList.remove('start-screen-visible');
+
+    // Clean up tracked listeners
+    _startScreenListeners.forEach(({ element, listener }) => {
+      element?.removeEventListener("click", listener);
+    });
+    _startScreenListeners = [];
+
     remove("start-modal");
     _domCache.invalidate(); // Clear cache after DOM change
     this._langChangeCleanup?.(); // Cleanup subscription
@@ -633,7 +697,10 @@ export const UI = {
     if (requireButton) {
       bindClick("btn-ready", close);
     } else {
-      _questionModalClickHandler = close;
+      _questionModalClickHandler = (event) => {
+        event.stopPropagation();
+        close();
+      };
       const modal = _domCache.get("question-modal");
       if (modal) modal.addEventListener("click", _questionModalClickHandler);
       setTimeout(close, UI_TIMING.QUESTION_AUTO_CLOSE);
@@ -706,10 +773,18 @@ export const UI = {
       const error = _domCache.get("pseudo-error");
       const validation = validationSystem.validatePseudo(pseudo);
       if (!validation.valid) {
+        input?.setAttribute("aria-invalid", "true");
+        input?.classList.add("input-error-shake");
         error?.classList.remove("hidden");
         input?.style.setProperty("border-color", "#ef4444");
+
+        // Remove shake class after animation
+        setTimeout(() => {
+          input?.classList.remove("input-error-shake");
+        }, 500);
         return;
       }
+      input?.setAttribute("aria-invalid", "false");
       error?.classList.add("hidden");
       input?.style.setProperty("border-color", "var(--accent)");
 
@@ -780,9 +855,10 @@ export const UI = {
 
     // Auto-close after duration
     if (duration > 0) {
-      setTimeout(() => {
+      const timerId = setTimeout(() => {
         this.closeToast(toastId);
       }, duration);
+      _toastTimers.set(toastId, timerId);
     }
 
     return toastId;
@@ -793,6 +869,13 @@ export const UI = {
    * @param {string} toastId - Toast ID to close
    */
   closeToast(toastId) {
+    // Clear timer if exists
+    const timerId = _toastTimers.get(toastId);
+    if (timerId) {
+      clearTimeout(timerId);
+      _toastTimers.delete(toastId);
+    }
+
     const toast = document.getElementById(toastId);
     if (!toast) return;
 

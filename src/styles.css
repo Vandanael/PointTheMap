@@ -11,6 +11,18 @@
   --border-color: #1e293b;
   --accent: #facc15;
 
+  /* Button colors */
+  --btn-primary: #facc15;        /* yellow-400 */
+  --btn-primary-hover: #fde047; /* yellow-300 */
+  --btn-secondary: #1e293b;     /* slate-700 */
+  --btn-secondary-hover: #334155; /* slate-600 */
+
+  /* Toast colors */
+  --toast-info: #3b82f6;        /* blue-500 */
+  --toast-error: #ef4444;       /* red-500 */
+  --toast-warning: #f59e0b;     /* yellow-500 */
+  --toast-success: #10b981;     /* green-500 */
+
   /* Z-index constants */
   --z-base: 1000;
   --z-modal: 2000;
@@ -27,9 +39,13 @@ body.light-theme {
   --bg-secondary: #ebe8e3;    /* Beige/gris moyen - cartes et éléments secondaires */
   --bg-tertiary: #ddd9d2;     /* Beige/gris foncé - éléments tertiaires */
   --text-primary: #1a1816;    /* Presque noir mais légèrement adouci */
-  --text-secondary: #4a4844;  /* Gris moyen pour texte secondaire */
-  --text-tertiary: #6b6863;   /* Gris plus clair pour texte tertiaire */
+  --text-secondary: #3a3834;  /* Darker for better contrast (was #4a4844) */
+  --text-tertiary: #5b5853;   /* Darker for better contrast (was #6b6863) */
   --border-color: #c9c5be;    /* Bordure visible mais douce */
+
+  /* Button colors for light theme */
+  --btn-secondary: #e2e8f0;     /* slate-200 */
+  --btn-secondary-hover: #cbd5e1; /* slate-300 */
 }
 
 * {
@@ -232,7 +248,7 @@ body.light-theme .result-line-distance {
 }
 
 #timer-progress {
-  transition: width linear;
+  transition: width 0.1s linear;
 }
 
 /* Danger shake animation */
@@ -257,6 +273,15 @@ body.light-theme .result-line-distance {
   animation: fadeIn 0.3s ease-out;
 }
 
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
 @keyframes pulse-button {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.02); }
@@ -267,7 +292,17 @@ body.light-theme .result-line-distance {
 }
 
 .pulse-button:hover {
-  animation: none;
+  animation-play-state: paused;  /* Pause instead of stopping */
+}
+
+@keyframes inputErrorShake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.input-error-shake {
+  animation: inputErrorShake 0.4s ease-in-out;
 }
 
 /* Boutons */
@@ -290,15 +325,15 @@ body.light-theme .result-line-distance {
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+  width: 44px;   /* WCAG 2.1 AA - minimum 44x44px touch target */
+  height: 44px;  /* WCAG 2.1 AA - minimum 44x44px touch target */
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 12px;
+  font-size: 1rem;
   font-weight: 600;
 }
 
@@ -338,16 +373,26 @@ body.light-theme .result-line-distance {
   border: 1px solid var(--border-color);
 }
 
+/* Primary button */
+.btn-primary {
+  background: var(--btn-primary);
+  color: #000000;
+}
+
+.btn-primary:hover {
+  background: var(--btn-primary-hover);
+}
+
 /* Secondary button - adapts to theme */
 .btn-secondary {
-  background: var(--bg-tertiary);
+  background: var(--btn-secondary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
   transition: all 0.2s ease;
 }
 
 .btn-secondary:hover {
-  background: var(--bg-secondary);
+  background: var(--btn-secondary-hover);
 }
 
 /* Game Lobby - Mode Toggle */
@@ -382,7 +427,69 @@ body.light-theme .result-line-distance {
 
 /* Input pseudo */
 input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Better focus indicators for keyboard navigation */
+button:focus-visible,
+.toggle-btn:focus-visible,
+.category-btn:focus-visible,
+.pill-option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Remove focus ring for mouse clicks */
+button:focus:not(:focus-visible),
+.toggle-btn:focus:not(:focus-visible),
+.category-btn:focus:not(:focus-visible) {
   outline: none;
+}
+
+/* Disabled category buttons */
+.category-btn:disabled,
+.category-btn.category-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.category-btn.category-disabled .category-coming-soon {
+  color: var(--text-tertiary);
+}
+
+/* Disabled buttons */
+button:disabled,
+button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+}
+
+/* Toast colors */
+.toast-info { background: var(--toast-info); }
+.toast-error { background: var(--toast-error); }
+.toast-warning { background: var(--toast-warning); }
+.toast-success { background: var(--toast-success); }
+
+/* Theme transition animation */
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+* {
+  transition: background-color 0.3s ease,
+              color 0.3s ease,
+              border-color 0.3s ease;
+}
+
+/* Except animations that need to be instant */
+.btn-scale,
+.pulse-button,
+.toast-slide-up,
+[class*="animate-"] {
+  transition: none !important;
 }
 
 /* Safe area padding pour iPhone notch */
@@ -432,16 +539,7 @@ input:focus {
   animation: bounce 0.6s ease-out;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
+/* Duplicate fadeIn removed - using the one at line 267 */
 
 @keyframes bounce {
   0%, 100% {
@@ -604,10 +702,11 @@ body.light-theme .challenge-info {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
-  height: 100%;
+  align-items: start; /* don't stretch buttons so they stay same height */
 }
 
 .category-btn {
+  position: relative;
   background: var(--bg-secondary);
   border: 2px solid var(--border-color);
   border-radius: 0.75rem;
@@ -618,6 +717,7 @@ body.light-theme .challenge-info {
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
+  min-height: 2.75rem; /* fixed height so all buttons match */
 }
 
 .category-btn span {
@@ -629,12 +729,32 @@ body.light-theme .challenge-info {
   transition: color 0.2s ease;
 }
 
+/* Coming soon: full-width bar at bottom, flex centers the text */
+.category-btn .category-coming-soon-wrap {
+  position: absolute;
+  top: auto;
+  bottom: 0.2rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+
+.category-btn .category-coming-soon {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
 .category-btn:hover {
   transform: scale(1.02);
   border-color: var(--accent) !important;
 }
 
-.category-btn:hover span,
+.category-btn:hover span:not(.category-coming-soon),
 .category-btn:hover .text-secondary {
   color: var(--text-primary);
 }
@@ -647,7 +767,7 @@ body.light-theme .challenge-info {
   border-color: var(--accent) !important;
 }
 
-.category-btn.category-active span,
+.category-btn.category-active span:not(.category-coming-soon),
 .category-btn.category-active .text-secondary {
   color: var(--text-primary);
 }
@@ -803,5 +923,36 @@ body.light-theme .challenge-info {
 @media (min-width: 768px) {
   .lobby-footer-content {
     padding: 0 1.5rem;
+  }
+}
+
+/* ===================================
+   ACCESSIBILITY ENHANCEMENTS
+   =================================== */
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Respect prefers-color-scheme for auto theme */
+@media (prefers-color-scheme: light) {
+  body:not(.light-theme):not(.dark-theme) {
+    /* Auto-apply light theme if no manual selection */
+    --bg-primary: #f5f3f0;
+    --bg-secondary: #ebe8e3;
+    --bg-tertiary: #ddd9d2;
+    --text-primary: #1a1816;
+    --text-secondary: #3a3834;
+    --text-tertiary: #5b5853;
+    --border-color: #c9c5be;
+    --btn-secondary: #e2e8f0;
+    --btn-secondary-hover: #cbd5e1;
   }
 }
