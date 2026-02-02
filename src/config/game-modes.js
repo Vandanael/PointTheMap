@@ -116,7 +116,10 @@ export const GAME_MODES = {
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         const dateString = `${year}${month}${day}`;
-        return parseInt(dateString, 10);
+
+        // Add salt to prevent prediction (prime number for better distribution)
+        const salt = 73856093;
+        return (parseInt(dateString, 10) * salt) % 999999;
       }
     },
 

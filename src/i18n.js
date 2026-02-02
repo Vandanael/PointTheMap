@@ -101,6 +101,7 @@ const translations = {
     save: "ENREGISTRER",
     replayNoSave: "REJOUER SANS SAUVEGARDER",
     replay: "REJOUER",
+    waitSeconds: "Attendez {{seconds}}s",
 
     // Final
     top50: "🏆 Top 50 !",
@@ -137,6 +138,35 @@ const translations = {
     },
     online: {
       message: "Vous êtes de retour en ligne !",
+    },
+
+    // Help modal
+    help: {
+      title: "Comment jouer",
+      howToPlay: {
+        title: "Comment jouer",
+        description: "Localisez les capitales sur la carte en 5 secondes. Plus vous êtes précis, plus vous gagnez de points !",
+      },
+      scoring: {
+        title: "Système de points",
+        description: "Vos points dépendent de la distance entre votre clic et la vraie position :",
+        perfect: "< 0,1 km = 5000 pts",
+        excellent: "< 50 km = 4000-5000 pts",
+        good: "< 200 km = 2000-4000 pts",
+        fair: "< 1000 km = 500-2000 pts",
+      },
+      modes: {
+        title: "Modes de jeu",
+        classic: "Jouez quand vous voulez avec des capitales aléatoires",
+        daily: "Un défi quotidien identique pour tous avec bonus de vitesse",
+        countries: "Placez des pays entiers au lieu de capitales",
+      },
+      tips: {
+        title: "Astuces",
+        tip1: "Le bonus de vitesse peut doubler vos points en mode Quotidien",
+        tip2: "Zoomez sur la carte pour plus de précision",
+        tip3: "Les capitales populaires apparaissent plus souvent",
+      },
     },
 
     // Errors
@@ -259,6 +289,7 @@ const translations = {
     save: "SAVE",
     replayNoSave: "REPLAY WITHOUT SAVING",
     replay: "REPLAY",
+    waitSeconds: "Wait {{seconds}}s",
 
     // Final
     top50: "🏆 Top 50!",
@@ -295,6 +326,35 @@ const translations = {
     },
     online: {
       message: "You are back online!",
+    },
+
+    // Help modal
+    help: {
+      title: "How to Play",
+      howToPlay: {
+        title: "How to Play",
+        description: "Locate capitals on the map in 5 seconds. The more accurate you are, the more points you earn!",
+      },
+      scoring: {
+        title: "Scoring System",
+        description: "Your points depend on the distance between your click and the actual location:",
+        perfect: "< 0.1 km = 5000 pts",
+        excellent: "< 50 km = 4000-5000 pts",
+        good: "< 200 km = 2000-4000 pts",
+        fair: "< 1000 km = 500-2000 pts",
+      },
+      modes: {
+        title: "Game Modes",
+        classic: "Play anytime with random capitals",
+        daily: "Daily challenge identical for everyone with speed bonus",
+        countries: "Place entire countries instead of capitals",
+      },
+      tips: {
+        title: "Tips",
+        tip1: "Speed bonus can double your points in Daily mode",
+        tip2: "Zoom on the map for better accuracy",
+        tip3: "Popular capitals appear more often",
+      },
     },
 
     // Errors

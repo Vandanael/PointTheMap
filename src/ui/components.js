@@ -229,6 +229,9 @@ export const StartScreen = () => `
   <div id="start-modal" class="start-modal-overlay fixed inset-0 flex flex-col" style="z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="challengeText">
     <!-- Toggle buttons: top-right (no position override so they stay aligned right) -->
     <div class="lobby-header-icons absolute top-4 right-4 md:top-6 md:right-6 flex gap-2" style="z-index: 10;">
+      <button id="btn-help" class="toggle-btn" title="${t('help.title')}" aria-label="Show help">
+        <span>❓</span>
+      </button>
       <button id="btn-stats" class="toggle-btn" title="My Stats" aria-label="Show stats">
         <span>📋</span>
       </button>
@@ -730,6 +733,72 @@ export const AchievementUnlockModal = (achievementId, achievement) => {
           </div>
 
           ${Button("btn-close-achievement", t("continue"), "secondary")}
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+/**
+ * Help/Tutorial Modal
+ */
+export const HelpModal = () => {
+  return `
+    <div id="help-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4"
+         style="z-index: var(--z-overlay);" role="dialog" aria-modal="true">
+      <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content" style="max-height: 80vh; overflow-y: auto;">
+        <h2 class="text-3xl font-black text-primary mb-6 text-center">${t('help.title')}</h2>
+
+        <div class="space-y-6 text-secondary">
+          <!-- How to Play -->
+          <div>
+            <h3 class="font-bold text-primary mb-2 flex items-center gap-2">
+              <span>🎮</span> ${t('help.howToPlay.title')}
+            </h3>
+            <p class="text-sm leading-relaxed">${t('help.howToPlay.description')}</p>
+          </div>
+
+          <!-- Scoring -->
+          <div>
+            <h3 class="font-bold text-primary mb-2 flex items-center gap-2">
+              <span>🏆</span> ${t('help.scoring.title')}
+            </h3>
+            <p class="text-sm leading-relaxed mb-2">${t('help.scoring.description')}</p>
+            <ul class="text-sm space-y-1 pl-4">
+              <li>• <strong>${t('category.perfect')}</strong>: ${t('help.scoring.perfect')}</li>
+              <li>• <strong>${t('category.excellent')}</strong>: ${t('help.scoring.excellent')}</li>
+              <li>• <strong>${t('category.good')}</strong>: ${t('help.scoring.good')}</li>
+              <li>• <strong>${t('category.fair')}</strong>: ${t('help.scoring.fair')}</li>
+            </ul>
+          </div>
+
+          <!-- Game Modes -->
+          <div>
+            <h3 class="font-bold text-primary mb-2 flex items-center gap-2">
+              <span>🎯</span> ${t('help.modes.title')}
+            </h3>
+            <ul class="text-sm space-y-2">
+              <li>• <strong>${t('classic')}</strong>: ${t('help.modes.classic')}</li>
+              <li>• <strong>${t('daily')}</strong>: ${t('help.modes.daily')}</li>
+              <li>• <strong>${t('countries')}</strong>: ${t('help.modes.countries')}</li>
+            </ul>
+          </div>
+
+          <!-- Tips -->
+          <div>
+            <h3 class="font-bold text-primary mb-2 flex items-center gap-2">
+              <span>💡</span> ${t('help.tips.title')}
+            </h3>
+            <ul class="text-sm space-y-1 pl-4">
+              <li>• ${t('help.tips.tip1')}</li>
+              <li>• ${t('help.tips.tip2')}</li>
+              <li>• ${t('help.tips.tip3')}</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="mt-6">
+          ${Button("btn-close-help", t("close"), "primary")}
         </div>
       </div>
     </div>

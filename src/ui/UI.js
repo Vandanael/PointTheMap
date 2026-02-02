@@ -29,6 +29,7 @@ import {
   Toast,
   MyStatsModal,
   AchievementUnlockModal,
+  HelpModal,
 } from "./components.js";
 import { getStats } from "../features/StatsManager.js";
 import { shareGameResults } from "../features/Share.js";
@@ -512,6 +513,7 @@ export const UI = {
       inputSystem.handleStartGame(gameMode);
     });
 
+    bindClick("btn-help", () => UI.showHelpModal());
     bindClick("btn-theme", toggleTheme);
     bindClick("btn-lang", handleToggleLang);
     bindClick("btn-stats", () => UI.showStatsModal());
@@ -609,10 +611,17 @@ export const UI = {
 
   showStatsModal() {
     remove("stats-modal");
-    
+
     const stats = getStats();
     render(MyStatsModal(stats));
     bindClick("btn-close-stats", () => remove("stats-modal"));
+  },
+
+  showHelpModal() {
+    remove("help-modal");
+
+    render(HelpModal());
+    bindClick("btn-close-help", () => remove("help-modal"));
   },
 
   // Game UI
@@ -763,10 +772,25 @@ export const UI = {
     }
 
     bindClick("btn-submit", debounce(() => {
+      const submitBtn = document.getElementById("btn-submit");
+
       // Rate limiting check
       const now = Date.now();
-      if (now - lastSubmitTime < MIN_SUBMIT_INTERVAL) {
-        UI.showError(t('error.tooFast') || "Please wait before submitting again");
+      const elapsed = now - lastSubmitTime;
+      const remaining = MIN_SUBMIT_INTERVAL - elapsed;
+
+      if (remaining > 0) {
+        // Show countdown instead of error
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          const originalText = submitBtn.textContent;
+          submitBtn.textContent = `${t('waitSeconds', { seconds: Math.ceil(remaining / 1000) })}`;
+
+          setTimeout(() => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+          }, remaining);
+        }
         return;
       }
 
