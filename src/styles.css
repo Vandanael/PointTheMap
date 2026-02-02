@@ -251,11 +251,6 @@ body.light-theme .result-line-distance {
   transition: width 0.1s linear;
 }
 
-.timer-grace #timer-progress {
-  background: var(--text-tertiary);
-  opacity: 0.5;
-}
-
 /* Danger shake animation */
 @keyframes shake {
   0%, 100% { transform: translateX(0); }

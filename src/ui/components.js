@@ -100,6 +100,7 @@ export const QuestionModal = (capitalName, country) => {
   <div id="question-modal" class="fixed inset-0 flex items-center justify-center p-4" style="background: transparent; z-index: var(--z-modal); pointer-events: none;" role="dialog" aria-modal="true" aria-labelledby="capitalName">
     <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content" style="box-shadow: 0 8px 32px rgba(0,0,0,0.4); pointer-events: auto;">
       <div class="text-center">
+        <div class="text-yellow-400 text-3xl font-black mb-4 animate-pulse">${t("getReady")}</div>
         <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-3" id="findLabel">${t("find")}</div>
         <h2 class="text-5xl font-black text-primary mb-2" id="capitalName">${escapedCapital}</h2>
         <div class="text-secondary text-base mb-6" id="countryName">${escapedCountry}</div>
@@ -123,6 +124,7 @@ export const QuestionModalWithButton = (capitalName, country) => {
   <div id="question-modal" class="fixed inset-0 flex items-center justify-center p-4" style="background: transparent; z-index: var(--z-modal); pointer-events: none;" role="dialog" aria-modal="true" aria-labelledby="capitalName">
     <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content" style="box-shadow: 0 8px 32px rgba(0,0,0,0.4); pointer-events: auto;">
       <div class="text-center">
+        <div class="text-yellow-400 text-3xl font-black mb-4 animate-pulse">${t("getReady")}</div>
         <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-3" id="findLabel">${t("find")}</div>
         <h2 class="text-5xl font-black text-primary mb-2" id="capitalName">${escapedCapital}</h2>
         <div class="text-secondary text-base mb-6" id="countryName">${escapedCountry}</div>

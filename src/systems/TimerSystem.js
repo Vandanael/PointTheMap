@@ -54,15 +54,9 @@ export class TimerSystem {
 
     this.#isRunning = true;
 
-    // Emit grace period start event
-    eventBus.emit('timer:grace-start', { graceMs });
-
     // Grace period timeout (before timer UI starts)
     const gracePeriodTimeout = setTimeout(() => {
       if (!this.#isRunning) return;
-
-      // Emit grace period end event
-      eventBus.emit('timer:grace-end');
 
       // Emit timer started event with duration for UI (transition)
       eventBus.emit('timer:started', { timerMs });
