@@ -48,12 +48,22 @@ export const getStats = () => {
 };
 
 /**
- * Get yesterday's date in YYYY-MM-DD format
+ * Get today's date in YYYY-MM-DD format (UTC)
+ * @returns {string}
+ */
+const getToday = () => {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+    .toISOString().split('T')[0];
+};
+
+/**
+ * Get yesterday's date in YYYY-MM-DD format (UTC)
  * @returns {string}
  */
 const getYesterday = () => {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
+  const now = new Date();
+  const yesterday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1));
   return yesterday.toISOString().split('T')[0];
 };
 
@@ -66,7 +76,7 @@ const getYesterday = () => {
 export const updateStats = (rounds, gameType) => {
   try {
     const stats = getStats();
-    const today = new Date().toISOString().split('T')[0];
+    const today = getToday();
 
     // Calculate game metrics
     const avgDistance = rounds.reduce((sum, r) => sum + (r.distance || 0), 0) / rounds.length;
