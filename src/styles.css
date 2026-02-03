@@ -996,3 +996,7 @@ body.light-theme .challenge-info {
     --btn-secondary-hover: #cbd5e1;
   }
 }
+
+.hidden {
+  display: none !important;
+}

@@ -229,9 +229,6 @@ export const StartScreen = () => `
   <div id="start-modal" class="start-modal-overlay fixed inset-0 flex flex-col" style="z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="challengeText">
     <!-- Toggle buttons: top-right (no position override so they stay aligned right) -->
     <div class="lobby-header-icons absolute top-4 right-4 md:top-6 md:right-6 flex gap-2" style="z-index: 10;">
-      <button id="btn-help" class="toggle-btn" title="${t('help.title')}" aria-label="Show help">
-        <span>❓</span>
-      </button>
       <button id="btn-stats" class="toggle-btn" title="My Stats" aria-label="Show stats">
         <span>📋</span>
       </button>
@@ -750,14 +747,6 @@ export const HelpModal = () => {
         <h2 class="text-3xl font-black text-primary mb-6 text-center">${t('help.title')}</h2>
 
         <div class="space-y-6 text-secondary">
-          <!-- How to Play -->
-          <div>
-            <h3 class="font-bold text-primary mb-2 flex items-center gap-2">
-              <span>🎮</span> ${t('help.howToPlay.title')}
-            </h3>
-            <p class="text-sm leading-relaxed">${t('help.howToPlay.description')}</p>
-          </div>
-
           <!-- Scoring -->
           <div>
             <h3 class="font-bold text-primary mb-2 flex items-center gap-2">

@@ -644,10 +644,11 @@ export const UI = {
    * Hide question modal
    */
   hideQuestion() {
-    remove("question-modal");
-    _domCache.invalidate("question-modal");
+    const modal = _domCache.get("question-modal");
+    if (modal) {
+      modal.classList.add("hidden");
+    }
     if (_questionModalClickHandler) {
-      const modal = document.getElementById("question-modal");
       modal?.removeEventListener("click", _questionModalClickHandler);
       _questionModalClickHandler = null;
     }
@@ -662,26 +663,25 @@ export const UI = {
    * @param {boolean} options.requireButton - If true, show button instead of auto-close
    */
   showQuestion(capitalName, country, onClose, { requireButton = false } = {}) {
-    // Remove existing modal first
-    remove("question-modal");
-    
-    // Render appropriate modal variant
-    if (requireButton) {
-      render(QuestionModalWithButton(capitalName, country));
+    let modal = _domCache.get("question-modal");
+    if (!modal) {
+      if (requireButton) {
+        render(QuestionModalWithButton(capitalName, country));
+      } else {
+        render(QuestionModal(capitalName, country));
+      }
+      modal = _domCache.get("question-modal");
     } else {
-      render(QuestionModal(capitalName, country));
+      const capitalEl = modal.querySelector("#capitalName");
+      const countryEl = modal.querySelector("#countryName");
+      if (capitalEl) capitalEl.textContent = capitalName;
+      if (countryEl) countryEl.textContent = country;
+      modal.classList.remove("hidden");
     }
-
+    
     // Shared close handler
     const close = () => {
-      remove("question-modal");
-      // Clean up click listener if it was set
-      if (_questionModalClickHandler) {
-        const modal = document.getElementById("question-modal");
-        modal?.removeEventListener("click", _questionModalClickHandler);
-      }
-      _domCache.invalidate("question-modal");
-
+      this.hideQuestion();
       // Explicit focus management to prevent "first tap = focus restoration"
       // After long wait (tab inactive/minimized), first tap would normally restore focus
       // By proactively focusing the map container, we ensure subsequent taps work as clicks
