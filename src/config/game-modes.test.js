@@ -142,7 +142,10 @@ describe('Game Modes Configuration', () => {
     it('should generate consistent seed from date', () => {
       const date = new Date('2024-01-15');
       const seed = daily.capitalSelection.seed(date);
-      expect(seed).toBe(20240115);
+      // Seed is (YYYYMMDD * salt) % 999999, not raw YYYYMMDD
+      expect(seed).toBe(628005);
+      // Same date must produce same seed
+      expect(daily.capitalSelection.seed(new Date('2024-01-15'))).toBe(628005);
     });
 
     it('should generate different seeds for different dates', () => {

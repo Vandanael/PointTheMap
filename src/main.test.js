@@ -142,6 +142,9 @@ vi.mock('./services/api.js', () => ({
 
 vi.mock('./services/storage.js', () => ({ setLastPseudo: vi.fn(), getRetryQueue: vi.fn(() => []) }));
 
+vi.mock('./services/Analytics.js', () => ({ analytics: { init: vi.fn(), track: vi.fn() } }));
+vi.mock('./services/ErrorMonitoring.js', () => ({ errorMonitoring: { init: vi.fn() } }));
+
 vi.mock('./utils.js', () => ({ isIOS: vi.fn(() => false) }));
 vi.mock('./utils/logger.js', () => ({ logger: { log: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('./utils/performance.js', () => ({ debounce: vi.fn((fn) => fn) }));
@@ -162,6 +165,7 @@ vi.mock('./i18n.js', () => ({ getLang: vi.fn(() => 'en'), t: vi.fn((k) => k) }))
 vi.mock('./ui/components.js', () => ({ AchievementUnlockModal: vi.fn(() => '') }));
 
 import { eventBus } from './core/EventBus.js';
+import { UI } from './ui/UI.js';
 
 describe('main.js wiring', () => {
   beforeEach(() => {
@@ -182,8 +186,10 @@ describe('main.js wiring', () => {
     await import('./main.js');
 
     document.dispatchEvent(new Event('DOMContentLoaded'));
-    await Promise.resolve();
-    await Promise.resolve();
+    // Wait for init() to complete so timer:timeout subscription is registered
+    await vi.waitFor(() => {
+      expect(UI.showStart).toHaveBeenCalled();
+    });
 
     eventBus.emit('timer:timeout');
 
