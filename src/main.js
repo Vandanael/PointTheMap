@@ -376,7 +376,7 @@ const handleStart = async (gameType = "classic") => {
   mapSystem.clearMap();
   const startCenter = gameType === 'stadium' ? MAP.EUROPE_CENTER : MAP.CENTER;
   const startZoom  = gameType === 'stadium' ? MAP.EUROPE_ZOOM  : MAP.ZOOM;
-  mapSystem.flyTo(startCenter, startZoom, { animate: false });
+  mapSystem.flyTo(startCenter, startZoom, { animate: false }); // civilization uses world view (same as country)
 
   const newState = await safeAsync(
     () => startGame(stateManager.getState(), gameType),
@@ -405,10 +405,8 @@ const handleStart = async (gameType = "classic") => {
     roundCount: state.runtimeConfig?.roundCount || 5,
   });
 
-  console.log('[Game Start]', {
+  logger.debug('[Game Start]', {
     gameType: state.gameType,
-    capitals: state.capitals.length,
-    countries: state.countries.length,
     roundCount: state.runtimeConfig?.roundCount
   });
 
@@ -421,9 +419,10 @@ const handleStart = async (gameType = "classic") => {
   const target = getCurrentTarget(state);
   const isCountryMode = state.gameType === 'country';
   const isStadiumMode = state.gameType === 'stadium';
+  const isCivilizationMode = state.gameType === 'civilization';
 
   if (!target || !target.name) {
-    UI.showError(isCountryMode ? "Erreur: pays introuvable" : isStadiumMode ? "Erreur: stade introuvable" : "Erreur: capitale introuvable");
+    UI.showError(isCountryMode ? "Erreur: pays introuvable" : isStadiumMode ? "Erreur: stade introuvable" : isCivilizationMode ? "Erreur: civilisation introuvable" : "Erreur: capitale introuvable");
     UI.hideQuestion();
     return;
   }
@@ -444,11 +443,11 @@ const handleStart = async (gameType = "classic") => {
   };
 
   // Update modal with real data
-  // For country mode: show country name only
-  // For stadium mode: show stadium name only (no city, to keep it challenging)
+  // For country/civilization mode: show name only
+  // For stadium mode: show stadium name only (no city)
   // For capital mode: show capital name + country
   const displayName = target.name;
-  const displaySubtitle = isCountryMode ? "" : isStadiumMode ? "" : target.country;
+  const displaySubtitle = isCountryMode || isCivilizationMode ? "" : isStadiumMode ? "" : target.country;
 
   if (state.currentRoundIndex === 0) {
     UI.showQuestion(displayName, displaySubtitle, onReady, { requireButton: true });
@@ -484,11 +483,13 @@ const onRoundEnd = async () => {
   const round = state.currentRound;
   const isCountryMode = state.gameType === 'country';
   const isStadiumMode = state.gameType === 'stadium';
+  const isCivilizationMode = state.gameType === 'civilization';
 
   if (!round) return;
   if (isCountryMode && !round.country) return;
   if (isStadiumMode && !round.stadium) return;
-  if (!isCountryMode && !isStadiumMode && !round.capital) return;
+  if (isCivilizationMode && !round.civilization) return;
+  if (!isCountryMode && !isStadiumMode && !isCivilizationMode && !round.capital) return;
 
   // Emit round completed event
   eventBus.emit('game:round:completed', { round });
@@ -501,6 +502,11 @@ const onRoundEnd = async () => {
       mapSystem.highlightCountries({
         correctCountryId: round.correctCountryId,
         clickedCountryId: round.clickedCountryId
+      });
+    } else if (isCivilizationMode) {
+      mapSystem.highlightCivilizations({
+        correctCivilizationId: round.correctCivilizationId,
+        clickedCivilizationId: round.clickedCivilizationId
       });
     } else if (isStadiumMode) {
       // Stadium mode: Show stadium markers and line (same as capital)
@@ -527,14 +533,47 @@ const onRoundEnd = async () => {
       delta: round.score,
     });
 
-    // For country mode, distance is always computed (including when clicking water)
-    const displayDistance = isCountryMode
+    // For country/civilization mode, distance is always computed (including when clicking water)
+    const displayDistance = isCountryMode || isCivilizationMode
       ? (round.distance ?? round.distanceToTargetKm ?? 0)
       : round.distance;
     UI.showRoundResult(
       displayDistance,
       round.score,
       round.status === "timeout",
+      isLastRound(state),
+      round.baseScore,
+      round.timeBonus
+    );
+  } else if (round.status === "timeout") {
+    // Timeout with no click: reveal correct target so the player learns where it was
+    if (isCountryMode && round.country) {
+      mapSystem.highlightCountries({
+        correctCountryId: round.country.countryId,
+        clickedCountryId: null
+      });
+    } else if (isCivilizationMode && round.civilization) {
+      mapSystem.highlightCivilizations({
+        correctCivilizationId: round.civilization.id,
+        clickedCivilizationId: null
+      });
+    } else if (isStadiumMode && round.stadium) {
+      mapSystem.addCapitalMarker([round.stadium.lat, round.stadium.lng]);
+    } else if (round.capital) {
+      mapSystem.addCapitalMarker([round.capital.lat, round.capital.lng]);
+    }
+
+    const userContinued = new Promise((r) => mapSystem.setOnResultContinue(r));
+    await Promise.race([
+      userContinued,
+      new Promise((r) => setTimeout(r, TIMING.RESULT_READ_TIME_MS)),
+    ]);
+    mapSystem.clearOnResultContinue();
+
+    UI.showRoundResult(
+      null,
+      round.score,
+      true,
       isLastRound(state),
       round.baseScore,
       round.timeBonus
@@ -563,9 +602,10 @@ const handleNext = () => {
   const target = getCurrentTarget(state);
   const isCountryMode = state.gameType === 'country';
   const isStadiumMode = state.gameType === 'stadium';
+  const isCivilizationMode = state.gameType === 'civilization';
 
   if (!target || !target.name) {
-    UI.showError(isCountryMode ? "Erreur: pays introuvable" : isStadiumMode ? "Erreur: stade introuvable" : "Erreur: capitale introuvable");
+    UI.showError(isCountryMode ? "Erreur: pays introuvable" : isStadiumMode ? "Erreur: stade introuvable" : isCivilizationMode ? "Erreur: civilisation introuvable" : "Erreur: capitale introuvable");
     return;
   }
 
@@ -576,11 +616,9 @@ const handleNext = () => {
     state.totalScore
   );
 
-  // For country mode: show country name only
-  // For stadium mode: show stadium name only (no city, to keep it challenging)
-  // For capital mode: show capital name + country
+  // For country/civilization: show name only; stadium: name only; capital: name + country
   const displayName = target.name;
-  const displaySubtitle = isCountryMode ? "" : isStadiumMode ? "" : target.country;
+  const displaySubtitle = isCountryMode || isCivilizationMode ? "" : isStadiumMode ? "" : target.country;
 
   UI.showQuestion(displayName, displaySubtitle, () => {
     startTimer();

@@ -25,6 +25,8 @@ vi.mock("./Round.js", () => ({
   createRound: vi.fn((target, roundNumber, gameType = "capital") => ({
     capital: gameType === "capital" ? target : null,
     country: gameType === "country" ? target : null,
+    stadium: gameType === "stadium" ? target : null,
+    civilization: gameType === "civilization" ? target : null,
     roundNumber,
     startTime: Date.now(),
     endTime: null,
@@ -57,11 +59,15 @@ vi.mock("../systems/MapSystem.js", () => ({
     getCountryFeatureById: vi.fn(() => ({
       geometry: { type: "Polygon", coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]] },
     })),
+    getCivilizationAtLatLng: vi.fn(() => "roman_empire"),
+    getCivilizationFeatureById: vi.fn(() => ({
+      geometry: { type: "Polygon", coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]] },
+    })),
   },
 }));
 
 vi.mock("../features/StatsManager.js", () => ({
-  getStats: vi.fn(() => ({ bestScoreClassic: 0, bestScoreDaily: 0, bestScoreCountry: 0 })),
+  getStats: vi.fn(() => ({ bestScoreClassic: 0, bestScoreDaily: 0, bestScoreCountry: 0, bestScoreCivilization: 0 })),
 }));
 
 vi.mock("../config.js", async (importOriginal) => {
@@ -90,6 +96,7 @@ describe("Game.js", () => {
         capitals: [],
         countries: [],
         stadiums: [],
+        civilizations: [],
         rounds: [],
         currentRoundIndex: 0,
         currentRound: null,
@@ -249,7 +256,7 @@ describe("Game.js", () => {
       const clickCoords = [48.8, 2.3];
       const newState = playRound(state, clickCoords);
 
-      expect(recordClick).toHaveBeenCalledWith(currentRound, clickCoords, state.gameType, undefined, null);
+      expect(recordClick).toHaveBeenCalledWith(currentRound, clickCoords, state.gameType, undefined, null, null);
       expect(newState.status).toBe(GameStatus.ROUND_RESULT);
       expect(newState.rounds).toHaveLength(1);
       expect(newState.currentRound.status).toBe("completed");

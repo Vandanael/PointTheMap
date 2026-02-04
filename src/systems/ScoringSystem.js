@@ -40,7 +40,7 @@ export class ScoringSystem {
     // Subscribe to round completed event to emit score calculated
     const unsubRoundComplete = eventBus.subscribe('game:round:completed', (/** @type {{ round: import('../game/Game.js').Round }} */ { round }) => {
       if (round.score !== null) {
-        const targetName = round.capital?.name || round.country?.name || 'Unknown';
+        const targetName = round.capital?.name || round.country?.name || round.civilization?.name || round.stadium?.name || 'Unknown';
         eventBus.emit('score:calculated', {
           round: round.roundNumber,
           distance: round.distance,

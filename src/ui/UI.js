@@ -127,8 +127,13 @@ const bindClick = (id, handler) => {
 };
 
 const applyTheme = (theme) => {
-  if (theme === "light") document.body.classList.add("light-theme");
-  else document.body.classList.remove("light-theme");
+  if (theme === "light") {
+    document.body.classList.add("light-theme");
+    document.body.classList.remove("dark-theme");
+  } else {
+    document.body.classList.remove("light-theme");
+    document.body.classList.add("dark-theme");
+  }
   const icon = _domCache.get("theme-icon");
   if (icon) icon.textContent = theme === "light" ? "☀️" : "🌙";
 };
@@ -340,10 +345,10 @@ export const UI = {
           info: t("countriesInfo"),
           desc: t("clickToWin")
         },
-        monuments: {
+        civilizations: {
           title: t("challenge"),
-          info: t("monumentsInfo"),
-          desc: t("comingSoon")
+          info: t("civilizationsInfo"),
+          desc: t("clickToWin")
         },
         stadiums: {
           title: t("challenge"),
@@ -393,7 +398,7 @@ export const UI = {
     };
 
     // Category selection handlers
-    const categoryButtons = ["capitals", "countries", "monuments", "stadiums"];
+    const categoryButtons = ["capitals", "countries", "civilizations", "stadiums"];
     categoryButtons.forEach(category => {
       const btn = document.getElementById(`category-${category}`);
       if (btn) {
@@ -497,18 +502,42 @@ export const UI = {
             return;
           }
 
-          console.log('Countries GeoJSON loaded successfully');
           UI.hideLoader();
         } catch (error) {
-          console.error('Error loading countries:', error);
+          logger.error('Error loading countries:', error);
           UI.hideLoader();
           UI.showToast(t('error.countriesLoadFailed') || "Error loading countries: " + error.message, "error", 4000);
+          return;
+        }
+      } else if (selectedCategory === "civilizations") {
+        gameMode = "civilization";
+
+        UI.showLoader();
+        UI.updateLoader(30);
+
+        try {
+          const { mapSystem } = await import("../systems/MapSystem.js");
+          UI.updateLoader(60);
+
+          const loaded = await mapSystem.loadCivilizationsGeoJSON();
+          UI.updateLoader(100);
+
+          if (!loaded) {
+            UI.hideLoader();
+            UI.showToast(t('error.civilizationsLoadFailed') || "Failed to load civilizations data. Please try again.", "error", 4000);
+            return;
+          }
+
+          UI.hideLoader();
+        } catch (error) {
+          logger.error('Error loading civilizations:', error);
+          UI.hideLoader();
+          UI.showToast(t('error.civilizationsLoadFailed') || "Error loading civilizations: " + error.message, "error", 4000);
           return;
         }
       } else if (selectedCategory === "stadiums") {
         gameMode = "stadium";
       } else {
-        // monuments are disabled, so this shouldn't be reached
         return;
       }
 

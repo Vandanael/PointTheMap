@@ -1,0 +1,86 @@
+{
+  "type": "FeatureCollection",
+  "name": "civilizations",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "id": "roman_empire", "name": "Roman Empire" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[8, 36], [20, 36], [20, 47], [8, 47], [8, 36]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "ancient_egypt", "name": "Ancient Egypt" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[25, 22], [37, 22], [37, 31], [25, 31], [25, 22]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "ancient_greece", "name": "Ancient Greece" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[19, 35], [30, 35], [30, 42], [19, 42], [19, 35]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "maya", "name": "Maya" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-92, 14], [-87, 14], [-87, 21], [-92, 21], [-92, 14]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "inca", "name": "Inca Empire" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-80, -18], [-68, -18], [-68, -2], [-80, -2], [-80, -18]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "aztec", "name": "Aztec Empire" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[-99, 18], [-98, 18], [-98, 20], [-99, 20], [-99, 18]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "persian_empire", "name": "Persian Empire" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[44, 25], [64, 25], [64, 40], [44, 40], [44, 25]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "ottoman_empire", "name": "Ottoman Empire" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[26, 36], [45, 36], [45, 42], [26, 42], [26, 36]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "mongol_empire", "name": "Mongol Empire" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[85, 35], [120, 35], [120, 52], [85, 52], [85, 35]]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "id": "byzantine_empire", "name": "Byzantine Empire" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[28, 34], [37, 34], [37, 42], [28, 42], [28, 34]]]
+      }
+    }
+  ]
+}

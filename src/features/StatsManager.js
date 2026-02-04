@@ -17,6 +17,7 @@ const DEFAULT_STATS = {
   bestScoreClassic: 0,
   bestScoreDaily: 0,
   bestScoreStadium: 0,
+  bestScoreCivilization: 0,
   averageDistance: 0,
   perfectCount: 0,
   playCount: 0,
@@ -147,6 +148,11 @@ export const updateStats = (rounds, gameType) => {
       if (totalScore > (stats.bestScoreStadium || 0)) {
         stats.bestScoreStadium = totalScore;
         logger.info(`Stats: New best stadium score: ${totalScore}`);
+      }
+    } else if (gameType === 'civilization') {
+      if (totalScore > (stats.bestScoreCivilization || 0)) {
+        stats.bestScoreCivilization = totalScore;
+        logger.info(`Stats: New best civilization score: ${totalScore}`);
       }
     }
 

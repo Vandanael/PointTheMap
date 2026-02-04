@@ -57,6 +57,11 @@ export const MODES = {
     id: 'stadium',
     name: 'Stadium',
     variants: ['classic']
+  },
+  civilization: {
+    id: 'civilization',
+    name: 'Civilization',
+    variants: ['classic']
   }
 };
 
@@ -208,6 +213,45 @@ export const GAME_MODES = {
     // Scoring configuration (point-based, same as classic)
     scoring: {
       maxPerRound: 5000,
+      timeBonus: {
+        enabled: false,
+        maxBonus: 0,
+        maxBonusPercent: 0,
+        distanceThreshold: 200
+      }
+    },
+
+    // Timing
+    timing: {
+      roundTime: 5000,
+      gracePeriod: 500,
+      roundCount: 5
+    },
+
+    // Leaderboard
+    leaderboard: {
+      deduplication: 'by_pseudo',
+      timeframe: 'all_time'
+    }
+  },
+
+  civilization: {
+    id: 'civilization',
+    name: 'Civilization Mode',
+    description: 'Find civilizations on the map',
+
+    // Civilization selection strategy
+    civilizationSelection: {
+      type: 'random',
+      dataSource: 'civilizations',
+      count: 5,
+      balancing: { popular: 2, obscure: 3 }
+    },
+
+    // Scoring configuration (zone-based, same as country)
+    scoring: {
+      maxPerRound: 5000,
+      type: 'country',
       timeBonus: {
         enabled: false,
         maxBonus: 0,

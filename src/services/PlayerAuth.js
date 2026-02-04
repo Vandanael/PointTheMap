@@ -8,6 +8,8 @@
  * - Providing the token for API requests
  */
 
+import { logger } from '../utils/logger.js';
+
 const TOKEN_KEY = 'player_token';
 const PLAYER_ID_KEY = 'player_id';
 const TOKEN_ENDPOINT = '/.netlify/functions/generate-player-token';
@@ -42,12 +44,12 @@ class PlayerAuth {
     if (storedToken && storedPlayerId && !this.isTokenExpired(storedToken)) {
       this.token = storedToken;
       this.playerId = storedPlayerId;
-      console.log('[PlayerAuth] Loaded existing token for player:', storedPlayerId.substring(0, 8) + '...');
+      logger.debug('[PlayerAuth] Loaded existing token for player:', storedPlayerId.substring(0, 8) + '...');
       return;
     }
 
     // Token is missing or expired, generate a new one
-    console.log('[PlayerAuth] No valid token found, generating new one...');
+    logger.debug('[PlayerAuth] No valid token found, generating new one...');
     await this.generateNewToken();
   }
 
@@ -75,10 +77,10 @@ class PlayerAuth {
       localStorage.setItem(TOKEN_KEY, data.token);
       localStorage.setItem(PLAYER_ID_KEY, data.player_id);
 
-      console.log('[PlayerAuth] New token generated for player:', data.player_id.substring(0, 8) + '...');
+      logger.debug('[PlayerAuth] New token generated for player:', data.player_id.substring(0, 8) + '...');
       return data;
     } catch (error) {
-      console.error('[PlayerAuth] Error generating token:', error);
+      logger.error('[PlayerAuth] Error generating token:', error);
       throw error;
     }
   }
@@ -98,7 +100,7 @@ class PlayerAuth {
       const oneDayMs = 24 * 60 * 60 * 1000;
       return (expiresAt - now) < oneDayMs;
     } catch (error) {
-      console.error('[PlayerAuth] Error parsing token:', error);
+      logger.error('[PlayerAuth] Error parsing token:', error);
       return true; // Consider invalid tokens as expired
     }
   }
@@ -115,7 +117,7 @@ class PlayerAuth {
 
     // Double-check expiration
     if (this.isTokenExpired(this.token)) {
-      console.log('[PlayerAuth] Token expired, generating new one...');
+      logger.debug('[PlayerAuth] Token expired, generating new one...');
       await this.generateNewToken();
     }
 
@@ -150,7 +152,7 @@ class PlayerAuth {
     this.playerId = null;
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(PLAYER_ID_KEY);
-    console.log('[PlayerAuth] Token cleared');
+    logger.debug('[PlayerAuth] Token cleared');
   }
 
   /**

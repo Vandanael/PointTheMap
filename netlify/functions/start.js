@@ -3,7 +3,8 @@
 
 import { randomUUID } from "crypto";
 import { capitals } from "../../capitals.js";
-import { selectCapitals, selectCountries } from "../../lib/capital-selection/index.js";
+import { civilizations } from "../../civilizations.js";
+import { selectCapitals, selectCountries, selectCivilizations } from "../../lib/capital-selection/index.js";
 import { getGameMode, isValidMode } from "../../src/config/game-modes.js";
 import { API } from "../../src/config.js";
 import { getDatabase } from "./db.js";
@@ -72,6 +73,7 @@ export default async function startHandler(req, context) {
 
     const mode = getGameMode(gameType);
     const isCountryMode = gameType === 'country';
+    const isCivilizationMode = gameType === 'civilization';
 
     let selectedTargets;
     let clientData;
@@ -82,6 +84,15 @@ export default async function startHandler(req, context) {
         countries: selectedTargets.map(c => ({
           name: c.name,
           countryId: c.countryId,
+          popular: c.popular
+        }))
+      };
+    } else if (isCivilizationMode) {
+      selectedTargets = selectCivilizations(mode, civilizations, new Date());
+      clientData = {
+        civilizations: selectedTargets.map(c => ({
+          id: c.id,
+          name: c.name,
           popular: c.popular
         }))
       };

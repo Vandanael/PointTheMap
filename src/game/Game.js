@@ -36,10 +36,18 @@ import { mapSystem } from "../systems/MapSystem.js";
  */
 
 /**
+ * @typedef {Object} Civilization
+ * @property {string} id
+ * @property {string} name
+ * @property {boolean} popular
+ */
+
+/**
  * @typedef {Object} Round
  * @property {Capital | null} capital
  * @property {Country | null} country
  * @property {Stadium | null} stadium
+ * @property {import('./Game.js').Civilization | null} [civilization] - For civilization mode
  * @property {number} roundNumber
  * @property {number} startTime
  * @property {number | null} endTime
@@ -50,9 +58,11 @@ import { mapSystem } from "../systems/MapSystem.js";
  * @property {number} [timeBonus] - Time bonus points
  * @property {string} [correctCountryId] - For country mode
  * @property {string | null} [clickedCountryId] - For country mode
- * @property {number | null} [distanceToTargetKm] - For country mode
+ * @property {string} [correctCivilizationId] - For civilization mode
+ * @property {string | null} [clickedCivilizationId] - For civilization mode
+ * @property {number | null} [distanceToTargetKm] - For country/civilization mode
  * @property {'playing' | 'completed' | 'timeout'} status
- * @property {string} [gameType] - 'capital' or 'country'
+ * @property {string} [gameType] - 'capital' | 'country' | 'stadium' | 'civilization'
  */
 
 /**
@@ -74,6 +84,7 @@ import { mapSystem } from "../systems/MapSystem.js";
  * @property {Capital[]} capitals
  * @property {Country[]} countries
  * @property {Stadium[]} stadiums
+ * @property {import('./Game.js').Civilization[]} civilizations
  * @property {Round[]} rounds
  * @property {number} currentRoundIndex
  * @property {Round | null} currentRound
@@ -82,7 +93,7 @@ import { mapSystem } from "../systems/MapSystem.js";
  * @property {SubmitResult | null} result
  * @property {string | null} error
  * @property {number} sessionBestScore
- * @property {'classic' | 'daily' | 'country' | 'stadium'} gameType
+ * @property {'classic' | 'daily' | 'country' | 'stadium' | 'civilization'} gameType
  * @property {RuntimeGameConfig | null} runtimeConfig - Mode-derived config for this session (set at start)
  */
 
@@ -104,6 +115,7 @@ export const createGameState = () => ({
   capitals: [],
   countries: [],
   stadiums: [],
+  civilizations: [],
   rounds: [],
   currentRoundIndex: 0,
   currentRound: null,
@@ -119,7 +131,7 @@ export const createGameState = () => ({
 /**
  * Start a new game session
  * @param {GameState} state - Current game state
- * @param {'classic' | 'daily' | 'country'} [gameType='classic'] - Type of game
+ * @param {'classic' | 'daily' | 'country' | 'stadium' | 'civilization'} [gameType='classic'] - Type of game
  * @returns {Promise<GameState>}
  */
 export const startGame = async (state, gameType = "classic") => {
@@ -127,13 +139,14 @@ export const startGame = async (state, gameType = "classic") => {
     const session = await api.start(gameType);
     const isCountryMode = gameType === 'country';
     const isStadiumMode = gameType === 'stadium';
-    const targets = isCountryMode ? session.countries : isStadiumMode ? session.stadiums : session.capitals;
+    const isCivilizationMode = gameType === 'civilization';
+    const targets = isCountryMode ? session.countries : isStadiumMode ? session.stadiums : isCivilizationMode ? session.civilizations : session.capitals;
 
     if (!targets || targets.length === 0) {
       return {
         ...state,
         status: GameStatus.IDLE,
-        error: isCountryMode ? "Aucun pays disponible" : isStadiumMode ? "Aucun stade disponible" : "Aucune capitale disponible",
+        error: isCountryMode ? "Aucun pays disponible" : isStadiumMode ? "Aucun stade disponible" : isCivilizationMode ? "Aucune civilisation disponible" : "Aucune capitale disponible",
       };
     }
 
@@ -143,20 +156,23 @@ export const startGame = async (state, gameType = "classic") => {
       ? stats.bestScoreCountry ?? 0
       : gameType === 'stadium'
         ? stats.bestScoreStadium ?? 0
-        : gameType === 'classic'
-          ? stats.bestScoreClassic
-          : stats.bestScoreDaily;
+        : gameType === 'civilization'
+          ? stats.bestScoreCivilization ?? 0
+          : gameType === 'classic'
+            ? stats.bestScoreClassic
+            : stats.bestScoreDaily;
 
     const runtimeConfig = getRuntimeGameConfig(gameType);
-    const roundGameType = isCountryMode ? 'country' : isStadiumMode ? 'stadium' : 'capital';
+    const roundGameType = isCountryMode ? 'country' : isStadiumMode ? 'stadium' : isCivilizationMode ? 'civilization' : 'capital';
 
     return {
       ...createGameState(),
       status: GameStatus.PLAYING,
       token: session.token,
-      capitals: isCountryMode || isStadiumMode ? [] : session.capitals,
+      capitals: isCountryMode || isStadiumMode || isCivilizationMode ? [] : session.capitals,
       countries: isCountryMode ? session.countries : [],
       stadiums: isStadiumMode ? session.stadiums : [],
+      civilizations: isCivilizationMode ? session.civilizations : [],
       currentRound: createRound(targets[0], 0, roundGameType),
       gameType,
       sessionBestScore: previousBestScore,
@@ -187,6 +203,7 @@ export const playRound = (state, clickCoords) => {
     : undefined;
 
   let countryData = null;
+  let civilizationData = null;
 
   // Handle country mode
   if (state.gameType === 'country' && state.currentRound.country) {
@@ -203,12 +220,26 @@ export const playRound = (state, clickCoords) => {
     };
   }
 
+  // Handle civilization mode
+  if (state.gameType === 'civilization' && state.currentRound.civilization) {
+    const targetCivilizationId = state.currentRound.civilization.id;
+    const clickedCivilizationId = mapSystem.getCivilizationAtLatLng(clickCoords);
+    const targetCivilizationFeature = mapSystem.getCivilizationFeatureById(targetCivilizationId);
+
+    civilizationData = {
+      targetCivilizationFeature,
+      isInsideTargetCivilization: clickedCivilizationId === targetCivilizationId,
+      clickedCivilizationId,
+    };
+  }
+
   const completedRound = recordClick(
     state.currentRound,
     clickCoords,
     state.gameType,
     totalTimeAllowed,
-    countryData
+    countryData,
+    civilizationData
   );
 
   return {
@@ -247,8 +278,8 @@ export const handleTimeout = (state) => {
 export const nextRound = (state) => {
   const nextIndex = state.currentRoundIndex + 1;
   const roundCount = state.runtimeConfig?.roundCount ?? GAME.ROUNDS;
-  const targets = state.gameType === 'country' ? state.countries : state.gameType === 'stadium' ? state.stadiums : state.capitals;
-  const roundGameType = state.gameType === 'country' ? 'country' : state.gameType === 'stadium' ? 'stadium' : 'capital';
+  const targets = state.gameType === 'country' ? state.countries : state.gameType === 'stadium' ? state.stadiums : state.gameType === 'civilization' ? state.civilizations : state.capitals;
+  const roundGameType = state.gameType === 'country' ? 'country' : state.gameType === 'stadium' ? 'stadium' : state.gameType === 'civilization' ? 'civilization' : 'capital';
 
   if (nextIndex >= roundCount || nextIndex >= targets.length) {
     return {
@@ -283,7 +314,9 @@ export const getCurrentTarget = (state) => {
     ? state.currentRound.country
     : state.gameType === 'stadium'
       ? state.currentRound.stadium
-      : state.currentRound.capital;
+      : state.gameType === 'civilization'
+        ? state.currentRound.civilization
+        : state.currentRound.capital;
 };
 
 /**

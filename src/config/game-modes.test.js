@@ -12,6 +12,10 @@ describe('Game Modes Configuration', () => {
       expect(isValidMode('daily')).toBe(true);
     });
 
+    it('should return true for civilization mode', () => {
+      expect(isValidMode('civilization')).toBe(true);
+    });
+
     it('should return false for invalid mode', () => {
       expect(isValidMode('invalid')).toBe(false);
       expect(isValidMode('')).toBe(false);
@@ -63,6 +67,14 @@ describe('Game Modes Configuration', () => {
       expect(() => getRuntimeGameConfig('invalid')).toThrow('Unknown game mode: invalid');
     });
 
+    it('should return complete runtime config for civilization mode', () => {
+      const config = getRuntimeGameConfig('civilization');
+      expect(config.roundCount).toBe(5);
+      expect(config.timerMs).toBe(5000);
+      expect(config.graceMs).toBe(500);
+      expect(config.dangerZoneMs).toBe(GAME.DANGER_ZONE_MS);
+    });
+
     it('should return complete runtime config for country mode', () => {
       const config = getRuntimeGameConfig('country');
       expect(config).toEqual({
@@ -78,28 +90,32 @@ describe('Game Modes Configuration', () => {
   });
 
   describe('getAllModes', () => {
-    it('should return all available modes (capital, country, stadium)', () => {
+    it('should return all available modes (capital, country, stadium, civilization)', () => {
       const modes = getAllModes();
-      expect(modes).toHaveLength(3);
+      expect(modes).toHaveLength(4);
       expect(modes.map(m => m.id)).toContain('capital');
       expect(modes.map(m => m.id)).toContain('country');
       expect(modes.map(m => m.id)).toContain('stadium');
+      expect(modes.map(m => m.id)).toContain('civilization');
       const capital = modes.find(m => m.id === 'capital');
       const country = modes.find(m => m.id === 'country');
       const stadium = modes.find(m => m.id === 'stadium');
+      const civilization = modes.find(m => m.id === 'civilization');
       expect(capital.variants).toEqual(['classic', 'daily']);
       expect(country.variants).toEqual(['classic']);
       expect(stadium.variants).toEqual(['classic']);
+      expect(civilization.variants).toEqual(['classic']);
     });
   });
 
   describe('getModeIds', () => {
-    it('should return all mode IDs (capital, country, stadium)', () => {
+    it('should return all mode IDs (capital, country, stadium, civilization)', () => {
       const ids = getModeIds();
-      expect(ids).toHaveLength(3);
+      expect(ids).toHaveLength(4);
       expect(ids).toContain('capital');
       expect(ids).toContain('country');
       expect(ids).toContain('stadium');
+      expect(ids).toContain('civilization');
     });
   });
 
@@ -158,6 +174,23 @@ describe('Game Modes Configuration', () => {
       const seed1 = daily.capitalSelection.seed(date1);
       const seed2 = daily.capitalSelection.seed(date2);
       expect(seed1).not.toBe(seed2);
+    });
+  });
+
+  describe('Civilization mode configuration', () => {
+    const civilization = GAME_MODES.civilization;
+
+    it('should have civilization selection config', () => {
+      expect(civilization.civilizationSelection.type).toBe('random');
+      expect(civilization.civilizationSelection.count).toBe(5);
+      expect(civilization.civilizationSelection.balancing.popular).toBe(2);
+      expect(civilization.civilizationSelection.balancing.obscure).toBe(3);
+    });
+
+    it('should return civilization mode via getGameMode', () => {
+      const mode = getGameMode('civilization');
+      expect(mode.id).toBe('civilization');
+      expect(mode.name).toBe('Civilization Mode');
     });
   });
 });

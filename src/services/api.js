@@ -6,6 +6,7 @@
  * @property {import('../game/Game.js').Capital[]} [capitals]
  * @property {import('../game/Game.js').Country[]} [countries]
  * @property {import('../game/Game.js').Stadium[]} [stadiums]
+ * @property {import('../game/Game.js').Civilization[]} [civilizations]
  * @property {number} startTime
  * @property {string} csrfToken
  */
@@ -75,8 +76,6 @@ const mockStart = async (gameType = 'classic') => {
     const selector = new RandomSelector();
     const selected = selector.select(countries, { count: 5, balancing: { popular: 2, obscure: 3 } });
 
-    console.log('[API Mock] Country mode: selected', selected.length, 'countries:', selected.map(c => c.name));
-
     return {
       token: generateId(),
       countries: selected.map(c => ({
@@ -96,8 +95,6 @@ const mockStart = async (gameType = 'classic') => {
     ]);
 
     const selected = selectBalancedStadiums(stadiums);
-    console.log('[API Mock] Stadium mode: selected', selected.length, 'stadiums:', selected.map(s => s.name));
-
     return {
       token: generateId(),
       stadiums: selected.map(s => ({
@@ -107,6 +104,24 @@ const mockStart = async (gameType = 'classic') => {
         lat: s.lat,
         lng: s.lng,
         popular: s.popular,
+      })),
+      startTime: Date.now(),
+      csrfToken: generateId(),
+    };
+  }
+
+  if (gameType === 'civilization') {
+    const { civilizations } = await import('../../civilizations.js');
+    const { selectCivilizations } = await import('@lib/capital-selection/index.js');
+    const { getGameMode } = await import('../config/game-modes.js');
+    const mode = getGameMode('civilization');
+    const selected = selectCivilizations(mode, civilizations, new Date());
+    return {
+      token: generateId(),
+      civilizations: selected.map(c => ({
+        id: c.id,
+        name: c.name,
+        popular: c.popular
       })),
       startTime: Date.now(),
       csrfToken: generateId(),
@@ -249,6 +264,17 @@ const formatRoundsForSubmit = (rounds, gameType = 'classic') =>
         ...base,
         stadium: r.stadium?.name,
         city: r.stadium?.city,
+      };
+    }
+
+    if (gameType === 'civilization' || r.gameType === 'civilization') {
+      return {
+        ...base,
+        civilization: r.civilization?.name,
+        civilizationId: r.civilization?.id,
+        correctCivilizationId: r.correctCivilizationId,
+        clickedCivilizationId: r.clickedCivilizationId,
+        distanceToTargetKm: r.distanceToTargetKm,
       };
     }
 

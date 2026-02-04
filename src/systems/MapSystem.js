@@ -194,6 +194,10 @@ export class MapSystem {
   #countriesLayer = null;
   #countriesGeoJSON = null;
   #countryHighlights = [];
+  // Civilization mode support
+  #civilizationsLayer = null;
+  #civilizationsGeoJSON = null;
+  #civilizationHighlights = [];
 
   constructor() {}
 
@@ -549,6 +553,7 @@ export class MapSystem {
 
     this.clearCapitals();
     this.clearCountryHighlights();
+    this.clearCivilizationHighlights();
 
     this.#markers.forEach((m) => this.#map.removeLayer(m));
     this.#polylines.forEach((p) => this.#map.removeLayer(p));
@@ -857,6 +862,152 @@ export class MapSystem {
     });
     this.#countryHighlights = [];
     eventBus.emit('map:country-highlights-cleared');
+  }
+
+  /**
+   * Load civilizations GeoJSON layer for Civilization mode
+   * @returns {Promise<boolean>} Success status
+   */
+  async loadCivilizationsGeoJSON() {
+    if (this.#civilizationsLayer) {
+      logger.warn('Civilizations layer already loaded');
+      return true;
+    }
+
+    try {
+      const response = await fetch('/data/civilizations.geojson');
+      if (!response.ok) {
+        throw new Error(`Failed to load civilizations.geojson: ${response.status}`);
+      }
+
+      this.#civilizationsGeoJSON = await response.json();
+      if (!this.#map.getPane('civilizationsOverlay')) {
+        const civPane = this.#map.createPane('civilizationsOverlay');
+        civPane.style.zIndex = 450;
+        civPane.style.pointerEvents = 'none';
+      }
+      this.#civilizationsLayer = L.geoJSON(this.#civilizationsGeoJSON, {
+        style: () => ({
+          fillColor: 'transparent',
+          fillOpacity: 0,
+          color: 'transparent',
+          weight: 0,
+          interactive: false,
+          pane: 'civilizationsOverlay'
+        })
+      }).addTo(this.#map);
+
+      logger.info('Civilizations GeoJSON loaded successfully');
+      eventBus.emit('map:civilizations-loaded');
+      return true;
+    } catch (error) {
+      logger.error('Failed to load civilizations GeoJSON:', error);
+      eventBus.emit('map:civilizations-error', { error: error.message });
+      return false;
+    }
+  }
+
+  /**
+   * Detect which civilization zone contains the given coordinates
+   * @param {[number, number]} latlng - [lat, lng] coordinates
+   * @returns {string|null} Civilization id or null if not in any zone
+   */
+  getCivilizationAtLatLng(latlng) {
+    if (!this.#civilizationsGeoJSON) {
+      logger.warn('Civilizations GeoJSON not loaded');
+      return null;
+    }
+
+    const [lat, lng] = latlng;
+    const point = { type: 'Point', coordinates: [lng, lat] };
+
+    for (const feature of this.#civilizationsGeoJSON.features) {
+      if (this.#pointInPolygon(point, feature.geometry)) {
+        return feature.properties.id ?? feature.properties.name;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Get civilization feature by id
+   * @param {string} civilizationId - Civilization id (matches properties.id)
+   * @returns {Object|null} GeoJSON feature or null
+   */
+  getCivilizationFeatureById(civilizationId) {
+    if (!this.#civilizationsGeoJSON) return null;
+
+    return this.#civilizationsGeoJSON.features.find(f =>
+      f.properties.id === civilizationId
+    ) ?? null;
+  }
+
+  /**
+   * Highlight civilizations for Civilization mode result
+   * @param {Object} options - Highlighting options
+   * @param {string} options.correctCivilizationId - Id of correct civilization
+   * @param {string|null} [options.clickedCivilizationId] - Id of clicked civilization (null if ocean)
+   */
+  highlightCivilizations({ correctCivilizationId, clickedCivilizationId }) {
+    if (!this.#civilizationsLayer) {
+      logger.warn('Civilizations layer not loaded');
+      return;
+    }
+
+    this.clearCivilizationHighlights();
+
+    const correctFeature = this.getCivilizationFeatureById(correctCivilizationId);
+    if (!correctFeature) {
+      logger.warn(`Correct civilization not found: ${correctCivilizationId}`);
+      return;
+    }
+
+    const isSame = clickedCivilizationId === correctCivilizationId;
+
+    const correctStyle = {
+      fillColor: '#22c55e',
+      fillOpacity: isSame ? 0.45 : 0.35,
+      color: '#16a34a',
+      weight: 2,
+      interactive: false
+    };
+
+    const correctHighlight = L.geoJSON(correctFeature, { style: () => correctStyle })
+      .addTo(this.#map);
+    this.#civilizationHighlights.push(correctHighlight);
+
+    if (clickedCivilizationId && !isSame) {
+      const clickedFeature = this.getCivilizationFeatureById(clickedCivilizationId);
+      if (clickedFeature) {
+        const clickedStyle = {
+          fillColor: '#f97316',
+          fillOpacity: 0.3,
+          color: '#ea580c',
+          weight: 2,
+          interactive: false
+        };
+
+        const clickedHighlight = L.geoJSON(clickedFeature, { style: () => clickedStyle })
+          .addTo(this.#map);
+        this.#civilizationHighlights.push(clickedHighlight);
+      }
+    }
+
+    eventBus.emit('map:civilizations-highlighted', { correctCivilizationId, clickedCivilizationId });
+  }
+
+  /**
+   * Clear all civilization highlights
+   */
+  clearCivilizationHighlights() {
+    this.#civilizationHighlights.forEach(layer => {
+      if (this.#map) {
+        this.#map.removeLayer(layer);
+      }
+    });
+    this.#civilizationHighlights = [];
+    eventBus.emit('map:civilization-highlights-cleared');
   }
 
   /**

@@ -11,15 +11,16 @@ function getTotalTimeAllowed(totalTimeAllowed) {
 
 /**
  * Create a new round
- * @param {import('./Game.js').Capital|import('./Game.js').Country} target - Capital or Country to find
+ * @param {import('./Game.js').Capital|import('./Game.js').Country|import('./Game.js').Stadium|import('./Game.js').Civilization} target - Target to find
  * @param {number} roundNumber - Round number (0-indexed)
- * @param {string} [gameType='capital'] - 'capital' or 'country'
+ * @param {string} [gameType='capital'] - 'capital', 'country', 'stadium', or 'civilization'
  * @returns {import('./Game.js').Round}
  */
 export const createRound = (target, roundNumber, gameType = 'capital') => ({
   capital: gameType === 'capital' ? target : null,
   country: gameType === 'country' ? target : null,
   stadium: gameType === 'stadium' ? target : null,
+  civilization: gameType === 'civilization' ? target : null,
   roundNumber,
   startTime: Date.now(),
   endTime: null,
@@ -37,12 +38,10 @@ export const createRound = (target, roundNumber, gameType = 'capital') => ({
  * @param {string} [gameMode='classic'] - Game mode ('classic', 'daily', or 'country')
  * @param {number} [totalTimeAllowed] - From state.runtimeConfig (timerMs + graceMs); fallback GAME for tests
  * @param {Object} [countryData] - Country-specific data for country mode
- * @param {Object} [countryData.targetCountryFeature] - GeoJSON feature of target country
- * @param {boolean} [countryData.isInsideTargetCountry] - Whether click is inside target country
- * @param {string|null} [countryData.clickedCountryId] - ID of clicked country (null if ocean)
+ * @param {Object} [civilizationData] - Civilization-specific data for civilization mode
  * @returns {import('./Game.js').Round}
  */
-export const recordClick = (round, clickCoords, gameMode = 'classic', totalTimeAllowed = undefined, countryData = null) => {
+export const recordClick = (round, clickCoords, gameMode = 'classic', totalTimeAllowed = undefined, countryData = null, civilizationData = null) => {
   const endTime = Date.now();
   const elapsed = endTime - round.startTime;
   const total = getTotalTimeAllowed(totalTimeAllowed);
@@ -92,6 +91,42 @@ export const recordClick = (round, clickCoords, gameMode = 'classic', totalTimeA
       timeBonus: Math.round(scoreResult.timeBonus),
       correctCountryId: round.country.countryId,
       clickedCountryId: countryData.clickedCountryId,
+      status: "completed",
+    };
+  }
+
+  // Civilization mode: same flow and scoring as country (distance to polygon;
+  // click aside = some points, too far = fewer points, inside = max)
+  if (round.gameType === 'civilization' && civilizationData && round.civilization) {
+    const feature = civilizationData.targetCivilizationFeature;
+    const scoreResult = feature
+      ? scoringSystem.calculateCountryClickScore(
+          normalizedCoords,
+          feature,
+          civilizationData.isInsideTargetCivilization,
+          elapsed,
+          gameMode,
+          total
+        )
+      : {
+          distance: null,
+          distanceToCountry: Infinity,
+          score: 0,
+          timeBonus: 0,
+          totalScore: 0,
+        };
+
+    return {
+      ...round,
+      endTime,
+      click: { lat: normalizedLat, lng: normalizedLng },
+      distance: scoreResult.distance,
+      distanceToTargetKm: scoreResult.distanceToCountry,
+      score: Math.round(scoreResult.totalScore),
+      baseScore: Math.round(scoreResult.score),
+      timeBonus: Math.round(scoreResult.timeBonus),
+      correctCivilizationId: round.civilization.id,
+      clickedCivilizationId: civilizationData.clickedCivilizationId,
       status: "completed",
     };
   }

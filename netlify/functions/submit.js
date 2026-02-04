@@ -85,20 +85,21 @@ const validateRounds = (rounds, sessionTargets, gameType) => {
   }
 
   const isCountryMode = gameType === 'country';
+  const isCivilizationMode = gameType === 'civilization';
 
   for (let i = 0; i < GAME.ROUNDS; i++) {
     const round = rounds[i];
     const expected = sessionTargets[i];
 
-    // For country mode: check country, for capital modes: check capital
-    const targetField = isCountryMode ? round.country : round.capital;
+    const targetField = isCountryMode ? round.country : isCivilizationMode ? round.civilization : round.capital;
 
     if (!round || !targetField) {
       return { valid: false, error: `Missing round ${i + 1}` };
     }
 
-    if (targetField !== expected.name) {
-      return { valid: false, error: `${isCountryMode ? 'Country' : 'Capital'} mismatch at round ${i + 1}` };
+    const expectedName = typeof expected === 'object' && expected !== null && 'name' in expected ? expected.name : expected;
+    if (targetField !== expectedName) {
+      return { valid: false, error: `${isCountryMode ? 'Country' : isCivilizationMode ? 'Civilization' : 'Capital'} mismatch at round ${i + 1}` };
     }
 
     // Per-round time validation - detect suspiciously fast submissions
@@ -290,7 +291,8 @@ export default async function submitHandler(req, context) {
      */
     const validateRound = (round, i) => {
       const isCountryMode = session.gameType === 'country';
-      const serverTarget = session.capitals[i]; // Contains capitals or countries
+      const isCivilizationMode = session.gameType === 'civilization';
+      const serverTarget = session.capitals[i]; // Contains capitals, countries, or civilizations
 
       // For country mode: trust client score (server-side validation would require GeoJSON)
       if (isCountryMode) {
@@ -305,13 +307,36 @@ export default async function submitHandler(req, context) {
           };
         }
 
-        // For country mode, trust client-side score calculation
-        // (Server-side validation would require loading GeoJSON and doing polygon math)
         return {
           country: round.country,
           countryId: round.countryId,
           correctCountryId: round.correctCountryId,
           clickedCountryId: round.clickedCountryId,
+          click: round.click,
+          distance: round.distanceToTargetKm || 0,
+          score: Math.round(round.score || 0),
+          status: "completed",
+        };
+      }
+
+      // For civilization mode: trust client score (same as country)
+      if (isCivilizationMode) {
+        if (!round.click) {
+          return {
+            civilization: round.civilization,
+            civilizationId: round.civilizationId,
+            click: null,
+            distance: null,
+            score: 0,
+            status: "timeout",
+          };
+        }
+
+        return {
+          civilization: round.civilization,
+          civilizationId: round.civilizationId,
+          correctCivilizationId: round.correctCivilizationId,
+          clickedCivilizationId: round.clickedCivilizationId,
           click: round.click,
           distance: round.distanceToTargetKm || 0,
           score: Math.round(round.score || 0),

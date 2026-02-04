@@ -17,7 +17,7 @@ const translations = {
     selectCategory: "Choisissez une catégorie",
     capitals: "Capitales",
     countries: "Pays",
-    monuments: "Monuments",
+    civilizations: "Civilisations",
     stadiums: "Stades",
     selectMode: "Choisissez un mode",
     play: "JOUER",
@@ -25,7 +25,7 @@ const translations = {
 
     // Category info
     countriesInfo: "5 pays · 5 secondes par pays",
-    monumentsInfo: "5 monuments · 5 secondes par monument",
+    civilizationsInfo: "5 civilisations · 5 secondes par civilisation",
     stadiumsInfo: "5 stades · 5 secondes par stade",
 
     // Share
@@ -161,6 +161,8 @@ const translations = {
         classic: "Jouez quand vous voulez avec des capitales aléatoires",
         daily: "Un défi quotidien identique pour tous avec bonus de vitesse",
         countries: "Placez des pays entiers au lieu de capitales",
+        civilizations: "Trouvez les zones des civilisations sur la carte",
+        stadiums: "Localisez les stades sur la carte",
       },
       tips: {
         title: "Astuces",
@@ -190,6 +192,7 @@ const translations = {
       retry: "Réessayer",
       leaderboardRetry: "Le classement est temporairement indisponible.",
       countriesLoadFailed: "Impossible de charger les données des pays. Veuillez réessayer.",
+      civilizationsLoadFailed: "Impossible de charger les données des civilisations. Veuillez réessayer.",
     },
   },
 
@@ -206,7 +209,7 @@ const translations = {
     selectCategory: "Select a category",
     capitals: "Capitals",
     countries: "Countries",
-    monuments: "Monuments",
+    civilizations: "Civilizations",
     stadiums: "Stadiums",
     selectMode: "Select a mode",
     play: "PLAY",
@@ -214,7 +217,7 @@ const translations = {
 
     // Category info
     countriesInfo: "5 countries · 5 seconds per country",
-    monumentsInfo: "5 monuments · 5 seconds per monument",
+    civilizationsInfo: "5 civilizations · 5 seconds per civilization",
     stadiumsInfo: "5 stadiums · 5 seconds per stadium",
 
     // Share
@@ -350,6 +353,8 @@ const translations = {
         classic: "Play anytime with random capitals",
         daily: "Daily challenge identical for everyone with speed bonus",
         countries: "Place entire countries instead of capitals",
+        civilizations: "Find civilization zones on the map",
+        stadiums: "Locate stadiums on the map",
       },
       tips: {
         title: "Tips",
@@ -379,6 +384,7 @@ const translations = {
       retry: "Retry",
       leaderboardRetry: "The leaderboard is temporarily unavailable.",
       countriesLoadFailed: "Failed to load countries data. Please try again.",
+      civilizationsLoadFailed: "Failed to load civilizations data. Please try again.",
     },
   },
 };

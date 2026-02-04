@@ -93,6 +93,15 @@ describe('createRound', () => {
     expect(createRound(capital, 1).roundNumber).toBe(1);
     expect(createRound(capital, 4).roundNumber).toBe(4);
   });
+
+  it('creates a round for civilization mode with civilization target', () => {
+    const civ = { id: 'roman_empire', name: 'Roman Empire', popular: true };
+    const round = createRound(civ, 0, 'civilization');
+    expect(round.civilization).toBe(civ);
+    expect(round.capital).toBeNull();
+    expect(round.country).toBeNull();
+    expect(round.gameType).toBe('civilization');
+  });
 });
 
 describe('recordClick', () => {
@@ -179,6 +188,29 @@ describe('recordClick', () => {
     expect(result.score).toBe(0);
     expect(result.distance).toBeNull();
     expect(result.click).toEqual({ lat: 48.8566, lng: 2.3522 });
+  });
+
+  it('records a click for civilization mode and returns correctCivilizationId', () => {
+    const civ = { id: 'roman_empire', name: 'Roman Empire', popular: true };
+    const round = createRound(civ, 0, 'civilization');
+    const feature = {
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[[2, 36], [3, 36], [3, 37], [2, 37], [2, 36]]],
+      },
+    };
+    const civilizationData = {
+      targetCivilizationFeature: feature,
+      isInsideTargetCivilization: true,
+      clickedCivilizationId: 'roman_empire',
+    };
+    const clickCoords = [36.5, 2.5];
+    const result = recordClick(round, clickCoords, 'classic', undefined, null, civilizationData);
+
+    expect(result.status).toBe('completed');
+    expect(result.correctCivilizationId).toBe('roman_empire');
+    expect(result.clickedCivilizationId).toBe('roman_empire');
+    expect(result.score).toBe(5000);
   });
 });
 

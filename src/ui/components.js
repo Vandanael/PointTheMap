@@ -291,14 +291,13 @@ export const StartScreen = () => `
                 <span aria-hidden="true">${t("countries")}</span>
               </button>
               <button
-                id="category-monuments"
-                class="category-btn category-disabled"
-                data-category="monuments"
-                disabled
-                aria-label="${t('monuments')} - ${t('comingSoon')}"
+                id="category-civilizations"
+                class="category-btn"
+                data-category="civilizations"
+                aria-label="${t('civilizations')}"
+                aria-pressed="false"
               >
-                <span aria-hidden="true">${t("monuments")}</span>
-                <span class="category-coming-soon-wrap"><span class="category-coming-soon" style="color:#facc15">${t("comingSoon")}</span></span>
+                <span aria-hidden="true">${t("civilizations")}</span>
               </button>
               <button
                 id="category-stadiums"
@@ -769,6 +768,8 @@ export const HelpModal = () => {
               <li>• <strong>${t('classic')}</strong>: ${t('help.modes.classic')}</li>
               <li>• <strong>${t('daily')}</strong>: ${t('help.modes.daily')}</li>
               <li>• <strong>${t('countries')}</strong>: ${t('help.modes.countries')}</li>
+              <li>• <strong>${t('civilizations')}</strong>: ${t('help.modes.civilizations')}</li>
+              <li>• <strong>${t('stadiums')}</strong>: ${t('help.modes.stadiums')}</li>
             </ul>
           </div>
 
