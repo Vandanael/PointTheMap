@@ -26,9 +26,20 @@ import { mapSystem } from "../systems/MapSystem.js";
  */
 
 /**
+ * @typedef {Object} Stadium
+ * @property {string} name
+ * @property {string} city
+ * @property {string} country
+ * @property {number} lat
+ * @property {number} lng
+ * @property {boolean} [popular]
+ */
+
+/**
  * @typedef {Object} Round
  * @property {Capital | null} capital
  * @property {Country | null} country
+ * @property {Stadium | null} stadium
  * @property {number} roundNumber
  * @property {number} startTime
  * @property {number | null} endTime
@@ -62,6 +73,7 @@ import { mapSystem } from "../systems/MapSystem.js";
  * @property {string | null} token
  * @property {Capital[]} capitals
  * @property {Country[]} countries
+ * @property {Stadium[]} stadiums
  * @property {Round[]} rounds
  * @property {number} currentRoundIndex
  * @property {Round | null} currentRound
@@ -70,7 +82,7 @@ import { mapSystem } from "../systems/MapSystem.js";
  * @property {SubmitResult | null} result
  * @property {string | null} error
  * @property {number} sessionBestScore
- * @property {'classic' | 'daily' | 'country'} gameType
+ * @property {'classic' | 'daily' | 'country' | 'stadium'} gameType
  * @property {RuntimeGameConfig | null} runtimeConfig - Mode-derived config for this session (set at start)
  */
 
@@ -91,6 +103,7 @@ export const createGameState = () => ({
   token: null,
   capitals: [],
   countries: [],
+  stadiums: [],
   rounds: [],
   currentRoundIndex: 0,
   currentRound: null,
@@ -113,13 +126,14 @@ export const startGame = async (state, gameType = "classic") => {
   try {
     const session = await api.start(gameType);
     const isCountryMode = gameType === 'country';
-    const targets = isCountryMode ? session.countries : session.capitals;
+    const isStadiumMode = gameType === 'stadium';
+    const targets = isCountryMode ? session.countries : isStadiumMode ? session.stadiums : session.capitals;
 
     if (!targets || targets.length === 0) {
       return {
         ...state,
         status: GameStatus.IDLE,
-        error: isCountryMode ? "Aucun pays disponible" : "Aucune capitale disponible",
+        error: isCountryMode ? "Aucun pays disponible" : isStadiumMode ? "Aucun stade disponible" : "Aucune capitale disponible",
       };
     }
 
@@ -127,19 +141,22 @@ export const startGame = async (state, gameType = "classic") => {
     const stats = getStats();
     const previousBestScore = gameType === 'country'
       ? stats.bestScoreCountry ?? 0
-      : gameType === 'classic'
-        ? stats.bestScoreClassic
-        : stats.bestScoreDaily;
+      : gameType === 'stadium'
+        ? stats.bestScoreStadium ?? 0
+        : gameType === 'classic'
+          ? stats.bestScoreClassic
+          : stats.bestScoreDaily;
 
     const runtimeConfig = getRuntimeGameConfig(gameType);
-    const roundGameType = isCountryMode ? 'country' : 'capital';
+    const roundGameType = isCountryMode ? 'country' : isStadiumMode ? 'stadium' : 'capital';
 
     return {
       ...createGameState(),
       status: GameStatus.PLAYING,
       token: session.token,
-      capitals: isCountryMode ? [] : session.capitals,
+      capitals: isCountryMode || isStadiumMode ? [] : session.capitals,
       countries: isCountryMode ? session.countries : [],
+      stadiums: isStadiumMode ? session.stadiums : [],
       currentRound: createRound(targets[0], 0, roundGameType),
       gameType,
       sessionBestScore: previousBestScore,
@@ -230,8 +247,8 @@ export const handleTimeout = (state) => {
 export const nextRound = (state) => {
   const nextIndex = state.currentRoundIndex + 1;
   const roundCount = state.runtimeConfig?.roundCount ?? GAME.ROUNDS;
-  const targets = state.gameType === 'country' ? state.countries : state.capitals;
-  const roundGameType = state.gameType === 'country' ? 'country' : 'capital';
+  const targets = state.gameType === 'country' ? state.countries : state.gameType === 'stadium' ? state.stadiums : state.capitals;
+  const roundGameType = state.gameType === 'country' ? 'country' : state.gameType === 'stadium' ? 'stadium' : 'capital';
 
   if (nextIndex >= roundCount || nextIndex >= targets.length) {
     return {
@@ -264,7 +281,9 @@ export const getCurrentTarget = (state) => {
   if (!state.currentRound) return null;
   return state.gameType === 'country'
     ? state.currentRound.country
-    : state.currentRound.capital;
+    : state.gameType === 'stadium'
+      ? state.currentRound.stadium
+      : state.currentRound.capital;
 };
 
 /**

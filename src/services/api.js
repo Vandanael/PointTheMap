@@ -5,6 +5,7 @@
  * @property {string} token
  * @property {import('../game/Game.js').Capital[]} [capitals]
  * @property {import('../game/Game.js').Country[]} [countries]
+ * @property {import('../game/Game.js').Stadium[]} [stadiums]
  * @property {number} startTime
  * @property {string} csrfToken
  */
@@ -31,6 +32,7 @@ import { GAME } from "../config.js";
 import { generateId } from "../utils.js";
 import { logger } from "../utils/logger.js";
 import { loadCapitals, loadSelectBalancedCapitals } from "../data/capitals-loader.js";
+import { loadStadiums, loadSelectBalancedStadiums } from "../data/stadiums-loader.js";
 import { APIError, GameError } from "../core/ErrorHandler.js";
 import {
   getRetryQueue,
@@ -81,6 +83,30 @@ const mockStart = async (gameType = 'classic') => {
         name: c.name,
         countryId: c.countryId,
         popular: c.popular
+      })),
+      startTime: Date.now(),
+      csrfToken: generateId(),
+    };
+  }
+
+  if (gameType === 'stadium') {
+    const [stadiums, selectBalancedStadiums] = await Promise.all([
+      loadStadiums(),
+      loadSelectBalancedStadiums()
+    ]);
+
+    const selected = selectBalancedStadiums(stadiums);
+    console.log('[API Mock] Stadium mode: selected', selected.length, 'stadiums:', selected.map(s => s.name));
+
+    return {
+      token: generateId(),
+      stadiums: selected.map(s => ({
+        name: s.name,
+        city: s.city,
+        country: s.country,
+        lat: s.lat,
+        lng: s.lng,
+        popular: s.popular,
       })),
       startTime: Date.now(),
       csrfToken: generateId(),
@@ -215,6 +241,14 @@ const formatRoundsForSubmit = (rounds, gameType = 'classic') =>
         correctCountryId: r.correctCountryId,
         clickedCountryId: r.clickedCountryId,
         distanceToTargetKm: r.distanceToTargetKm,
+      };
+    }
+
+    if (gameType === 'stadium' || r.gameType === 'stadium') {
+      return {
+        ...base,
+        stadium: r.stadium?.name,
+        city: r.stadium?.city,
       };
     }
 

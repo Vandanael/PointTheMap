@@ -327,6 +327,20 @@ const init = async () => {
     }
 
     UI.updateLoader(100);
+
+    // Wait for the progress bar's CSS transition to complete before hiding.
+    // transitionend is the real event — no artificial delay.  Fallback guards
+    // against edge cases where the event never fires (e.g. element already removed).
+    await new Promise((resolve) => {
+      const progressEl = document.getElementById("loading-progress");
+      if (!progressEl) { resolve(); return; }
+      const fallback = setTimeout(resolve, 350);
+      progressEl.addEventListener("transitionend", () => {
+        clearTimeout(fallback);
+        resolve();
+      }, { once: true });
+    });
+
     UI.hideLoader();
     mapSystem.flyTo(MAP.AURAY_CENTER, MAP.AURAY_ZOOM, { animate: false });
     UI.showStart();
@@ -360,7 +374,9 @@ const handleStart = async (gameType = "classic") => {
   UI.showLoader();
 
   mapSystem.clearMap();
-  mapSystem.flyTo(MAP.CENTER, MAP.ZOOM, { animate: false });
+  const startCenter = gameType === 'stadium' ? MAP.EUROPE_CENTER : MAP.CENTER;
+  const startZoom  = gameType === 'stadium' ? MAP.EUROPE_ZOOM  : MAP.ZOOM;
+  mapSystem.flyTo(startCenter, startZoom, { animate: false });
 
   const newState = await safeAsync(
     () => startGame(stateManager.getState(), gameType),
@@ -404,9 +420,10 @@ const handleStart = async (gameType = "classic") => {
 
   const target = getCurrentTarget(state);
   const isCountryMode = state.gameType === 'country';
+  const isStadiumMode = state.gameType === 'stadium';
 
   if (!target || !target.name) {
-    UI.showError(isCountryMode ? "Erreur: pays introuvable" : "Erreur: capitale introuvable");
+    UI.showError(isCountryMode ? "Erreur: pays introuvable" : isStadiumMode ? "Erreur: stade introuvable" : "Erreur: capitale introuvable");
     UI.hideQuestion();
     return;
   }
@@ -428,9 +445,10 @@ const handleStart = async (gameType = "classic") => {
 
   // Update modal with real data
   // For country mode: show country name only
+  // For stadium mode: show stadium name only (no city, to keep it challenging)
   // For capital mode: show capital name + country
   const displayName = target.name;
-  const displaySubtitle = isCountryMode ? "" : target.country;
+  const displaySubtitle = isCountryMode ? "" : isStadiumMode ? "" : target.country;
 
   if (state.currentRoundIndex === 0) {
     UI.showQuestion(displayName, displaySubtitle, onReady, { requireButton: true });
@@ -465,10 +483,12 @@ const onRoundEnd = async () => {
 
   const round = state.currentRound;
   const isCountryMode = state.gameType === 'country';
+  const isStadiumMode = state.gameType === 'stadium';
 
   if (!round) return;
-  if (!isCountryMode && !round.capital) return;
   if (isCountryMode && !round.country) return;
+  if (isStadiumMode && !round.stadium) return;
+  if (!isCountryMode && !isStadiumMode && !round.capital) return;
 
   // Emit round completed event
   eventBus.emit('game:round:completed', { round });
@@ -482,9 +502,10 @@ const onRoundEnd = async () => {
         correctCountryId: round.correctCountryId,
         clickedCountryId: round.clickedCountryId
       });
-
-      // Optional: Show line from click to target (can be simplified)
-      // For now, just highlight countries
+    } else if (isStadiumMode) {
+      // Stadium mode: Show stadium markers and line (same as capital)
+      const stadiumCoords = /** @type {[number, number]} */ ([round.stadium.lat, round.stadium.lng]);
+      await mapSystem.showRoundResult(clickCoords, stadiumCoords, round.distance || 0);
     } else {
       // Capital mode: Show capital markers and line
       const capitalCoords = /** @type {[number, number]} */ ([round.capital.lat, round.capital.lng]);
@@ -535,13 +556,16 @@ const handleNext = () => {
   stateManager.setState(nextRound(state), 'round:next');
   state = stateManager.getState();
 
-  mapSystem.flyTo(MAP.CENTER, MAP.ZOOM, { animate: false });
+  const nextCenter = state.gameType === 'stadium' ? MAP.EUROPE_CENTER : MAP.CENTER;
+  const nextZoom  = state.gameType === 'stadium' ? MAP.EUROPE_ZOOM  : MAP.ZOOM;
+  mapSystem.flyTo(nextCenter, nextZoom, { animate: false });
 
   const target = getCurrentTarget(state);
   const isCountryMode = state.gameType === 'country';
+  const isStadiumMode = state.gameType === 'stadium';
 
   if (!target || !target.name) {
-    UI.showError(isCountryMode ? "Erreur: pays introuvable" : "Erreur: capitale introuvable");
+    UI.showError(isCountryMode ? "Erreur: pays introuvable" : isStadiumMode ? "Erreur: stade introuvable" : "Erreur: capitale introuvable");
     return;
   }
 
@@ -553,9 +577,10 @@ const handleNext = () => {
   );
 
   // For country mode: show country name only
+  // For stadium mode: show stadium name only (no city, to keep it challenging)
   // For capital mode: show capital name + country
   const displayName = target.name;
-  const displaySubtitle = isCountryMode ? "" : target.country;
+  const displaySubtitle = isCountryMode ? "" : isStadiumMode ? "" : target.country;
 
   UI.showQuestion(displayName, displaySubtitle, () => {
     startTimer();
@@ -568,6 +593,13 @@ const handleNext = () => {
  * @param {string} pseudo
  */
 const handleSubmit = async (pseudo) => {
+  // Disable submit button while the request is in flight — same pattern as rate-limiting above
+  const submitBtn = document.getElementById("btn-submit");
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = t('saving');
+  }
+
   try {
     const state = stateManager.getState();
     const result = await submitWithRetry(state.token, state.rounds, pseudo, state.gameType);
@@ -621,6 +653,12 @@ const handleSubmit = async (pseudo) => {
       shareBtn.addEventListener("click", shareButtonHandler);
     }
   } catch (error) {
+    // Restore submit button so the user can retry
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = t('save');
+    }
+
     /** @type {any} */
     const err = error;
     if (err.status === 409 && err.data?.error === "pseudo_already_set_for_this_ip") {

@@ -19,6 +19,7 @@ function getTotalTimeAllowed(totalTimeAllowed) {
 export const createRound = (target, roundNumber, gameType = 'capital') => ({
   capital: gameType === 'capital' ? target : null,
   country: gameType === 'country' ? target : null,
+  stadium: gameType === 'stadium' ? target : null,
   roundNumber,
   startTime: Date.now(),
   endTime: null,
@@ -91,6 +92,31 @@ export const recordClick = (round, clickCoords, gameMode = 'classic', totalTimeA
       timeBonus: Math.round(scoreResult.timeBonus),
       correctCountryId: round.country.countryId,
       clickedCountryId: countryData.clickedCountryId,
+      status: "completed",
+    };
+  }
+
+  // Handle stadium mode (point-to-point, same as capital)
+  if (round.gameType === 'stadium' && round.stadium) {
+    const stadiumCoords = [round.stadium.lat, round.stadium.lng];
+    const scoreResult = scoringSystem.calculateClickScore(
+      normalizedCoords,
+      stadiumCoords,
+      elapsed,
+      gameMode,
+      total
+    );
+
+    return {
+      ...round,
+      endTime,
+      click: { lat: normalizedLat, lng: normalizedLng },
+      distance: scoreResult.distance !== null && scoreResult.distance !== undefined
+        ? Math.round(scoreResult.distance)
+        : null,
+      score: Math.round(scoreResult.totalScore),
+      baseScore: Math.round(scoreResult.score),
+      timeBonus: Math.round(scoreResult.timeBonus),
       status: "completed",
     };
   }

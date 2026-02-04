@@ -52,6 +52,11 @@ export const MODES = {
     id: 'country',
     name: 'Country',
     variants: ['classic']
+  },
+  stadium: {
+    id: 'stadium',
+    name: 'Stadium',
+    variants: ['classic']
   }
 };
 
@@ -165,6 +170,44 @@ export const GAME_MODES = {
     scoring: {
       maxPerRound: 5000,
       type: 'country', // Use country scoring algorithm
+      timeBonus: {
+        enabled: false,
+        maxBonus: 0,
+        maxBonusPercent: 0,
+        distanceThreshold: 200
+      }
+    },
+
+    // Timing
+    timing: {
+      roundTime: 5000,
+      gracePeriod: 500,
+      roundCount: 5
+    },
+
+    // Leaderboard
+    leaderboard: {
+      deduplication: 'by_pseudo',
+      timeframe: 'all_time'
+    }
+  },
+
+  stadium: {
+    id: 'stadium',
+    name: 'Stadium Mode',
+    description: 'Find stadiums on the map',
+
+    // Stadium selection strategy
+    stadiumSelection: {
+      type: 'random',
+      dataSource: 'stadiums',
+      count: 5,
+      balancing: { popular: 2, obscure: 3 }
+    },
+
+    // Scoring configuration (point-based, same as classic)
+    scoring: {
+      maxPerRound: 5000,
       timeBonus: {
         enabled: false,
         maxBonus: 0,

@@ -16,6 +16,7 @@ const DEFAULT_STATS = {
   bestDaily: Infinity,
   bestScoreClassic: 0,
   bestScoreDaily: 0,
+  bestScoreStadium: 0,
   averageDistance: 0,
   perfectCount: 0,
   playCount: 0,
@@ -142,6 +143,11 @@ export const updateStats = (rounds, gameType) => {
       }
 
       stats.lastDailyDate = today;
+    } else if (gameType === 'stadium') {
+      if (totalScore > (stats.bestScoreStadium || 0)) {
+        stats.bestScoreStadium = totalScore;
+        logger.info(`Stats: New best stadium score: ${totalScore}`);
+      }
     }
 
     // Update timestamps

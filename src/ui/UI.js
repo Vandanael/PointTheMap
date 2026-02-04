@@ -348,7 +348,7 @@ export const UI = {
         stadiums: {
           title: t("challenge"),
           info: t("stadiumsInfo"),
-          desc: t("comingSoon")
+          desc: t("clickToWin")
         }
       };
       return infoMap[category] || infoMap.capitals;
@@ -505,8 +505,10 @@ export const UI = {
           UI.showToast(t('error.countriesLoadFailed') || "Error loading countries: " + error.message, "error", 4000);
           return;
         }
+      } else if (selectedCategory === "stadiums") {
+        gameMode = "stadium";
       } else {
-        // monuments, stadiums are disabled, so this shouldn't be reached
+        // monuments are disabled, so this shouldn't be reached
         return;
       }
 

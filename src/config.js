@@ -67,6 +67,12 @@ export const SCORING = {
       maxBonusPercent: 0,
       distanceThreshold: 200,
     },
+    stadium: {
+      enabled: false,           // Stadium mode: no time bonus (point-based only)
+      maxBonus: 0,
+      maxBonusPercent: 0,
+      distanceThreshold: 200,
+    },
   },
 };
 
@@ -81,6 +87,9 @@ export const TIMING = {
 export const MAP = {
   CENTER: [30, 10],
   ZOOM: 3,
+  /** Europe – used as initial view for stadium mode (majority of targets) */
+  EUROPE_CENTER: [52, 12],
+  EUROPE_ZOOM: 4,
   MIN_ZOOM: 0,
   MAX_ZOOM: 19,
   /** Auray, France – used as start screen background (same Carto tiles as game) */

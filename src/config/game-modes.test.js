@@ -78,24 +78,28 @@ describe('Game Modes Configuration', () => {
   });
 
   describe('getAllModes', () => {
-    it('should return all available modes (capital, country)', () => {
+    it('should return all available modes (capital, country, stadium)', () => {
       const modes = getAllModes();
-      expect(modes).toHaveLength(2);
+      expect(modes).toHaveLength(3);
       expect(modes.map(m => m.id)).toContain('capital');
       expect(modes.map(m => m.id)).toContain('country');
+      expect(modes.map(m => m.id)).toContain('stadium');
       const capital = modes.find(m => m.id === 'capital');
       const country = modes.find(m => m.id === 'country');
+      const stadium = modes.find(m => m.id === 'stadium');
       expect(capital.variants).toEqual(['classic', 'daily']);
       expect(country.variants).toEqual(['classic']);
+      expect(stadium.variants).toEqual(['classic']);
     });
   });
 
   describe('getModeIds', () => {
-    it('should return all mode IDs (capital, country)', () => {
+    it('should return all mode IDs (capital, country, stadium)', () => {
       const ids = getModeIds();
-      expect(ids).toHaveLength(2);
+      expect(ids).toHaveLength(3);
       expect(ids).toContain('capital');
       expect(ids).toContain('country');
+      expect(ids).toContain('stadium');
     });
   });
 

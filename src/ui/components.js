@@ -40,7 +40,7 @@ export const LoadingSpinner = () => `
     <div class="w-full max-w-md px-8">
       <!-- Barre de progression jaune -->
       <div class="w-full h-1 rounded-full overflow-hidden" style="background: var(--bg-tertiary);">
-        <div id="loading-progress" class="h-full rounded-full transition-all duration-300 ease-out" style="background: var(--accent); width: 0%;"></div>
+        <div id="loading-progress" class="h-full rounded-full" style="background: var(--accent); width: 0%; transition: width 300ms ease-out;"></div>
       </div>
     </div>
   </div>
@@ -302,13 +302,12 @@ export const StartScreen = () => `
               </button>
               <button
                 id="category-stadiums"
-                class="category-btn category-disabled"
+                class="category-btn"
                 data-category="stadiums"
-                disabled
-                aria-label="${t('stadiums')} - ${t('comingSoon')}"
+                aria-label="${t('stadiums')}"
+                aria-pressed="false"
               >
                 <span aria-hidden="true">${t("stadiums")}</span>
-                <span class="category-coming-soon-wrap"><span class="category-coming-soon" style="color:#facc15">${t("comingSoon")}</span></span>
               </button>
             </div>
           </div>

@@ -89,6 +89,7 @@ describe("Game.js", () => {
         token: null,
         capitals: [],
         countries: [],
+        stadiums: [],
         rounds: [],
         currentRoundIndex: 0,
         currentRound: null,
