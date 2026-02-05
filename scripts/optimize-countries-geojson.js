@@ -1,7 +1,7 @@
 /**
  * Optimize countries.geojson for smaller size without breaking map behavior.
  * - Reduces coordinate precision (3 decimals ≈ 111 m, acceptable for country boundaries)
- * - Keeps only properties required by MapSystem and generate-countries-dataset.js:
+ * - Keeps only properties required by MapSystem:
  *   ISO_A3, ADM0_A3, NAME, ADMIN, POP_EST
  * Output: overwrites public/data/countries.geojson (minified JSON).
  */

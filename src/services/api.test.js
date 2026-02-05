@@ -25,7 +25,7 @@ vi.mock("../utils/logger.js", () => ({
   },
 }));
 
-vi.mock("../../capitals.js", () => ({
+vi.mock("../data/capitals.js", () => ({
   selectBalancedCapitals: vi.fn((caps) => caps.slice(0, 10)),
 }));
 

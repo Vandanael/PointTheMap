@@ -20,7 +20,7 @@ export async function loadCapitals() {
   }
 
   // Dynamic import - only loaded when this function is called
-  const module = await import('../../capitals.js');
+  const module = await import('./capitals.js');
   capitalsCache = module.capitals;
 
   return capitalsCache;
@@ -36,7 +36,7 @@ export async function loadSelectBalancedCapitals() {
   }
 
   // Dynamic import
-  const module = await import('../../capitals.js');
+  const module = await import('./capitals.js');
   selectBalancedCapitalsCache = module.selectBalancedCapitals;
 
   return selectBalancedCapitalsCache;

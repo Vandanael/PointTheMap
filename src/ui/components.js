@@ -37,11 +37,11 @@ export const Button = (id, text, variant = "primary", fullWidth = true, pulse = 
 };
 
 export const LoadingSpinner = () => `
-  <div id="loading-spinner" class="fixed inset-0 flex items-center justify-center" style="background: var(--bg-primary); z-index: var(--z-overlay);" role="status" aria-live="polite" aria-busy="true">
+  <div id="loading-spinner" class="fixed inset-0 flex items-center justify-center" style="background: transparent; z-index: var(--z-overlay);" role="status" aria-live="polite" aria-busy="true">
     <div class="w-full max-w-md px-8">
       <!-- Barre de progression jaune -->
       <div class="w-full h-1 rounded-full overflow-hidden" style="background: var(--bg-tertiary);">
-        <div id="loading-progress" class="h-full rounded-full" style="background: var(--accent); width: 0%; transition: width 300ms ease-out;"></div>
+        <div id="loading-progress" class="h-full rounded-full" style="background: var(--accent); width: 100%; transform: scaleX(0); transform-origin: left; transition: transform 300ms ease-out;"></div>
       </div>
     </div>
   </div>
@@ -53,11 +53,6 @@ export const TimerBar = () => `
   </div>
 `;
 
-/**
- * @param {number} roundNum
- * @param {number} totalRounds
- * @param {number} totalScore
- */
 export const GameHeaderSkeleton = () => {
   return `
   <div id="game-header" class="game-header fixed top-0 left-0 right-0" style="z-index: var(--z-base);">
@@ -73,6 +68,11 @@ export const GameHeaderSkeleton = () => {
   `;
 };
 
+/**
+ * @param {number} roundNum
+ * @param {number} totalRounds
+ * @param {number} totalScore
+ */
 export const GameHeader = (roundNum, totalRounds, totalScore) => {
   return `
   <div id="game-header" class="game-header fixed top-0 left-0 right-0" style="z-index: var(--z-base);">
@@ -230,9 +230,6 @@ export const StartScreen = () => `
   <div id="start-modal" class="start-modal-overlay fixed inset-0 flex flex-col" style="z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="challengeText">
     <!-- Toggle buttons: top-right (no position override so they stay aligned right) -->
     <div class="lobby-header-icons absolute top-4 right-4 md:top-6 md:right-6 flex gap-2" style="z-index: 10;">
-      <button id="btn-stats" class="toggle-btn" title="My Stats" aria-label="Show stats">
-        <span>📋</span>
-      </button>
       <button id="btn-leaderboard" class="toggle-btn" title="Leaderboard" aria-label="Show leaderboard">
         <span>🏆</span>
       </button>
@@ -519,7 +516,7 @@ export const Leaderboard = (scores, highlightPseudo = null, loading = false, err
 
 /**
  * @param {Array<{rank: number, pseudo: string, score: number, time: number}>} scores
- * @param {"classic" | "daily"} [currentType="classic"]
+ * @param {string} [currentType="classic"]
  * @param {boolean} [loading=false]
  */
 export const LeaderboardModal = (scores, currentType = MODE_IDS.CLASSIC, loading = false) => {
@@ -604,7 +601,7 @@ export const PseudoLockedDialog = (pseudo) => {
  * Toast notification component
  * @param {string} id - Toast ID
  * @param {string} message - Message to display
- * @param {string} type - Type of toast: 'info', 'warning', 'error', 'success'
+ * @param {"info" | "warning" | "error" | "success"} type - Type of toast
  * @param {{ compact?: boolean, center?: boolean }} [options] - compact: smaller modal, no emoji, text only; center: center text horizontally
  * @returns {string} HTML string
  */

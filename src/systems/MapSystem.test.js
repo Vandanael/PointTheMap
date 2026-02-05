@@ -42,6 +42,17 @@ const mockLeafletMap = {
   doubleClickZoom: {
     disable: vi.fn(),
   },
+  wrapLatLng: vi.fn((latlng) => ({
+    lat: latlng.lat ?? latlng[0],
+    lng: (() => {
+      const lng = latlng.lng ?? latlng[1];
+      if (!Number.isFinite(lng)) return 0;
+      let n = lng;
+      while (n > 180) n -= 360;
+      while (n < -180) n += 360;
+      return n;
+    })(),
+  })),
 };
 
 vi.mock('leaflet', () => {
@@ -67,6 +78,12 @@ vi.mock('leaflet', () => {
     addTo: vi.fn().mockReturnThis(),
   }));
 
+  const mockLatLng = vi.fn((latlng) => {
+    const lat = Array.isArray(latlng) ? latlng[0] : latlng.lat;
+    const lng = Array.isArray(latlng) ? latlng[1] : latlng.lng;
+    return { lat, lng };
+  });
+
   const mock = {
     map: vi.fn(() => mockLeafletMap),
     tileLayer: vi.fn(() => mockTileLayer),
@@ -74,6 +91,7 @@ vi.mock('leaflet', () => {
     polyline: mockPolyline,
     layerGroup: mockLayerGroup,
     latLngBounds: mockLatLngBounds,
+    latLng: mockLatLng,
     geoJSON: mockGeoJSON,
     divIcon: vi.fn((options) => options),
     Browser: {
@@ -402,6 +420,18 @@ describe('MapSystem', () => {
 
       expect(system.getPolylineCount()).toBe(2);
     });
+
+    it('should use normalized segment for antimeridian (shortest arc)', () => {
+      const from = [0, 170];
+      const to = [0, -170];
+      system.drawLine(from, to, 222);
+      expect(mockPolyline).toHaveBeenCalled();
+      const coords = mockPolyline.mock.calls[mockPolyline.mock.calls.length - 1][0];
+      expect(coords).toHaveLength(2);
+      expect(coords[0]).toEqual(from);
+      expect(coords[1][0]).toBe(0);
+      expect(coords[1][1]).toBe(190);
+    });
   });
 
   describe('Round Result', () => {
@@ -464,9 +494,30 @@ describe('MapSystem', () => {
         expect.objectContaining({
           padding: [60, 60],
           maxZoom: 14,
-          duration: 1.5,
-          easeLinearity: 0.25,
+          duration: 2.0,
+          easeLinearity: 0.15,
           animate: true,
+        })
+      );
+    });
+
+    it('should skip dashed line and resolve immediately when skipResultLine is true', async () => {
+      const handler = vi.fn();
+      eventBus.subscribe('map:result-shown', handler);
+
+      const clickCoords = [48.8566, 2.3522];
+      const capitalCoords = [51.5074, -0.1278];
+
+      const resultPromise = system.showRoundResult(clickCoords, capitalCoords, 344, { skipResultLine: true });
+      await resultPromise;
+
+      expect(system.getMarkerCount()).toBe(2);
+      expect(system.getPolylineCount()).toBe(0);
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          clickCoords,
+          capitalCoords,
+          distanceKm: 344,
         })
       );
     });

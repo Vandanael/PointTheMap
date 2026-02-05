@@ -106,6 +106,17 @@ body:not(.light-theme) #map {
   user-select: none;
 }
 
+/* LCP skeleton - visible immediately before JS loads */
+.start-skeleton {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-modal) - 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
 /* Start screen: static background image (Auray) by viewport + theme, then overlay on top */
 .start-screen-bg {
   display: none;
@@ -116,7 +127,11 @@ body:not(.light-theme) #map {
   background-position: center;
   background-repeat: no-repeat;
   pointer-events: none;
-  background-image: url("/start-screen-mobile-dark.png");
+  background-image: url("/assets/start-screen-mobile-dark.png");
+  background-image: image-set(
+    url("/assets/start-screen-mobile-dark.webp") type("image/webp"),
+    url("/assets/start-screen-mobile-dark.png") type("image/png")
+  );
 }
 
 body.start-screen-visible .start-screen-bg {
@@ -125,41 +140,69 @@ body.start-screen-visible .start-screen-bg {
 
 @media (min-width: 768px) {
   .start-screen-bg {
-    background-image: url("/start-screen-tablet-dark.png");
+    background-image: url("/assets/start-screen-tablet-dark.png");
+    background-image: image-set(
+      url("/assets/start-screen-tablet-dark.webp") type("image/webp"),
+      url("/assets/start-screen-tablet-dark.png") type("image/png")
+    );
   }
 }
 
 @media (min-width: 1280px) {
   .start-screen-bg {
-    background-image: url("/start-screen-desktop-dark.png");
+    background-image: url("/assets/start-screen-desktop-dark.png");
+    background-image: image-set(
+      url("/assets/start-screen-desktop-dark.webp") type("image/webp"),
+      url("/assets/start-screen-desktop-dark.png") type("image/png")
+    );
   }
 }
 
 @media (min-width: 2560px) {
   .start-screen-bg {
-    background-image: url("/start-screen-2k-dark.png");
+    background-image: url("/assets/start-screen-2k-dark.png");
+    background-image: image-set(
+      url("/assets/start-screen-2k-dark.webp") type("image/webp"),
+      url("/assets/start-screen-2k-dark.png") type("image/png")
+    );
   }
 }
 
 body.light-theme .start-screen-bg {
-  background-image: url("/start-screen-mobile-light.png");
+  background-image: url("/assets/start-screen-mobile-light.png");
+  background-image: image-set(
+    url("/assets/start-screen-mobile-light.webp") type("image/webp"),
+    url("/assets/start-screen-mobile-light.png") type("image/png")
+  );
 }
 
 @media (min-width: 768px) {
   body.light-theme .start-screen-bg {
-    background-image: url("/start-screen-tablet-light.png");
+    background-image: url("/assets/start-screen-tablet-light.png");
+    background-image: image-set(
+      url("/assets/start-screen-tablet-light.webp") type("image/webp"),
+      url("/assets/start-screen-tablet-light.png") type("image/png")
+    );
   }
 }
 
 @media (min-width: 1280px) {
   body.light-theme .start-screen-bg {
-    background-image: url("/start-screen-desktop-light.png");
+    background-image: url("/assets/start-screen-desktop-light.png");
+    background-image: image-set(
+      url("/assets/start-screen-desktop-light.webp") type("image/webp"),
+      url("/assets/start-screen-desktop-light.png") type("image/png")
+    );
   }
 }
 
 @media (min-width: 2560px) {
   body.light-theme .start-screen-bg {
-    background-image: url("/start-screen-2k-light.png");
+    background-image: url("/assets/start-screen-2k-light.png");
+    background-image: image-set(
+      url("/assets/start-screen-2k-light.webp") type("image/webp"),
+      url("/assets/start-screen-2k-light.png") type("image/png")
+    );
   }
 }
 

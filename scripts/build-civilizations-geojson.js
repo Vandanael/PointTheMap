@@ -98,7 +98,3 @@ main().catch(function (e) {
   console.error(e);
   process.exit(1);
 });
-enerated ${outputPath}`);
-console.log(`   Total countries: ${countries.length}`);
-console.log(`   Popular: ${countries.filter(c => c.popular).length}`);
-console.log(`   Obscure: ${countries.filter(c => !c.popular).length}`);

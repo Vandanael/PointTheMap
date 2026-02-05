@@ -112,7 +112,7 @@ const mockStart = async (gameType = MODE_IDS.CLASSIC) => {
   }
 
   if (gameType === MODE_IDS.CIVILIZATION) {
-    const { civilizations } = await import('../../civilizations.js');
+    const { civilizations } = await import('../data/civilizations.js');
     const { selectCivilizations } = await import('@lib/capital-selection/index.js');
     const { getGameMode } = await import('../config/game-modes.js');
     const mode = getGameMode(MODE_IDS.CIVILIZATION);

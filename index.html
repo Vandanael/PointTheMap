@@ -17,7 +17,6 @@
   <link rel="dns-prefetch" href="https://fonts.googleapis.com">
   <link rel="dns-prefetch" href="https://fonts.gstatic.com">
   <link rel="dns-prefetch" href="https://basemaps.cartocdn.com">
-  <link rel="preconnect" href="https://a.basemaps.cartocdn.com" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
@@ -36,8 +35,8 @@
   <meta name="twitter:image" content="/og-image.png">
 
   <!-- Google Fonts - Deferred (media=print then media=all) to avoid chaining on critical path -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"></noscript>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap"></noscript>
 
   <!-- Preload main module for faster execution -->
   <link rel="modulepreload" href="/src/main.js">
@@ -48,6 +47,13 @@
     <div id="app">
       <div id="map"></div>
       <div id="start-screen-bg" class="start-screen-bg" aria-hidden="true"></div>
+      <!-- LCP skeleton - removed by JS when full start screen loads -->
+      <div id="start-skeleton" class="start-skeleton">
+        <h1 class="lobby-title">
+          <div class="lobby-title-line">POINT</div>
+          <div class="lobby-title-line">THE MAP</div>
+        </h1>
+      </div>
     </div>
   </main>
   <script type="module" src="/src/main.js"></script>

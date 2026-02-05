@@ -38,6 +38,7 @@ import {
   MAP_ANIMATIONS,
   getLineColor,
 } from '../config/visual-constants.js';
+import { normalizeCoords } from '@lib/game-math/index.js';
 
 /**
  * Returns a Promise that resolves once after the next map moveend.
@@ -63,19 +64,36 @@ function formatDistanceLabel(distanceKm) {
 }
 
 /**
- * Precompute interpolated points from start to end (linear lat/lng).
+ * Normalize segment end so the arc from from to to is the shortest (|lon delta| <= 180).
+ * @param {[number, number]} from - [lat, lng] start
+ * @param {[number, number]} to - [lat, lng] end
+ * @returns {[number, number]} [lat2, lon2'] with lon2' adjusted for shortest arc
+ */
+function normalizeSegmentEnd(from, to) {
+  const [lat1, lon1] = from;
+  const [lat2, lon2] = to;
+  let lon2Norm = lon2;
+  const dLon = lon2 - lon1;
+  if (dLon > 180) lon2Norm = lon2 - 360;
+  else if (dLon < -180) lon2Norm = lon2 + 360;
+  return [lat2, lon2Norm];
+}
+
+/**
+ * Precompute interpolated points from start to end (linear lat/lng, shortest arc).
  * @param {[number, number]} from - [lat, lng]
  * @param {[number, number]} to - [lat, lng]
  * @param {number} steps - Number of segments (points length = steps + 1)
  * @returns {[number, number][]}
  */
 function interpolatePoints(from, to, steps) {
+  const toNorm = normalizeSegmentEnd(from, to);
   const points = [];
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     points.push([
-      from[0] + (to[0] - from[0]) * t,
-      from[1] + (to[1] - from[1]) * t,
+      from[0] + (toNorm[0] - from[0]) * t,
+      from[1] + (toNorm[1] - from[1]) * t,
     ]);
   }
   return points;
@@ -95,7 +113,8 @@ function animateResultLine(map, startLatLng, endLatLng, distanceKm, options = {}
   if (!L) throw new Error('Leaflet not loaded');
   const durationMs = options.durationMs ?? MAP_ANIMATIONS.RESULT_LINE.durationMs;
   const steps = options.steps ?? MAP_ANIMATIONS.RESULT_LINE.steps;
-  const points = interpolatePoints(startLatLng, endLatLng, steps);
+  const endNorm = normalizeSegmentEnd(startLatLng, endLatLng);
+  const points = interpolatePoints(startLatLng, endNorm, steps);
   const lineColor = getLineColor(distanceKm);
 
   const outlineLine = L.polyline([startLatLng], {
@@ -467,7 +486,7 @@ export class MapSystem {
    */
   drawLine(from, to, distanceKm) {
     const lineColor = getLineColor(distanceKm);
-    const coords = [from, to];
+    const coords = [from, normalizeSegmentEnd(from, to)];
 
     const outlineLine = L.polyline(coords, {
       ...LINES.OUTLINE,
@@ -484,14 +503,17 @@ export class MapSystem {
   }
 
   /**
-   * Show round result: markers, flyToBounds, then dashed result line + distance label (animated).
-   * Resolves when the line animation is complete. Caller can then wait for tap/continue or timeout.
+   * Show round result: markers, flyToBounds, then (unless skipResultLine) dashed result line + distance label (animated).
+   * Resolves when the line animation is complete (or immediately after flyTo when skipResultLine).
    * @param {[number, number]} clickCoords - Player click coordinates
    * @param {[number, number]} capitalCoords - Capital coordinates
    * @param {number} distanceKm - Distance in kilometers
+   * @param {{ skipResultLine?: boolean }} [options] - If skipResultLine true, do not draw/animate the result line
    * @returns {Promise<void>}
    */
-  async showRoundResult(clickCoords, capitalCoords, distanceKm) {
+  async showRoundResult(clickCoords, capitalCoords, distanceKm, options = {}) {
+    const skipResultLine = options.skipResultLine === true;
+
     if (this.#clearCapitalsTimeout) {
       clearTimeout(this.#clearCapitalsTimeout);
       this.#clearCapitalsTimeout = null;
@@ -510,7 +532,8 @@ export class MapSystem {
     this.addClickMarker(clickCoords);
     this.addCapitalMarker(capitalCoords);
 
-    const bounds = L.latLngBounds([clickCoords, capitalCoords]);
+    const endNorm = normalizeSegmentEnd(clickCoords, capitalCoords);
+    const bounds = L.latLngBounds([clickCoords, endNorm]);
     const fitBoundsOptions = {
       ...MAP_ANIMATIONS.SHOW_RESULT,
       padding: [60, 60],
@@ -519,6 +542,15 @@ export class MapSystem {
     this.#map.flyToBounds(bounds, fitBoundsOptions);
 
     await waitForMapSettled(this.#map);
+
+    if (skipResultLine) {
+      eventBus.emit('map:result-shown', {
+        clickCoords,
+        capitalCoords,
+        distanceKm,
+      });
+      return;
+    }
 
     const { cancel, layerGroup, ready } = animateResultLine(
       this.#map,
@@ -707,7 +739,12 @@ export class MapSystem {
       return null;
     }
 
-    const [lat, lng] = latlng;
+    const [lat, lng] = this.#map
+      ? (() => {
+          const wrapped = this.#map.wrapLatLng(L.latLng(latlng));
+          return [wrapped.lat, wrapped.lng];
+        })()
+      : normalizeCoords(latlng);
     const point = { type: 'Point', coordinates: [lng, lat] };
 
     // Find country containing this point
@@ -918,7 +955,12 @@ export class MapSystem {
       return null;
     }
 
-    const [lat, lng] = latlng;
+    const [lat, lng] = this.#map
+      ? (() => {
+          const wrapped = this.#map.wrapLatLng(L.latLng(latlng));
+          return [wrapped.lat, wrapped.lng];
+        })()
+      : normalizeCoords(latlng);
     const point = { type: 'Point', coordinates: [lng, lat] };
 
     for (const feature of this.#civilizationsGeoJSON.features) {

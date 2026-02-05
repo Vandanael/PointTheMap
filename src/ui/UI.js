@@ -336,11 +336,12 @@ export const UI = {
   /** @param {number} percent */
   updateLoader(percent) {
     const p = _domCache.get("loading-progress");
-    if (p) p.style.width = `${Math.min(100, percent)}%`;
+    if (p) p.style.transform = `scaleX(${Math.min(100, percent) / 100})`;
   },
 
   // Start screen
   showStart() {
+    document.getElementById('start-skeleton')?.remove();
     document.body.classList.add('start-screen-visible');
     // Subscribe to language changes
     const unsubscribe = eventBus.subscribe('language:changed', () => {
@@ -577,7 +578,6 @@ export const UI = {
 
     bindClick("btn-theme", toggleTheme);
     bindClick("btn-lang", handleToggleLang);
-    bindClick("btn-stats", () => UI.showStatsModal());
     bindClick("btn-leaderboard", () => {
       // Show skeleton immediately, load data in background
       UI.showLeaderboardModal([], MODE_IDS.CLASSIC, true);

@@ -498,6 +498,7 @@ const onRoundEnd = async () => {
 
   if (round.click && round.click.lat != null && round.click.lng != null) {
     const clickCoords = /** @type {[number, number]} */ ([round.click.lat, round.click.lng]);
+    const skipResultLine = state.gameType === MODE_IDS.CLASSIC || state.gameType === MODE_IDS.DAILY || state.gameType === MODE_IDS.STADIUM;
 
     if (isCountryMode) {
       // Country mode: Highlight countries instead of showing markers
@@ -513,20 +514,22 @@ const onRoundEnd = async () => {
     } else if (isStadiumMode) {
       // Stadium mode: Show stadium markers and line (same as capital)
       const stadiumCoords = /** @type {[number, number]} */ ([round.stadium.lat, round.stadium.lng]);
-      await mapSystem.showRoundResult(clickCoords, stadiumCoords, round.distance || 0);
+      await mapSystem.showRoundResult(clickCoords, stadiumCoords, round.distance || 0, { skipResultLine });
     } else {
       // Capital mode: Show capital markers and line
       const capitalCoords = /** @type {[number, number]} */ ([round.capital.lat, round.capital.lng]);
-      await mapSystem.showRoundResult(clickCoords, capitalCoords, round.distance || 0);
+      await mapSystem.showRoundResult(clickCoords, capitalCoords, round.distance || 0, { skipResultLine });
     }
 
-    // Tap/click to continue to modal, or wait RESULT_READ_TIME_MS
-    /** @type {Promise<void>} */
-    const userContinued = new Promise((r) => mapSystem.setOnResultContinue(() => r()));
-    /** @type {Promise<void>} */
-    const timeoutPromise = new Promise((r) => setTimeout(r, TIMING.RESULT_READ_TIME_MS));
-    await Promise.race([userContinued, timeoutPromise]);
-    mapSystem.clearOnResultContinue();
+    if (!skipResultLine) {
+      // Tap/click to continue to modal, or wait RESULT_READ_TIME_MS
+      /** @type {Promise<void>} */
+      const userContinued = new Promise((r) => mapSystem.setOnResultContinue(() => r()));
+      /** @type {Promise<void>} */
+      const timeoutPromise = new Promise((r) => setTimeout(r, TIMING.RESULT_READ_TIME_MS));
+      await Promise.race([userContinued, timeoutPromise]);
+      mapSystem.clearOnResultContinue();
+    }
 
     // Emit score updated event
     eventBus.emit('score:updated', {

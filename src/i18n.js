@@ -394,6 +394,8 @@ let currentLang = null;
 const initLang = () => {
   if (currentLang === null) {
     currentLang = storage.get("lang") || "fr";
+    // Set HTML lang attribute on init
+    document.documentElement.lang = currentLang;
   }
 };
 
@@ -432,6 +434,8 @@ const setLang = (lang) => {
   if (translations[lang]) {
     currentLang = lang;
     storage.set("lang", lang);
+    // Update HTML lang attribute for accessibility/SEO
+    document.documentElement.lang = lang;
   }
 };
 

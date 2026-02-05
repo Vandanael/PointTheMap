@@ -51,8 +51,8 @@ export const DISTANCE_COLORS = {
 // Map animations
 export const MAP_ANIMATIONS = {
   SHOW_RESULT: {
-    duration: 1.5,
-    easeLinearity: 0.25,
+    duration: 2.0,
+    easeLinearity: 0.15,
     animate: true,
   },
   RESET_VIEW: {

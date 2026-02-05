@@ -16,7 +16,7 @@ export async function loadStadiums() {
     return stadiumsCache;
   }
 
-  const module = await import('../../stadiums.js');
+  const module = await import('./stadiums.js');
   stadiumsCache = module.stadiums;
 
   return stadiumsCache;
@@ -31,7 +31,7 @@ export async function loadSelectBalancedStadiums() {
     return selectBalancedStadiumsCache;
   }
 
-  const module = await import('../../stadiums.js');
+  const module = await import('./stadiums.js');
   selectBalancedStadiumsCache = module.selectBalancedStadiums;
 
   return selectBalancedStadiumsCache;
