@@ -6,10 +6,10 @@
   publish = "dist"
   functions = "netlify/functions"
 
-# Ensure functions can resolve imports from repo root (capitals.js, src/, lib/)
+# Ensure functions can resolve imports from src/ and lib/
 [functions]
   node_bundler = "esbuild"
-  included_files = ["./capitals.js", "./src/**", "./lib/**"]
+  included_files = ["./src/**", "./lib/**"]
 
 # Security Headers - Applied to all routes
 [[headers]]

@@ -2,8 +2,8 @@
 // Flat handler (no compose) to avoid "w is not a function" after esbuild minification
 
 import { randomUUID } from "crypto";
-import { capitals } from "../../capitals.js";
-import { civilizations } from "../../civilizations.js";
+import { capitals } from "../../src/data/capitals.js";
+import { civilizations } from "../../src/data/civilizations.js";
 import { selectCapitals, selectCountries, selectCivilizations } from "../../lib/capital-selection/index.js";
 import { getGameMode, isValidMode } from "../../src/config/game-modes.js";
 import { API } from "../../src/config.js";
