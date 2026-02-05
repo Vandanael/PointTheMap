@@ -69,7 +69,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Manual chunk splitting for better caching
-        // Split by change frequency: stable code (core) vs frequently changing (ui)
+        // Split by change frequency; cyclic pairs grouped to avoid circular chunk warnings:
+        // - core ↔ services (core→i18n→storage, services→EventBus/ErrorHandler)
+        // - ui ↔ systems (ui→ScoringSystem, UISystem→UI)
         manualChunks: (id) => {
           // External dependencies
           if (id.includes('node_modules')) {
@@ -81,11 +83,14 @@ export default defineConfig({
             return 'vendor';
           }
 
-          // Application chunks (split by change frequency for better caching)
+          // Application chunks (cyclic pairs merged to break circular chunk warnings)
 
-          // Core: Rarely changes (EventBus, StateManager, ErrorHandler)
+          // Core + Services: single chunk to avoid services→core→i18n→services cycle
           if (id.includes('/src/core/') || id.includes('\\src\\core\\')) {
-            return 'core';
+            return 'core-services';
+          }
+          if (id.includes('/src/services/') || id.includes('\\src\\services\\')) {
+            return 'core-services';
           }
 
           // Game: Moderate changes (game logic, rounds)
@@ -93,24 +98,17 @@ export default defineConfig({
             return 'game';
           }
 
-          // Systems: Frequent changes (new features, scoring tweaks)
+          // UI + Systems: single chunk to avoid ui→systems→ui cycle
           if (id.includes('/src/systems/') || id.includes('\\src\\systems\\')) {
-            return 'systems';
+            return 'ui-systems';
           }
-
-          // UI: Very frequent changes (UI tweaks, components)
           if (id.includes('/src/ui/') || id.includes('\\src\\ui\\')) {
-            return 'ui';
+            return 'ui-systems';
           }
 
           // Features: New features added here
           if (id.includes('/src/features/') || id.includes('\\src\\features\\')) {
             return 'features';
-          }
-
-          // Services: API and storage (moderate changes)
-          if (id.includes('/src/services/') || id.includes('\\src\\services\\')) {
-            return 'services';
           }
         },
         // Optimize asset file names for better caching

@@ -8,6 +8,7 @@
  * - Better performance than localStorage
  */
 
+import { MODE_IDS } from "../config/game-modes.js";
 import { logger } from "../utils/logger.js";
 
 const DB_NAME = "ptm_retry_queue";
@@ -110,7 +111,7 @@ export class IndexedDBQueue {
    * @param {string} gameType
    * @returns {Promise<string>} Entry ID
    */
-  async add(token, rounds, pseudo, gameType = "classic") {
+  async add(token, rounds, pseudo, gameType = MODE_IDS.CLASSIC) {
     try {
       const db = await this.#getDB();
       const transaction = db.transaction([STORE_NAME], "readwrite");

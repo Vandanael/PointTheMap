@@ -11,7 +11,8 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "generate:start-screen": "node scripts/generate-start-screen-images.js"
+    "generate:start-screen": "node scripts/generate-start-screen-images.js",
+    "optimize:geojson": "node scripts/optimize-countries-geojson.js"
   },
   "dependencies": {
     "@netlify/functions": "^3.0.0",

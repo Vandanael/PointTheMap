@@ -132,7 +132,7 @@ export const createGameState = () => ({
   result: null,
   error: null,
   sessionBestScore: 0,
-  gameType: "classic",
+  gameType: MODE_IDS.CLASSIC,
   runtimeConfig: null,
 });
 
@@ -142,7 +142,7 @@ export const createGameState = () => ({
  * @param {'classic' | 'daily' | 'country' | 'stadium' | 'civilization'} [gameType='classic'] - Type of game
  * @returns {Promise<GameState>}
  */
-export const startGame = async (state, gameType = "classic") => {
+export const startGame = async (state, gameType = MODE_IDS.CLASSIC) => {
   try {
     const session = await api.start(gameType);
     const targets = getTargetsFromSession(session, gameType);
@@ -165,9 +165,9 @@ export const startGame = async (state, gameType = "classic") => {
       status: GameStatus.PLAYING,
       token: session.token,
       capitals: roundGameType === 'capital' ? session.capitals ?? [] : [],
-      countries: roundGameType === 'country' ? session.countries ?? [] : [],
-      stadiums: roundGameType === 'stadium' ? session.stadiums ?? [] : [],
-      civilizations: roundGameType === 'civilization' ? session.civilizations ?? [] : [],
+      countries: roundGameType === MODE_IDS.COUNTRY ? session.countries ?? [] : [],
+      stadiums: roundGameType === MODE_IDS.STADIUM ? session.stadiums ?? [] : [],
+      civilizations: roundGameType === MODE_IDS.CIVILIZATION ? session.civilizations ?? [] : [],
       currentRound: createRound(targets[0], 0, roundGameType),
       gameType,
       sessionBestScore: previousBestScore,

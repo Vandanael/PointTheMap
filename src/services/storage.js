@@ -1,5 +1,6 @@
 // Point The Map - Storage Service
 
+import { MODE_IDS } from "../config/game-modes.js";
 import { storageManager, QuotaExceededError } from "../storage/StorageManager.js";
 import { logger } from "../utils/logger.js";
 import { eventBus } from "../core/EventBus.js";
@@ -109,7 +110,7 @@ export const saveRetryQueue = (queue) => {
   }
 };
 
-export const addToRetryQueue = (token, rounds, pseudo, gameType = "classic") => {
+export const addToRetryQueue = (token, rounds, pseudo, gameType = MODE_IDS.CLASSIC) => {
   const queue = getRetryQueue();
   queue.push({
     token,

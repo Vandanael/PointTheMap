@@ -1,4 +1,5 @@
 import { GAME } from "../config.js";
+import { MODE_IDS } from "../config/game-modes.js";
 import { normalizeCoords } from '@lib/game-math/index.js';
 import { validationSystem } from "../systems/ValidationSystem.js";
 import { scoringSystem } from "../systems/ScoringSystem.js";
@@ -18,9 +19,9 @@ function getTotalTimeAllowed(totalTimeAllowed) {
  */
 export const createRound = (target, roundNumber, gameType = 'capital') => ({
   capital: gameType === 'capital' ? target : null,
-  country: gameType === 'country' ? target : null,
-  stadium: gameType === 'stadium' ? target : null,
-  civilization: gameType === 'civilization' ? target : null,
+  country: gameType === MODE_IDS.COUNTRY ? target : null,
+  stadium: gameType === MODE_IDS.STADIUM ? target : null,
+  civilization: gameType === MODE_IDS.CIVILIZATION ? target : null,
   roundNumber,
   startTime: Date.now(),
   endTime: null,
@@ -41,7 +42,7 @@ export const createRound = (target, roundNumber, gameType = 'capital') => ({
  * @param {Object} [civilizationData] - Civilization-specific data for civilization mode
  * @returns {import('./Game.js').Round}
  */
-export const recordClick = (round, clickCoords, gameMode = 'classic', totalTimeAllowed = undefined, countryData = null, civilizationData = null) => {
+export const recordClick = (round, clickCoords, gameMode = MODE_IDS.CLASSIC, totalTimeAllowed = undefined, countryData = null, civilizationData = null) => {
   const endTime = Date.now();
   const elapsed = endTime - round.startTime;
   const total = getTotalTimeAllowed(totalTimeAllowed);
@@ -70,7 +71,7 @@ export const recordClick = (round, clickCoords, gameMode = 'classic', totalTimeA
   }
 
   // Handle country mode
-  if (round.gameType === 'country' && countryData) {
+  if (round.gameType === MODE_IDS.COUNTRY && countryData) {
     const scoreResult = scoringSystem.calculateCountryClickScore(
       normalizedCoords,
       countryData.targetCountryFeature,
@@ -97,7 +98,7 @@ export const recordClick = (round, clickCoords, gameMode = 'classic', totalTimeA
 
   // Civilization mode: same flow and scoring as country (distance to polygon;
   // click aside = some points, too far = fewer points, inside = max)
-  if (round.gameType === 'civilization' && civilizationData && round.civilization) {
+  if (round.gameType === MODE_IDS.CIVILIZATION && civilizationData && round.civilization) {
     const feature = civilizationData.targetCivilizationFeature;
     const scoreResult = feature
       ? scoringSystem.calculateCountryClickScore(
@@ -132,7 +133,7 @@ export const recordClick = (round, clickCoords, gameMode = 'classic', totalTimeA
   }
 
   // Handle stadium mode (point-to-point, same as capital)
-  if (round.gameType === 'stadium' && round.stadium) {
+  if (round.gameType === MODE_IDS.STADIUM && round.stadium) {
     const stadiumCoords = [round.stadium.lat, round.stadium.lng];
     const scoreResult = scoringSystem.calculateClickScore(
       normalizedCoords,

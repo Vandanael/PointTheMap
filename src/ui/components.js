@@ -1,4 +1,5 @@
 import { SCORING_THRESHOLDS } from "../config.js";
+import { MODE_IDS } from "../config/game-modes.js";
 import { formatScore, escapeHtml } from "../utils.js";
 import { t, getLang } from "../i18n.js";
 import { scoringSystem } from "../systems/ScoringSystem.js";
@@ -320,16 +321,16 @@ export const StartScreen = () => `
             <div class="pill-toggle">
               <div id="pill-slider" class="pill-slider"></div>
               <button
-                id="mode-classic"
+                id="mode-${MODE_IDS.CLASSIC}"
                 class="pill-option pill-option-active"
-                data-mode="classic"
+                data-mode="${MODE_IDS.CLASSIC}"
               >
                 ${t("classic")}
               </button>
               <button
-                id="mode-daily"
+                id="mode-${MODE_IDS.DAILY}"
                 class="pill-option"
-                data-mode="daily"
+                data-mode="${MODE_IDS.DAILY}"
               >
                 ${t("daily")}
               </button>
@@ -521,10 +522,10 @@ export const Leaderboard = (scores, highlightPseudo = null, loading = false, err
  * @param {"classic" | "daily"} [currentType="classic"]
  * @param {boolean} [loading=false]
  */
-export const LeaderboardModal = (scores, currentType = "classic", loading = false) => {
-  const isClassic = currentType === "classic";
-  const isDaily = currentType === "daily";
-  const isCountry = currentType === "country";
+export const LeaderboardModal = (scores, currentType = MODE_IDS.CLASSIC, loading = false) => {
+  const isClassic = currentType === MODE_IDS.CLASSIC;
+  const isDaily = currentType === MODE_IDS.DAILY;
+  const isCountry = currentType === MODE_IDS.COUNTRY;
 
   return `
     <div id="leaderboard-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-overlay);" role="dialog" aria-modal="true">

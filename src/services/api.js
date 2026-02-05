@@ -30,6 +30,7 @@
  */
 
 import { GAME } from "../config.js";
+import { MODE_IDS } from "../config/game-modes.js";
 import { generateId } from "../utils.js";
 import { logger } from "../utils/logger.js";
 import { loadCapitals, loadSelectBalancedCapitals } from "../data/capitals-loader.js";
@@ -54,8 +55,8 @@ let currentCsrfToken = null;
  * @param {string} [gameType='classic']
  * @returns {Promise<StartSessionResponse>}
  */
-const mockStart = async (gameType = 'classic') => {
-  if (gameType === 'country') {
+const mockStart = async (gameType = MODE_IDS.CLASSIC) => {
+  if (gameType === MODE_IDS.COUNTRY) {
     // Load capitals and extract unique countries with valid countryId
     const capitals = await loadCapitals();
     const { RandomSelector } = await import('@lib/capital-selection/index.js');
@@ -88,7 +89,7 @@ const mockStart = async (gameType = 'classic') => {
     };
   }
 
-  if (gameType === 'stadium') {
+  if (gameType === MODE_IDS.STADIUM) {
     const [stadiums, selectBalancedStadiums] = await Promise.all([
       loadStadiums(),
       loadSelectBalancedStadiums()
@@ -110,11 +111,11 @@ const mockStart = async (gameType = 'classic') => {
     };
   }
 
-  if (gameType === 'civilization') {
+  if (gameType === MODE_IDS.CIVILIZATION) {
     const { civilizations } = await import('../../civilizations.js');
     const { selectCivilizations } = await import('@lib/capital-selection/index.js');
     const { getGameMode } = await import('../config/game-modes.js');
-    const mode = getGameMode('civilization');
+    const mode = getGameMode(MODE_IDS.CIVILIZATION);
     const selected = selectCivilizations(mode, civilizations, new Date());
     return {
       token: generateId(),
@@ -239,7 +240,7 @@ const fetchApi = async (endpoint, options = {}) => {
  * @param {string} [gameType='classic']
  * @returns {Array<Object>}
  */
-const formatRoundsForSubmit = (rounds, gameType = 'classic') =>
+const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
   rounds.map((r) => {
     const base = {
       click: r.click,
@@ -248,7 +249,7 @@ const formatRoundsForSubmit = (rounds, gameType = 'classic') =>
       timeElapsed: r.endTime && r.startTime ? r.endTime - r.startTime : undefined,
     };
 
-    if (gameType === 'country' || r.gameType === 'country') {
+    if (gameType === MODE_IDS.COUNTRY || r.gameType === MODE_IDS.COUNTRY) {
       return {
         ...base,
         country: r.country?.name,
@@ -259,7 +260,7 @@ const formatRoundsForSubmit = (rounds, gameType = 'classic') =>
       };
     }
 
-    if (gameType === 'stadium' || r.gameType === 'stadium') {
+    if (gameType === MODE_IDS.STADIUM || r.gameType === MODE_IDS.STADIUM) {
       return {
         ...base,
         stadium: r.stadium?.name,
@@ -267,7 +268,7 @@ const formatRoundsForSubmit = (rounds, gameType = 'classic') =>
       };
     }
 
-    if (gameType === 'civilization' || r.gameType === 'civilization') {
+    if (gameType === MODE_IDS.CIVILIZATION || r.gameType === MODE_IDS.CIVILIZATION) {
       return {
         ...base,
         civilization: r.civilization?.name,
@@ -285,7 +286,7 @@ const formatRoundsForSubmit = (rounds, gameType = 'classic') =>
   });
 
 export const api = {
-  start: async (gameType = "classic") => {
+  start: async (gameType = MODE_IDS.CLASSIC) => {
     if (USE_MOCK) {
       logger.log("[API] Mode mock activé");
       const session = await mockStart(gameType);
@@ -300,7 +301,7 @@ export const api = {
     return session;
   },
 
-  submit: async (token, rounds, pseudo, gameType = "classic") => {
+  submit: async (token, rounds, pseudo, gameType = MODE_IDS.CLASSIC) => {
     if (USE_MOCK) {
       return mockSubmit(token, rounds, pseudo);
     }
@@ -315,7 +316,7 @@ export const api = {
     });
   },
 
-  getLeaderboard: async (type = "classic") => {
+  getLeaderboard: async (type = MODE_IDS.CLASSIC) => {
     if (USE_MOCK) {
       return [];
     }
@@ -331,7 +332,7 @@ export const api = {
  * @param {'classic' | 'daily'} [gameType='classic'] - Game type
  * @returns {Promise<import('../game/Game.js').SubmitResult>}
  */
-export const submitWithRetry = async (token, rounds, pseudo, gameType = "classic") => {
+export const submitWithRetry = async (token, rounds, pseudo, gameType = MODE_IDS.CLASSIC) => {
   try {
     const result = await api.submit(token, rounds, pseudo, gameType);
     const queue = getRetryQueue();
@@ -400,7 +401,7 @@ export const processRetryQueue = async () => {
     }
 
     try {
-      await api.submit(entry.token, entry.rounds, entry.pseudo, entry.gameType || "classic");
+      await api.submit(entry.token, entry.rounds, entry.pseudo, entry.gameType || MODE_IDS.CLASSIC);
       removeFromRetryQueue(i);
       successful++;
     } catch (error) {

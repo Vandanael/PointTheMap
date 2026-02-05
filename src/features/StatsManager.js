@@ -4,6 +4,7 @@
  * Manages personal statistics tracking (local-only, no backend sync)
  */
 
+import { MODE_IDS } from "../config/game-modes.js";
 import { storageManager } from "../storage/StorageManager.js";
 import { logger } from "../utils/logger.js";
 import { eventBus } from "../core/EventBus.js";
@@ -107,7 +108,7 @@ export const updateStats = (rounds, gameType) => {
     }
 
     // Update best scores by game type
-    if (gameType === 'classic') {
+    if (gameType === MODE_IDS.CLASSIC) {
       if (avgDistance < stats.bestClassic) {
         stats.bestClassic = avgDistance;
         logger.info(`Stats: New best classic distance: ${avgDistance.toFixed(2)} km`);
@@ -116,7 +117,7 @@ export const updateStats = (rounds, gameType) => {
         stats.bestScoreClassic = totalScore;
         logger.info(`Stats: New best classic score: ${totalScore}`);
       }
-    } else if (gameType === 'daily') {
+    } else if (gameType === MODE_IDS.DAILY) {
       if (avgDistance < stats.bestDaily) {
         stats.bestDaily = avgDistance;
         logger.info(`Stats: New best daily distance: ${avgDistance.toFixed(2)} km`);
@@ -144,12 +145,12 @@ export const updateStats = (rounds, gameType) => {
       }
 
       stats.lastDailyDate = today;
-    } else if (gameType === 'stadium') {
+    } else if (gameType === MODE_IDS.STADIUM) {
       if (totalScore > (stats.bestScoreStadium || 0)) {
         stats.bestScoreStadium = totalScore;
         logger.info(`Stats: New best stadium score: ${totalScore}`);
       }
-    } else if (gameType === 'civilization') {
+    } else if (gameType === MODE_IDS.CIVILIZATION) {
       if (totalScore > (stats.bestScoreCivilization || 0)) {
         stats.bestScoreCivilization = totalScore;
         logger.info(`Stats: New best civilization score: ${totalScore}`);

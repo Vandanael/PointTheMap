@@ -1,6 +1,7 @@
 // Point The Map - UI Controller
 // Clean, minimal UI controller using components
 
+import { MODE_IDS } from "../config/game-modes.js";
 import { api } from "../services/api.js";
 import { getLastPseudo, getTheme, setTheme } from "../services/storage.js";
 import { toggleLang, t } from "../i18n.js";
@@ -191,7 +192,7 @@ export const loadLeaderboard = async (type) => {
 const setupLeaderboardTabs = () => {
   bindClick("btn-leaderboard-classic", async () => {
     try {
-      await UI.showLeaderboardModal([], "classic", true);
+      await UI.showLeaderboardModal([], MODE_IDS.CLASSIC, true);
         } catch (/** @type {unknown} */ error) {
       logger.error('Failed to load classic leaderboard:', error);
       const content = _domCache.get("leaderboard-content");
@@ -205,7 +206,7 @@ const setupLeaderboardTabs = () => {
           </div>
         `;
         bindClick("btn-retry-leaderboard", () => {
-          UI.showLeaderboardModal([], "classic", true);
+          UI.showLeaderboardModal([], MODE_IDS.CLASSIC, true);
         });
       }
     }
@@ -213,7 +214,7 @@ const setupLeaderboardTabs = () => {
 
   bindClick("btn-leaderboard-daily", async () => {
     try {
-      await UI.showLeaderboardModal([], "daily", true);
+      await UI.showLeaderboardModal([], MODE_IDS.DAILY, true);
     } catch (/** @type {unknown} */ error) {
       logger.error('Failed to load daily leaderboard:', error);
       const content = _domCache.get("leaderboard-content");
@@ -227,7 +228,7 @@ const setupLeaderboardTabs = () => {
           </div>
         `;
         bindClick("btn-retry-leaderboard", () => {
-          UI.showLeaderboardModal([], "daily", true);
+          UI.showLeaderboardModal([], MODE_IDS.DAILY, true);
         });
       }
     }
@@ -235,7 +236,7 @@ const setupLeaderboardTabs = () => {
 
   bindClick("btn-leaderboard-country", async () => {
     try {
-      await UI.showLeaderboardModal([], "country", true);
+      await UI.showLeaderboardModal([], MODE_IDS.COUNTRY, true);
     } catch (error) {
       logger.error('Failed to load country leaderboard:', error);
       const content = _domCache.get("leaderboard-content");
@@ -249,7 +250,7 @@ const setupLeaderboardTabs = () => {
           </div>
         `;
         bindClick("btn-retry-leaderboard", () => {
-          UI.showLeaderboardModal([], "country", true);
+          UI.showLeaderboardModal([], MODE_IDS.COUNTRY, true);
         });
       }
     }
@@ -356,7 +357,7 @@ export const UI = {
 
     // State for lobby selections
     let selectedCategory = "capitals"; // Default
-    let selectedMode = "classic"; // Default
+    let selectedMode = MODE_IDS.CLASSIC; // Default
 
     // Helper to get category info
     /** @param {string} category */
@@ -470,7 +471,7 @@ export const UI = {
     });
 
     // Mode selection handlers with pill slider
-    const modeButtons = ["classic", "daily"];
+    const modeButtons = [MODE_IDS.CLASSIC, MODE_IDS.DAILY];
     const slider = document.getElementById("pill-slider");
 
     modeButtons.forEach(mode => {
@@ -481,7 +482,7 @@ export const UI = {
 
           // Update slider position
           if (slider) {
-            if (mode === "daily") {
+            if (mode === MODE_IDS.DAILY) {
               slider.classList.add("slide-right");
             } else {
               slider.classList.remove("slide-right");
@@ -511,11 +512,11 @@ export const UI = {
       if (selectedCategory === "capitals") {
         gameMode = selectedMode; // classic or daily
       } else if (selectedCategory === "countries") {
-        gameMode = "country";
+        gameMode = MODE_IDS.COUNTRY;
       } else if (selectedCategory === "civilizations") {
-        gameMode = "civilization";
+        gameMode = MODE_IDS.CIVILIZATION;
       } else if (selectedCategory === "stadiums") {
-        gameMode = "stadium";
+        gameMode = MODE_IDS.STADIUM;
       } else {
         return;
       }
@@ -579,7 +580,7 @@ export const UI = {
     bindClick("btn-stats", () => UI.showStatsModal());
     bindClick("btn-leaderboard", () => {
       // Show skeleton immediately, load data in background
-      UI.showLeaderboardModal([], "classic", true);
+      UI.showLeaderboardModal([], MODE_IDS.CLASSIC, true);
     });
     bindClick("btn-share-game", async () => {
       const shareText = t("shareGameMessage");
@@ -613,7 +614,7 @@ export const UI = {
    * @param {string} type - Leaderboard type
    * @param {boolean} lazyLoad - If true, show skeleton and load data
    */
-  async showLeaderboardModal(initialScores = [], type = "classic", lazyLoad = false) {
+  async showLeaderboardModal(initialScores = [], type = MODE_IDS.CLASSIC, lazyLoad = false) {
     remove("leaderboard-modal");
 
     // Show skeleton immediately if lazy loading

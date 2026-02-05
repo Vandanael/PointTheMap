@@ -8,6 +8,7 @@
  * - Emit input events via EventBus
  */
 
+import { MODE_IDS } from '../config/game-modes.js';
 import { eventBus } from '../core/EventBus.js';
 
 export class InputSystem {
@@ -130,7 +131,7 @@ export class InputSystem {
    * Emits input:start-game event
    * @param {string} gameType - Game type (classic/daily)
    */
-  handleStartGame(gameType = 'classic') {
+  handleStartGame(gameType = MODE_IDS.CLASSIC) {
     eventBus.emit('input:start-game', { gameType });
   }
 

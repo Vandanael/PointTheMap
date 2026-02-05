@@ -1,5 +1,6 @@
 /// <reference types="../vite-env" />
 import { TIMING, MAP } from "./config.js";
+import { MODE_IDS } from "./config/game-modes.js";
 import { setLastPseudo } from "./services/storage.js";
 import { isIOS } from "./utils.js";
 import { logger } from "./utils/logger.js";
@@ -197,7 +198,7 @@ const init = async () => {
 
     // Subscribe to InputSystem events
     const unsubscribeStartGame = eventBus.subscribe('input:start-game', (/** @type {{ gameType?: "classic" | "daily" }} */ { gameType }) => {
-      handleStart(gameType || 'classic');
+      handleStart(gameType || MODE_IDS.CLASSIC);
     });
     eventUnsubscribers.push(/** @type {() => void} */ (unsubscribeStartGame));
 
@@ -369,14 +370,14 @@ const stopTimer = () => {
 /**
  * @param {"classic" | "daily" | "country" | "stadium" | "civilization"} [gameType="classic"]
  */
-const handleStart = async (gameType = "classic") => {
+const handleStart = async (gameType = MODE_IDS.CLASSIC) => {
   UI.hideStart();
   // Show loader while fetching game data
   UI.showLoader();
 
   mapSystem.clearMap();
-  const startCenter = /** @type {[number, number]} */ (gameType === 'stadium' ? MAP.EUROPE_CENTER : MAP.CENTER);
-  const startZoom  = gameType === 'stadium' ? MAP.EUROPE_ZOOM  : MAP.ZOOM;
+  const startCenter = /** @type {[number, number]} */ (gameType === MODE_IDS.STADIUM ? MAP.EUROPE_CENTER : MAP.CENTER);
+  const startZoom  = gameType === MODE_IDS.STADIUM ? MAP.EUROPE_ZOOM  : MAP.ZOOM;
   mapSystem.flyTo(startCenter, startZoom, { animate: false }); // civilization uses world view (same as country)
 
   const newState = await safeAsync(
@@ -418,9 +419,9 @@ const handleStart = async (gameType = "classic") => {
   });
 
   const target = getCurrentTarget(state);
-  const isCountryMode = state.gameType === 'country';
-  const isStadiumMode = state.gameType === 'stadium';
-  const isCivilizationMode = state.gameType === 'civilization';
+  const isCountryMode = state.gameType === MODE_IDS.COUNTRY;
+  const isStadiumMode = state.gameType === MODE_IDS.STADIUM;
+  const isCivilizationMode = state.gameType === MODE_IDS.CIVILIZATION;
 
   if (!target || !target.name) {
     UI.showError(isCountryMode ? "Erreur: pays introuvable" : isStadiumMode ? "Erreur: stade introuvable" : isCivilizationMode ? "Erreur: civilisation introuvable" : "Erreur: capitale introuvable");
@@ -482,9 +483,9 @@ const onRoundEnd = async () => {
   stopTimer();
 
   const round = state.currentRound;
-  const isCountryMode = state.gameType === 'country';
-  const isStadiumMode = state.gameType === 'stadium';
-  const isCivilizationMode = state.gameType === 'civilization';
+  const isCountryMode = state.gameType === MODE_IDS.COUNTRY;
+  const isStadiumMode = state.gameType === MODE_IDS.STADIUM;
+  const isCivilizationMode = state.gameType === MODE_IDS.CIVILIZATION;
 
   if (!round) return;
   if (isCountryMode && !round.country) return;
@@ -596,14 +597,14 @@ const handleNext = () => {
   stateManager.setState(nextRound(state), 'round:next');
   state = stateManager.getState();
 
-  const nextCenter = /** @type {[number, number]} */ (state.gameType === 'stadium' ? MAP.EUROPE_CENTER : MAP.CENTER);
-  const nextZoom  = state.gameType === 'stadium' ? MAP.EUROPE_ZOOM  : MAP.ZOOM;
+  const nextCenter = /** @type {[number, number]} */ (state.gameType === MODE_IDS.STADIUM ? MAP.EUROPE_CENTER : MAP.CENTER);
+  const nextZoom  = state.gameType === MODE_IDS.STADIUM ? MAP.EUROPE_ZOOM  : MAP.ZOOM;
   mapSystem.flyTo(nextCenter, nextZoom, { animate: false });
 
   const target = getCurrentTarget(state);
-  const isCountryMode = state.gameType === 'country';
-  const isStadiumMode = state.gameType === 'stadium';
-  const isCivilizationMode = state.gameType === 'civilization';
+  const isCountryMode = state.gameType === MODE_IDS.COUNTRY;
+  const isStadiumMode = state.gameType === MODE_IDS.STADIUM;
+  const isCivilizationMode = state.gameType === MODE_IDS.CIVILIZATION;
 
   if (!target || !target.name) {
     UI.showError(isCountryMode ? "Erreur: pays introuvable" : isStadiumMode ? "Erreur: stade introuvable" : isCivilizationMode ? "Erreur: civilisation introuvable" : "Erreur: capitale introuvable");
@@ -678,7 +679,7 @@ const handleSubmit = async (pseudo) => {
       
       shareButtonHandler = async () => {
         const avgDistance = state.rounds.reduce((/** @type {number} */ sum, /** @type {any} */ r) => sum + (r.distance || 0), 0) / state.rounds.length;
-        const dailyNumber = state.gameType === 'daily' ? getDailyNumber(state.lastDailyDate) : null;
+        const dailyNumber = state.gameType === MODE_IDS.DAILY ? getDailyNumber(state.lastDailyDate) : null;
         const shareText = formatShareText(dailyNumber, avgDistance, state.rounds, getLang());
         const success = await shareGameResults(shareText);
 

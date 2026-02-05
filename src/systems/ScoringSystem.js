@@ -10,6 +10,7 @@
 
 import { calculateScore as calculateScoreLib, haversine } from '@lib/game-math/index.js';
 import { GAME, SCORING_THRESHOLDS, SCORING_FORMULA, SCORING } from '../config.js';
+import { MODE_IDS } from '../config/game-modes.js';
 import { eventBus } from '../core/EventBus.js';
 import { t } from '../i18n.js';
 
@@ -73,7 +74,7 @@ export class ScoringSystem {
    * @param {string} [gameMode='classic'] - Game mode ('classic' or 'daily')
    * @returns {number} Time bonus (0-maxBonus)
    */
-  calculateTimeBonus(baseScore, totalTimeMs, timeRemainingMs, distanceKm, gameMode = 'classic') {
+  calculateTimeBonus(baseScore, totalTimeMs, timeRemainingMs, distanceKm, gameMode = MODE_IDS.CLASSIC) {
     // Get mode-specific config
     const config = SCORING.TIME_BONUS_BY_MODE[gameMode];
 
@@ -104,7 +105,7 @@ export class ScoringSystem {
    * @param {string} [gameMode='classic'] - Game mode ('classic' or 'daily')
    * @returns {ScoreResult}
    */
-  calculateScoreWithTime(distanceKm, timeRemainingMs, totalTimeMs = null, gameMode = 'classic') {
+  calculateScoreWithTime(distanceKm, timeRemainingMs, totalTimeMs = null, gameMode = MODE_IDS.CLASSIC) {
     const baseScore = this.calculateScore(distanceKm);
 
     // Calculate time bonus
@@ -141,7 +142,7 @@ export class ScoringSystem {
    * @param {number | null} [totalTimeAllowed] - From state.runtimeConfig (timerMs + graceMs); null = fallback GAME for tests
    * @returns {ScoreResult}
    */
-  calculateClickScore(clickCoords, targetCoords, timeElapsedMs, gameMode = 'classic', totalTimeAllowed = null) {
+  calculateClickScore(clickCoords, targetCoords, timeElapsedMs, gameMode = MODE_IDS.CLASSIC, totalTimeAllowed = null) {
     const total = totalTimeAllowed ?? (GAME.TIMER_MS + GAME.GRACE_PERIOD_MS);
 
     // Check if timed out
@@ -339,7 +340,7 @@ export class ScoringSystem {
     targetCountryFeature,
     isInsideTargetCountry,
     timeElapsedMs,
-    gameMode = 'country',
+    gameMode = MODE_IDS.COUNTRY,
     totalTimeAllowed = null
   ) {
     const total = totalTimeAllowed ?? (GAME.TIMER_MS + GAME.GRACE_PERIOD_MS);
