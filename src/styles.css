@@ -117,10 +117,7 @@ body:not(.light-theme) #map {
 }
 
 .skeleton-loader {
-  position: absolute;
-  left: 50%;
-  bottom: 38%;
-  transform: translateX(-50%);
+  margin-top: 1.5rem;
   width: 220px;
 }
 
@@ -644,10 +641,14 @@ body {
    LOBBY LAYOUT - DENSE & PROFESSIONAL
    =================================== */
 
-/* Container */
+/* Container - top-aligned with fixed padding so title position is
+   deterministic regardless of content below (prevents CLS between
+   skeleton and full start screen). */
 .lobby-container {
-  padding-top: 1.5rem;
+  padding-top: 12vh;
   padding-bottom: 1rem;
+  align-items: flex-start;
+  justify-content: flex-start;
 }
 
 /* Content wrapper with max-width constraint */

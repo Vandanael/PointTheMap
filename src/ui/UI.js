@@ -341,7 +341,6 @@ export const UI = {
 
   // Start screen
   showStart() {
-    document.getElementById('start-skeleton')?.remove();
     document.body.classList.add('start-screen-visible');
     // Subscribe to language changes
     const unsubscribe = eventBus.subscribe('language:changed', () => {
@@ -353,7 +352,11 @@ export const UI = {
     render(StartScreen());
     const startModal = document.getElementById("start-modal");
     if (startModal) {
-      requestAnimationFrame(() => activateFocusTrap(/** @type {HTMLElement} */ (startModal), { onEscape: () => this.hideStart() }));
+      requestAnimationFrame(() => {
+        // Remove skeleton after start screen is painted (z-modal covers z-modal-1)
+        document.getElementById('start-skeleton')?.remove();
+        activateFocusTrap(/** @type {HTMLElement} */ (startModal), { onEscape: () => this.hideStart() });
+      });
     }
 
     // State for lobby selections
