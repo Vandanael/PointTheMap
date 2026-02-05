@@ -1,9 +1,19 @@
 import { defineConfig } from "vite";
 import { resolve } from "path";
+import { readFileSync } from "fs";
 import { visualizer } from "rollup-plugin-visualizer";
 
-/** Injects preload hints and moves critical CSS to the start of <head> to shorten the critical request chain. */
+/** Inlines critical CSS and loads full stylesheet async to shorten the critical request chain (avoids blocking LCP). */
 function criticalCssPreload() {
+  const criticalPath = resolve(process.cwd(), "src/critical.css");
+  let criticalCss = "";
+  try {
+    criticalCss = readFileSync(criticalPath, "utf-8");
+  } catch {
+    criticalCss = "/* critical.css not found */";
+  }
+  const inlineCritical = `<style>${criticalCss.replace(/<\/style>/gi, "\\3c/style>")}</style>`;
+
   return {
     name: "critical-css-preload",
     apply: "build",
@@ -17,13 +27,26 @@ function criticalCssPreload() {
         if (!tags.length) return html;
         const local = tags.filter((t) => t.href.startsWith("/"));
         if (!local.length) return html;
-        // No crossorigin: stylesheet requests use same-origin credentials by default;
-        // the preload must match to be consumed by the browser.
+
+        // Preload full CSS so it fetches early; load async so it does not block first paint.
         const preloads = local.map((t) => `<link rel="preload" href="${t.href}" as="style">`).join("\n  ");
-        const stylesheets = local.map((t) => t.full).join("\n  ");
+        const asyncStyles = local
+          .map(
+            (t) =>
+              `<link rel="stylesheet" href="${t.href}" media="print" onload="this.media='all'">`
+          )
+          .join("\n  ");
+        const noscriptFallback = local
+          .map((t) => `<link rel="stylesheet" href="${t.href}">`)
+          .join("");
+        const noscript = `<noscript>${noscriptFallback}</noscript>`;
+
         let out = html;
         for (const t of local) out = out.replace(t.full, "");
-        out = out.replace(/(<head[^>]*>)/i, `$1\n  ${preloads}\n  ${stylesheets}`);
+        out = out.replace(
+          /(<head[^>]*>)/i,
+          `$1\n  ${inlineCritical}\n  ${preloads}\n  ${asyncStyles}\n  ${noscript}`
+        );
         return out;
       },
     },

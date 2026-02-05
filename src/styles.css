@@ -86,6 +86,18 @@ body:not(.light-theme) #map {
   filter: brightness(1.14) contrast(1.04);
 }
 
+/* Light mode : pas de filtre par défaut (tuiles Carto light_nolabels) */
+
+/* Mobile : renforcer la lisibilité de la carte dans les deux thèmes (écrans petits, luminosité variable) */
+@media (max-width: 768px) {
+  body:not(.light-theme) #map {
+    filter: brightness(1.2) contrast(1.12);
+  }
+  body.light-theme #map {
+    filter: brightness(0.98) contrast(1.1);
+  }
+}
+
 /* iOS: Désactiver le callout de sélection lors des appuis longs sur la carte */
 #map,
 #map * {

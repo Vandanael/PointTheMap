@@ -1,0 +1,135 @@
+/* Inlined at build time to avoid render-blocking CSS on the critical path. */
+:root {
+  --bg-primary: #020617;
+  --bg-secondary: #0f172a;
+  --bg-tertiary: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --border-color: #1e293b;
+  --accent: #facc15;
+  --btn-primary: #facc15;
+  --btn-primary-hover: #fde047;
+  --btn-secondary: #1e293b;
+  --btn-secondary-hover: #334155;
+  --z-base: 1000;
+  --z-modal: 2000;
+  --z-overlay: 3000;
+  --z-toast: 4000;
+  --app-height: 100vh;
+}
+
+body.light-theme {
+  --bg-primary: #f5f3f0;
+  --bg-secondary: #ebe8e3;
+  --bg-tertiary: #ddd9d2;
+  --text-primary: #1a1816;
+  --text-secondary: #3a3834;
+  --text-tertiary: #5b5853;
+  --border-color: #c9c5be;
+  --btn-secondary: #e2e8f0;
+  --btn-secondary-hover: #cbd5e1;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: rgba(250, 204, 21, 0.3);
+}
+
+html, body {
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overscroll-behavior: none;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+#map {
+  height: var(--app-height);
+  width: 100vw;
+  cursor: crosshair;
+  touch-action: manipulation;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+body:not(.light-theme) #map {
+  filter: brightness(1.14) contrast(1.04);
+}
+
+#map, #map * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.start-screen-bg {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-modal) - 1);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  background-image: url("/start-screen-mobile-dark.png");
+}
+
+body.start-screen-visible .start-screen-bg {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .start-screen-bg { background-image: url("/start-screen-tablet-dark.png"); }
+}
+
+@media (min-width: 1280px) {
+  .start-screen-bg { background-image: url("/start-screen-desktop-dark.png"); }
+}
+
+@media (min-width: 2560px) {
+  .start-screen-bg { background-image: url("/start-screen-2k-dark.png"); }
+}
+
+body.light-theme .start-screen-bg {
+  background-image: url("/start-screen-mobile-light.png");
+}
+
+@media (min-width: 768px) {
+  body.light-theme .start-screen-bg { background-image: url("/start-screen-tablet-light.png"); }
+}
+
+@media (min-width: 1280px) {
+  body.light-theme .start-screen-bg { background-image: url("/start-screen-desktop-light.png"); }
+}
+
+@media (min-width: 2560px) {
+  body.light-theme .start-screen-bg { background-image: url("/start-screen-2k-light.png"); }
+}
+
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--accent);
+  color: #000;
+  padding: 8px 16px;
+  text-decoration: none;
+  z-index: 9999;
+  font-weight: bold;
+  border-radius: 0 0 4px 0;
+}
+
+.skip-link:focus {
+  top: 0;
+}
