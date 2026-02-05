@@ -53,20 +53,6 @@ export const TimerBar = () => `
   </div>
 `;
 
-export const GameHeaderSkeleton = () => {
-  return `
-  <div id="game-header" class="game-header fixed top-0 left-0 right-0" style="z-index: var(--z-base);">
-    <div class="px-6 py-2 flex justify-between items-center" style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
-      <div class="flex items-center gap-2">
-        <div class="w-20 h-6 rounded skeleton-pulse"></div>
-      </div>
-      <div class="flex items-center gap-2">
-        <div class="w-24 h-6 rounded skeleton-pulse"></div>
-      </div>
-    </div>
-  </div>
-  `;
-};
 
 /**
  * @param {number} roundNum

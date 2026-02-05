@@ -27,7 +27,7 @@ async function loadLeaflet() {
 }
 
 import { MAP } from '../config.js';
-import { getTheme } from '../services/storage.js';
+import { getTheme, getMapView, setMapView } from '../services/storage.js';
 import { isIOS } from '../utils.js';
 import { eventBus } from '../core/EventBus.js';
 import { logger } from '../utils/logger.js';
@@ -252,9 +252,13 @@ export class MapSystem {
    * @private
    */
   #createMap(containerId) {
+    const saved = getMapView();
+    const initialCenter = saved?.center ?? MAP.CENTER;
+    const initialZoom = saved?.zoom ?? MAP.ZOOM;
+
     this.#map = L.map(containerId, {
-      center: MAP.CENTER,
-      zoom: MAP.ZOOM,
+      center: initialCenter,
+      zoom: initialZoom,
       minZoom: MAP.MIN_ZOOM,
       maxZoom: MAP.MAX_ZOOM,
       zoomControl: false,
@@ -266,7 +270,7 @@ export class MapSystem {
       markerZoomAnimation: true,
     });
 
-    this.#map.setView(MAP.CENTER, MAP.ZOOM, { animate: false });
+    this.#map.setView(initialCenter, initialZoom, { animate: false });
     this.#map.doubleClickZoom.disable();
 
     // Make map container focusable for programmatic focus
@@ -308,6 +312,22 @@ export class MapSystem {
     });
 
     this.#eventUnsubscribers.push(unsubTheme);
+
+    // Persist map view on move/zoom (debounced)
+    let saveTimeout = null;
+    const saveView = () => {
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => {
+        const center = this.getCenter();
+        const zoom = this.getZoom();
+        if (center) setMapView(center, zoom);
+      }, 300);
+    };
+    this.#map.on('moveend', saveView);
+    this.#eventUnsubscribers.push(() => {
+      clearTimeout(saveTimeout);
+      this.#map?.off('moveend', saveView);
+    });
   }
 
   /**

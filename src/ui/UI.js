@@ -319,13 +319,13 @@ export const UI = {
 
   // Loader
   showLoader() {
-    const existing = document.getElementById("loading-spinner");
-    if (existing) return;
+    // During initial load the progress bar lives in the skeleton HTML.
+    // After the skeleton is removed (Play click), render the standalone spinner.
+    if (document.getElementById("loading-progress")) return;
+    if (document.getElementById("loading-spinner")) return;
     const spinner = render(LoadingSpinner());
-    // Force reflow to ensure loader is rendered and visible
     if (spinner) {
-      void (/** @type {HTMLElement} */ (spinner).offsetHeight); // Force reflow
-      // Update cache immediately
+      void (/** @type {HTMLElement} */ (spinner).offsetHeight);
       _domCache._cache["loading-spinner"] = /** @type {HTMLElement} */ (spinner);
       _domCache._cache["loading-progress"] = document.getElementById("loading-progress");
     }

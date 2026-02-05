@@ -10,7 +10,9 @@ export { storageManager, QuotaExceededError };
 
 // Legacy API - kept for backwards compatibility
 export const storage = {
+  /** @param {string} key */
   get: (key) => storageManager.get(key),
+  /** @param {string} key @param {unknown} value */
   set: (key, value) => {
     try {
       return storageManager.set(key, value);
@@ -63,9 +65,15 @@ export const storage = {
 };
 
 export const getLastPseudo = () => storage.get("lastPseudo");
+/** @param {string} pseudo */
 export const setLastPseudo = (pseudo) => storage.set("lastPseudo", pseudo);
 export const getTheme = () => storage.get("theme") || "dark";
+/** @param {string} theme */
 export const setTheme = (theme) => storage.set("theme", theme);
+
+export const getMapView = () => storage.get("mapView");
+/** @param {{ lat: number; lng: number } | [number, number]} center @param {number} zoom */
+export const setMapView = (center, zoom) => storage.set("mapView", { center, zoom });
 
 const RETRY_QUEUE_KEY = "retry_queue";
 
@@ -84,6 +92,7 @@ export const getRetryQueue = () => {
   }
 };
 
+/** @param {Array<{ token: string; rounds: unknown; pseudo: string; gameType?: string; attempts?: number; addedAt?: number }>} queue */
 export const saveRetryQueue = (queue) => {
   try {
     return storageManager.set(RETRY_QUEUE_KEY, queue);
@@ -110,6 +119,7 @@ export const saveRetryQueue = (queue) => {
   }
 };
 
+/** @param {string} token @param {unknown} rounds @param {string} pseudo @param {string} [gameType] */
 export const addToRetryQueue = (token, rounds, pseudo, gameType = MODE_IDS.CLASSIC) => {
   const queue = getRetryQueue();
   queue.push({
@@ -127,6 +137,7 @@ export const addToRetryQueue = (token, rounds, pseudo, gameType = MODE_IDS.CLASS
   return saved;
 };
 
+/** @param {number} index */
 export const removeFromRetryQueue = (index) => {
   const queue = getRetryQueue();
   queue.splice(index, 1);
