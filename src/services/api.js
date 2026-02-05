@@ -181,7 +181,7 @@ const fetchApi = async (endpoint, options = {}) => {
     const authHeader = await playerAuth.getAuthHeader();
     headers["Authorization"] = authHeader;
   } catch (error) {
-    console.error("[API] Failed to get player token:", error);
+    logger.error("[API] Failed to get player token:", error);
     // Continue without token - server will handle missing token
   }
 

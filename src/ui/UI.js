@@ -15,7 +15,6 @@ import {
   Modal,
   TimerBar,
   GameHeader,
-  GameHeaderSkeleton,
   QuestionModal,
   QuestionModalWithButton,
   RoundResult,
@@ -28,26 +27,31 @@ import {
   PseudoLockedDialog,
   Toast,
   MyStatsModal,
-  AchievementUnlockModal,
-  HelpModal,
 } from "./components.js";
 import { getStats } from "../features/StatsManager.js";
 import { shareGameResults } from "../features/Share.js";
+import { activateFocusTrap, deactivateFocusTrap } from "../utils/focusTrap.js";
 
 // Rate limiting for submit button
 const MIN_SUBMIT_INTERVAL = 2000; // 2 seconds between submissions
 let lastSubmitTime = 0;
 
 // Store UI.init() subscriptions for cleanup
+/** @type {Array<() => void>} */
 let _uiInitUnsubscribers = [];
 
 // Store dynamic event listeners for cleanup
+/** @type {null | ((e: Event) => void)} */
 let _questionModalClickHandler = null;
+/** @type {null | ((e: Event) => void)} */
 let _pseudoInputHandler = null;
+/** @type {null | ((e: Event) => void)} */
 let _pseudoKeypressHandler = null;
+/** @type {null | ((e: Event) => void)} */
 let _pseudoFocusHandler = null;
 
 // Track start screen listeners for cleanup
+/** @type {Array<{ element: HTMLElement; listener: () => void }>} */
 let _startScreenListeners = [];
 
 // Track toast timers for cleanup
@@ -57,14 +61,18 @@ const _toastTimers = new Map();
 const _clickHandlers = new Map();
 
 // DOM cache to avoid repeated queries
+/** @type {{ _cache: Record<string, HTMLElement | null>; get(id: string): HTMLElement | null; invalidate(id?: string): void }} */
 const _domCache = {
+  /** @type {Record<string, HTMLElement | null>} */
   _cache: {},
+  /** @param {string} id */
   get(id) {
     if (!this._cache[id] || !document.body.contains(this._cache[id])) {
       this._cache[id] = document.getElementById(id);
     }
     return this._cache[id];
   },
+  /** @param {string} [id] */
   invalidate(id) {
     if (id) {
       delete this._cache[id];
@@ -83,14 +91,20 @@ const app = () => {
   return el;
 };
 
+/**
+ * @param {string} html
+ * @param {HTMLElement} [container]
+ * @returns {Element | null}
+ */
 const render = (html, container = app()) => {
   const div = document.createElement("div");
   div.innerHTML = html;
   const el = div.firstElementChild;
-  container.appendChild(el);
+  if (el) container.appendChild(el);
   return el;
 };
 
+/** @param {string} id */
 const remove = (id) => {
   const el = document.getElementById(id) || _domCache.get(id);
   if (el) {
@@ -101,6 +115,10 @@ const remove = (id) => {
   _clickHandlers.delete(id);
 };
 
+/**
+ * @param {string} id
+ * @param {(e: Event) => void} handler
+ */
 const bindClick = (id, handler) => {
   // Try cache first, then direct DOM lookup
   let el = _domCache.get(id);
@@ -126,6 +144,7 @@ const bindClick = (id, handler) => {
   }
 };
 
+/** @param {string} theme */
 const applyTheme = (theme) => {
   if (theme === "light") {
     document.body.classList.add("light-theme");
@@ -154,6 +173,7 @@ const handleToggleLang = () => {
 
 const LEADERBOARD_TIMEOUT_MS = 5000; // 5 seconds timeout
 
+/** @param {string} type */
 export const loadLeaderboard = async (type) => {
   const scores = await safeAsync(
     () => Promise.race([
@@ -172,8 +192,8 @@ const setupLeaderboardTabs = () => {
   bindClick("btn-leaderboard-classic", async () => {
     try {
       await UI.showLeaderboardModal([], "classic", true);
-    } catch (error) {
-      console.error('Failed to load classic leaderboard:', error);
+        } catch (/** @type {unknown} */ error) {
+      logger.error('Failed to load classic leaderboard:', error);
       const content = _domCache.get("leaderboard-content");
       if (content) {
         content.innerHTML = `
@@ -194,8 +214,8 @@ const setupLeaderboardTabs = () => {
   bindClick("btn-leaderboard-daily", async () => {
     try {
       await UI.showLeaderboardModal([], "daily", true);
-    } catch (error) {
-      console.error('Failed to load daily leaderboard:', error);
+    } catch (/** @type {unknown} */ error) {
+      logger.error('Failed to load daily leaderboard:', error);
       const content = _domCache.get("leaderboard-content");
       if (content) {
         content.innerHTML = `
@@ -217,7 +237,7 @@ const setupLeaderboardTabs = () => {
     try {
       await UI.showLeaderboardModal([], "country", true);
     } catch (error) {
-      console.error('Failed to load country leaderboard:', error);
+      logger.error('Failed to load country leaderboard:', error);
       const content = _domCache.get("leaderboard-content");
       if (content) {
         content.innerHTML = `
@@ -240,6 +260,7 @@ const setupLeaderboardTabs = () => {
 export const _domCacheForTesting = _domCache;
 
 export const UI = {
+  /** @type {null | (() => void)} */
   _langChangeCleanup: null,
 
   init() {
@@ -247,7 +268,7 @@ export const UI = {
 
     // Subscribe to error events
     _uiInitUnsubscribers.push(
-      eventBus.subscribe('error:show', ({ message }) => {
+      eventBus.subscribe('error:show', (/** @type {{ message: string }} */ { message }) => {
         UI.showError(message);
       })
     );
@@ -256,19 +277,19 @@ export const UI = {
 
     // Subscribe to storage quota events
     _uiInitUnsubscribers.push(
-      eventBus.subscribe('storage:quota-exceeded', ({ message }) => {
+      eventBus.subscribe('storage:quota-exceeded', (/** @type {{ message: string }} */ { message }) => {
         UI.showToast(message, 'warning', 4000);
       })
     );
 
     _uiInitUnsubscribers.push(
-      eventBus.subscribe('storage:quota-recovered', ({ message }) => {
+      eventBus.subscribe('storage:quota-recovered', (/** @type {{ message: string }} */ { message }) => {
         UI.showToast(message, 'success', 3000);
       })
     );
 
     _uiInitUnsubscribers.push(
-      eventBus.subscribe('storage:quota-failed', ({ message }) => {
+      eventBus.subscribe('storage:quota-failed', (/** @type {{ message: string }} */ { message }) => {
         UI.showToast(message, 'error', 6000);
       })
     );
@@ -302,15 +323,16 @@ export const UI = {
     const spinner = render(LoadingSpinner());
     // Force reflow to ensure loader is rendered and visible
     if (spinner) {
-      spinner.offsetHeight; // Force reflow
+      void (/** @type {HTMLElement} */ (spinner).offsetHeight); // Force reflow
       // Update cache immediately
-      _domCache._cache["loading-spinner"] = spinner;
+      _domCache._cache["loading-spinner"] = /** @type {HTMLElement} */ (spinner);
       _domCache._cache["loading-progress"] = document.getElementById("loading-progress");
     }
   },
   hideLoader() {
     remove("loading-spinner");
   },
+  /** @param {number} percent */
   updateLoader(percent) {
     const p = _domCache.get("loading-progress");
     if (p) p.style.width = `${Math.min(100, percent)}%`;
@@ -324,15 +346,20 @@ export const UI = {
       UI.hideStart();
       UI.showStart(); // Re-render with new language
     });
-    this._langChangeCleanup = unsubscribe;
+    this._langChangeCleanup = /** @type {() => void} */ (unsubscribe);
 
     render(StartScreen());
+    const startModal = document.getElementById("start-modal");
+    if (startModal) {
+      requestAnimationFrame(() => activateFocusTrap(/** @type {HTMLElement} */ (startModal), { onEscape: () => this.hideStart() }));
+    }
 
     // State for lobby selections
     let selectedCategory = "capitals"; // Default
     let selectedMode = "classic"; // Default
 
     // Helper to get category info
+    /** @param {string} category */
     const getCategoryInfo = (category) => {
       const infoMap = {
         capitals: {
@@ -356,10 +383,11 @@ export const UI = {
           desc: t("clickToWin")
         }
       };
-      return infoMap[category] || infoMap.capitals;
+      return infoMap[/** @type {keyof typeof infoMap} */ (category)] || infoMap.capitals;
     };
 
     // Helper to update challenge card with fade animation
+    /** @param {string} category */
     const updateChallengeCard = (category) => {
       const card = document.getElementById("challenge-card");
       if (!card) return;
@@ -383,11 +411,13 @@ export const UI = {
           // Apply color for "coming soon" text: black in light mode, yellow in dark mode
           if (info.desc === t("comingSoon")) {
             const theme = getTheme();
-            desc.style.color = theme === 'dark' ? 'var(--accent)' : '#000000';
-            desc.style.fontWeight = "bold";
+            const descEl = /** @type {HTMLElement} */ (desc);
+            descEl.style.color = theme === 'dark' ? 'var(--accent)' : '#000000';
+            descEl.style.fontWeight = "bold";
           } else {
-            desc.style.color = "";  // Reset to default
-            desc.style.fontWeight = "";
+            const descEl = /** @type {HTMLElement} */ (desc);
+            descEl.style.color = "";  // Reset to default
+            descEl.style.fontWeight = "";
           }
         }
 
@@ -477,74 +507,73 @@ export const UI = {
 
     // Start game button with selected category and mode
     bindClick("btn-start-game", async () => {
-      // Map category to game mode
       let gameMode;
-
       if (selectedCategory === "capitals") {
-        gameMode = selectedMode; // Use selected mode (classic or daily)
+        gameMode = selectedMode; // classic or daily
       } else if (selectedCategory === "countries") {
         gameMode = "country";
-
-        // Load countries GeoJSON if not already loaded
-        UI.showLoader();
-        UI.updateLoader(30);
-
-        try {
-          const { mapSystem } = await import("../systems/MapSystem.js");
-          UI.updateLoader(60);
-
-          const loaded = await mapSystem.loadCountriesGeoJSON();
-          UI.updateLoader(100);
-
-          if (!loaded) {
-            UI.hideLoader();
-            UI.showToast(t('error.countriesLoadFailed') || "Failed to load countries data. Please try again.", "error", 4000);
-            return;
-          }
-
-          UI.hideLoader();
-        } catch (error) {
-          logger.error('Error loading countries:', error);
-          UI.hideLoader();
-          UI.showToast(t('error.countriesLoadFailed') || "Error loading countries: " + error.message, "error", 4000);
-          return;
-        }
       } else if (selectedCategory === "civilizations") {
         gameMode = "civilization";
-
-        UI.showLoader();
-        UI.updateLoader(30);
-
-        try {
-          const { mapSystem } = await import("../systems/MapSystem.js");
-          UI.updateLoader(60);
-
-          const loaded = await mapSystem.loadCivilizationsGeoJSON();
-          UI.updateLoader(100);
-
-          if (!loaded) {
-            UI.hideLoader();
-            UI.showToast(t('error.civilizationsLoadFailed') || "Failed to load civilizations data. Please try again.", "error", 4000);
-            return;
-          }
-
-          UI.hideLoader();
-        } catch (error) {
-          logger.error('Error loading civilizations:', error);
-          UI.hideLoader();
-          UI.showToast(t('error.civilizationsLoadFailed') || "Error loading civilizations: " + error.message, "error", 4000);
-          return;
-        }
       } else if (selectedCategory === "stadiums") {
         gameMode = "stadium";
       } else {
         return;
       }
 
+      const { mapSystem } = await import("../systems/MapSystem.js");
+      const needsInit = !mapSystem.isInitialized();
+      const needsGeoJSON = selectedCategory === "countries" || selectedCategory === "civilizations";
+
+      // Show loader only if there is actual async work pending
+      if (needsInit || needsGeoJSON) {
+        UI.showLoader();
+        UI.updateLoader(needsInit && needsGeoJSON ? 20 : needsInit ? 40 : 50);
+      }
+
+      try {
+        // Initialize map on first use
+        if (needsInit) {
+          await mapSystem.init("map");
+          UI.updateLoader(needsGeoJSON ? 50 : 100);
+        }
+
+        // Load GeoJSON for country / civilization modes
+        if (selectedCategory === "countries") {
+          const loaded = await mapSystem.loadCountriesGeoJSON();
+          UI.updateLoader(100);
+          if (!loaded) {
+            UI.hideLoader();
+            UI.showToast(t('error.countriesLoadFailed') || "Failed to load countries data. Please try again.", "error", 4000);
+            return;
+          }
+        } else if (selectedCategory === "civilizations") {
+          const loaded = await mapSystem.loadCivilizationsGeoJSON();
+          UI.updateLoader(100);
+          if (!loaded) {
+            UI.hideLoader();
+            UI.showToast(t('error.civilizationsLoadFailed') || "Failed to load civilizations data. Please try again.", "error", 4000);
+            return;
+          }
+        }
+
+        if (needsInit || needsGeoJSON) {
+          UI.hideLoader();
+        }
+      } catch (error) {
+        logger.error('Error initializing game:', error);
+        UI.hideLoader();
+        const errorMsg = selectedCategory === "countries"
+          ? (t('error.countriesLoadFailed') || "Failed to load countries data.")
+          : selectedCategory === "civilizations"
+            ? (t('error.civilizationsLoadFailed') || "Failed to load civilizations data.")
+            : (t('error.mapLoadFailed') || "Failed to initialize map.");
+        UI.showToast(errorMsg + " " + (error instanceof Error ? error.message : ""), "error", 4000);
+        return;
+      }
+
       inputSystem.handleStartGame(gameMode);
     });
 
-    bindClick("btn-help", () => UI.showHelpModal());
     bindClick("btn-theme", toggleTheme);
     bindClick("btn-lang", handleToggleLang);
     bindClick("btn-stats", () => UI.showStatsModal());
@@ -564,6 +593,7 @@ export const UI = {
     });
   },
   hideStart() {
+    deactivateFocusTrap();
     document.body.classList.remove('start-screen-visible');
 
     // Clean up tracked listeners
@@ -579,7 +609,7 @@ export const UI = {
 
   /**
    * Show leaderboard modal with lazy loading
-   * @param {Array} initialScores - Initial scores (empty for lazy load)
+   * @param {Array<any>} initialScores - Initial scores (empty for lazy load)
    * @param {string} type - Leaderboard type
    * @param {boolean} lazyLoad - If true, show skeleton and load data
    */
@@ -588,8 +618,16 @@ export const UI = {
 
     // Show skeleton immediately if lazy loading
     if (lazyLoad) {
-      render(LeaderboardModal([], type, true));
-      bindClick("btn-close-leaderboard", () => remove("leaderboard-modal"));
+      render(LeaderboardModal([], /** @type {"classic" | "daily"} */ (type), true));
+      const closeLeaderboard = () => {
+        deactivateFocusTrap();
+        remove("leaderboard-modal");
+      };
+      bindClick("btn-close-leaderboard", closeLeaderboard);
+      const leaderboardModalSkeleton = document.getElementById("leaderboard-modal");
+      if (leaderboardModalSkeleton) {
+        requestAnimationFrame(() => activateFocusTrap(/** @type {HTMLElement} */ (leaderboardModalSkeleton), { onEscape: closeLeaderboard }));
+      }
 
       // Load data in background
       const scores = await loadLeaderboard(type);
@@ -622,7 +660,7 @@ export const UI = {
       // Re-enable buttons
       const btns = ["btn-leaderboard-classic", "btn-leaderboard-daily", "btn-leaderboard-country"];
       btns.forEach(id => {
-        const btn = _domCache.get(id);
+        const btn = /** @type {HTMLButtonElement | null} */ (_domCache.get(id));
         if (btn) {
           btn.disabled = false;
           btn.style.opacity = "";
@@ -632,11 +670,23 @@ export const UI = {
 
       // Setup tab switching
       setupLeaderboardTabs();
+      const leaderboardModal = document.getElementById("leaderboard-modal");
+      if (leaderboardModal) {
+        requestAnimationFrame(() => activateFocusTrap(/** @type {HTMLElement} */ (leaderboardModal), { onEscape: closeLeaderboard }));
+      }
     } else {
       // Immediate render with data
-      render(LeaderboardModal(initialScores, type, false));
-      bindClick("btn-close-leaderboard", () => remove("leaderboard-modal"));
+      const closeLeaderboard = () => {
+        deactivateFocusTrap();
+        remove("leaderboard-modal");
+      };
+      render(LeaderboardModal(initialScores, /** @type {"classic" | "daily"} */ (type), false));
+      bindClick("btn-close-leaderboard", closeLeaderboard);
       setupLeaderboardTabs();
+      const leaderboardModal = document.getElementById("leaderboard-modal");
+      if (leaderboardModal) {
+        requestAnimationFrame(() => activateFocusTrap(/** @type {HTMLElement} */ (leaderboardModal), { onEscape: closeLeaderboard }));
+      }
     }
   },
 
@@ -645,21 +695,32 @@ export const UI = {
 
     const stats = getStats();
     render(MyStatsModal(stats));
-    bindClick("btn-close-stats", () => remove("stats-modal"));
-  },
-
-  showHelpModal() {
-    remove("help-modal");
-
-    render(HelpModal());
-    bindClick("btn-close-help", () => remove("help-modal"));
+    const closeStats = () => {
+      deactivateFocusTrap();
+      remove("stats-modal");
+    };
+    bindClick("btn-close-stats", closeStats);
+    const statsModal = document.getElementById("stats-modal");
+    if (statsModal) {
+      requestAnimationFrame(() => activateFocusTrap(/** @type {HTMLElement} */ (statsModal), { onEscape: closeStats }));
+    }
   },
 
   // Game UI
+  /**
+   * @param {number} roundNum
+   * @param {number} totalRounds
+   * @param {number} totalScore
+   */
   showGameUI(roundNum, totalRounds, totalScore) {
     render(TimerBar());
     render(GameHeader(roundNum, totalRounds, totalScore));
   },
+  /**
+   * @param {number} roundNum
+   * @param {number} totalRounds
+   * @param {number} totalScore
+   */
   updateGameUI(roundNum, totalRounds, totalScore) {
     remove("game-header");
     _domCache.invalidate("game-header");
@@ -675,6 +736,7 @@ export const UI = {
    * Hide question modal
    */
   hideQuestion() {
+    deactivateFocusTrap();
     const modal = _domCache.get("question-modal");
     if (modal) {
       modal.classList.add("hidden");
@@ -689,9 +751,8 @@ export const UI = {
    * Show question modal
    * @param {string} capitalName - Capital name
    * @param {string} country - Country name
-   * @param {Function} onClose - Callback when modal closes
-   * @param {Object} options - Options
-   * @param {boolean} options.requireButton - If true, show button instead of auto-close
+   * @param {() => void} onClose - Callback when modal closes
+   * @param {{ requireButton?: boolean }} [options] - Options
    */
   showQuestion(capitalName, country, onClose, { requireButton = false } = {}) {
     let modal = _domCache.get("question-modal");
@@ -709,7 +770,6 @@ export const UI = {
       if (countryEl) countryEl.textContent = country;
       modal.classList.remove("hidden");
     }
-    
     // Shared close handler
     const close = () => {
       this.hideQuestion();
@@ -733,6 +793,11 @@ export const UI = {
         });
       });
     };
+
+    const modalEl = _domCache.get("question-modal");
+    if (modalEl) {
+      requestAnimationFrame(() => activateFocusTrap(/** @type {HTMLElement} */ (modalEl), { onEscape: close }));
+    }
 
     // Setup close behavior
     if (requireButton) {
@@ -758,8 +823,16 @@ export const UI = {
   },
 
   // Round result
+  /**
+   * @param {number | null} distance - Distance in km, or null on timeout with no click
+   * @param {number} score
+   * @param {boolean} isTimeout
+   * @param {boolean} isLast
+   * @param {number} baseScore
+   * @param {number} timeBonus
+   */
   showRoundResult(distance, score, isTimeout, isLast, baseScore, timeBonus) {
-    const content = RoundResult(distance, score, isTimeout, isLast, baseScore, timeBonus);
+    const content = /** @type {(distance: number | null, score: number, isTimeout: boolean, isLast: boolean, baseScore?: number, timeBonus?: number) => string} */ (RoundResult)(distance, score, isTimeout, isLast, baseScore, timeBonus);
     render(Modal("round-result", content, true));
     bindClick("btn-next", () => inputSystem.handleNextRound());
   },
@@ -769,6 +842,7 @@ export const UI = {
   },
 
   // Game over / submit
+  /** @param {number} totalScore */
   showGameOver(totalScore) {
     const lastPseudo = getLastPseudo() || "";
     render(GameOverScreen(totalScore, lastPseudo));
@@ -781,20 +855,22 @@ export const UI = {
       if (_pseudoFocusHandler) oldInput.removeEventListener("focus", _pseudoFocusHandler);
     }
 
-    const input = _domCache.get("pseudo-input");
+    const input = /** @type {HTMLInputElement | null} */ (_domCache.get("pseudo-input"));
     if (input) {
       _pseudoInputHandler = (e) => {
-        e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 5);
+        const target = /** @type {HTMLInputElement} */ (e.target);
+        target.value = target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 5);
       };
       _pseudoKeypressHandler = (e) => {
-        if (e.key === "Enter") {
+        if (/** @type {KeyboardEvent} */ (e).key === "Enter") {
           const btn = _domCache.get("btn-submit");
           if (btn) btn.click();
         }
       };
       _pseudoFocusHandler = (e) => {
-        e.target.style.outline = "none";
-        e.target.style.boxShadow = "none";
+        const target = /** @type {HTMLElement} */ (e.target);
+        target.style.outline = "none";
+        target.style.boxShadow = "none";
       };
       input.addEventListener("input", _pseudoInputHandler);
       input.addEventListener("keypress", _pseudoKeypressHandler);
@@ -802,8 +878,8 @@ export const UI = {
       input.focus();
     }
 
-    bindClick("btn-submit", debounce(() => {
-      const submitBtn = document.getElementById("btn-submit");
+    bindClick("btn-submit", /** @type {(e: Event) => void} */ (debounce(() => {
+      const submitBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById("btn-submit"));
 
       // Rate limiting check
       const now = Date.now();
@@ -825,7 +901,7 @@ export const UI = {
         return;
       }
 
-      const pseudo = input?.value.trim();
+      const pseudo = (input?.value.trim() ?? "");
       const error = _domCache.get("pseudo-error");
       const validation = validationSystem.validatePseudo(pseudo);
       if (!validation.valid) {
@@ -846,31 +922,49 @@ export const UI = {
 
       lastSubmitTime = now; // Update last submit time
       inputSystem.handleSubmit(pseudo);
-    }, UI_TIMING.DEBOUNCE_SUBMIT)); // Debounce delay
+    }, UI_TIMING.DEBOUNCE_SUBMIT))); // Debounce delay
 
     bindClick("btn-replay", () => inputSystem.handleReplay());
+    const gameOverModal = document.getElementById("result-modal");
+    if (gameOverModal) {
+      requestAnimationFrame(() => activateFocusTrap(/** @type {HTMLElement} */ (gameOverModal), { onEscape: () => this.hideGameOver() }));
+    }
   },
 
+  /**
+   * @param {number} totalScore
+   * @param {string} pseudo
+   * @param {{ rank: number, isTopFifty: boolean }} result
+   * @param {boolean} [isNewSessionBest]
+   */
   showFinalResults(totalScore, pseudo, result, isNewSessionBest = false) {
     let modal = document.getElementById("result-modal");
     if (!modal) {
-      modal = render(`
+      modal = /** @type {HTMLElement | null} */ (render(`
         <div id="result-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-modal);" role="dialog" aria-modal="true"></div>
-      `);
+      `));
     }
-    modal.innerHTML = `
-      <div class="flex items-center justify-center p-4 h-full">
-        ${FinalResults(totalScore, pseudo, result.rank, result.isTopFifty, isNewSessionBest)}
-      </div>
-    `;
+    if (modal) {
+      modal.innerHTML = `
+        <div class="flex items-center justify-center p-4 h-full">
+          ${FinalResults(totalScore, pseudo, result.rank, result.isTopFifty, isNewSessionBest)}
+        </div>
+      `;
+    }
     bindClick("btn-replay", () => inputSystem.handleReplay());
+    const resultModal = document.getElementById("result-modal");
+    if (resultModal) {
+      requestAnimationFrame(() => activateFocusTrap(/** @type {HTMLElement} */ (resultModal), { onEscape: () => this.hideGameOver() }));
+    }
   },
 
   hideGameOver() {
+    deactivateFocusTrap();
     remove("result-modal");
     _domCache.invalidate("result-modal");
   },
 
+  /** @param {string} message */
   showError(message) {
     const container = app();
     if (!container) return; // Protection supplémentaire
@@ -882,14 +976,29 @@ export const UI = {
     setTimeout(() => errorEl.remove(), UI_TIMING.ERROR_DISPLAY);
   },
 
+  /**
+   * @param {string} pseudo
+   * @param {() => void} onConfirm
+   */
   showPseudoLockedDialog(pseudo, onConfirm) {
     render(PseudoLockedDialog(pseudo));
-    bindClick("btn-pseudo-locked-ok", () => {
+    const closePseudoLocked = () => {
+      deactivateFocusTrap();
       remove("pseudo-locked-modal");
       _domCache.invalidate("pseudo-locked-modal");
       // Call the confirm callback to resubmit with locked pseudo
       if (onConfirm) onConfirm();
-    });
+    };
+    const closePseudoLockedWithoutConfirm = () => {
+      deactivateFocusTrap();
+      remove("pseudo-locked-modal");
+      _domCache.invalidate("pseudo-locked-modal");
+    };
+    bindClick("btn-pseudo-locked-ok", closePseudoLocked);
+    const pseudoLockedModal = document.getElementById("pseudo-locked-modal");
+    if (pseudoLockedModal) {
+      requestAnimationFrame(() => activateFocusTrap(/** @type {HTMLElement} */ (pseudoLockedModal), { onEscape: closePseudoLockedWithoutConfirm }));
+    }
   },
 
   /**

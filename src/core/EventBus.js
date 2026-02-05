@@ -23,7 +23,7 @@ class EventBus {
    * Subscribe to an event
    * @param {string} event - Event name (supports wildcards like "timer:*")
    * @param {Function} handler - Event handler
-   * @returns {Function} Unsubscribe function
+   * @returns {() => void} Unsubscribe function
    */
   subscribe(event, handler) {
     if (typeof event !== 'string' || !event) {
@@ -46,7 +46,7 @@ class EventBus {
    * Subscribe to an event and auto-unsubscribe after first call
    * @param {string} event - Event name
    * @param {Function} handler - Event handler
-   * @returns {Function} Unsubscribe function
+   * @returns {() => void} Unsubscribe function
    */
   once(event, handler) {
     if (typeof handler !== 'function') {

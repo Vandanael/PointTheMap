@@ -4,7 +4,7 @@
  * Features:
  * - Immutable updates (old state never mutated)
  * - Validation on setState
- * - State history (max 50 entries)
+ * - State history (max 50 entries) — linear log of snapshots, not undo/redo stack
  * - Integration with EventBus
  * - DevTools support
  */
@@ -115,8 +115,10 @@ export class StateManager {
   }
 
   /**
-   * Restore state from history
-   * @param {number} index - History index to restore
+   * Restore state to the snapshot at the given history index.
+   * Replaces current state with that snapshot and pushes a new history entry;
+   * this is not undo/redo — the history list is not rewound or altered.
+   * @param {number} index - History index (0 = oldest, length-1 = most recent)
    */
   restoreFromHistory(index) {
     if (index < 0 || index >= this.#history.length) {

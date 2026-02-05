@@ -6,6 +6,11 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     testTimeout: 10000,
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '.netlify/**',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

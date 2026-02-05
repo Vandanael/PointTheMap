@@ -131,7 +131,7 @@ vi.mock('./ui/UI.js', () => ({
 vi.mock('./config.js', () => ({
   GAME: { ROUNDS: 5, TIMER_MS: 5000, GRACE_PERIOD_MS: 500, DANGER_ZONE_MS: 1500 },
   TIMING: { RESULT_READ_TIME_MS: 2500 },
-  MAP: { CENTER: [30, 10], ZOOM: 3, AURAY_CENTER: [47.67, -2.98], AURAY_ZOOM: 14 },
+  MAP: { CENTER: [30, 10], ZOOM: 3 },
 }));
 
 vi.mock('./services/api.js', () => ({

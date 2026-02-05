@@ -139,7 +139,7 @@ export const QuestionModalWithButton = (capitalName, country) => {
 };
 
 /**
- * @param {number} distance
+ * @param {number | null} distance - Distance in km, or null on timeout with no click
  * @param {number} score
  * @param {boolean} isTimeout
  * @param {boolean} isLast
@@ -173,13 +173,13 @@ export const RoundResult = (distance, score, isTimeout, isLast, baseScore, timeB
   const getIcon = () => {
     if (isTimeout) return "⏱️";
     const category = getCategory();
-    if (!category) return "🤔";
-    
+    if (!category || distance === null) return "🤔";
+    const d = distance;
     const { PERFECT_MAX, EXCELLENT_MAX, GOOD_MAX, FAIR_MAX } = SCORING_THRESHOLDS;
-    if (distance < PERFECT_MAX) return "🏆";
-    if (distance < EXCELLENT_MAX) return "⭐";
-    if (distance < GOOD_MAX) return "🎯";
-    if (distance < FAIR_MAX) return "👍";
+    if (d < PERFECT_MAX) return "🏆";
+    if (d < EXCELLENT_MAX) return "⭐";
+    if (d < GOOD_MAX) return "🎯";
+    if (d < FAIR_MAX) return "👍";
     return "👌";
   };
 
@@ -207,7 +207,7 @@ export const RoundResult = (distance, score, isTimeout, isLast, baseScore, timeB
         <div id="resultIcon" class="text-6xl mb-4">${getIcon()}</div>
         ${categoryLabel ? `<div class="text-xl font-bold text-primary mb-2" id="categoryLabel">${categoryLabel}</div>` : ''}
         <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="distanceLabel">${t("distance")}</div>
-        <div class="text-3xl font-black text-primary mb-6" id="distanceDisplay">${formatDistance(distance)}</div>
+        <div class="text-3xl font-black text-primary mb-6" id="distanceDisplay">${formatDistance(distance ?? 0)}</div>
 
         <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="pointsEarnedLabel">${t("pointsEarned")}</div>
         ${hasTimeBonus ? `
@@ -713,14 +713,14 @@ export const MyStatsModal = (stats) => {
 export const AchievementUnlockModal = (achievementId, achievement) => {
   return `
     <div id="achievement-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4 achievement-fade-in"
-         style="z-index: var(--z-modal);">
+         style="z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="achievement-modal-title">
       <div class="modal-card rounded-2xl max-w-sm w-full p-8 modal-content">
         <div class="text-center">
           <div class="text-8xl mb-4 achievement-bounce">${achievement.icon}</div>
           <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-2">
             ${t('achievement.unlocked')}
           </div>
-          <h3 class="text-3xl font-black text-primary mb-2">${t(achievement.labelKey)}</h3>
+          <h3 id="achievement-modal-title" class="text-3xl font-black text-primary mb-2">${t(achievement.labelKey)}</h3>
           <p class="text-secondary text-sm mb-6">${t(achievement.descKey)}</p>
 
           <div class="mb-3">
@@ -734,62 +734,3 @@ export const AchievementUnlockModal = (achievementId, achievement) => {
   `;
 };
 
-/**
- * Help/Tutorial Modal
- */
-export const HelpModal = () => {
-  return `
-    <div id="help-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4"
-         style="z-index: var(--z-overlay); overflow-y: auto;" role="dialog" aria-modal="true">
-      <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content my-8">
-        <h2 class="text-3xl font-black text-primary mb-6 text-center">${t('help.title')}</h2>
-
-        <div class="space-y-6 text-secondary">
-          <!-- Scoring -->
-          <div>
-            <h3 class="font-bold text-primary mb-2 flex items-center gap-2">
-              <span>🏆</span> ${t('help.scoring.title')}
-            </h3>
-            <p class="text-sm leading-relaxed mb-2">${t('help.scoring.description')}</p>
-            <ul class="text-sm space-y-1 pl-4">
-              <li>• <strong>${t('category.perfect')}</strong>: ${t('help.scoring.perfect')}</li>
-              <li>• <strong>${t('category.excellent')}</strong>: ${t('help.scoring.excellent')}</li>
-              <li>• <strong>${t('category.good')}</strong>: ${t('help.scoring.good')}</li>
-              <li>• <strong>${t('category.fair')}</strong>: ${t('help.scoring.fair')}</li>
-            </ul>
-          </div>
-
-          <!-- Game Modes -->
-          <div>
-            <h3 class="font-bold text-primary mb-2 flex items-center gap-2">
-              <span>🎯</span> ${t('help.modes.title')}
-            </h3>
-            <ul class="text-sm space-y-2">
-              <li>• <strong>${t('classic')}</strong>: ${t('help.modes.classic')}</li>
-              <li>• <strong>${t('daily')}</strong>: ${t('help.modes.daily')}</li>
-              <li>• <strong>${t('countries')}</strong>: ${t('help.modes.countries')}</li>
-              <li>• <strong>${t('civilizations')}</strong>: ${t('help.modes.civilizations')}</li>
-              <li>• <strong>${t('stadiums')}</strong>: ${t('help.modes.stadiums')}</li>
-            </ul>
-          </div>
-
-          <!-- Tips -->
-          <div>
-            <h3 class="font-bold text-primary mb-2 flex items-center gap-2">
-              <span>💡</span> ${t('help.tips.title')}
-            </h3>
-            <ul class="text-sm space-y-1 pl-4">
-              <li>• ${t('help.tips.tip1')}</li>
-              <li>• ${t('help.tips.tip2')}</li>
-              <li>• ${t('help.tips.tip3')}</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="mt-6">
-          ${Button("btn-close-help", t("close"), "primary")}
-        </div>
-      </div>
-    </div>
-  `;
-};

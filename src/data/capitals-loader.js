@@ -4,6 +4,8 @@
  * Reduces initial bundle size by ~15KB
  */
 
+import { logger } from '../utils/logger.js';
+
 // Cache for loaded capitals
 let capitalsCache = null;
 let selectBalancedCapitalsCache = null;
@@ -47,6 +49,6 @@ export async function loadSelectBalancedCapitals() {
 export function preloadCapitals() {
   // Fire and forget - just trigger the import
   loadCapitals().catch(err => {
-    console.error('Failed to preload capitals:', err);
+    logger.error('Failed to preload capitals:', err);
   });
 }

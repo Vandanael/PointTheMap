@@ -113,7 +113,7 @@ export class StateDevTools {
               <span class="state-devtools-entry-time">${time}</span>
             </div>
             <div class="state-devtools-entry-actions">
-              <button class="state-devtools-restore" data-index="${index}">Restore</button>
+              <button class="state-devtools-restore" data-index="${index}" title="Restore to this snapshot (replaces current state)">Restore</button>
               <button class="state-devtools-inspect" data-index="${index}">Inspect</button>
             </div>
           </div>

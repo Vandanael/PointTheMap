@@ -36,6 +36,7 @@ import { checkAchievements } from "./features/AchievementManager.js";
 import { formatShareText, shareGameResults, getDailyNumber } from "./features/Share.js";
 import { getLang, t } from "./i18n.js";
 import { AchievementUnlockModal } from "./ui/components.js";
+import { activateFocusTrap, deactivateFocusTrap } from "./utils/focusTrap.js";
 
 // State Management
 const stateManager = new StateManager(createGameState());
@@ -261,6 +262,7 @@ const init = async () => {
       }
 
       const closeAchievement = () => {
+        deactivateFocusTrap();
         const modal = document.getElementById("achievement-modal");
         if (modal) modal.remove();
         isShowingAchievement = false;
@@ -269,6 +271,11 @@ const init = async () => {
         currentAchievementId = null;
         showNextAchievement();
       };
+
+      const modalEl = document.getElementById("achievement-modal");
+      if (modalEl) {
+        requestAnimationFrame(() => activateFocusTrap(/** @type {HTMLElement} */ (modalEl), { onEscape: closeAchievement }));
+      }
 
       const closeBtn = document.getElementById("btn-close-achievement");
       if (closeBtn) {
@@ -303,21 +310,13 @@ const init = async () => {
     );
 
     UI.showLoader();
-    UI.updateLoader(20);
-
-    try {
-      await mapSystem.init("map");
-      UI.updateLoader(50);
-    } catch (error) {
-      errorHandler.handle(error instanceof Error ? error : new Error(String(error)), 'map:init', { showToUser: true, fatal: false });
-    }
+    UI.updateLoader(50);
 
     const retryResult = await safeAsync(
       () => processRetryQueue(),
       'retry-queue',
       { successful: 0, failed: 0 }
     );
-    UI.updateLoader(80);
 
     if (retryResult.successful > 0) {
       logger.log(`✅ ${retryResult.successful} score(s) synchronisé(s)`);
@@ -328,21 +327,23 @@ const init = async () => {
 
     UI.updateLoader(100);
 
-    // Wait for the progress bar's CSS transition to complete before hiding.
-    // transitionend is the real event — no artificial delay.  Fallback guards
-    // against edge cases where the event never fires (e.g. element already removed).
-    await new Promise((resolve) => {
+    // Wait for the progress bar's CSS transition to complete, then one RAF to
+    // guarantee the 100% frame is painted before we remove the element.
+    // Fallback guards against edge cases where transitionend never fires.
+    /** @type {Promise<void>} */
+    const transitionDone = new Promise((resolve) => {
       const progressEl = document.getElementById("loading-progress");
       if (!progressEl) { resolve(); return; }
-      const fallback = setTimeout(resolve, 350);
+      const done = () => resolve();
+      const fallback = setTimeout(() => requestAnimationFrame(done), 350);
       progressEl.addEventListener("transitionend", () => {
         clearTimeout(fallback);
-        resolve();
+        requestAnimationFrame(done);
       }, { once: true });
     });
+    await transitionDone;
 
     UI.hideLoader();
-    mapSystem.flyTo(MAP.AURAY_CENTER, MAP.AURAY_ZOOM, { animate: false });
     UI.showStart();
   } catch (error) {
     errorHandler.handle(error instanceof Error ? error : new Error(String(error)), 'init', { showToUser: true, fatal: true });
@@ -360,13 +361,13 @@ const stopTimer = () => {
 };
 
 // Map view transitions (same for classic/daily; use animate: false for instant transitions):
-// - Init: Auray (MAP.AURAY_CENTER, MAP.AURAY_ZOOM) – start screen
+// - Init: world view (MAP.CENTER, MAP.ZOOM) – start screen is static image, map not shown
 // - handleStart: world view (MAP.CENTER, MAP.ZOOM) – new game, no animation
 // - handleNext: world view – between questions, no animation
-// - handleReplay: Auray – back to start screen, no animation
+// - handleReplay: world view – back to start screen (static image), no animation
 
 /**
- * @param {"classic" | "daily"} [gameType="classic"]
+ * @param {"classic" | "daily" | "country" | "stadium" | "civilization"} [gameType="classic"]
  */
 const handleStart = async (gameType = "classic") => {
   UI.hideStart();
@@ -374,7 +375,7 @@ const handleStart = async (gameType = "classic") => {
   UI.showLoader();
 
   mapSystem.clearMap();
-  const startCenter = gameType === 'stadium' ? MAP.EUROPE_CENTER : MAP.CENTER;
+  const startCenter = /** @type {[number, number]} */ (gameType === 'stadium' ? MAP.EUROPE_CENTER : MAP.CENTER);
   const startZoom  = gameType === 'stadium' ? MAP.EUROPE_ZOOM  : MAP.ZOOM;
   mapSystem.flyTo(startCenter, startZoom, { animate: false }); // civilization uses world view (same as country)
 
@@ -447,7 +448,7 @@ const handleStart = async (gameType = "classic") => {
   // For stadium mode: show stadium name only (no city)
   // For capital mode: show capital name + country
   const displayName = target.name;
-  const displaySubtitle = isCountryMode || isCivilizationMode ? "" : isStadiumMode ? "" : target.country;
+  const displaySubtitle = isCountryMode || isCivilizationMode ? "" : isStadiumMode ? "" : (target && 'country' in target ? target.country : "");
 
   if (state.currentRoundIndex === 0) {
     UI.showQuestion(displayName, displaySubtitle, onReady, { requireButton: true });
@@ -519,11 +520,11 @@ const onRoundEnd = async () => {
     }
 
     // Tap/click to continue to modal, or wait RESULT_READ_TIME_MS
-    const userContinued = new Promise((r) => mapSystem.setOnResultContinue(r));
-    await Promise.race([
-      userContinued,
-      new Promise((r) => setTimeout(r, TIMING.RESULT_READ_TIME_MS)),
-    ]);
+    /** @type {Promise<void>} */
+    const userContinued = new Promise((r) => mapSystem.setOnResultContinue(() => r()));
+    /** @type {Promise<void>} */
+    const timeoutPromise = new Promise((r) => setTimeout(r, TIMING.RESULT_READ_TIME_MS));
+    await Promise.race([userContinued, timeoutPromise]);
     mapSystem.clearOnResultContinue();
 
     // Emit score updated event
@@ -558,16 +559,16 @@ const onRoundEnd = async () => {
         clickedCivilizationId: null
       });
     } else if (isStadiumMode && round.stadium) {
-      mapSystem.addCapitalMarker([round.stadium.lat, round.stadium.lng]);
+      mapSystem.addCapitalMarker(/** @type {[number, number]} */ ([round.stadium.lat, round.stadium.lng]));
     } else if (round.capital) {
-      mapSystem.addCapitalMarker([round.capital.lat, round.capital.lng]);
+      mapSystem.addCapitalMarker(/** @type {[number, number]} */ ([round.capital.lat, round.capital.lng]));
     }
 
-    const userContinued = new Promise((r) => mapSystem.setOnResultContinue(r));
-    await Promise.race([
-      userContinued,
-      new Promise((r) => setTimeout(r, TIMING.RESULT_READ_TIME_MS)),
-    ]);
+    /** @type {Promise<void>} */
+    const userContinuedTimeout = new Promise((r) => mapSystem.setOnResultContinue(() => r()));
+    /** @type {Promise<void>} */
+    const timeoutPromiseResult = new Promise((r) => setTimeout(r, TIMING.RESULT_READ_TIME_MS));
+    await Promise.race([userContinuedTimeout, timeoutPromiseResult]);
     mapSystem.clearOnResultContinue();
 
     UI.showRoundResult(
@@ -595,7 +596,7 @@ const handleNext = () => {
   stateManager.setState(nextRound(state), 'round:next');
   state = stateManager.getState();
 
-  const nextCenter = state.gameType === 'stadium' ? MAP.EUROPE_CENTER : MAP.CENTER;
+  const nextCenter = /** @type {[number, number]} */ (state.gameType === 'stadium' ? MAP.EUROPE_CENTER : MAP.CENTER);
   const nextZoom  = state.gameType === 'stadium' ? MAP.EUROPE_ZOOM  : MAP.ZOOM;
   mapSystem.flyTo(nextCenter, nextZoom, { animate: false });
 
@@ -618,8 +619,9 @@ const handleNext = () => {
 
   // For country/civilization: show name only; stadium: name only; capital: name + country
   const displayName = target.name;
-  const displaySubtitle = isCountryMode || isCivilizationMode ? "" : isStadiumMode ? "" : target.country;
+  const displaySubtitle = isCountryMode || isCivilizationMode ? "" : isStadiumMode ? "" : (target && 'country' in target ? target.country : "");
 
+  UI.resetTimer();
   UI.showQuestion(displayName, displaySubtitle, () => {
     startTimer();
     mapSystem.enableClicks(() => {}); // Empty callback, InputSystem handles via EventBus
@@ -632,7 +634,7 @@ const handleNext = () => {
  */
 const handleSubmit = async (pseudo) => {
   // Disable submit button while the request is in flight — same pattern as rate-limiting above
-  const submitBtn = document.getElementById("btn-submit");
+  const submitBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById("btn-submit"));
   if (submitBtn) {
     submitBtn.disabled = true;
     submitBtn.textContent = t('saving');
@@ -719,7 +721,7 @@ const handleSubmit = async (pseudo) => {
 const handleReplay = () => {
   stateManager.setState(resetGame(), 'game:reset');
   mapSystem.clearMap();
-  mapSystem.flyTo(MAP.AURAY_CENTER, MAP.AURAY_ZOOM, { animate: false });
+  mapSystem.flyTo(/** @type {[number, number]} */ (MAP.CENTER), MAP.ZOOM, { animate: false });
   UI.hideGameUI(); // Clear game header and timer from previous game
   UI.hideGameOver();
   // Clean up share button handler

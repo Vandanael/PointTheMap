@@ -92,9 +92,6 @@ export const MAP = {
   EUROPE_ZOOM: 4,
   MIN_ZOOM: 0,
   MAX_ZOOM: 19,
-  /** Auray, France – used as start screen background (same Carto tiles as game) */
-  AURAY_CENTER: [47.6706, -2.9833],
-  AURAY_ZOOM: 14,
   // Tuiles CartoDB sans labels (minimaliste)
   TILE_URL_DARK: "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
   TILE_URL_LIGHT: "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png",

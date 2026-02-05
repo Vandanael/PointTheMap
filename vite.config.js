@@ -6,6 +6,7 @@ import { visualizer } from "rollup-plugin-visualizer";
 function criticalCssPreload() {
   return {
     name: "critical-css-preload",
+    apply: "build",
     transformIndexHtml: {
       order: "post",
       handler(html) {
@@ -16,8 +17,9 @@ function criticalCssPreload() {
         if (!tags.length) return html;
         const local = tags.filter((t) => t.href.startsWith("/"));
         if (!local.length) return html;
-        // Match credentials mode of stylesheet request so preload is used (crossorigin = CORS mode)
-        const preloads = local.map((t) => `<link rel="preload" href="${t.href}" as="style" crossorigin>`).join("\n  ");
+        // No crossorigin: stylesheet requests use same-origin credentials by default;
+        // the preload must match to be consumed by the browser.
+        const preloads = local.map((t) => `<link rel="preload" href="${t.href}" as="style">`).join("\n  ");
         const stylesheets = local.map((t) => t.full).join("\n  ");
         let out = html;
         for (const t of local) out = out.replace(t.full, "");

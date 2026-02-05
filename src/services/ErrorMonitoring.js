@@ -105,7 +105,7 @@ class ErrorMonitoring {
   captureError(error, context = {}) {
     if (!this.#enabled) {
       // Log in development
-      console.error('[ErrorMonitoring]', error, context);
+      logger.error('[ErrorMonitoring]', error, context);
       return;
     }
 

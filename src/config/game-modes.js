@@ -66,6 +66,18 @@ export const MODES = {
 };
 
 /**
+ * Game type string constants — use these instead of magic strings.
+ * @type {{ CLASSIC: string, DAILY: string, COUNTRY: string, STADIUM: string, CIVILIZATION: string }}
+ */
+export const MODE_IDS = {
+  CLASSIC: 'classic',
+  DAILY: 'daily',
+  COUNTRY: 'country',
+  STADIUM: 'stadium',
+  CIVILIZATION: 'civilization',
+};
+
+/**
  * Game-type configs keyed by API game type: 'classic' | 'daily' | 'country'.
  * classic = capital + classic, daily = capital + daily, country = country + classic.
  * @type {Object.<string, GameModeConfig>}
@@ -274,6 +286,103 @@ export const GAME_MODES = {
     }
   }
 };
+
+/**
+ * Runtime helpers keyed by game type: targets(state), roundGameType, noTargetsError, sessionBestScoreKey, sessionTargetsKey.
+ * Used by Game.js to avoid repeated ternaries.
+ * @type {Object.<string, { targets: (state: { gameType: string, capitals: unknown[], countries: unknown[], stadiums: unknown[], civilizations: unknown[] }) => unknown[], sessionTargetsKey: string, roundGameType: string, noTargetsError: string, sessionBestScoreKey: string }>}
+ */
+const MODE_CONFIG = {
+  [MODE_IDS.CLASSIC]: {
+    targets: (state) => state.capitals,
+    sessionTargetsKey: 'capitals',
+    roundGameType: 'capital',
+    noTargetsError: 'Aucune capitale disponible',
+    sessionBestScoreKey: 'bestScoreClassic',
+  },
+  [MODE_IDS.DAILY]: {
+    targets: (state) => state.capitals,
+    sessionTargetsKey: 'capitals',
+    roundGameType: 'capital',
+    noTargetsError: 'Aucune capitale disponible',
+    sessionBestScoreKey: 'bestScoreDaily',
+  },
+  [MODE_IDS.COUNTRY]: {
+    targets: (state) => state.countries,
+    sessionTargetsKey: 'countries',
+    roundGameType: 'country',
+    noTargetsError: 'Aucun pays disponible',
+    sessionBestScoreKey: 'bestScoreCountry',
+  },
+  [MODE_IDS.STADIUM]: {
+    targets: (state) => state.stadiums,
+    sessionTargetsKey: 'stadiums',
+    roundGameType: 'stadium',
+    noTargetsError: 'Aucun stade disponible',
+    sessionBestScoreKey: 'bestScoreStadium',
+  },
+  [MODE_IDS.CIVILIZATION]: {
+    targets: (state) => state.civilizations,
+    sessionTargetsKey: 'civilizations',
+    roundGameType: 'civilization',
+    noTargetsError: 'Aucune civilisation disponible',
+    sessionBestScoreKey: 'bestScoreCivilization',
+  },
+};
+
+/**
+ * Get targets array for current game type from state.
+ * @param {{ gameType: string, capitals: unknown[], countries: unknown[], stadiums: unknown[], civilizations: unknown[] }} state
+ * @returns {unknown[]}
+ */
+export function getTargetsForMode(state) {
+  const config = MODE_CONFIG[state.gameType];
+  return config ? config.targets(state) : state.capitals;
+}
+
+/**
+ * Get targets array from session by game type (for startGame).
+ * @param {{ capitals?: unknown[], countries?: unknown[], stadiums?: unknown[], civilizations?: unknown[] }} session
+ * @param {string} gameType
+ * @returns {unknown[]}
+ */
+export function getTargetsFromSession(session, gameType) {
+  const config = MODE_CONFIG[gameType];
+  const key = config ? config.sessionTargetsKey : 'capitals';
+  return session[key] ?? [];
+}
+
+/**
+ * Get round game type string for API game type.
+ * @param {string} gameType
+ * @returns {string}
+ */
+export function getRoundGameType(gameType) {
+  const config = MODE_CONFIG[gameType];
+  return config ? config.roundGameType : 'capital';
+}
+
+/**
+ * Get "no targets available" error message for game type.
+ * @param {string} gameType
+ * @returns {string}
+ */
+export function getNoTargetsError(gameType) {
+  const config = MODE_CONFIG[gameType];
+  return config ? config.noTargetsError : 'Aucune capitale disponible';
+}
+
+/**
+ * Get session best score from stats for game type.
+ * @param {Record<string, number>} stats
+ * @param {string} gameType
+ * @returns {number}
+ */
+export function getSessionBestScore(stats, gameType) {
+  const config = MODE_CONFIG[gameType];
+  const key = config ? config.sessionBestScoreKey : 'bestScoreClassic';
+  return stats[key] ?? 0;
+}
 
 /**
  * Get mode configuration by ID
