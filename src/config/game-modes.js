@@ -51,17 +51,17 @@ export const MODES = {
   country: {
     id: 'country',
     name: 'Country',
-    variants: ['classic']
+    variants: ['classic', 'daily']
   },
   stadium: {
     id: 'stadium',
     name: 'Stadium',
-    variants: ['classic']
+    variants: ['classic', 'daily']
   },
   civilization: {
     id: 'civilization',
     name: 'Civilization',
-    variants: ['classic']
+    variants: ['classic', 'daily']
   }
 };
 
@@ -75,11 +75,35 @@ export const MODE_IDS = {
   COUNTRY: 'country',
   STADIUM: 'stadium',
   CIVILIZATION: 'civilization',
+  COUNTRY_DAILY: 'country_daily',
+  STADIUM_DAILY: 'stadium_daily',
+  CIVILIZATION_DAILY: 'civilization_daily',
 };
 
+/** @param {string} gt */
+export const isDailyVariant = (gt) =>
+  gt === MODE_IDS.DAILY || gt === MODE_IDS.COUNTRY_DAILY ||
+  gt === MODE_IDS.STADIUM_DAILY || gt === MODE_IDS.CIVILIZATION_DAILY;
+
+/** @param {string} gt */
+export const isCapitalCategory = (gt) =>
+  gt === MODE_IDS.CLASSIC || gt === MODE_IDS.DAILY;
+
+/** @param {string} gt */
+export const isStadiumCategory = (gt) =>
+  gt === MODE_IDS.STADIUM || gt === MODE_IDS.STADIUM_DAILY;
+
+/** @param {string} gt */
+export const isCountryCategory = (gt) =>
+  gt === MODE_IDS.COUNTRY || gt === MODE_IDS.COUNTRY_DAILY;
+
+/** @param {string} gt */
+export const isCivilizationCategory = (gt) =>
+  gt === MODE_IDS.CIVILIZATION || gt === MODE_IDS.CIVILIZATION_DAILY;
+
 /**
- * Game-type configs keyed by API game type: 'classic' | 'daily' | 'country'.
- * classic = capital + classic, daily = capital + daily, country = country + classic.
+ * Game-type configs keyed by API game type: 'classic' | 'daily' | 'country' | 'country_daily' | 'stadium' | 'stadium_daily' | 'civilization' | 'civilization_daily'.
+ * Each category (capital, country, stadium, civilization) can be played as classic (random) or daily (seeded).
  * @type {Object.<string, GameModeConfig>}
  */
 export const GAME_MODES = {
@@ -209,6 +233,53 @@ export const GAME_MODES = {
     }
   },
 
+  country_daily: {
+    id: 'country_daily',
+    name: 'Country Daily Challenge',
+    description: 'Same countries for everyone today',
+
+    // Country selection strategy
+    countrySelection: {
+      type: 'seeded',
+      dataSource: 'countries',
+      count: 5,
+      balancing: { popular: 2, obscure: 3 },
+      seed: (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateString = `${year}${month}${day}`;
+        const salt = 73856093;
+        return (parseInt(dateString, 10) * salt) % 999999;
+      }
+    },
+
+    // Scoring configuration
+    scoring: {
+      maxPerRound: 5000,
+      type: 'country',
+      timeBonus: {
+        enabled: true,
+        maxBonus: 1000,
+        maxBonusPercent: 0.20,
+        distanceThreshold: 200
+      }
+    },
+
+    // Timing
+    timing: {
+      roundTime: 5000,
+      gracePeriod: 500,
+      roundCount: 5
+    },
+
+    // Leaderboard
+    leaderboard: {
+      deduplication: 'by_pseudo',
+      timeframe: 'daily'
+    }
+  },
+
   stadium: {
     id: 'stadium',
     name: 'Stadium Mode',
@@ -244,6 +315,52 @@ export const GAME_MODES = {
     leaderboard: {
       deduplication: 'by_pseudo',
       timeframe: 'all_time'
+    }
+  },
+
+  stadium_daily: {
+    id: 'stadium_daily',
+    name: 'Stadium Daily Challenge',
+    description: 'Same stadiums for everyone today',
+
+    // Stadium selection strategy
+    stadiumSelection: {
+      type: 'seeded',
+      dataSource: 'stadiums',
+      count: 5,
+      balancing: { popular: 2, obscure: 3 },
+      seed: (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateString = `${year}${month}${day}`;
+        const salt = 73856093;
+        return (parseInt(dateString, 10) * salt) % 999999;
+      }
+    },
+
+    // Scoring configuration
+    scoring: {
+      maxPerRound: 5000,
+      timeBonus: {
+        enabled: true,
+        maxBonus: 1000,
+        maxBonusPercent: 0.20,
+        distanceThreshold: 200
+      }
+    },
+
+    // Timing
+    timing: {
+      roundTime: 5000,
+      gracePeriod: 500,
+      roundCount: 5
+    },
+
+    // Leaderboard
+    leaderboard: {
+      deduplication: 'by_pseudo',
+      timeframe: 'daily'
     }
   },
 
@@ -283,6 +400,53 @@ export const GAME_MODES = {
     leaderboard: {
       deduplication: 'by_pseudo',
       timeframe: 'all_time'
+    }
+  },
+
+  civilization_daily: {
+    id: 'civilization_daily',
+    name: 'Civilization Daily Challenge',
+    description: 'Same civilizations for everyone today',
+
+    // Civilization selection strategy
+    civilizationSelection: {
+      type: 'seeded',
+      dataSource: 'civilizations',
+      count: 5,
+      balancing: { popular: 2, obscure: 3 },
+      seed: (date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateString = `${year}${month}${day}`;
+        const salt = 73856093;
+        return (parseInt(dateString, 10) * salt) % 999999;
+      }
+    },
+
+    // Scoring configuration
+    scoring: {
+      maxPerRound: 5000,
+      type: 'country',
+      timeBonus: {
+        enabled: true,
+        maxBonus: 1000,
+        maxBonusPercent: 0.20,
+        distanceThreshold: 200
+      }
+    },
+
+    // Timing
+    timing: {
+      roundTime: 5000,
+      gracePeriod: 500,
+      roundCount: 5
+    },
+
+    // Leaderboard
+    leaderboard: {
+      deduplication: 'by_pseudo',
+      timeframe: 'daily'
     }
   }
 };
@@ -327,6 +491,27 @@ const MODE_CONFIG = {
     roundGameType: 'civilization',
     noTargetsError: 'Aucune civilisation disponible',
     sessionBestScoreKey: 'bestScoreCivilization',
+  },
+  [MODE_IDS.COUNTRY_DAILY]: {
+    targets: (state) => state.countries,
+    sessionTargetsKey: 'countries',
+    roundGameType: 'country',
+    noTargetsError: 'Aucun pays disponible',
+    sessionBestScoreKey: 'bestScoreCountryDaily',
+  },
+  [MODE_IDS.STADIUM_DAILY]: {
+    targets: (state) => state.stadiums,
+    sessionTargetsKey: 'stadiums',
+    roundGameType: 'stadium',
+    noTargetsError: 'Aucun stade disponible',
+    sessionBestScoreKey: 'bestScoreStadiumDaily',
+  },
+  [MODE_IDS.CIVILIZATION_DAILY]: {
+    targets: (state) => state.civilizations,
+    sessionTargetsKey: 'civilizations',
+    roundGameType: 'civilization',
+    noTargetsError: 'Aucune civilisation disponible',
+    sessionBestScoreKey: 'bestScoreCivilizationDaily',
   },
 };
 

@@ -28,6 +28,8 @@ import {
   PseudoLockedDialog,
   Toast,
   MyStatsModal,
+  leaderboardTypeFromSelection,
+  selectionFromLeaderboardType,
 } from "./components.js";
 import { getStats } from "../features/StatsManager.js";
 import { shareGameResults } from "../features/Share.js";
@@ -48,8 +50,6 @@ let _questionModalClickHandler = null;
 let _pseudoInputHandler = null;
 /** @type {null | ((e: Event) => void)} */
 let _pseudoKeypressHandler = null;
-/** @type {null | ((e: Event) => void)} */
-let _pseudoFocusHandler = null;
 
 // Track start screen listeners for cleanup
 /** @type {Array<{ element: HTMLElement; listener: () => void }>} */
@@ -189,34 +189,19 @@ export const loadLeaderboard = async (type) => {
   return scores;
 };
 
+// Leaderboard two-level tab state
+let _leaderboardVariant = "classic";
+let _leaderboardCategory = "capitals";
+
 const setupLeaderboardTabs = () => {
-  bindClick("btn-leaderboard-classic", async () => {
+  const switchTo = async (variant, category) => {
+    _leaderboardVariant = variant;
+    _leaderboardCategory = category;
+    const type = leaderboardTypeFromSelection(variant, category);
     try {
-      await UI.showLeaderboardModal([], MODE_IDS.CLASSIC, true);
-        } catch (/** @type {unknown} */ error) {
-      logger.error('Failed to load classic leaderboard:', error);
-      const content = _domCache.get("leaderboard-content");
-      if (content) {
-        content.innerHTML = `
-          <div class="text-center py-8">
-            <p class="text-tertiary mb-4">${t('error.leaderboardRetry')}</p>
-            <button id="btn-retry-leaderboard" class="text-yellow-400 hover:text-yellow-300 font-bold">
-              ${t('error.retry')}
-            </button>
-          </div>
-        `;
-        bindClick("btn-retry-leaderboard", () => {
-          UI.showLeaderboardModal([], MODE_IDS.CLASSIC, true);
-        });
-      }
-    }
-  });
-
-  bindClick("btn-leaderboard-daily", async () => {
-    try {
-      await UI.showLeaderboardModal([], MODE_IDS.DAILY, true);
+      await UI.showLeaderboardModal([], type, true);
     } catch (/** @type {unknown} */ error) {
-      logger.error('Failed to load daily leaderboard:', error);
+      logger.error(`Failed to load ${type} leaderboard:`, error);
       const content = _domCache.get("leaderboard-content");
       if (content) {
         content.innerHTML = `
@@ -228,33 +213,21 @@ const setupLeaderboardTabs = () => {
           </div>
         `;
         bindClick("btn-retry-leaderboard", () => {
-          UI.showLeaderboardModal([], MODE_IDS.DAILY, true);
+          switchTo(variant, category);
         });
       }
     }
-  });
+  };
 
-  bindClick("btn-leaderboard-country", async () => {
-    try {
-      await UI.showLeaderboardModal([], MODE_IDS.COUNTRY, true);
-    } catch (error) {
-      logger.error('Failed to load country leaderboard:', error);
-      const content = _domCache.get("leaderboard-content");
-      if (content) {
-        content.innerHTML = `
-          <div class="text-center py-8">
-            <p class="text-tertiary mb-4">${t('error.leaderboardRetry')}</p>
-            <button id="btn-retry-leaderboard" class="text-yellow-400 hover:text-yellow-300 font-bold">
-              ${t('error.retry')}
-            </button>
-          </div>
-        `;
-        bindClick("btn-retry-leaderboard", () => {
-          UI.showLeaderboardModal([], MODE_IDS.COUNTRY, true);
-        });
-      }
-    }
-  });
+  // Variant buttons
+  bindClick("btn-leaderboard-classic", () => switchTo("classic", _leaderboardCategory));
+  bindClick("btn-leaderboard-daily", () => switchTo("daily", _leaderboardCategory));
+
+  // Category buttons
+  bindClick("btn-leaderboard-cat-capitals", () => switchTo(_leaderboardVariant, "capitals"));
+  bindClick("btn-leaderboard-cat-countries", () => switchTo(_leaderboardVariant, "countries"));
+  bindClick("btn-leaderboard-cat-stadiums", () => switchTo(_leaderboardVariant, "stadiums"));
+  bindClick("btn-leaderboard-cat-civilizations", () => switchTo(_leaderboardVariant, "civilizations"));
 };
 
 // Export for testing
@@ -312,7 +285,6 @@ export const UI = {
     if (pseudoInput) {
       if (_pseudoInputHandler) pseudoInput.removeEventListener("input", _pseudoInputHandler);
       if (_pseudoKeypressHandler) pseudoInput.removeEventListener("keypress", _pseudoKeypressHandler);
-      if (_pseudoFocusHandler) pseudoInput.removeEventListener("focus", _pseudoFocusHandler);
     }
     _domCache.invalidate();
   },
@@ -413,17 +385,6 @@ export const UI = {
         if (infoText) infoText.textContent = info.info;
         if (desc) {
           desc.textContent = info.desc;
-          // Apply color for "coming soon" text: black in light mode, yellow in dark mode
-          if (info.desc === t("comingSoon")) {
-            const theme = getTheme();
-            const descEl = /** @type {HTMLElement} */ (desc);
-            descEl.style.color = theme === 'dark' ? 'var(--accent)' : '#000000';
-            descEl.style.fontWeight = "bold";
-          } else {
-            const descEl = /** @type {HTMLElement} */ (desc);
-            descEl.style.color = "";  // Reset to default
-            descEl.style.fontWeight = "";
-          }
         }
 
         // Fade in
@@ -499,8 +460,10 @@ export const UI = {
             if (modeBtn) {
               if (m === mode) {
                 modeBtn.classList.add("pill-option-active");
+                modeBtn.setAttribute("aria-checked", "true");
               } else {
                 modeBtn.classList.remove("pill-option-active");
+                modeBtn.setAttribute("aria-checked", "false");
               }
             }
           });
@@ -511,26 +474,28 @@ export const UI = {
     });
 
     // Start game button with selected category and mode
+    let _startingGame = false;
     bindClick("btn-start-game", async () => {
-      let gameMode;
-      if (selectedCategory === "capitals") {
-        gameMode = selectedMode; // classic or daily
-      } else if (selectedCategory === "countries") {
-        gameMode = MODE_IDS.COUNTRY;
-      } else if (selectedCategory === "civilizations") {
-        gameMode = MODE_IDS.CIVILIZATION;
-      } else if (selectedCategory === "stadiums") {
-        gameMode = MODE_IDS.STADIUM;
-      } else {
-        return;
-      }
+      if (_startingGame) return;
+      _startingGame = true;
+      const isDaily = selectedMode === MODE_IDS.DAILY;
+      const gameModeMap = {
+        capitals: isDaily ? MODE_IDS.DAILY : MODE_IDS.CLASSIC,
+        countries: isDaily ? MODE_IDS.COUNTRY_DAILY : MODE_IDS.COUNTRY,
+        civilizations: isDaily ? MODE_IDS.CIVILIZATION_DAILY : MODE_IDS.CIVILIZATION,
+        stadiums: isDaily ? MODE_IDS.STADIUM_DAILY : MODE_IDS.STADIUM,
+      };
+      const gameMode = gameModeMap[selectedCategory];
+      if (!gameMode) return;
 
       const { mapSystem } = await import("../systems/MapSystem.js");
       const needsInit = !mapSystem.isInitialized();
       const needsGeoJSON = selectedCategory === "countries" || selectedCategory === "civilizations";
+      const needsAsyncWork = needsInit || needsGeoJSON;
 
-      // Show loader only if there is actual async work pending
-      if (needsInit || needsGeoJSON) {
+      // Always hide start screen first, then show loader
+      UI.hideStart();
+      if (needsAsyncWork) {
         UI.showLoader();
         UI.updateLoader(needsInit && needsGeoJSON ? 20 : needsInit ? 40 : 50);
       }
@@ -548,7 +513,8 @@ export const UI = {
           UI.updateLoader(100);
           if (!loaded) {
             UI.hideLoader();
-            UI.showToast(t('error.countriesLoadFailed') || "Failed to load countries data. Please try again.", "error", 4000);
+            UI.showToast(t('error.countriesLoadFailed'), "error", 4000);
+            UI.showStart();
             return;
           }
         } else if (selectedCategory === "civilizations") {
@@ -556,23 +522,25 @@ export const UI = {
           UI.updateLoader(100);
           if (!loaded) {
             UI.hideLoader();
-            UI.showToast(t('error.civilizationsLoadFailed') || "Failed to load civilizations data. Please try again.", "error", 4000);
+            UI.showToast(t('error.civilizationsLoadFailed'), "error", 4000);
+            UI.showStart();
             return;
           }
         }
 
-        if (needsInit || needsGeoJSON) {
+        if (needsAsyncWork) {
           UI.hideLoader();
         }
       } catch (error) {
         logger.error('Error initializing game:', error);
-        UI.hideLoader();
+        if (needsAsyncWork) UI.hideLoader();
         const errorMsg = selectedCategory === "countries"
-          ? (t('error.countriesLoadFailed') || "Failed to load countries data.")
+          ? t('error.countriesLoadFailed')
           : selectedCategory === "civilizations"
-            ? (t('error.civilizationsLoadFailed') || "Failed to load civilizations data.")
-            : (t('error.mapLoadFailed') || "Failed to initialize map.");
-        UI.showToast(errorMsg + " " + (error instanceof Error ? error.message : ""), "error", 4000);
+            ? t('error.civilizationsLoadFailed')
+            : t('error.mapLoadFailed');
+        UI.showToast(errorMsg, "error", 4000);
+        UI.showStart();
         return;
       }
 
@@ -618,6 +586,11 @@ export const UI = {
    * @param {boolean} lazyLoad - If true, show skeleton and load data
    */
   async showLeaderboardModal(initialScores = [], type = MODE_IDS.CLASSIC, lazyLoad = false) {
+    // Sync tab state from type
+    const selection = selectionFromLeaderboardType(type);
+    _leaderboardVariant = selection.variant;
+    _leaderboardCategory = selection.category;
+
     remove("leaderboard-modal");
 
     // Show skeleton immediately if lazy loading
@@ -628,6 +601,7 @@ export const UI = {
         remove("leaderboard-modal");
       };
       bindClick("btn-close-leaderboard", closeLeaderboard);
+      setupLeaderboardTabs();
       const leaderboardModalSkeleton = document.getElementById("leaderboard-modal");
       if (leaderboardModalSkeleton) {
         requestAnimationFrame(() => activateFocusTrap(/** @type {HTMLElement} */ (leaderboardModalSkeleton), { onEscape: closeLeaderboard }));
@@ -662,7 +636,11 @@ export const UI = {
       }
 
       // Re-enable buttons
-      const btns = ["btn-leaderboard-classic", "btn-leaderboard-daily", "btn-leaderboard-country"];
+      const btns = [
+        "btn-leaderboard-classic", "btn-leaderboard-daily",
+        "btn-leaderboard-cat-capitals", "btn-leaderboard-cat-countries",
+        "btn-leaderboard-cat-stadiums", "btn-leaderboard-cat-civilizations",
+      ];
       btns.forEach(id => {
         const btn = /** @type {HTMLButtonElement | null} */ (_domCache.get(id));
         if (btn) {
@@ -672,12 +650,7 @@ export const UI = {
         }
       });
 
-      // Setup tab switching
-      setupLeaderboardTabs();
-      const leaderboardModal = document.getElementById("leaderboard-modal");
-      if (leaderboardModal) {
-        requestAnimationFrame(() => activateFocusTrap(/** @type {HTMLElement} */ (leaderboardModal), { onEscape: closeLeaderboard }));
-      }
+      // Tab switching was already set up during initial skeleton render — no need to re-bind
     } else {
       // Immediate render with data
       const closeLeaderboard = () => {
@@ -807,11 +780,15 @@ export const UI = {
     if (requireButton) {
       bindClick("btn-ready", close);
     } else {
+      // Remove old handler before setting new one
+      const modal = _domCache.get("question-modal");
+      if (modal && _questionModalClickHandler) {
+        modal.removeEventListener("click", _questionModalClickHandler);
+      }
       _questionModalClickHandler = (event) => {
         event.stopPropagation();
         close();
       };
-      const modal = _domCache.get("question-modal");
       if (modal) modal.addEventListener("click", _questionModalClickHandler);
       setTimeout(close, UI_TIMING.QUESTION_AUTO_CLOSE);
     }
@@ -856,7 +833,6 @@ export const UI = {
     if (oldInput) {
       if (_pseudoInputHandler) oldInput.removeEventListener("input", _pseudoInputHandler);
       if (_pseudoKeypressHandler) oldInput.removeEventListener("keypress", _pseudoKeypressHandler);
-      if (_pseudoFocusHandler) oldInput.removeEventListener("focus", _pseudoFocusHandler);
     }
 
     const input = /** @type {HTMLInputElement | null} */ (_domCache.get("pseudo-input"));
@@ -871,14 +847,8 @@ export const UI = {
           if (btn) btn.click();
         }
       };
-      _pseudoFocusHandler = (e) => {
-        const target = /** @type {HTMLElement} */ (e.target);
-        target.style.outline = "none";
-        target.style.boxShadow = "none";
-      };
       input.addEventListener("input", _pseudoInputHandler);
       input.addEventListener("keypress", _pseudoKeypressHandler);
-      input.addEventListener("focus", _pseudoFocusHandler);
       input.focus();
     }
 

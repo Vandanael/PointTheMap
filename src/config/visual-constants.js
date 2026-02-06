@@ -68,7 +68,7 @@ export const MAP_ANIMATIONS = {
 
 // UI timings
 export const UI_TIMING = {
-  QUESTION_AUTO_CLOSE: 1000,        // Auto-close question modal after 1s
+  QUESTION_AUTO_CLOSE: 1500,        // Auto-close question modal after 1.5s
   ERROR_DISPLAY: 4000,              // Error message display duration
   CHALLENGE_CARD_FADE: 200,         // Challenge card fade transition duration
   INPUT_ERROR_SHAKE: 500,           // Duration to keep shake animation class

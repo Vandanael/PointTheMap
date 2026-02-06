@@ -301,12 +301,14 @@ export const StartScreen = () => `
           <!-- Pill Toggle for Mode Selection -->
           <div class="pill-toggle-wrapper">
             <label class="mode-label">${t("selectMode")}</label>
-            <div class="pill-toggle">
+            <div class="pill-toggle" role="radiogroup" aria-label="${t("selectMode")}">
               <div id="pill-slider" class="pill-slider"></div>
               <button
                 id="mode-${MODE_IDS.CLASSIC}"
                 class="pill-option pill-option-active"
                 data-mode="${MODE_IDS.CLASSIC}"
+                role="radio"
+                aria-checked="true"
               >
                 ${t("classic")}
               </button>
@@ -314,6 +316,8 @@ export const StartScreen = () => `
                 id="mode-${MODE_IDS.DAILY}"
                 class="pill-option"
                 data-mode="${MODE_IDS.DAILY}"
+                role="radio"
+                aria-checked="false"
               >
                 ${t("daily")}
               </button>
@@ -321,7 +325,7 @@ export const StartScreen = () => `
           </div>
 
           <!-- Main Action Button -->
-          <button id="btn-start-game" class="play-btn">
+          <button id="btn-start-game" class="play-btn" aria-label="${t("play")}">
             ${t("play")}
           </button>
         </div>
@@ -409,7 +413,7 @@ export const FinalResults = (totalScore, pseudo, rank, isTopFifty, isNewSessionB
   <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
     ${isNewSessionBest ? `<div class="text-center mb-4 text-4xl animate-bounce">🏆</div>` : ""}
     <h2 class="text-4xl font-black text-primary mb-6 text-center tracking-tight uppercase" id="newRecordLabel">
-      ${isNewSessionBest ? "NOUVEAU RECORD PERSONNEL" : isTopFifty ? t("top50") : t("scoreSaved")}
+      ${isNewSessionBest ? t("newPersonalBest") : isTopFifty ? t("top50") : t("scoreSaved")}
     </h2>
     <div class="text-center mb-6">
       <div class="text-8xl font-black text-yellow-400 mb-2">${formatScore(totalScore)}</div>
@@ -440,7 +444,7 @@ export const LeaderboardRow = (rank, pseudo, score, time, isHighlighted = false)
   const escapedPseudo = escapeHtml(pseudo);
 
   return `
-    <div class="flex items-center justify-between py-3 px-4 ${isHighlighted ? "rounded-xl" : ""}" style="${isHighlighted ? "background: rgba(250, 204, 21, 0.1); border: 1px solid rgba(250, 204, 21, 0.3);" : "border-bottom: 1px solid var(--border-color);"}">
+    <div role="listitem" class="flex items-center justify-between py-3 px-4 ${isHighlighted ? "rounded-xl" : ""}" style="${isHighlighted ? "background: rgba(250, 204, 21, 0.1); border: 1px solid rgba(250, 204, 21, 0.3);" : "border-bottom: 1px solid var(--border-color);"}">
       <div class="flex items-center gap-3">
         <span class="w-8 text-center font-bold ${rank <= 3 ? "text-yellow-400" : ""}" style="${rank > 3 ? "color: var(--text-tertiary);" : ""}">${rankDisplay}</span>
         <span class="font-mono font-bold ${isHighlighted ? "text-yellow-400" : ""}" style="${!isHighlighted ? "color: var(--text-primary);" : ""}">${escapedPseudo}</span>
@@ -473,7 +477,7 @@ export const LeaderboardSkeletonRow = () => `
  * @param {boolean} [loading=false]
  */
 export const Leaderboard = (scores, highlightPseudo = null, loading = false, error = null) => `
-  <div id="leaderboard-content" class="rounded-xl max-h-[400px]" style="background: var(--bg-tertiary); overflow: hidden;">
+  <div id="leaderboard-content" class="rounded-xl max-h-[400px]" role="list" aria-label="${t("leaderboardTitle")}" style="background: var(--bg-tertiary); overflow: hidden;">
     ${loading ?
       // Skeleton loading
       Array(10).fill(0).map(() => LeaderboardSkeletonRow()).join('')
@@ -501,14 +505,75 @@ export const Leaderboard = (scores, highlightPseudo = null, loading = false, err
 `;
 
 /**
+ * Map variant + category to API game type
+ * @param {"classic"|"daily"} variant
+ * @param {"capitals"|"countries"|"stadiums"|"civilizations"} category
+ * @returns {string}
+ */
+export const leaderboardTypeFromSelection = (variant, category) => {
+  const map = {
+    capitals: { classic: MODE_IDS.CLASSIC, daily: MODE_IDS.DAILY },
+    countries: { classic: MODE_IDS.COUNTRY, daily: MODE_IDS.COUNTRY_DAILY },
+    stadiums: { classic: MODE_IDS.STADIUM, daily: MODE_IDS.STADIUM_DAILY },
+    civilizations: { classic: MODE_IDS.CIVILIZATION, daily: MODE_IDS.CIVILIZATION_DAILY },
+  };
+  return map[category]?.[variant] ?? MODE_IDS.CLASSIC;
+};
+
+/**
+ * Derive variant + category from an API type string
+ * @param {string} type
+ * @returns {{ variant: "classic"|"daily", category: "capitals"|"countries"|"stadiums"|"civilizations" }}
+ */
+export const selectionFromLeaderboardType = (type) => {
+  const map = {
+    [MODE_IDS.CLASSIC]: { variant: "classic", category: "capitals" },
+    [MODE_IDS.DAILY]: { variant: "daily", category: "capitals" },
+    [MODE_IDS.COUNTRY]: { variant: "classic", category: "countries" },
+    [MODE_IDS.COUNTRY_DAILY]: { variant: "daily", category: "countries" },
+    [MODE_IDS.STADIUM]: { variant: "classic", category: "stadiums" },
+    [MODE_IDS.STADIUM_DAILY]: { variant: "daily", category: "stadiums" },
+    [MODE_IDS.CIVILIZATION]: { variant: "classic", category: "civilizations" },
+    [MODE_IDS.CIVILIZATION_DAILY]: { variant: "daily", category: "civilizations" },
+  };
+  return map[type] ?? { variant: "classic", category: "capitals" };
+};
+
+/**
  * @param {Array<{rank: number, pseudo: string, score: number, time: number}>} scores
  * @param {string} [currentType="classic"]
  * @param {boolean} [loading=false]
  */
 export const LeaderboardModal = (scores, currentType = MODE_IDS.CLASSIC, loading = false) => {
-  const isClassic = currentType === MODE_IDS.CLASSIC;
-  const isDaily = currentType === MODE_IDS.DAILY;
-  const isCountry = currentType === MODE_IDS.COUNTRY;
+  const { variant, category } = selectionFromLeaderboardType(currentType);
+
+  const variantBtn = (id, label, value) => `
+    <button
+      id="${id}"
+      class="flex-1 py-2 px-3 rounded-xl font-black text-base transition-all ${
+        value === variant
+          ? "bg-yellow-400 text-black"
+          : "btn-secondary"
+      }"
+      ${loading ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
+    >
+      ${label}
+    </button>
+  `;
+
+  const categoryBtn = (id, label, value) => `
+    <button
+      id="${id}"
+      class="flex-1 py-2 px-2 rounded-xl font-bold text-sm transition-all ${
+        value === category
+          ? "bg-yellow-400 text-black"
+          : "btn-secondary"
+      }"
+      ${loading ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
+    >
+      ${label}
+    </button>
+  `;
 
   return `
     <div id="leaderboard-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-overlay);" role="dialog" aria-modal="true">
@@ -517,41 +582,18 @@ export const LeaderboardModal = (scores, currentType = MODE_IDS.CLASSIC, loading
           ${t("leaderboardTitle")}
         </h2>
 
-        <!-- Boutons de switch -->
+        <!-- Row 1: Variant (Classic / Daily) -->
+        <div class="flex gap-2 mb-3">
+          ${variantBtn("btn-leaderboard-classic", t("classic"), "classic")}
+          ${variantBtn("btn-leaderboard-daily", t("daily"), "daily")}
+        </div>
+
+        <!-- Row 2: Category -->
         <div class="flex gap-2 mb-6">
-          <button
-            id="btn-leaderboard-classic"
-            class="flex-1 py-2 px-3 rounded-xl font-black text-base transition-all ${
-              isClassic
-                ? "bg-yellow-400 text-black"
-                : "bg-slate-700 hover:bg-slate-600 text-white"
-            }"
-            ${loading ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
-          >
-            ${t("classic")}
-          </button>
-          <button
-            id="btn-leaderboard-daily"
-            class="flex-1 py-2 px-3 rounded-xl font-black text-base transition-all ${
-              isDaily
-                ? "bg-yellow-400 text-black"
-                : "bg-slate-700 hover:bg-slate-600 text-white"
-            }"
-            ${loading ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
-          >
-            ${t("daily")}
-          </button>
-          <button
-            id="btn-leaderboard-country"
-            class="flex-1 py-2 px-3 rounded-xl font-black text-base transition-all ${
-              isCountry
-                ? "bg-yellow-400 text-black"
-                : "bg-slate-700 hover:bg-slate-600 text-white"
-            }"
-            ${loading ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
-          >
-            ${t("countries")}
-          </button>
+          ${categoryBtn("btn-leaderboard-cat-capitals", t("capitals"), "capitals")}
+          ${categoryBtn("btn-leaderboard-cat-countries", t("countries"), "countries")}
+          ${categoryBtn("btn-leaderboard-cat-stadiums", t("stadiums"), "stadiums")}
+          ${categoryBtn("btn-leaderboard-cat-civilizations", t("civilizations"), "civilizations")}
         </div>
 
         ${Leaderboard(scores, null, loading)}

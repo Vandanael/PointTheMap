@@ -9,6 +9,7 @@
  */
 
 import { calculateScore as calculateScoreLib, haversine } from '@lib/game-math/index.js';
+import { distanceToPolygonBorder, calculateCountryScore as calculateCountryScoreLib } from '@lib/geo-utils/index.js';
 import { GAME, SCORING_THRESHOLDS, SCORING_FORMULA, SCORING } from '../config.js';
 import { MODE_IDS } from '../config/game-modes.js';
 import { eventBus } from '../core/EventBus.js';
@@ -214,7 +215,7 @@ export class ScoringSystem {
 
   /**
    * Calculate distance from point to country polygon (in kilometers)
-   * Uses Haversine for distances between coordinates
+   * Uses shared geo-utils library
    *
    * @param {[number, number]} clickCoords - [lat, lng] of click
    * @param {Object} countryFeature - GeoJSON feature of the country
@@ -222,106 +223,20 @@ export class ScoringSystem {
    * @returns {number} Distance in kilometers (0 if inside)
    */
   calculateDistanceToCountry(clickCoords, countryFeature, isInsideCountry) {
-    if (isInsideCountry) {
-      return 0;
-    }
-    if (!countryFeature?.geometry) {
-      return Infinity;
-    }
-
-    const [clickLat, clickLng] = clickCoords;
-    const geometry = countryFeature.geometry;
-    let minDistance = Infinity;
-
-    const processRing = (ring) => {
-      for (let i = 0; i < ring.length - 1; i++) {
-        const [lng1, lat1] = ring[i];
-        const [lng2, lat2] = ring[i + 1];
-
-        // Calculate distance to line segment
-        const distance = this.#distanceToLineSegment(
-          clickLat, clickLng,
-          lat1, lng1,
-          lat2, lng2
-        );
-
-        minDistance = Math.min(minDistance, distance);
-      }
-    };
-
-    if (geometry.type === 'Polygon') {
-      // Process only exterior ring (index 0) for border distance
-      processRing(geometry.coordinates[0]);
-    } else if (geometry.type === 'MultiPolygon') {
-      // Process exterior rings of all polygons
-      geometry.coordinates.forEach(polygon => {
-        processRing(polygon[0]);
-      });
-    }
-
-    return minDistance;
-  }
-
-  /**
-   * Calculate distance from point to line segment
-   * @private
-   * @returns {number} Distance in kilometers
-   */
-  #distanceToLineSegment(lat, lng, lat1, lng1, lat2, lng2) {
-    // Convert to approximate Cartesian for segment projection
-    const dx = lng2 - lng1;
-    const dy = lat2 - lat1;
-    const lengthSquared = dx * dx + dy * dy;
-
-    if (lengthSquared === 0) {
-      // Segment is a point
-      return haversine([lat, lng], [lat1, lng1]);
-    }
-
-    // Calculate projection parameter
-    const t = Math.max(0, Math.min(1,
-      ((lng - lng1) * dx + (lat - lat1) * dy) / lengthSquared
-    ));
-
-    // Calculate closest point on segment
-    const closestLat = lat1 + t * dy;
-    const closestLng = lng1 + t * dx;
-
-    // Return Haversine distance to closest point
-    return haversine([lat, lng], [closestLat, closestLng]);
+    if (isInsideCountry) return 0;
+    if (!countryFeature?.geometry) return Infinity;
+    return distanceToPolygonBorder(clickCoords, countryFeature.geometry);
   }
 
   /**
    * Calculate score for Country mode based on distance to country
-   *
-   * Scoring curve:
-   * - d = 0 km (inside country): 5000 points
-   * - 0 < d ≤ 50 km: 4000 points
-   * - 50 < d ≤ 200 km: 3000 points
-   * - d > 200 km: exponential decay from 3000 to 0
+   * Delegates to shared geo-utils library
    *
    * @param {number} distanceKm - Distance to target country in kilometers
    * @returns {number} Score (0-5000)
    */
   calculateCountryScore(distanceKm) {
-    if (distanceKm === 0) {
-      return 5000; // Perfect - inside correct country
-    }
-
-    if (distanceKm <= 50) {
-      return 4000; // Just next to it (very close)
-    }
-
-    if (distanceKm <= 200) {
-      return 3000; // Nearby
-    }
-
-    // Exponential decay for d > 200 km
-    // score = 3000 * exp(-(d - 200) / 1500)
-    const decayConstant = 1500;
-    const score = 3000 * Math.exp(-(distanceKm - 200) / decayConstant);
-
-    return Math.round(Math.max(0, Math.min(3000, score)));
+    return calculateCountryScoreLib(distanceKm);
   }
 
   /**

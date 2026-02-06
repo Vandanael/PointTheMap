@@ -17,13 +17,23 @@ const DEFAULT_STATS = {
   bestDaily: Infinity,
   bestScoreClassic: 0,
   bestScoreDaily: 0,
+  bestScoreCountry: 0,
   bestScoreStadium: 0,
   bestScoreCivilization: 0,
+  bestScoreCountryDaily: 0,
+  bestScoreStadiumDaily: 0,
+  bestScoreCivilizationDaily: 0,
   averageDistance: 0,
   perfectCount: 0,
   playCount: 0,
   streakDaily: 0,
   lastDailyDate: null,
+  streakCountryDaily: 0,
+  lastCountryDailyDate: null,
+  streakStadiumDaily: 0,
+  lastStadiumDailyDate: null,
+  streakCivilizationDaily: 0,
+  lastCivilizationDailyDate: null,
   totalRoundsPlayed: 0,
   under20kmCount: 0,
   lastUpdated: Date.now(),
@@ -71,9 +81,29 @@ const getYesterday = () => {
 };
 
 /**
+ * Update daily streak for a given streak/date key pair
+ * @param {Record<string, any>} stats
+ * @param {string} streakKey
+ * @param {string} dateKey
+ * @param {string} today
+ * @param {string} yesterday
+ */
+const updateDailyStreak = (stats, streakKey, dateKey, today, yesterday) => {
+  const lastDate = stats[dateKey];
+  if (lastDate === today) {
+    // Already played today, no change
+  } else if (lastDate === yesterday) {
+    stats[streakKey] += 1;
+  } else {
+    stats[streakKey] = 1;
+  }
+  stats[dateKey] = today;
+};
+
+/**
  * Update stats after game completion
  * @param {Array<{distance: number, score: number}>} rounds - Array of round results
- * @param {"classic" | "daily"} gameType - Type of game played
+ * @param {string} gameType - Type of game played
  * @returns {typeof DEFAULT_STATS} Updated stats
  */
 export const updateStats = (rounds, gameType) => {
@@ -127,24 +157,14 @@ export const updateStats = (rounds, gameType) => {
         logger.info(`Stats: New best daily score: ${totalScore}`);
       }
 
-      // Update daily streak (only for daily games)
-      const lastDate = stats.lastDailyDate;
+      // Update daily streak
       const yesterday = getYesterday();
-
-      if (lastDate === today) {
-        // Already played today, no change to streak
-        logger.debug('Stats: Already played today, streak unchanged');
-      } else if (lastDate === yesterday) {
-        // Consecutive day
-        stats.streakDaily += 1;
-        logger.info(`Stats: Daily streak continued: ${stats.streakDaily} days`);
-      } else {
-        // Streak broken or first time, reset to 1
-        stats.streakDaily = 1;
-        logger.info('Stats: Daily streak reset to 1');
+      updateDailyStreak(stats, 'streakDaily', 'lastDailyDate', today, yesterday);
+    } else if (gameType === MODE_IDS.COUNTRY) {
+      if (totalScore > (stats.bestScoreCountry || 0)) {
+        stats.bestScoreCountry = totalScore;
+        logger.info(`Stats: New best country score: ${totalScore}`);
       }
-
-      stats.lastDailyDate = today;
     } else if (gameType === MODE_IDS.STADIUM) {
       if (totalScore > (stats.bestScoreStadium || 0)) {
         stats.bestScoreStadium = totalScore;
@@ -155,6 +175,27 @@ export const updateStats = (rounds, gameType) => {
         stats.bestScoreCivilization = totalScore;
         logger.info(`Stats: New best civilization score: ${totalScore}`);
       }
+    } else if (gameType === MODE_IDS.COUNTRY_DAILY) {
+      if (totalScore > (stats.bestScoreCountryDaily || 0)) {
+        stats.bestScoreCountryDaily = totalScore;
+        logger.info(`Stats: New best country daily score: ${totalScore}`);
+      }
+      const yesterday = getYesterday();
+      updateDailyStreak(stats, 'streakCountryDaily', 'lastCountryDailyDate', today, yesterday);
+    } else if (gameType === MODE_IDS.STADIUM_DAILY) {
+      if (totalScore > (stats.bestScoreStadiumDaily || 0)) {
+        stats.bestScoreStadiumDaily = totalScore;
+        logger.info(`Stats: New best stadium daily score: ${totalScore}`);
+      }
+      const yesterday = getYesterday();
+      updateDailyStreak(stats, 'streakStadiumDaily', 'lastStadiumDailyDate', today, yesterday);
+    } else if (gameType === MODE_IDS.CIVILIZATION_DAILY) {
+      if (totalScore > (stats.bestScoreCivilizationDaily || 0)) {
+        stats.bestScoreCivilizationDaily = totalScore;
+        logger.info(`Stats: New best civilization daily score: ${totalScore}`);
+      }
+      const yesterday = getYesterday();
+      updateDailyStreak(stats, 'streakCivilizationDaily', 'lastCivilizationDailyDate', today, yesterday);
     }
 
     // Update timestamps

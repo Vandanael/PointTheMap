@@ -177,14 +177,11 @@ describe("Game.js", () => {
       expect(newState.error).toBe("Aucune capitale disponible");
     });
 
-    it("should handle API error", async () => {
+    it("should propagate API error", async () => {
       api.start.mockRejectedValue(new Error("Network error"));
 
       const initialState = createGameState();
-      const newState = await startGame(initialState);
-
-      expect(newState.status).toBe(GameStatus.IDLE);
-      expect(newState.error).toBe("Network error");
+      await expect(startGame(initialState)).rejects.toThrow("Network error");
     });
 
     it("should default to classic mode when no gameType provided", async () => {
@@ -229,6 +226,113 @@ describe("Game.js", () => {
       expect(newState.currentRound.capital).toBeNull();
       expect(newState.runtimeConfig).toBeDefined();
       expect(newState.runtimeConfig.roundCount).toBe(5);
+    });
+
+    it("should start a new game session with stadium mode", async () => {
+      const mockStadiums = [
+        { name: "Stade de France", stadiumId: "sdf", lat: 48.9244, lng: 2.36, popular: true },
+        { name: "Wembley", stadiumId: "wem", lat: 51.556, lng: -0.2795, popular: true },
+      ];
+
+      api.start.mockResolvedValue({
+        token: "stadium-token",
+        stadiums: mockStadiums,
+      });
+
+      const initialState = createGameState();
+      const newState = await startGame(initialState, "stadium");
+
+      expect(api.start).toHaveBeenCalledWith("stadium");
+      expect(newState.status).toBe(GameStatus.PLAYING);
+      expect(newState.gameType).toBe("stadium");
+      expect(newState.stadiums).toEqual(mockStadiums);
+      expect(newState.currentRound).toBeDefined();
+      expect(newState.runtimeConfig).toBeDefined();
+    });
+
+    it("should start a new game session with civilization mode", async () => {
+      const mockCivilizations = [
+        { name: "Roman Empire", civilizationId: "roman", popular: true },
+        { name: "Ottoman Empire", civilizationId: "ottoman", popular: true },
+      ];
+
+      api.start.mockResolvedValue({
+        token: "civ-token",
+        civilizations: mockCivilizations,
+      });
+
+      const initialState = createGameState();
+      const newState = await startGame(initialState, "civilization");
+
+      expect(api.start).toHaveBeenCalledWith("civilization");
+      expect(newState.status).toBe(GameStatus.PLAYING);
+      expect(newState.gameType).toBe("civilization");
+      expect(newState.civilizations).toEqual(mockCivilizations);
+      expect(newState.currentRound).toBeDefined();
+      expect(newState.runtimeConfig).toBeDefined();
+    });
+
+    it("should start a new game session with country_daily mode", async () => {
+      const mockCountries = [
+        { name: "Brazil", countryId: "BRA", popular: true },
+        { name: "Japan", countryId: "JPN", popular: true },
+      ];
+
+      api.start.mockResolvedValue({
+        token: "country-daily-token",
+        countries: mockCountries,
+      });
+
+      const initialState = createGameState();
+      const newState = await startGame(initialState, "country_daily");
+
+      expect(api.start).toHaveBeenCalledWith("country_daily");
+      expect(newState.status).toBe(GameStatus.PLAYING);
+      expect(newState.gameType).toBe("country_daily");
+      expect(newState.countries).toEqual(mockCountries);
+      expect(newState.currentRound).toBeDefined();
+    });
+
+    it("should start a new game session with stadium_daily mode", async () => {
+      const mockStadiums = [
+        { name: "Camp Nou", stadiumId: "camp", lat: 41.3809, lng: 2.1228, popular: true },
+        { name: "Old Trafford", stadiumId: "ot", lat: 53.4631, lng: -2.2913, popular: true },
+      ];
+
+      api.start.mockResolvedValue({
+        token: "stadium-daily-token",
+        stadiums: mockStadiums,
+      });
+
+      const initialState = createGameState();
+      const newState = await startGame(initialState, "stadium_daily");
+
+      expect(api.start).toHaveBeenCalledWith("stadium_daily");
+      expect(newState.status).toBe(GameStatus.PLAYING);
+      expect(newState.gameType).toBe("stadium_daily");
+      expect(newState.stadiums).toEqual(mockStadiums);
+      expect(newState.currentRound).toBeDefined();
+    });
+
+    it("should start a new game session with civilization_daily mode", async () => {
+      const mockCivilizations = [
+        { name: "Mongol Empire", civilizationId: "mongol", popular: true },
+        { name: "Inca Empire", civilizationId: "inca", popular: false },
+      ];
+
+      api.start.mockResolvedValue({
+        token: "civ-daily-token",
+        civilizations: mockCivilizations,
+      });
+
+      const initialState = createGameState();
+      const newState = await startGame(initialState, "civilization_daily");
+
+      expect(api.start).toHaveBeenCalledWith("civilization_daily");
+      expect(newState.status).toBe(GameStatus.PLAYING);
+      expect(newState.gameType).toBe("civilization_daily");
+      expect(newState.civilizations).toEqual(mockCivilizations);
+      expect(newState.currentRound).toBeDefined();
     });
   });
 

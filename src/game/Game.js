@@ -143,43 +143,35 @@ export const createGameState = () => ({
  * @returns {Promise<GameState>}
  */
 export const startGame = async (state, gameType = MODE_IDS.CLASSIC) => {
-  try {
-    const session = await api.start(gameType);
-    const targets = getTargetsFromSession(session, gameType);
+  const session = await api.start(gameType);
+  const targets = getTargetsFromSession(session, gameType);
 
-    if (!targets || targets.length === 0) {
-      return {
-        ...state,
-        status: GameStatus.IDLE,
-        error: getNoTargetsError(gameType),
-      };
-    }
-
-    const stats = getStats();
-    const previousBestScore = getSessionBestScore(stats, gameType);
-    const runtimeConfig = getRuntimeGameConfig(gameType);
-    const roundGameType = getRoundGameType(gameType);
-
-    return {
-      ...createGameState(),
-      status: GameStatus.PLAYING,
-      token: session.token,
-      capitals: roundGameType === 'capital' ? session.capitals ?? [] : [],
-      countries: roundGameType === MODE_IDS.COUNTRY ? session.countries ?? [] : [],
-      stadiums: roundGameType === MODE_IDS.STADIUM ? session.stadiums ?? [] : [],
-      civilizations: roundGameType === MODE_IDS.CIVILIZATION ? session.civilizations ?? [] : [],
-      currentRound: createRound(targets[0], 0, roundGameType),
-      gameType,
-      sessionBestScore: previousBestScore,
-      runtimeConfig,
-    };
-  } catch (error) {
+  if (!targets || targets.length === 0) {
     return {
       ...state,
       status: GameStatus.IDLE,
-      error: error.message,
+      error: getNoTargetsError(gameType),
     };
   }
+
+  const stats = getStats();
+  const previousBestScore = getSessionBestScore(stats, gameType);
+  const runtimeConfig = getRuntimeGameConfig(gameType);
+  const roundGameType = getRoundGameType(gameType);
+
+  return {
+    ...createGameState(),
+    status: GameStatus.PLAYING,
+    token: session.token,
+    capitals: roundGameType === 'capital' ? session.capitals ?? [] : [],
+    countries: roundGameType === MODE_IDS.COUNTRY ? session.countries ?? [] : [],
+    stadiums: roundGameType === MODE_IDS.STADIUM ? session.stadiums ?? [] : [],
+    civilizations: roundGameType === MODE_IDS.CIVILIZATION ? session.civilizations ?? [] : [],
+    currentRound: createRound(targets[0], 0, roundGameType),
+    gameType,
+    sessionBestScore: previousBestScore,
+    runtimeConfig,
+  };
 };
 
 /**

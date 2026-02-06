@@ -93,8 +93,8 @@ export function deactivateFocusTrap() {
     _container = null;
   }
   _onEscape = null;
-  if (_previousActiveElement && typeof _previousActiveElement.focus === 'function') {
+  if (_previousActiveElement && typeof _previousActiveElement.focus === 'function' && document.body.contains(_previousActiveElement)) {
     (/** @type {HTMLElement} */ (_previousActiveElement)).focus({ preventScroll: true });
-    _previousActiveElement = null;
   }
+  _previousActiveElement = null;
 }

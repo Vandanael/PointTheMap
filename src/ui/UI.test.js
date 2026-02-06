@@ -42,7 +42,7 @@ vi.mock('../config.js', () => ({
 
 vi.mock('../config/visual-constants.js', () => ({
   UI_TIMING: {
-    QUESTION_AUTO_CLOSE: 1000,
+    QUESTION_AUTO_CLOSE: 1500,
     ERROR_DISPLAY: 4000,
   },
 }));

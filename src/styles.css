@@ -242,7 +242,7 @@ body.light-theme .start-modal-overlay {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 1000;
+  z-index: var(--z-base);
   pointer-events: none;
 }
 
@@ -542,9 +542,6 @@ button:focus:not(:focus-visible),
   pointer-events: none;
 }
 
-.category-btn.category-disabled .category-coming-soon {
-  color: var(--text-tertiary);
-}
 
 /* Disabled buttons */
 button:disabled,
@@ -565,18 +562,20 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-* {
+.modal-card,
+.modal-bg,
+.modal-section,
+.category-btn,
+.toggle-btn,
+.pill-option,
+.pill-toggle,
+.challenge-card,
+.lobby-footer,
+.btn-secondary,
+.game-header > div {
   transition: background-color 0.3s ease,
               color 0.3s ease,
               border-color 0.3s ease;
-}
-
-/* Except animations that need to be instant */
-.btn-scale,
-.pulse-button,
-.toast-slide-up,
-[class*="animate-"] {
-  transition: none !important;
 }
 
 /* Safe area padding pour iPhone notch */
@@ -641,14 +640,21 @@ body {
    LOBBY LAYOUT - DENSE & PROFESSIONAL
    =================================== */
 
-/* Container - top-aligned with fixed padding so title position is
-   deterministic regardless of content below (prevents CLS between
-   skeleton and full start screen). */
+/* Container - top-aligned on mobile (fixed padding prevents CLS between
+   skeleton and full start screen), centered on desktop where there's more room. */
 .lobby-container {
   padding-top: 12vh;
   padding-bottom: 1rem;
   align-items: flex-start;
   justify-content: flex-start;
+}
+
+@media (min-width: 1024px) {
+  .lobby-container {
+    padding-top: 0;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 /* Content wrapper with max-width constraint */
@@ -827,32 +833,12 @@ body.light-theme .challenge-info {
   transition: color 0.2s ease;
 }
 
-/* Coming soon: full-width bar at bottom, flex centers the text */
-.category-btn .category-coming-soon-wrap {
-  position: absolute;
-  top: auto;
-  bottom: 0.2rem;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  pointer-events: none;
-}
-
-.category-btn .category-coming-soon {
-  font-size: 0.6rem;
-  font-weight: 600;
-  text-transform: none;
-  letter-spacing: 0.02em;
-}
-
 .category-btn:hover {
   transform: scale(1.02);
   border-color: var(--accent) !important;
 }
 
-.category-btn:hover span:not(.category-coming-soon),
+.category-btn:hover span,
 .category-btn:hover .text-secondary {
   color: var(--text-primary);
 }
@@ -865,7 +851,7 @@ body.light-theme .challenge-info {
   border-color: var(--accent) !important;
 }
 
-.category-btn.category-active span:not(.category-coming-soon),
+.category-btn.category-active span,
 .category-btn.category-active .text-secondary {
   color: var(--text-primary);
 }
@@ -1021,6 +1007,23 @@ body.light-theme .challenge-info {
 @media (min-width: 768px) {
   .lobby-footer-content {
     padding: 0 1.5rem;
+  }
+}
+
+/* Leaderboard modal: ensure it fits narrow viewports */
+@media (max-width: 480px) {
+  #leaderboard-modal .modal-card {
+    max-width: calc(100vw - 2rem);
+    padding: 1.25rem;
+  }
+
+  #leaderboard-modal .flex-wrap {
+    gap: 0.375rem;
+  }
+
+  #leaderboard-modal .flex-wrap button {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.5rem;
   }
 }
 

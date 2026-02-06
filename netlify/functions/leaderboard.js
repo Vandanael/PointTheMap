@@ -23,8 +23,10 @@ export default async function leaderboardHandler(req, context) {
     const url = new URL(req.url, `http://${req.headers.get("host") || "localhost"}`);
     const type = url.searchParams.get("type") || "classic";
 
+    const validDailyTypes = ["daily", "country_daily", "stadium_daily", "civilization_daily"];
+    const validClassicTypes = ["classic", "country", "stadium", "civilization"];
     let query;
-    if (type === "daily") {
+    if (validDailyTypes.includes(type)) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todayTimestamp = today.getTime();
@@ -42,7 +44,7 @@ export default async function leaderboardHandler(req, context) {
               ORDER BY score DESC, time ASC
             ) as rank
           FROM scores
-          WHERE game_type = 'daily'
+          WHERE game_type = ${type}
             AND timestamp >= ${todayTimestamp}
             AND timestamp < ${tomorrowTimestamp}
         )
@@ -53,7 +55,7 @@ export default async function leaderboardHandler(req, context) {
         LIMIT ${LEADERBOARD_TOP_LIMIT}
       `;
     } else {
-      const gameType = type === "country" ? "country" : "classic";
+      const gameType = validClassicTypes.includes(type) ? type : "classic";
       query = sql`
         WITH ranked_scores AS (
           SELECT

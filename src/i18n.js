@@ -107,6 +107,7 @@ const translations = {
     // Final
     top50: "🏆 Top 50 !",
     scoreSaved: "Score enregistré !",
+    newPersonalBest: "NOUVEAU RECORD PERSONNEL",
     rank: "Rang",
 
     // Leaderboard
@@ -193,6 +194,7 @@ const translations = {
       leaderboardRetry: "Le classement est temporairement indisponible.",
       countriesLoadFailed: "Impossible de charger les données des pays. Veuillez réessayer.",
       civilizationsLoadFailed: "Impossible de charger les données des civilisations. Veuillez réessayer.",
+      mapLoadFailed: "Impossible d'initialiser la carte. Veuillez réessayer.",
     },
   },
 
@@ -299,6 +301,7 @@ const translations = {
     // Final
     top50: "🏆 Top 50!",
     scoreSaved: "Score saved!",
+    newPersonalBest: "NEW PERSONAL BEST",
     rank: "Rank",
 
     // Leaderboard
@@ -385,6 +388,7 @@ const translations = {
       leaderboardRetry: "The leaderboard is temporarily unavailable.",
       countriesLoadFailed: "Failed to load countries data. Please try again.",
       civilizationsLoadFailed: "Failed to load civilizations data. Please try again.",
+      mapLoadFailed: "Failed to initialize map. Please try again.",
     },
   },
 };

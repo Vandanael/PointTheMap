@@ -10,6 +10,8 @@
  * Leaflet is loaded lazily on first init() to reduce initial JS and defer until the map is required.
  */
 
+import { pointInPolygon } from '@lib/geo-utils/index.js';
+
 /** @type {typeof import('leaflet') | null} */
 let L = null;
 
@@ -769,73 +771,12 @@ export class MapSystem {
 
     // Find country containing this point
     for (const feature of this.#countriesGeoJSON.features) {
-      if (this.#pointInPolygon(point, feature.geometry)) {
+      if (pointInPolygon(point, feature.geometry)) {
         return feature.properties.ISO_A3 || feature.properties.ADM0_A3;
       }
     }
 
     return null; // Ocean or no match
-  }
-
-  /**
-   * Simple point-in-polygon test using ray casting algorithm
-   * @private
-   * @param {Object} point - GeoJSON point
-   * @param {Object} geometry - GeoJSON geometry (Polygon or MultiPolygon)
-   * @returns {boolean}
-   */
-  #pointInPolygon(point, geometry) {
-    const [x, y] = point.coordinates;
-
-    if (geometry.type === 'Polygon') {
-      return this.#testPolygon(x, y, geometry.coordinates);
-    } else if (geometry.type === 'MultiPolygon') {
-      return geometry.coordinates.some(polygon => this.#testPolygon(x, y, polygon));
-    }
-
-    return false;
-  }
-
-  /**
-   * Test if point is inside polygon using ray casting
-   * @private
-   */
-  #testPolygon(x, y, rings) {
-    // Test exterior ring (first ring)
-    const exterior = rings[0];
-    let inside = false;
-
-    for (let i = 0, j = exterior.length - 1; i < exterior.length; j = i++) {
-      const xi = exterior[i][0], yi = exterior[i][1];
-      const xj = exterior[j][0], yj = exterior[j][1];
-
-      const intersect = ((yi > y) !== (yj > y))
-        && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-
-      if (intersect) inside = !inside;
-    }
-
-    // If inside exterior ring, check holes (remaining rings)
-    if (inside && rings.length > 1) {
-      for (let h = 1; h < rings.length; h++) {
-        const hole = rings[h];
-        let inHole = false;
-
-        for (let i = 0, j = hole.length - 1; i < hole.length; j = i++) {
-          const xi = hole[i][0], yi = hole[i][1];
-          const xj = hole[j][0], yj = hole[j][1];
-
-          const intersect = ((yi > y) !== (yj > y))
-            && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
-
-          if (intersect) inHole = !inHole;
-        }
-
-        if (inHole) return false; // Point is in a hole
-      }
-    }
-
-    return inside;
   }
 
   /**
@@ -984,7 +925,7 @@ export class MapSystem {
     const point = { type: 'Point', coordinates: [lng, lat] };
 
     for (const feature of this.#civilizationsGeoJSON.features) {
-      if (this.#pointInPolygon(point, feature.geometry)) {
+      if (pointInPolygon(point, feature.geometry)) {
         return feature.properties.id ?? feature.properties.name;
       }
     }
@@ -1113,6 +1054,13 @@ export class MapSystem {
       this.#countriesLayer = null;
     }
     this.#countriesGeoJSON = null;
+
+    // Remove civilizations layer
+    if (this.#civilizationsLayer) {
+      this.#map.removeLayer(this.#civilizationsLayer);
+      this.#civilizationsLayer = null;
+    }
+    this.#civilizationsGeoJSON = null;
 
     // Destroy Leaflet map
     if (this.#map) {

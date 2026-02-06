@@ -45,34 +45,39 @@ export const SCORING_THRESHOLDS = {
 /**
  * Time bonus configuration by game mode
  * Controls speed-based scoring bonuses
+ *
+ * NOTE: This data mirrors GAME_MODES[mode].scoring.timeBonus.
+ * Kept here to avoid a circular dependency (config.js ↔ game-modes.js).
+ * When adding a new mode, update BOTH here and in game-modes.js.
  */
+
+/** Shared config for all daily variants (competitive speedrun aspect) */
+const DAILY_TIME_BONUS = {
+  enabled: true,
+  maxBonus: 1000,
+  maxBonusPercent: 0.20,
+  distanceThreshold: 200,
+};
+
+/** Shared config for all classic variants (no time pressure) */
+const NO_TIME_BONUS = {
+  enabled: false,
+  maxBonus: 0,
+  maxBonusPercent: 0,
+  distanceThreshold: 200,
+};
+
 export const SCORING = {
   ENABLE_TIME_BONUS: true,  // Global feature flag
   TIME_BONUS_BY_MODE: {
-    classic: {
-      enabled: false,           // Classic mode: pure geography skill, no time pressure
-      maxBonus: 0,
-      maxBonusPercent: 0,
-      distanceThreshold: 200,
-    },
-    daily: {
-      enabled: true,            // Daily mode: competitive speedrun aspect
-      maxBonus: 1000,           // Maximum bonus points (20% of 5000)
-      maxBonusPercent: 0.20,    // 20% max bonus
-      distanceThreshold: 200,   // Only award bonus if distance < 200km
-    },
-    country: {
-      enabled: false,           // Country mode: no time bonus (distance-based only)
-      maxBonus: 0,
-      maxBonusPercent: 0,
-      distanceThreshold: 200,
-    },
-    stadium: {
-      enabled: false,           // Stadium mode: no time bonus (point-based only)
-      maxBonus: 0,
-      maxBonusPercent: 0,
-      distanceThreshold: 200,
-    },
+    classic: NO_TIME_BONUS,
+    daily: DAILY_TIME_BONUS,
+    country: NO_TIME_BONUS,
+    stadium: NO_TIME_BONUS,
+    civilization: NO_TIME_BONUS,
+    country_daily: DAILY_TIME_BONUS,
+    stadium_daily: DAILY_TIME_BONUS,
+    civilization_daily: DAILY_TIME_BONUS,
   },
 };
 

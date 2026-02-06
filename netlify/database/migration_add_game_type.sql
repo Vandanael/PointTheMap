@@ -12,7 +12,7 @@ BEGIN
         AND column_name = 'game_type'
     ) THEN
         ALTER TABLE sessions 
-        ADD COLUMN game_type VARCHAR(10) DEFAULT 'classic';
+        ADD COLUMN game_type VARCHAR(20) DEFAULT 'classic';
         
         -- Mettre à jour les sessions existantes avec la valeur par défaut
         UPDATE sessions 

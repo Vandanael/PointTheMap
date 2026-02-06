@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS scores (
   time INTEGER NOT NULL,
   rounds JSONB NOT NULL,
   timestamp BIGINT NOT NULL,
-  game_type VARCHAR(10) NOT NULL DEFAULT 'classic',
+  game_type VARCHAR(20) NOT NULL DEFAULT 'classic',
   ip VARCHAR(45),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -23,9 +23,6 @@ CREATE INDEX IF NOT EXISTS idx_scores_pseudo ON scores(pseudo);
 -- Index composite pour le calcul de rank (optimisation critique)
 CREATE INDEX IF NOT EXISTS idx_scores_rank ON scores(game_type, score DESC, time ASC);
 
--- Index composite pour le leaderboard
-CREATE INDEX IF NOT EXISTS idx_scores_leaderboard ON scores(game_type, score DESC, time ASC);
-
 -- Index pour la vérification IP (pseudo lock)
 CREATE INDEX IF NOT EXISTS idx_scores_ip ON scores(ip);
 
@@ -35,7 +32,7 @@ CREATE TABLE IF NOT EXISTS sessions (
   capitals JSONB NOT NULL,
   start_time BIGINT NOT NULL,
   used BOOLEAN DEFAULT FALSE,
-  game_type VARCHAR(10) DEFAULT 'classic',
+  game_type VARCHAR(20) DEFAULT 'classic',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   expires_at TIMESTAMP NOT NULL
 );

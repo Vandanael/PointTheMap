@@ -13,7 +13,10 @@ import {
 } from "./_utils.js";
 // Import shared game logic from lib (same functions used by client)
 import { haversine, calculateScore } from "../../lib/game-math/index.js";
+import { pointInPolygon, distanceToPolygonBorder, calculateCountryScore } from "../../lib/geo-utils/index.js";
+import { getCountryFeature, getCivilizationFeature } from "./_geo-data.js";
 import { GAME, SCORING, API } from "../../src/config.js";
+import { GAME_MODES } from "../../src/config/game-modes.js";
 
 /**
  * @param {number} gameDuration
@@ -84,14 +87,15 @@ const validateRounds = (rounds, sessionTargets, gameType) => {
     return { valid: false, error: "Invalid rounds count" };
   }
 
-  const isCountryMode = gameType === 'country';
-  const isCivilizationMode = gameType === 'civilization';
+  const isCountryMode = gameType === 'country' || gameType === 'country_daily';
+  const isCivilizationMode = gameType === 'civilization' || gameType === 'civilization_daily';
+  const isStadiumMode = gameType === 'stadium' || gameType === 'stadium_daily';
 
   for (let i = 0; i < GAME.ROUNDS; i++) {
     const round = rounds[i];
     const expected = sessionTargets[i];
 
-    const targetField = isCountryMode ? round.country : isCivilizationMode ? round.civilization : round.capital;
+    const targetField = isCountryMode ? round.country : isCivilizationMode ? round.civilization : isStadiumMode ? round.stadium : round.capital;
 
     if (!round || !targetField) {
       return { valid: false, error: `Missing round ${i + 1}` };
@@ -99,7 +103,7 @@ const validateRounds = (rounds, sessionTargets, gameType) => {
 
     const expectedName = typeof expected === 'object' && expected !== null && 'name' in expected ? expected.name : expected;
     if (targetField !== expectedName) {
-      return { valid: false, error: `${isCountryMode ? 'Country' : isCivilizationMode ? 'Civilization' : 'Capital'} mismatch at round ${i + 1}` };
+      return { valid: false, error: `${isCountryMode ? 'Country' : isCivilizationMode ? 'Civilization' : isStadiumMode ? 'Stadium' : 'Capital'} mismatch at round ${i + 1}` };
     }
 
     // Per-round time validation - detect suspiciously fast submissions
@@ -224,26 +228,11 @@ export default async function submitHandler(req, context) {
       playerId: sessionRow.player_id,
     };
 
-    // CSRF token validation
-    console.log("[submit] CSRF validation:");
-    console.log("  - Expected (from DB):", session.csrfToken?.substring(0, 16) + "...");
-    console.log("  - Received (header):", csrfToken?.substring(0, 16) + "...");
-    console.log("  - Match:", session.csrfToken === csrfToken);
-    console.log("  - Types:", typeof session.csrfToken, typeof csrfToken);
-
-    if (session.csrfToken && session.csrfToken !== csrfToken) {
-      console.log("[submit] CSRF token mismatch! Returning 403");
-      return jsonResponse({
-        error: "Invalid CSRF token",
-        debug: {
-          expectedPrefix: session.csrfToken?.substring(0, 8),
-          receivedPrefix: csrfToken?.substring(0, 8),
-          receivedIsNull: csrfToken === null,
-          receivedIsUndefined: csrfToken === undefined
-        }
-      }, 403);
+    // CSRF token validation (strict: reject any mismatch)
+    if (session.csrfToken !== csrfToken) {
+      console.log("[submit] CSRF token mismatch, returning 403");
+      return jsonResponse({ error: "Invalid CSRF token" }, 403);
     }
-    console.log("[submit] CSRF token validated successfully");
 
     if (session.used) {
       return errorResponse("Session already used", 401);
@@ -290,11 +279,11 @@ export default async function submitHandler(req, context) {
      * @returns {any}
      */
     const validateRound = (round, i) => {
-      const isCountryMode = session.gameType === 'country';
-      const isCivilizationMode = session.gameType === 'civilization';
+      const isCountryMode = session.gameType === 'country' || session.gameType === 'country_daily';
+      const isCivilizationMode = session.gameType === 'civilization' || session.gameType === 'civilization_daily';
       const serverTarget = session.capitals[i]; // Contains capitals, countries, or civilizations
 
-      // For country mode: trust client score (server-side validation would require GeoJSON)
+      // Country mode: server-side GeoJSON validation
       if (isCountryMode) {
         if (!round.click) {
           return {
@@ -307,19 +296,52 @@ export default async function submitHandler(req, context) {
           };
         }
 
+        const targetFeature = getCountryFeature(serverTarget.countryId);
+        let serverScore;
+        let distance;
+
+        if (targetFeature) {
+          const isInside = pointInPolygon(
+            { coordinates: [round.click.lng, round.click.lat] },
+            targetFeature.geometry
+          );
+          distance = isInside ? 0 : distanceToPolygonBorder([round.click.lat, round.click.lng], targetFeature.geometry);
+          serverScore = calculateCountryScore(distance);
+
+          // Apply time bonus if enabled for this mode
+          const modeConfig = GAME_MODES[session.gameType]?.scoring?.timeBonus;
+          if (round.timeElapsed && modeConfig?.enabled && SCORING.ENABLE_TIME_BONUS) {
+            const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
+            const timeRemaining = totalTimeAllowed - round.timeElapsed;
+            if (distance < modeConfig.distanceThreshold && timeRemaining > 0) {
+              const timeRatio = timeRemaining / totalTimeAllowed;
+              const bonusPercent = timeRatio * modeConfig.maxBonusPercent;
+              serverScore += Math.min(Math.round(serverScore * bonusPercent), modeConfig.maxBonus);
+            }
+          }
+
+          if (round.score && Math.abs(round.score - serverScore) > 100) {
+            console.warn(`[submit] Country score mismatch: client=${round.score}, server=${serverScore}`);
+          }
+        } else {
+          // Fallback: clamp client score (GeoJSON data missing for this country)
+          distance = round.distanceToTargetKm || 0;
+          serverScore = Math.min(Math.max(Math.round(round.score || 0), 0), GAME.MAX_SCORE_PER_ROUND);
+        }
+
         return {
           country: round.country,
           countryId: round.countryId,
-          correctCountryId: round.correctCountryId,
+          correctCountryId: serverTarget.countryId,
           clickedCountryId: round.clickedCountryId,
           click: round.click,
-          distance: round.distanceToTargetKm || 0,
-          score: Math.round(round.score || 0),
+          distance: Math.round(distance),
+          score: serverScore,
           status: "completed",
         };
       }
 
-      // For civilization mode: trust client score (same as country)
+      // Civilization mode: server-side GeoJSON validation
       if (isCivilizationMode) {
         if (!round.click) {
           return {
@@ -332,14 +354,88 @@ export default async function submitHandler(req, context) {
           };
         }
 
+        const targetFeature = getCivilizationFeature(serverTarget.id);
+        let serverScore;
+        let distance;
+
+        if (targetFeature) {
+          const isInside = pointInPolygon(
+            { coordinates: [round.click.lng, round.click.lat] },
+            targetFeature.geometry
+          );
+          distance = isInside ? 0 : distanceToPolygonBorder([round.click.lat, round.click.lng], targetFeature.geometry);
+          serverScore = calculateCountryScore(distance);
+
+          // Apply time bonus if enabled for this mode
+          const modeConfig = GAME_MODES[session.gameType]?.scoring?.timeBonus;
+          if (round.timeElapsed && modeConfig?.enabled && SCORING.ENABLE_TIME_BONUS) {
+            const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
+            const timeRemaining = totalTimeAllowed - round.timeElapsed;
+            if (distance < modeConfig.distanceThreshold && timeRemaining > 0) {
+              const timeRatio = timeRemaining / totalTimeAllowed;
+              const bonusPercent = timeRatio * modeConfig.maxBonusPercent;
+              serverScore += Math.min(Math.round(serverScore * bonusPercent), modeConfig.maxBonus);
+            }
+          }
+
+          if (round.score && Math.abs(round.score - serverScore) > 100) {
+            console.warn(`[submit] Civilization score mismatch: client=${round.score}, server=${serverScore}`);
+          }
+        } else {
+          // Fallback: clamp client score (GeoJSON data missing)
+          distance = round.distanceToTargetKm || 0;
+          serverScore = Math.min(Math.max(Math.round(round.score || 0), 0), GAME.MAX_SCORE_PER_ROUND);
+        }
+
         return {
           civilization: round.civilization,
           civilizationId: round.civilizationId,
-          correctCivilizationId: round.correctCivilizationId,
+          correctCivilizationId: serverTarget.id,
           clickedCivilizationId: round.clickedCivilizationId,
           click: round.click,
-          distance: round.distanceToTargetKm || 0,
-          score: Math.round(round.score || 0),
+          distance: Math.round(distance),
+          score: serverScore,
+          status: "completed",
+        };
+      }
+
+      // Stadium mode: server-side validation (has lat/lng like capitals)
+      if (session.gameType === 'stadium' || session.gameType === 'stadium_daily') {
+        const stadiumCoords = /** @type {[number, number]} */ ([serverTarget.lat, serverTarget.lng]);
+
+        if (!round.click) {
+          return {
+            stadium: round.stadium,
+            click: null,
+            distance: null,
+            score: 0,
+            status: "timeout",
+          };
+        }
+
+        const clickCoords = /** @type {[number, number]} */ ([round.click.lat, round.click.lng]);
+        const distance = haversine(clickCoords, stadiumCoords);
+
+        if (distance > API.MAX_DISTANCE_KM) {
+          return {
+            stadium: round.stadium,
+            click: round.click,
+            distance: API.MAX_DISTANCE_KM,
+            score: 0,
+            status: "invalid",
+          };
+        }
+
+        const score = calculateScore(distance);
+        if (round.score && Math.abs(round.score - score) > 1) {
+          console.warn(`[submit] Stadium score mismatch: client=${round.score}, server=${Math.round(score)}`);
+        }
+
+        return {
+          stadium: round.stadium,
+          click: round.click,
+          distance: Math.round(distance),
+          score: Math.round(score),
           status: "completed",
         };
       }
@@ -374,10 +470,11 @@ export default async function submitHandler(req, context) {
 
       // Calculate time bonus (if applicable for this game mode)
       let timeBonus = 0;
-      if (round.timeElapsed && session.gameType === 'daily' && SCORING.ENABLE_TIME_BONUS) {
+      const timeBonusConfig = SCORING.TIME_BONUS_BY_MODE[session.gameType];
+      if (round.timeElapsed && timeBonusConfig?.enabled && SCORING.ENABLE_TIME_BONUS) {
         const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
         const timeRemaining = totalTimeAllowed - round.timeElapsed;
-        const config = SCORING.TIME_BONUS_BY_MODE.daily;
+        const config = timeBonusConfig;
 
         if (config.enabled && distance < config.distanceThreshold && timeRemaining > 0) {
           const timeRatio = timeRemaining / totalTimeAllowed;
@@ -450,12 +547,7 @@ export default async function submitHandler(req, context) {
     try {
       console.log("[submit] Starting database transaction");
 
-      // Neon SQL doesn't support transactions, run operations sequentially
-      // Mark session as used first to prevent double submission
-      await sql`UPDATE sessions SET used = true WHERE token = ${token}`;
-      console.log("[submit] Session marked as used");
-
-      // Double-check pseudo hasn't changed
+      // Double-check pseudo hasn't changed (authoritative check before marking session)
       const doubleCheckResult = await sql`
         SELECT pseudo
         FROM scores
@@ -466,7 +558,6 @@ export default async function submitHandler(req, context) {
 
       if (doubleCheckResult.length > 0 && doubleCheckResult[0].pseudo !== pseudo) {
         console.log("[submit] Pseudo mismatch detected");
-        await sql`UPDATE sessions SET used = false WHERE token = ${token}`;
         return jsonResponse(
           {
             error: "pseudo_already_set_for_this_ip",
@@ -475,6 +566,10 @@ export default async function submitHandler(req, context) {
           409
         );
       }
+
+      // Mark session as used (after pseudo check passes, before score insert)
+      await sql`UPDATE sessions SET used = true WHERE token = ${token}`;
+      console.log("[submit] Session marked as used");
 
       // Insert score
       await sql`

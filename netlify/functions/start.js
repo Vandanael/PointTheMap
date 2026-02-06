@@ -4,14 +4,16 @@
 import { randomUUID } from "crypto";
 import { capitals } from "../../src/data/capitals.js";
 import { civilizations } from "../../src/data/civilizations.js";
-import { selectCapitals, selectCountries, selectCivilizations } from "../../lib/capital-selection/index.js";
+import { stadiums } from "../../src/data/stadiums.js";
+import { selectCapitals, selectCountries, selectCivilizations, selectStadiums } from "../../lib/capital-selection/index.js";
 import { getGameMode, isValidMode } from "../../src/config/game-modes.js";
 import { API } from "../../src/config.js";
 import { getDatabase } from "./db.js";
 import { errorResponse, successResponse, parseJsonBody, handleDatabaseError } from "./_utils.js";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
 
 // Derive countries list from capitals (unique countries with valid countryId)
 const countryMap = new Map();
@@ -72,8 +74,9 @@ export default async function startHandler(req, context) {
     }
 
     const mode = getGameMode(gameType);
-    const isCountryMode = gameType === 'country';
-    const isCivilizationMode = gameType === 'civilization';
+    const isCountryMode = gameType === 'country' || gameType === 'country_daily';
+    const isCivilizationMode = gameType === 'civilization' || gameType === 'civilization_daily';
+    const isStadiumMode = gameType === 'stadium' || gameType === 'stadium_daily';
 
     let selectedTargets;
     let clientData;
@@ -94,6 +97,17 @@ export default async function startHandler(req, context) {
           id: c.id,
           name: c.name,
           popular: c.popular
+        }))
+      };
+    } else if (isStadiumMode) {
+      selectedTargets = selectStadiums(mode, stadiums, new Date());
+      clientData = {
+        stadiums: selectedTargets.map(s => ({
+          name: s.name,
+          city: s.city,
+          country: s.country,
+          lat: s.lat,
+          lng: s.lng,
         }))
       };
     } else {
