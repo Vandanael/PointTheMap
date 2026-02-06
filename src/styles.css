@@ -640,8 +640,8 @@ body {
    LOBBY LAYOUT - DENSE & PROFESSIONAL
    =================================== */
 
-/* Container - top-aligned on mobile (fixed padding prevents CLS between
-   skeleton and full start screen), centered on desktop where there's more room. */
+/* Container - fixed top offset so title stays at same position before and after
+   load (skeleton vs full start screen), preventing layout shift. */
 .lobby-container {
   padding-top: 12vh;
   padding-bottom: 1rem;
@@ -651,9 +651,9 @@ body {
 
 @media (min-width: 1024px) {
   .lobby-container {
-    padding-top: 0;
-    align-items: center;
-    justify-content: center;
+    padding-top: 16vh;
+    align-items: flex-start;
+    justify-content: flex-start;
   }
 }
 

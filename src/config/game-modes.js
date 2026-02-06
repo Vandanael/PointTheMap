@@ -452,65 +452,65 @@ export const GAME_MODES = {
 };
 
 /**
- * Runtime helpers keyed by game type: targets(state), roundGameType, noTargetsError, sessionBestScoreKey, sessionTargetsKey.
- * Used by Game.js to avoid repeated ternaries.
- * @type {Object.<string, { targets: (state: { gameType: string, capitals: unknown[], countries: unknown[], stadiums: unknown[], civilizations: unknown[] }) => unknown[], sessionTargetsKey: string, roundGameType: string, noTargetsError: string, sessionBestScoreKey: string }>}
+ * Runtime helpers keyed by game type: targets(state), roundGameType, noTargetsErrorKey, sessionBestScoreKey, sessionTargetsKey.
+ * noTargetsErrorKey is an i18n key (e.g. error.noTargetsCapitals); callers must pass through t() for display.
+ * @type {Object.<string, { targets: (state: { gameType: string, capitals: unknown[], countries: unknown[], stadiums: unknown[], civilizations: unknown[] }) => unknown[], sessionTargetsKey: string, roundGameType: string, noTargetsErrorKey: string, sessionBestScoreKey: string }>}
  */
 const MODE_CONFIG = {
   [MODE_IDS.CLASSIC]: {
     targets: (state) => state.capitals,
     sessionTargetsKey: 'capitals',
     roundGameType: 'capital',
-    noTargetsError: 'Aucune capitale disponible',
+    noTargetsErrorKey: 'error.noTargetsCapitals',
     sessionBestScoreKey: 'bestScoreClassic',
   },
   [MODE_IDS.DAILY]: {
     targets: (state) => state.capitals,
     sessionTargetsKey: 'capitals',
     roundGameType: 'capital',
-    noTargetsError: 'Aucune capitale disponible',
+    noTargetsErrorKey: 'error.noTargetsCapitals',
     sessionBestScoreKey: 'bestScoreDaily',
   },
   [MODE_IDS.COUNTRY]: {
     targets: (state) => state.countries,
     sessionTargetsKey: 'countries',
     roundGameType: 'country',
-    noTargetsError: 'Aucun pays disponible',
+    noTargetsErrorKey: 'error.noTargetsCountries',
     sessionBestScoreKey: 'bestScoreCountry',
   },
   [MODE_IDS.STADIUM]: {
     targets: (state) => state.stadiums,
     sessionTargetsKey: 'stadiums',
     roundGameType: 'stadium',
-    noTargetsError: 'Aucun stade disponible',
+    noTargetsErrorKey: 'error.noTargetsStadiums',
     sessionBestScoreKey: 'bestScoreStadium',
   },
   [MODE_IDS.CIVILIZATION]: {
     targets: (state) => state.civilizations,
     sessionTargetsKey: 'civilizations',
     roundGameType: 'civilization',
-    noTargetsError: 'Aucune civilisation disponible',
+    noTargetsErrorKey: 'error.noTargetsCivilizations',
     sessionBestScoreKey: 'bestScoreCivilization',
   },
   [MODE_IDS.COUNTRY_DAILY]: {
     targets: (state) => state.countries,
     sessionTargetsKey: 'countries',
     roundGameType: 'country',
-    noTargetsError: 'Aucun pays disponible',
+    noTargetsErrorKey: 'error.noTargetsCountries',
     sessionBestScoreKey: 'bestScoreCountryDaily',
   },
   [MODE_IDS.STADIUM_DAILY]: {
     targets: (state) => state.stadiums,
     sessionTargetsKey: 'stadiums',
     roundGameType: 'stadium',
-    noTargetsError: 'Aucun stade disponible',
+    noTargetsErrorKey: 'error.noTargetsStadiums',
     sessionBestScoreKey: 'bestScoreStadiumDaily',
   },
   [MODE_IDS.CIVILIZATION_DAILY]: {
     targets: (state) => state.civilizations,
     sessionTargetsKey: 'civilizations',
     roundGameType: 'civilization',
-    noTargetsError: 'Aucune civilisation disponible',
+    noTargetsErrorKey: 'error.noTargetsCivilizations',
     sessionBestScoreKey: 'bestScoreCivilizationDaily',
   },
 };
@@ -548,13 +548,13 @@ export function getRoundGameType(gameType) {
 }
 
 /**
- * Get "no targets available" error message for game type.
+ * Get "no targets available" i18n key for game type. Call t(getNoTargetsError(gameType)) for display.
  * @param {string} gameType
  * @returns {string}
  */
 export function getNoTargetsError(gameType) {
   const config = MODE_CONFIG[gameType];
-  return config ? config.noTargetsError : 'Aucune capitale disponible';
+  return config ? config.noTargetsErrorKey : 'error.noTargetsCapitals';
 }
 
 /**

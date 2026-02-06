@@ -125,6 +125,8 @@ vi.mock('./ui/UI.js', () => ({
     hideQuestion: vi.fn(),
     showError: vi.fn(),
     resetTimer: vi.fn(),
+    showPseudoLockedDialog: vi.fn(),
+    showFinalResults: vi.fn(),
   },
 }));
 
@@ -166,6 +168,16 @@ vi.mock('./ui/components.js', () => ({ AchievementUnlockModal: vi.fn(() => '') }
 
 import { eventBus } from './core/EventBus.js';
 import { UI } from './ui/UI.js';
+import { submitWithRetry } from './services/api.js';
+import { errorHandler } from './core/ErrorHandler.js';
+
+/** State with token/rounds/gameType for submit flow */
+const submitState = {
+  ...playingState,
+  token: 'test-token',
+  rounds: [{ roundNumber: 1, score: 1000, distance: 50 }],
+  gameType: 'classic',
+};
 
 describe('main.js wiring', () => {
   beforeEach(() => {
@@ -195,5 +207,83 @@ describe('main.js wiring', () => {
 
     expect(disableClicks).toHaveBeenCalledTimes(1);
     expect(disableMapInput).toHaveBeenCalledTimes(1);
+  });
+
+  describe('handleSubmit (pseudo lock retry)', () => {
+    /** Ensure btn-submit exists in DOM for restore assertions */
+    const ensureSubmitButton = () => {
+      let btn = document.getElementById('btn-submit');
+      if (!btn) {
+        btn = document.createElement('button');
+        btn.id = 'btn-submit';
+        document.body.appendChild(btn);
+      }
+      return btn;
+    };
+
+    it('409 path triggers pseudo dialog and retries; second attempt succeeds', async () => {
+      mockState = { ...submitState };
+      const lockedPseudo = 'LOCKED';
+      submitWithRetry
+        .mockRejectedValueOnce({ status: 409, data: { error: 'pseudo_already_set_for_this_ip', pseudo: lockedPseudo } })
+        .mockResolvedValueOnce({ score: 10000, rank: 1, isTopFifty: false });
+
+      UI.showPseudoLockedDialog.mockImplementation((_pseudo, onConfirm) => {
+        onConfirm();
+      });
+
+      await import('./main.js');
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await vi.waitFor(() => expect(UI.showStart).toHaveBeenCalled());
+
+      eventBus.emit('input:submit', { pseudo: 'USER' });
+      await vi.waitFor(() => expect(submitWithRetry).toHaveBeenCalledTimes(2));
+
+      expect(UI.showPseudoLockedDialog).toHaveBeenCalledWith(lockedPseudo, expect.any(Function));
+      expect(submitWithRetry).toHaveBeenNthCalledWith(1, 'test-token', submitState.rounds, 'USER', 'classic');
+      expect(submitWithRetry).toHaveBeenNthCalledWith(2, 'test-token', submitState.rounds, lockedPseudo, 'classic');
+      expect(UI.showFinalResults).toHaveBeenCalledWith(10000, lockedPseudo, expect.objectContaining({ score: 10000, rank: 1, isTopFifty: false }), undefined);
+    });
+
+    it('409 then second attempt fails restores UI and surfaces error', async () => {
+      mockState = { ...submitState };
+      const btn = ensureSubmitButton();
+      submitWithRetry
+        .mockRejectedValueOnce({ status: 409, data: { error: 'pseudo_already_set_for_this_ip', pseudo: 'LOCKED' } })
+        .mockRejectedValueOnce({ status: 500, message: 'Server error' });
+
+      UI.showPseudoLockedDialog.mockImplementation((_pseudo, onConfirm) => {
+        onConfirm();
+      });
+
+      await import('./main.js');
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await vi.waitFor(() => expect(UI.showStart).toHaveBeenCalled());
+
+      eventBus.emit('input:submit', { pseudo: 'USER' });
+      await vi.waitFor(() => expect(errorHandler.handle).toHaveBeenCalled());
+
+      expect(btn.disabled).toBe(false);
+      expect(btn.textContent).toBe('save');
+      expect(errorHandler.handle).toHaveBeenCalledWith(expect.any(Error), 'score:submit', { showToUser: true, fatal: false });
+    });
+
+    it('non-409 error restores UI and surfaces via ErrorHandler', async () => {
+      mockState = { ...submitState };
+      const btn = ensureSubmitButton();
+      submitWithRetry.mockRejectedValueOnce({ status: 500, message: 'Server error' });
+
+      await import('./main.js');
+      document.dispatchEvent(new Event('DOMContentLoaded'));
+      await vi.waitFor(() => expect(UI.showStart).toHaveBeenCalled());
+
+      eventBus.emit('input:submit', { pseudo: 'USER' });
+      await vi.waitFor(() => expect(errorHandler.handle).toHaveBeenCalled());
+
+      expect(UI.showPseudoLockedDialog).not.toHaveBeenCalled();
+      expect(btn.disabled).toBe(false);
+      expect(btn.textContent).toBe('save');
+      expect(errorHandler.handle).toHaveBeenCalledWith(expect.any(Error), 'score:submit', { showToUser: true, fatal: false });
+    });
   });
 });

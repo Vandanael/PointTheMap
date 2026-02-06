@@ -20,10 +20,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-  <!-- Preload start-screen background (CSS-referenced, invisible to preload scanner) -->
+  <!-- Preload only mobile start-screen (LCP candidate); tablet/desktop load via CSS when shown to avoid "preloaded but not used" (bg is display:none until start-screen-visible) -->
   <link rel="preload" href="/assets/start-screen-mobile-dark.webp" as="image" type="image/webp" media="(max-width: 767px)">
-  <link rel="preload" href="/assets/start-screen-tablet-dark.webp" as="image" type="image/webp" media="(min-width: 768px) and (max-width: 1279px)">
-  <link rel="preload" href="/assets/start-screen-desktop-dark.webp" as="image" type="image/webp" media="(min-width: 1280px)">
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">

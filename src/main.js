@@ -368,6 +368,18 @@ const stopTimer = () => {
 // - handleReplay: world view – back to start screen (static image), no animation
 
 /**
+ * Show localized "target not found" error for the given game type.
+ * @param {string} gameType
+ */
+function showTargetNotFoundError(gameType) {
+  const errorKey = isCountryCategory(gameType) ? 'error.targetNotFoundCountry'
+    : isStadiumCategory(gameType) ? 'error.targetNotFoundStadium'
+    : isCivilizationCategory(gameType) ? 'error.targetNotFoundCivilization'
+    : 'error.targetNotFoundCapital';
+  UI.showError(t(errorKey));
+}
+
+/**
  * @param {"classic" | "daily" | "country" | "stadium" | "civilization"} [gameType="classic"]
  */
 const handleStart = async (gameType = MODE_IDS.CLASSIC) => {
@@ -398,7 +410,7 @@ const handleStart = async (gameType = MODE_IDS.CLASSIC) => {
 
   const state = stateManager.getState();
   if (state.status !== GameStatus.PLAYING) {
-    if (state.error) UI.showToast(t('error.startFailed') || state.error, 'error', 4000);
+    if (state.error) UI.showToast(t(state.error), 'error', 4000);
     UI.showStart();
     return;
   }
@@ -426,7 +438,7 @@ const handleStart = async (gameType = MODE_IDS.CLASSIC) => {
   const isCivilizationMode = isCivilizationCategory(state.gameType);
 
   if (!target || !target.name) {
-    UI.showError(isCountryMode ? "Erreur: pays introuvable" : isStadiumMode ? "Erreur: stade introuvable" : isCivilizationMode ? "Erreur: civilisation introuvable" : "Erreur: capitale introuvable");
+    showTargetNotFoundError(state.gameType);
     UI.hideQuestion();
     return;
   }
@@ -612,7 +624,7 @@ const handleNext = () => {
   const isCivilizationMode = isCivilizationCategory(state.gameType);
 
   if (!target || !target.name) {
-    UI.showError(isCountryMode ? "Erreur: pays introuvable" : isStadiumMode ? "Erreur: stade introuvable" : isCivilizationMode ? "Erreur: civilisation introuvable" : "Erreur: capitale introuvable");
+    showTargetNotFoundError(state.gameType);
     return;
   }
 
@@ -638,94 +650,118 @@ const handleNext = () => {
 /**
  * @param {string} pseudo
  */
+const PSEUDO_LOCK_ERROR = "pseudo_already_set_for_this_ip";
+const MAX_SUBMIT_ATTEMPTS = 2; // initial attempt + one retry on 409
+
+/**
+ * @param {string} pseudo
+ */
 const handleSubmit = async (pseudo) => {
-  // Disable submit button while the request is in flight — same pattern as rate-limiting above
   const submitBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById("btn-submit"));
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.textContent = t('saving');
-  }
-
-  try {
-    const state = stateManager.getState();
-    const result = await submitWithRetry(state.token, state.rounds, pseudo, state.gameType);
-    setLastPseudo(pseudo);
-
-    const isNewBest = checkIfNewSessionBest(state, result.score);
-    stateManager.setState(
-      updateSessionBestScore(state, result.score),
-      'score:submit'
-    );
-
-    // Update stats and check achievements
-    const updatedStats = updateStats(state.rounds, state.gameType);
-    checkAchievements(state.rounds, updatedStats, result.rank);
-
-    UI.showFinalResults(result.score, pseudo, result, isNewBest);
-
-    // Track game completion
-    analytics.track('game_completed', {
-      totalScore: result.score,
-      gameType: state.gameType,
-      rounds: state.rounds.length,
-      rank: result.rank,
-      isTopFifty: result.isTopFifty,
-      isNewSessionBest: isNewBest,
-    });
-
-    // Bind share button (after UI.showFinalResults renders the button)
-    // Remove any existing listener first to prevent duplicates
-    const shareBtn = document.getElementById("btn-share");
-    if (shareBtn) {
-      // Remove previous handler if it exists
-      if (shareButtonHandler) {
-        shareBtn.removeEventListener("click", shareButtonHandler);
-      }
-      
-      shareButtonHandler = async () => {
-        const avgDistance = state.rounds.reduce((/** @type {number} */ sum, /** @type {any} */ r) => sum + (r.distance || 0), 0) / state.rounds.length;
-        const stats = getStats();
-        const dailyDateKey = state.gameType === MODE_IDS.COUNTRY_DAILY ? 'lastCountryDailyDate'
-          : state.gameType === MODE_IDS.STADIUM_DAILY ? 'lastStadiumDailyDate'
-          : state.gameType === MODE_IDS.CIVILIZATION_DAILY ? 'lastCivilizationDailyDate'
-          : 'lastDailyDate';
-        const dailyNumber = isDailyVariant(state.gameType) ? getDailyNumber(stats[dailyDateKey]) : null;
-        const shareText = formatShareText(dailyNumber, avgDistance, state.rounds, getLang());
-        const success = await shareGameResults(shareText);
-
-        UI.showToast(
-          success ? t('shareCopied') : t('shareFailed'),
-          success ? 'success' : 'error',
-          3000,
-          { compact: true }
-        );
-      };
-      
-      shareBtn.addEventListener("click", shareButtonHandler);
+  const setButtonSaving = () => {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = t('saving');
     }
-  } catch (error) {
-    // Restore submit button so the user can retry
+  };
+  const restoreSubmitButton = () => {
     if (submitBtn) {
       submitBtn.disabled = false;
       submitBtn.textContent = t('save');
     }
+  };
 
-    /** @type {any} */
-    const err = error;
-    if (err.status === 409 && err.data?.error === "pseudo_already_set_for_this_ip") {
-      UI.showPseudoLockedDialog(err.data.pseudo, () => {
-        // Retry submission with the locked pseudo
-        handleSubmit(err.data.pseudo);
+  let succeeded = false;
+  /** @type {any} */
+  let lastError = null;
+  let currentPseudo = pseudo;
+
+  for (let attempt = 0; attempt < MAX_SUBMIT_ATTEMPTS; attempt++) {
+    setButtonSaving();
+    try {
+      const state = stateManager.getState();
+      const result = await submitWithRetry(state.token, state.rounds, currentPseudo, state.gameType);
+      setLastPseudo(currentPseudo);
+
+      const isNewBest = checkIfNewSessionBest(state, result.score);
+      stateManager.setState(
+        updateSessionBestScore(state, result.score),
+        'score:submit'
+      );
+
+      // Update stats and check achievements
+      const updatedStats = updateStats(state.rounds, state.gameType);
+      checkAchievements(state.rounds, updatedStats, result.rank);
+
+      UI.showFinalResults(result.score, currentPseudo, result, isNewBest);
+
+      // Track game completion
+      analytics.track('game_completed', {
+        totalScore: result.score,
+        gameType: state.gameType,
+        rounds: state.rounds.length,
+        rank: result.rank,
+        isTopFifty: result.isTopFifty,
+        isNewSessionBest: isNewBest,
       });
-      return;
-    }
 
-    const apiError = new APIError(
-      err.message || "Erreur lors de la soumission",
-      err.status || 500,
-      err.data
-    );
-    errorHandler.handle(apiError, 'score:submit', { showToUser: true, fatal: false });
+      // Bind share button (after UI.showFinalResults renders the button)
+      const shareBtn = document.getElementById("btn-share");
+      if (shareBtn) {
+        if (shareButtonHandler) {
+          shareBtn.removeEventListener("click", shareButtonHandler);
+        }
+        shareButtonHandler = async () => {
+          const avgDistance = state.rounds.reduce((/** @type {number} */ sum, /** @type {any} */ r) => sum + (r.distance || 0), 0) / state.rounds.length;
+          const stats = getStats();
+          const dailyDateKey = state.gameType === MODE_IDS.COUNTRY_DAILY ? 'lastCountryDailyDate'
+            : state.gameType === MODE_IDS.STADIUM_DAILY ? 'lastStadiumDailyDate'
+            : state.gameType === MODE_IDS.CIVILIZATION_DAILY ? 'lastCivilizationDailyDate'
+            : 'lastDailyDate';
+          const dailyNumber = isDailyVariant(state.gameType) ? getDailyNumber(stats[dailyDateKey]) : null;
+          const shareText = formatShareText(dailyNumber, avgDistance, state.rounds, getLang());
+          const success = await shareGameResults(shareText);
+          UI.showToast(
+            success ? t('shareCopied') : t('shareFailed'),
+            success ? 'success' : 'error',
+            3000,
+            { compact: true }
+          );
+        };
+        shareBtn.addEventListener("click", shareButtonHandler);
+      }
+      succeeded = true;
+      return;
+    } catch (error) {
+      const err = /** @type {any} */ (error);
+      const is409Lock = err.status === 409 && err.data?.error === PSEUDO_LOCK_ERROR;
+      const canRetry409 = attempt < MAX_SUBMIT_ATTEMPTS - 1;
+
+      if (is409Lock && canRetry409) {
+        restoreSubmitButton();
+        await new Promise((resolve) => {
+          UI.showPseudoLockedDialog(err.data.pseudo, () => resolve());
+        });
+        currentPseudo = err.data.pseudo;
+        continue;
+      }
+      lastError = err;
+      break;
+    }
+  }
+
+  restoreSubmitButton();
+  if (lastError) {
+    if (lastError.status === 409 && lastError.data?.error === PSEUDO_LOCK_ERROR) {
+      UI.showPseudoLockedDialog(lastError.data.pseudo, () => {});
+    } else {
+      const apiError = new APIError(
+        lastError.message || t('error.submitError'),
+        lastError.status || 500,
+        lastError.data
+      );
+      errorHandler.handle(apiError, 'score:submit', { showToUser: true, fatal: false });
+    }
   }
 };
 

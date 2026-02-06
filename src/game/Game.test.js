@@ -162,7 +162,7 @@ describe("Game.js", () => {
       const newState = await startGame(initialState);
 
       expect(newState.status).toBe(GameStatus.IDLE);
-      expect(newState.error).toBe("Aucune capitale disponible");
+      expect(newState.error).toBe("error.noTargetsCapitals");
     });
 
     it("should handle missing capitals", async () => {
@@ -174,7 +174,7 @@ describe("Game.js", () => {
       const newState = await startGame(initialState);
 
       expect(newState.status).toBe(GameStatus.IDLE);
-      expect(newState.error).toBe("Aucune capitale disponible");
+      expect(newState.error).toBe("error.noTargetsCapitals");
     });
 
     it("should propagate API error", async () => {
