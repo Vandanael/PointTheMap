@@ -1,22 +1,69 @@
 // POST /.netlify/functions/submit
 // Flat handler (no compose) to avoid "w is not a function" after esbuild minification
 
-import { getDatabase } from "./db.js";
+import { getDatabase } from './db.js';
 import {
   jsonResponse,
-  errorResponse,
   successResponse,
   parseJsonBody,
   getClientIp,
-  handleDatabaseError,
   isDatabaseConnectionError,
-} from "./_utils.js";
+  createLogger,
+} from './_utils.js';
 // Import shared game logic from lib (same functions used by client)
-import { haversine, calculateScore } from "../../lib/game-math/index.js";
-import { pointInPolygon, distanceToPolygonBorder, calculateCountryScore } from "../../lib/geo-utils/index.js";
-import { getCountryFeature, getCivilizationFeature } from "./_geo-data.js";
-import { GAME, SCORING, API } from "../../src/config.js";
-import { GAME_MODES } from "../../src/config/game-modes.js";
+import { haversine, calculateScore } from '../../lib/game-math/index.js';
+import {
+  pointInPolygon,
+  distanceToPolygonBorder,
+  calculateCountryScore,
+} from '../../lib/geo-utils/index.js';
+import { getCountryFeature, getCivilizationFeature } from './_geo-data.js';
+import { GAME, SCORING, API } from '../../lib/config/index.js';
+import { GAME_MODES } from '../../lib/config/game-modes.js';
+import { toDomainModel } from '../../src/lib/session/sessionModel.js';
+import { SubmitSchema } from '../../lib/schemas/submit.js';
+
+const logger = createLogger('submit');
+
+const errorJson = (code, message, status = 400, details = undefined, headers = undefined) =>
+  jsonResponse({ ok: false, error: { code, message, details } }, status, headers);
+
+const DB_BREAKER_WINDOW_MS = 60 * 1000;
+const DB_BREAKER_COOLDOWN_MS = 60 * 1000;
+const DB_BREAKER_THRESHOLD = 3;
+
+let dbFailureTimestamps = [];
+let dbBreakerUntil = 0;
+
+const fallbackRateLimits = new Map();
+const FALLBACK_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+
+const recordDbFailure = (error) => {
+  if (!isDatabaseConnectionError(error)) return;
+  const now = Date.now();
+  dbFailureTimestamps = dbFailureTimestamps.filter((ts) => now - ts <= DB_BREAKER_WINDOW_MS);
+  dbFailureTimestamps.push(now);
+  if (dbFailureTimestamps.length >= DB_BREAKER_THRESHOLD) {
+    dbBreakerUntil = now + DB_BREAKER_COOLDOWN_MS;
+  }
+};
+
+const isDbBreakerOpen = () => Date.now() < dbBreakerUntil;
+
+const checkFallbackRateLimit = (ip) => {
+  const now = Date.now();
+  const entry = fallbackRateLimits.get(ip);
+  if (!entry || now > entry.expiresAt) {
+    const expiresAt = now + FALLBACK_RATE_LIMIT_WINDOW_MS;
+    fallbackRateLimits.set(ip, { count: 1, expiresAt });
+    return { allowed: true, remaining: API.RATE_LIMIT_PER_HOUR - 1 };
+  }
+  if (entry.count >= API.RATE_LIMIT_PER_HOUR) {
+    return { allowed: false, remaining: 0 };
+  }
+  entry.count += 1;
+  return { allowed: true, remaining: API.RATE_LIMIT_PER_HOUR - entry.count };
+};
 
 /**
  * @param {number} gameDuration
@@ -24,7 +71,7 @@ import { GAME_MODES } from "../../src/config/game-modes.js";
  */
 const checkPlausibility = (gameDuration) => {
   if (gameDuration < API.MIN_PLAUSIBLE_DURATION_MS || gameDuration > API.MAX_GAME_DURATION_MS) {
-    return { valid: false, reason: "Session duration implausible" };
+    return { valid: false, reason: 'Session duration implausible' };
   }
   return { valid: true };
 };
@@ -65,26 +112,26 @@ const checkRateLimit = async (ip, context) => {
       return { allowed: true, remaining: API.RATE_LIMIT_PER_HOUR - 1 };
     }
   } catch (e) {
-    // On database errors, allow the request but log the error
-    // This prevents rate limiting from blocking legitimate requests when DB is down
-    if (process.env.NODE_ENV === "development") {
+    recordDbFailure(e);
+    if (process.env.NODE_ENV === 'development') {
       const error = /** @type {Error & {code?: string}} */ (e);
-      console.error("Rate limit error:", error.message, error.code);
+      logger.error('Rate limit error:', error.message, error.code);
     }
-    // Allow request to proceed if rate limiting fails (fail open)
-    return { allowed: true, remaining: API.RATE_LIMIT_PER_HOUR };
+    // Fallback to in-memory limiter when DB is unavailable
+    return checkFallbackRateLimit(ip);
   }
 };
 
 /**
- * @param {any[]} rounds
- * @param {any[]} sessionTargets - Can be capitals or countries
- * @param {string} gameType - 'classic', 'daily', or 'country'
+ * Validate submitted rounds against session targets.
+ * @param {any[]} rounds - Submitted rounds
+ * @param {any[]} sessionTargets - Session targets (capitals, countries, stadiums, or civilizations)
+ * @param {string} gameType - Game mode identifier
  * @returns {{valid: boolean, error?: string}}
  */
 const validateRounds = (rounds, sessionTargets, gameType) => {
   if (!Array.isArray(rounds) || rounds.length !== GAME.ROUNDS) {
-    return { valid: false, error: "Invalid rounds count" };
+    return { valid: false, error: 'Invalid rounds count' };
   }
 
   const isCountryMode = gameType === 'country' || gameType === 'country_daily';
@@ -95,27 +142,45 @@ const validateRounds = (rounds, sessionTargets, gameType) => {
     const round = rounds[i];
     const expected = sessionTargets[i];
 
-    const targetField = isCountryMode ? round.country : isCivilizationMode ? round.civilization : isStadiumMode ? round.stadium : round.capital;
+    const targetField = isCountryMode
+      ? round.country
+      : isCivilizationMode
+        ? round.civilization
+        : isStadiumMode
+          ? round.stadium
+          : round.capital;
 
     if (!round || !targetField) {
       return { valid: false, error: `Missing round ${i + 1}` };
     }
 
-    const expectedName = typeof expected === 'object' && expected !== null && 'name' in expected ? expected.name : expected;
+    const expectedName =
+      typeof expected === 'object' && expected !== null && 'name' in expected
+        ? expected.name
+        : expected;
     if (targetField !== expectedName) {
-      return { valid: false, error: `${isCountryMode ? 'Country' : isCivilizationMode ? 'Civilization' : isStadiumMode ? 'Stadium' : 'Capital'} mismatch at round ${i + 1}` };
+      return {
+        valid: false,
+        error: `${isCountryMode ? 'Country' : isCivilizationMode ? 'Civilization' : isStadiumMode ? 'Stadium' : 'Capital'} mismatch at round ${i + 1}`,
+      };
     }
 
     // Per-round time validation - detect suspiciously fast submissions
     if (round.timeElapsed !== undefined && round.timeElapsed !== null) {
-      if (typeof round.timeElapsed !== "number" || !Number.isFinite(round.timeElapsed)) {
+      if (typeof round.timeElapsed !== 'number' || !Number.isFinite(round.timeElapsed)) {
         return { valid: false, error: `Invalid time at round ${i + 1}` };
       }
       if (round.timeElapsed < API.MIN_ROUND_TIME_MS) {
-        return { valid: false, error: `Round ${i + 1} completed too fast (${round.timeElapsed}ms)` };
+        return {
+          valid: false,
+          error: `Round ${i + 1} completed too fast (${round.timeElapsed}ms)`,
+        };
       }
       if (round.timeElapsed > GAME.TIMER_MS + GAME.GRACE_PERIOD_MS + 1000) {
-        return { valid: false, error: `Round ${i + 1} time exceeds maximum (${round.timeElapsed}ms)` };
+        return {
+          valid: false,
+          error: `Round ${i + 1} time exceeds maximum (${round.timeElapsed}ms)`,
+        };
       }
     }
 
@@ -123,7 +188,7 @@ const validateRounds = (rounds, sessionTargets, gameType) => {
       const { lat, lng } = round.click;
 
       // Type and finiteness validation
-      if (typeof lat !== "number" || typeof lng !== "number") {
+      if (typeof lat !== 'number' || typeof lng !== 'number') {
         return { valid: false, error: `Invalid click coordinates at round ${i + 1}` };
       }
 
@@ -150,19 +215,36 @@ const validateRounds = (rounds, sessionTargets, gameType) => {
 export default async function submitHandler(req, context) {
   try {
     if (req.method !== 'POST') {
-      return errorResponse("Method not allowed", 405);
+      return errorJson('method_not_allowed', 'Method not allowed', 405);
+    }
+
+    if (isDbBreakerOpen()) {
+      const retryAfterSeconds = Math.ceil((dbBreakerUntil - Date.now()) / 1000);
+      return errorJson(
+        'service_unavailable',
+        'Service temporarily unavailable. Please retry.',
+        503,
+        { retryAfter: retryAfterSeconds },
+        { 'Retry-After': String(retryAfterSeconds) }
+      );
     }
 
     let sql;
     try {
       sql = getDatabase(context);
     } catch (dbError) {
-      console.error("Database connection failed:", dbError?.message);
-      return errorResponse("Database connection failed. Please try again later.", 503);
+      const error = /** @type {Error} */ (dbError);
+      logger.error('Database connection failed:', error.message);
+      recordDbFailure(dbError);
+      return errorJson(
+        'db_connection_failed',
+        'Database connection failed. Please try again later.',
+        503
+      );
     }
     context.sql = sql;
 
-    console.log("[submit] Function invoked");
+    logger.info('[submit] Function invoked');
 
     const ip = getClientIp(req, context);
 
@@ -172,31 +254,38 @@ export default async function submitHandler(req, context) {
       rateLimit = await checkRateLimit(ip, context);
     } catch (rateLimitError) {
       // If rate limiting fails, log but allow request to proceed
-      console.error("Rate limit check failed:", rateLimitError);
-      rateLimit = { allowed: true, remaining: API.RATE_LIMIT_PER_HOUR };
+      logger.error('Rate limit check failed:', rateLimitError);
+      rateLimit = checkFallbackRateLimit(ip);
     }
 
     if (!rateLimit.allowed) {
-      return errorResponse("Rate limit exceeded. Try again later.", 429);
+      return errorJson('rate_limited', 'Rate limit exceeded. Try again later.', 429);
     }
+    logger.info('[submit] rate limit ok, remaining:', rateLimit.remaining);
 
     const body = await parseJsonBody(req);
-    const { token, rounds, pseudo, gameType = "classic" } = body;
-    const csrfToken = req.headers.get("x-csrf-token");
+    const parsed = SubmitSchema.safeParse(body);
+    if (!parsed.success) {
+      return errorJson('invalid_payload', 'Invalid payload', 400, parsed.error.flatten());
+    }
+    const { token, rounds, pseudo, gameType = 'classic' } = parsed.data;
+    const csrfToken = req.headers.get('x-csrf-token');
 
-    console.log("[submit] Request details - Token:", token?.substring(0, 8), "CSRF from header:", csrfToken?.substring(0, 8));
+    logger.info(
+      '[submit] Request details - Token:',
+      token?.substring(0, 8),
+      'CSRF from header:',
+      csrfToken?.substring(0, 8)
+    );
 
     // Validate pseudo: 3-5 uppercase letters
-    if (!pseudo || typeof pseudo !== "string") {
-      return errorResponse("Invalid pseudo (3-5 uppercase letters required)", 400);
-    }
     const trimmedPseudo = pseudo.trim();
-    if (trimmedPseudo.length < 3 || trimmedPseudo.length > 5 || !/^[A-Z]{3,5}$/.test(trimmedPseudo)) {
-      return errorResponse("Invalid pseudo (3-5 uppercase letters required)", 400);
-    }
-
-    if (!token || typeof token !== "string") {
-      return errorResponse("Invalid token", 400);
+    if (
+      trimmedPseudo.length < 3 ||
+      trimmedPseudo.length > 5 ||
+      !/^[A-Z]{3,5}$/.test(trimmedPseudo)
+    ) {
+      return errorJson('invalid_pseudo', 'Invalid pseudo (3-5 uppercase letters required)', 400);
     }
 
     let sessionResult;
@@ -209,68 +298,79 @@ export default async function submitHandler(req, context) {
       `;
     } catch (dbError) {
       const error = /** @type {Error & {code?: string}} */ (dbError);
-      console.error("Database query error (session lookup):", error.message, error.code);
-      return handleDatabaseError(error, "submit:session-lookup");
+      logger.error('Database query error (session lookup):', error.message, error.code);
+      return errorJson(
+        isDatabaseConnectionError(error) ? 'db_connection_error' : 'db_error',
+        'Database error. Please try again later.',
+        isDatabaseConnectionError(error) ? 503 : 500
+      );
     }
 
     if (sessionResult.length === 0) {
-      return errorResponse("Session not found or expired", 401);
+      return errorJson('session_not_found', 'Session not found or expired', 401);
     }
 
-    const sessionRow = sessionResult[0];
-    const session = {
+    const sessionRow = /** @type {any} */ (sessionResult[0]);
+    // Map DB row to persistence model, then normalize to domain model
+    // Legacy DB column "capitals" actually contains generic targets (capitals, countries, stadiums, civilizations)
+    const persistenceSession = {
       token: sessionRow.token,
-      capitals: sessionRow.capitals,
+      capitals: sessionRow.capitals, // Legacy DB field name
       startTime: parseInt(sessionRow.start_time, 10),
       used: sessionRow.used,
       gameType: sessionRow.game_type,
       csrfToken: sessionRow.csrf_token,
-      playerId: sessionRow.player_id,
+      playerId: sessionRow.player_id ?? undefined,
     };
+    const session = toDomainModel(persistenceSession);
 
     // CSRF token validation (strict: reject any mismatch)
     if (session.csrfToken !== csrfToken) {
-      console.log("[submit] CSRF token mismatch, returning 403");
-      return jsonResponse({ error: "Invalid CSRF token" }, 403);
+      logger.info('[submit] CSRF token mismatch, returning 403');
+      return errorJson('csrf_mismatch', 'Invalid CSRF token', 403);
     }
 
     if (session.used) {
-      return errorResponse("Session already used", 401);
+      return errorJson('session_used', 'Session already used', 401);
     }
 
     if (session.gameType && session.gameType !== gameType) {
-      return errorResponse("Game type mismatch", 400);
+      return errorJson('game_type_mismatch', 'Game type mismatch', 400);
     }
 
     const now = Date.now();
 
     if (session.startTime > now) {
-      return errorResponse("Invalid session timestamp", 400);
+      return errorJson('invalid_session_timestamp', 'Invalid session timestamp', 400);
     }
 
     const gameDuration = now - session.startTime;
 
     if (gameDuration < 0) {
-      return errorResponse("Invalid game duration", 400);
+      return errorJson('invalid_game_duration', 'Invalid game duration', 400);
     }
 
     if (gameDuration > API.SESSION_EXPIRY_MS) {
       await sql`DELETE FROM sessions WHERE token = ${token}`;
-      return errorResponse("Session expired", 401);
+      return errorJson('session_expired', 'Session expired', 401);
     }
 
     if (gameDuration < API.MIN_GAME_DURATION_MS) {
-      return errorResponse("Suspicious activity: too fast", 400);
+      return errorJson('suspicious_fast', 'Suspicious activity: too fast', 400);
     }
 
-    const validation = validateRounds(rounds, session.capitals, session.gameType || 'classic');
+    const validation = validateRounds(rounds, session.targets, session.gameType || 'classic');
     if (!validation.valid) {
-      return errorResponse(validation.error, 400);
+      return errorJson('invalid_rounds', validation.error || 'Invalid rounds', 400);
     }
 
     const plausibility = checkPlausibility(gameDuration);
     if (!plausibility.valid) {
-      return errorResponse(plausibility.reason, 400);
+      return errorJson(
+        'implausible_duration',
+        plausibility.reason || 'Session duration implausible',
+        400
+      );
     }
 
     /**
@@ -280,8 +380,9 @@ export default async function submitHandler(req, context) {
      */
     const validateRound = (round, i) => {
       const isCountryMode = session.gameType === 'country' || session.gameType === 'country_daily';
-      const isCivilizationMode = session.gameType === 'civilization' || session.gameType === 'civilization_daily';
-      const serverTarget = session.capitals[i]; // Contains capitals, countries, or civilizations
+      const isCivilizationMode =
+        session.gameType === 'civilization' || session.gameType === 'civilization_daily';
+      const serverTarget = /** @type {any} */ (session.targets[i]); // Generic session targets (semantically correct)
 
       // Country mode: server-side GeoJSON validation
       if (isCountryMode) {
@@ -292,11 +393,14 @@ export default async function submitHandler(req, context) {
             click: null,
             distance: null,
             score: 0,
-            status: "timeout",
+            status: 'timeout',
           };
         }
 
-        const targetFeature = getCountryFeature(serverTarget.countryId);
+        const targetCountryId = serverTarget?.countryId ?? '';
+        const targetFeature = targetCountryId
+          ? /** @type {any} */ (getCountryFeature(targetCountryId))
+          : undefined;
         let serverScore;
         let distance;
 
@@ -305,12 +409,25 @@ export default async function submitHandler(req, context) {
             { coordinates: [round.click.lng, round.click.lat] },
             targetFeature.geometry
           );
-          distance = isInside ? 0 : distanceToPolygonBorder([round.click.lat, round.click.lng], targetFeature.geometry);
+          distance = isInside
+            ? 0
+            : distanceToPolygonBorder([round.click.lat, round.click.lng], targetFeature.geometry);
           serverScore = calculateCountryScore(distance);
 
           // Apply time bonus if enabled for this mode
-          const modeConfig = GAME_MODES[session.gameType]?.scoring?.timeBonus;
-          if (round.timeElapsed && modeConfig?.enabled && SCORING.ENABLE_TIME_BONUS) {
+          const modeKey = session.gameType ?? 'classic';
+          const modeConfig = GAME_MODES[modeKey]?.scoring?.timeBonus;
+          if (
+            round.timeElapsed &&
+            modeConfig?.enabled &&
+            SCORING.ENABLE_TIME_BONUS &&
+            modeConfig.distanceThreshold !== null &&
+            modeConfig.distanceThreshold !== undefined &&
+            modeConfig.maxBonusPercent !== null &&
+            modeConfig.maxBonusPercent !== undefined &&
+            modeConfig.maxBonus !== null &&
+            modeConfig.maxBonus !== undefined
+          ) {
             const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
             const timeRemaining = totalTimeAllowed - round.timeElapsed;
             if (distance < modeConfig.distanceThreshold && timeRemaining > 0) {
@@ -321,12 +438,17 @@ export default async function submitHandler(req, context) {
           }
 
           if (round.score && Math.abs(round.score - serverScore) > 100) {
-            console.warn(`[submit] Country score mismatch: client=${round.score}, server=${serverScore}`);
+            logger.warn(
+              `[submit] Country score mismatch: client=${round.score}, server=${serverScore}`
+            );
           }
         } else {
           // Fallback: clamp client score (GeoJSON data missing for this country)
           distance = round.distanceToTargetKm || 0;
-          serverScore = Math.min(Math.max(Math.round(round.score || 0), 0), GAME.MAX_SCORE_PER_ROUND);
+          serverScore = Math.min(
+            Math.max(Math.round(round.score || 0), 0),
+            GAME.MAX_SCORE_PER_ROUND
+          );
         }
 
         return {
@@ -337,7 +459,7 @@ export default async function submitHandler(req, context) {
           click: round.click,
           distance: Math.round(distance),
           score: serverScore,
-          status: "completed",
+          status: 'completed',
         };
       }
 
@@ -350,11 +472,14 @@ export default async function submitHandler(req, context) {
             click: null,
             distance: null,
             score: 0,
-            status: "timeout",
+            status: 'timeout',
           };
         }
 
-        const targetFeature = getCivilizationFeature(serverTarget.id);
+        const targetCivilizationId = serverTarget?.id ?? '';
+        const targetFeature = targetCivilizationId
+          ? /** @type {any} */ (getCivilizationFeature(targetCivilizationId))
+          : undefined;
         let serverScore;
         let distance;
 
@@ -363,12 +488,25 @@ export default async function submitHandler(req, context) {
             { coordinates: [round.click.lng, round.click.lat] },
             targetFeature.geometry
           );
-          distance = isInside ? 0 : distanceToPolygonBorder([round.click.lat, round.click.lng], targetFeature.geometry);
+          distance = isInside
+            ? 0
+            : distanceToPolygonBorder([round.click.lat, round.click.lng], targetFeature.geometry);
           serverScore = calculateCountryScore(distance);
 
           // Apply time bonus if enabled for this mode
-          const modeConfig = GAME_MODES[session.gameType]?.scoring?.timeBonus;
-          if (round.timeElapsed && modeConfig?.enabled && SCORING.ENABLE_TIME_BONUS) {
+          const modeKey = session.gameType ?? 'classic';
+          const modeConfig = GAME_MODES[modeKey]?.scoring?.timeBonus;
+          if (
+            round.timeElapsed &&
+            modeConfig?.enabled &&
+            SCORING.ENABLE_TIME_BONUS &&
+            modeConfig.distanceThreshold !== null &&
+            modeConfig.distanceThreshold !== undefined &&
+            modeConfig.maxBonusPercent !== null &&
+            modeConfig.maxBonusPercent !== undefined &&
+            modeConfig.maxBonus !== null &&
+            modeConfig.maxBonus !== undefined
+          ) {
             const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
             const timeRemaining = totalTimeAllowed - round.timeElapsed;
             if (distance < modeConfig.distanceThreshold && timeRemaining > 0) {
@@ -379,12 +517,17 @@ export default async function submitHandler(req, context) {
           }
 
           if (round.score && Math.abs(round.score - serverScore) > 100) {
-            console.warn(`[submit] Civilization score mismatch: client=${round.score}, server=${serverScore}`);
+            logger.warn(
+              `[submit] Civilization score mismatch: client=${round.score}, server=${serverScore}`
+            );
           }
         } else {
           // Fallback: clamp client score (GeoJSON data missing)
           distance = round.distanceToTargetKm || 0;
-          serverScore = Math.min(Math.max(Math.round(round.score || 0), 0), GAME.MAX_SCORE_PER_ROUND);
+          serverScore = Math.min(
+            Math.max(Math.round(round.score || 0), 0),
+            GAME.MAX_SCORE_PER_ROUND
+          );
         }
 
         return {
@@ -395,13 +538,16 @@ export default async function submitHandler(req, context) {
           click: round.click,
           distance: Math.round(distance),
           score: serverScore,
-          status: "completed",
+          status: 'completed',
         };
       }
 
       // Stadium mode: server-side validation (has lat/lng like capitals)
       if (session.gameType === 'stadium' || session.gameType === 'stadium_daily') {
-        const stadiumCoords = /** @type {[number, number]} */ ([serverTarget.lat, serverTarget.lng]);
+        const stadiumCoords = /** @type {[number, number]} */ ([
+          serverTarget.lat ?? 0,
+          serverTarget.lng ?? 0,
+        ]);
 
         if (!round.click) {
           return {
@@ -409,7 +555,7 @@ export default async function submitHandler(req, context) {
             click: null,
             distance: null,
             score: 0,
-            status: "timeout",
+            status: 'timeout',
           };
         }
 
@@ -422,13 +568,15 @@ export default async function submitHandler(req, context) {
             click: round.click,
             distance: API.MAX_DISTANCE_KM,
             score: 0,
-            status: "invalid",
+            status: 'invalid',
           };
         }
 
         const score = calculateScore(distance);
         if (round.score && Math.abs(round.score - score) > 1) {
-          console.warn(`[submit] Stadium score mismatch: client=${round.score}, server=${Math.round(score)}`);
+          logger.warn(
+            `[submit] Stadium score mismatch: client=${round.score}, server=${Math.round(score)}`
+          );
         }
 
         return {
@@ -436,7 +584,7 @@ export default async function submitHandler(req, context) {
           click: round.click,
           distance: Math.round(distance),
           score: Math.round(score),
-          status: "completed",
+          status: 'completed',
         };
       }
 
@@ -449,7 +597,7 @@ export default async function submitHandler(req, context) {
           click: null,
           distance: null,
           score: 0,
-          status: "timeout",
+          status: 'timeout',
         };
       }
 
@@ -462,7 +610,7 @@ export default async function submitHandler(req, context) {
           click: round.click,
           distance: API.MAX_DISTANCE_KM,
           score: 0,
-          status: "invalid",
+          status: 'invalid',
         };
       }
 
@@ -470,8 +618,22 @@ export default async function submitHandler(req, context) {
 
       // Calculate time bonus (if applicable for this game mode)
       let timeBonus = 0;
-      const timeBonusConfig = SCORING.TIME_BONUS_BY_MODE[session.gameType];
-      if (round.timeElapsed && timeBonusConfig?.enabled && SCORING.ENABLE_TIME_BONUS) {
+      const modeKey = session.gameType ?? 'classic';
+      const timeBonusConfig =
+        SCORING.TIME_BONUS_BY_MODE[
+          /** @type {keyof typeof SCORING.TIME_BONUS_BY_MODE} */ (modeKey)
+        ];
+      if (
+        round.timeElapsed &&
+        timeBonusConfig?.enabled &&
+        SCORING.ENABLE_TIME_BONUS &&
+        timeBonusConfig.distanceThreshold !== null &&
+        timeBonusConfig.distanceThreshold !== undefined &&
+        timeBonusConfig.maxBonusPercent !== null &&
+        timeBonusConfig.maxBonusPercent !== undefined &&
+        timeBonusConfig.maxBonus !== null &&
+        timeBonusConfig.maxBonus !== undefined
+      ) {
         const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
         const timeRemaining = totalTimeAllowed - round.timeElapsed;
         const config = timeBonusConfig;
@@ -479,10 +641,7 @@ export default async function submitHandler(req, context) {
         if (config.enabled && distance < config.distanceThreshold && timeRemaining > 0) {
           const timeRatio = timeRemaining / totalTimeAllowed;
           const bonusPercent = timeRatio * config.maxBonusPercent;
-          timeBonus = Math.min(
-            Math.round(baseScore * bonusPercent),
-            config.maxBonus
-          );
+          timeBonus = Math.min(Math.round(baseScore * bonusPercent), config.maxBonus);
         }
       }
 
@@ -490,7 +649,9 @@ export default async function submitHandler(req, context) {
 
       // Validate client score matches server calculation (±1 point tolerance for rounding)
       if (round.score && Math.abs(round.score - totalScore) > 1) {
-        console.warn(`[submit] Score mismatch: client=${round.score}, server=${totalScore} (base=${Math.round(baseScore)}, bonus=${timeBonus})`);
+        logger.warn(
+          `[submit] Score mismatch: client=${round.score}, server=${totalScore} (base=${Math.round(baseScore)}, bonus=${timeBonus})`
+        );
         // Use server score for anti-cheat
       }
 
@@ -499,17 +660,20 @@ export default async function submitHandler(req, context) {
         click: round.click,
         distance: Math.round(distance),
         score: Math.round(totalScore),
-        status: "completed",
+        status: 'completed',
       };
     };
 
     const validatedRounds = rounds.map(validateRound);
 
-    const totalScore = validatedRounds.reduce((/** @type {number} */ sum, /** @type {any} */ r) => sum + r.score, 0);
+    const totalScore = validatedRounds.reduce(
+      (/** @type {number} */ sum, /** @type {any} */ r) => sum + r.score,
+      0
+    );
     const clientIp = getClientIp(req, context);
 
-    if (clientIp === "unknown") {
-      return errorResponse("Unable to verify player identity", 400);
+    if (clientIp === 'unknown') {
+      return errorJson('client_ip_unknown', 'Unable to verify player identity', 400);
     }
 
     let existingPseudoResult;
@@ -523,21 +687,21 @@ export default async function submitHandler(req, context) {
       `;
     } catch (dbError) {
       const error = /** @type {Error & {code?: string}} */ (dbError);
-      console.error("Database query error (pseudo check):", error.message, error.code);
-      return handleDatabaseError(error, "submit:pseudo-check");
+      logger.error('Database query error (pseudo check):', error.message, error.code);
+      return errorJson(
+        isDatabaseConnectionError(error) ? 'db_connection_error' : 'db_error',
+        'Database error. Please try again later.',
+        isDatabaseConnectionError(error) ? 503 : 500
+      );
     }
 
     let existingPseudo = null;
     if (existingPseudoResult.length > 0) {
       existingPseudo = existingPseudoResult[0].pseudo;
-      if (existingPseudo !== pseudo) {
-        return jsonResponse(
-          {
-            error: "pseudo_already_set_for_this_ip",
-            pseudo: existingPseudo,
-          },
-          409
-        );
+      if (existingPseudo !== trimmedPseudo) {
+        return errorJson('pseudo_already_set', 'Pseudo already set for this IP', 409, {
+          pseudo: existingPseudo,
+        });
       }
     }
 
@@ -545,7 +709,7 @@ export default async function submitHandler(req, context) {
     let isTopFifty = false;
 
     try {
-      console.log("[submit] Starting database transaction");
+      logger.info('[submit] Starting database transaction');
 
       // Double-check pseudo hasn't changed (authoritative check before marking session)
       const doubleCheckResult = await sql`
@@ -556,27 +720,23 @@ export default async function submitHandler(req, context) {
         LIMIT 1
       `;
 
-      if (doubleCheckResult.length > 0 && doubleCheckResult[0].pseudo !== pseudo) {
-        console.log("[submit] Pseudo mismatch detected");
-        return jsonResponse(
-          {
-            error: "pseudo_already_set_for_this_ip",
-            pseudo: doubleCheckResult[0].pseudo,
-          },
-          409
-        );
+      if (doubleCheckResult.length > 0 && doubleCheckResult[0].pseudo !== trimmedPseudo) {
+        logger.info('[submit] Pseudo mismatch detected');
+        return errorJson('pseudo_already_set', 'Pseudo already set for this IP', 409, {
+          pseudo: doubleCheckResult[0].pseudo,
+        });
       }
 
       // Mark session as used (after pseudo check passes, before score insert)
       await sql`UPDATE sessions SET used = true WHERE token = ${token}`;
-      console.log("[submit] Session marked as used");
+      logger.info('[submit] Session marked as used');
 
       // Insert score
       await sql`
         INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, ip, player_id)
-        VALUES (${pseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}::jsonb, ${now}, ${gameType}, ${clientIp}, ${session.playerId})
+        VALUES (${trimmedPseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}::jsonb, ${now}, ${gameType}, ${clientIp}, ${session.playerId})
       `;
-      console.log("[submit] Score inserted");
+      logger.info('[submit] Score inserted');
 
       // Update player stats
       if (session.playerId) {
@@ -586,33 +746,33 @@ export default async function submitHandler(req, context) {
               total_score = total_score + ${totalScore}
           WHERE player_id = ${session.playerId}
         `;
-        console.log("[submit] Player stats updated");
+        logger.info('[submit] Player stats updated');
       }
 
       // Clean up session
       await sql`DELETE FROM sessions WHERE token = ${token}`;
-      console.log("[submit] Session deleted")
+      logger.info('[submit] Session deleted');
 
       let rankResult;
       try {
-        console.log("[submit] Calculating rank");
+        logger.info('[submit] Calculating rank');
         rankResult = await sql`
           SELECT COUNT(*) + 1 as rank
           FROM scores
           WHERE game_type = ${gameType}
             AND (score > ${totalScore} OR (score = ${totalScore} AND time < ${gameDuration}))
         `;
-        rank = parseInt(rankResult[0]?.rank || "1", 10);
+        rank = parseInt(rankResult[0]?.rank || '1', 10);
         isTopFifty = rank <= 50;
-        console.log("[submit] Rank calculated:", rank);
+        logger.info('[submit] Rank calculated:', rank);
       } catch (rankError) {
         // If rank query fails, we still return the score but with rank 0
-        console.error("[submit] Rank query error:", rankError);
+        logger.error('[submit] Rank query error:', rankError);
         rank = 0;
         isTopFifty = false;
       }
 
-      console.log("[submit] Submission successful");
+      logger.info('[submit] Submission successful');
       return successResponse({
         score: totalScore,
         rank,
@@ -621,56 +781,65 @@ export default async function submitHandler(req, context) {
       });
     } catch (dbError) {
       const error = /** @type {Error & {code?: string}} */ (dbError);
-      console.error("[submit] Database operation failed:", error.message, error.code, error.stack);
+      logger.error('[submit] Database operation failed:', error.message, error.code, error.stack);
 
       // Handle database connection errors
       if (isDatabaseConnectionError(error)) {
-        console.error("[submit] Connection error detected");
-        return jsonResponse({
-          error: "Database connection error. Please try again later.",
-          score: totalScore,
-          rank: 0,
-          isTopFifty: false,
-          rounds: validatedRounds,
-        }, 503);
+        logger.error('[submit] Connection error detected');
+        return errorJson(
+          'db_connection_error',
+          'Database connection error. Please try again later.',
+          503,
+          {
+            score: totalScore,
+            rank: 0,
+            isTopFifty: false,
+            rounds: validatedRounds,
+          }
+        );
       }
 
-      console.error("[submit] Generic database error");
-      return jsonResponse({
-        error: "Database error. Please try again later.",
+      logger.error('[submit] Generic database error');
+      return errorJson('db_error', 'Database error. Please try again later.', 500, {
         score: totalScore,
         rank: 0,
         isTopFifty: false,
         rounds: validatedRounds,
-      }, 500);
+      });
     }
   } catch (outerError) {
     // Catch any unhandled errors that might cause 502
     const error = /** @type {Error & {code?: string}} */ (outerError);
-    console.error("[submit] Unhandled error caught:", error.message, error.code, error.stack);
+    logger.error('[submit] Unhandled error caught:', error.message, error.code, error.stack);
 
     // Handle JSON parsing errors
     if (error instanceof SyntaxError) {
-      console.error("[submit] JSON parsing error");
-      return errorResponse("Invalid request body", 400);
+      logger.error('[submit] JSON parsing error');
+      return errorJson('invalid_json', 'Invalid request body', 400);
     }
 
     // Check if it's a database connection error
     if (isDatabaseConnectionError(error)) {
-      console.error("[submit] Connection error in outer catch");
-      return errorResponse("Database connection error. Please try again later.", 503);
+      logger.error('[submit] Connection error in outer catch');
+      return errorJson(
+        'db_connection_error',
+        'Database connection error. Please try again later.',
+        503
+      );
     }
 
     // Log full error details
-    console.error("[submit] Generic error - full details:", JSON.stringify({
-      message: error.message,
-      code: error.code,
-      name: error.name,
-      stack: error.stack
-    }));
+    logger.error(
+      '[submit] Generic error - full details:',
+      JSON.stringify({
+        message: error.message,
+        code: error.code,
+        name: error.name,
+        stack: error.stack,
+      })
+    );
 
     // Generic error response - ALWAYS return a response to prevent 502
-    return errorResponse("Internal server error. Please try again later.", 500);
+    return errorJson('internal_error', 'Internal server error. Please try again later.', 500);
   }
-};
-
+}

@@ -6,7 +6,7 @@ import * as leaflet from 'leaflet';
 
 // Mock utils module (isIOS detection)
 vi.mock('../utils.js', async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = /** @type {any} */ (await importOriginal());
   return {
     ...actual,
     isIOS: vi.fn(() => false), // Default to non-iOS
@@ -112,13 +112,14 @@ import * as utils from '../utils.js';
 const mockIsIOS = vi.mocked(utils.isIOS);
 
 describe('MapSystem', () => {
+  /** @type {MapSystem} */
   let system;
 
   beforeEach(() => {
     // Mock DOM container
     if (typeof document === 'undefined') {
-      global.document = {
-        getElementById: vi.fn(() => ({})),
+      /** @type {any} */ (global).document = {
+        getElementById: vi.fn(() => /** @type {any} */ ({})),
       };
     }
 
@@ -265,9 +266,7 @@ describe('MapSystem', () => {
       system.enableClicks(() => {});
 
       // Simulate click event
-      const clickHandler = mockLeafletMap.on.mock.calls.find(
-        (call) => call[0] === 'click'
-      )?.[1];
+      const clickHandler = mockLeafletMap.on.mock.calls.find((call) => call[0] === 'click')?.[1];
 
       if (clickHandler) {
         clickHandler({ latlng: { lat: 48.8566, lng: 2.3522 } });
@@ -282,9 +281,7 @@ describe('MapSystem', () => {
       system.enableClicks(callback);
 
       // Simulate click event
-      const clickHandler = mockLeafletMap.on.mock.calls.find(
-        (call) => call[0] === 'click'
-      )?.[1];
+      const clickHandler = mockLeafletMap.on.mock.calls.find((call) => call[0] === 'click')?.[1];
 
       if (clickHandler) {
         clickHandler({ latlng: { lat: 48.8566, lng: 2.3522 } });
@@ -331,35 +328,29 @@ describe('MapSystem', () => {
     });
 
     it('should add click marker', () => {
-      system.addClickMarker([48.8566, 2.3522]);
+      system.addClickMarker(/** @type {[number, number]} */ ([48.8566, 2.3522]));
 
-      expect(mockMarker).toHaveBeenCalledWith(
-        [48.8566, 2.3522],
-        expect.any(Object)
-      );
+      expect(mockMarker).toHaveBeenCalledWith([48.8566, 2.3522], expect.any(Object));
       expect(system.getMarkerCount()).toBe(1);
     });
 
     it('should add capital marker', () => {
-      system.addCapitalMarker([48.8566, 2.3522]);
+      system.addCapitalMarker(/** @type {[number, number]} */ ([48.8566, 2.3522]));
 
-      expect(mockMarker).toHaveBeenCalledWith(
-        [48.8566, 2.3522],
-        expect.any(Object)
-      );
+      expect(mockMarker).toHaveBeenCalledWith([48.8566, 2.3522], expect.any(Object));
       expect(system.getMarkerCount()).toBe(1);
     });
 
     it('should track multiple markers', () => {
-      system.addClickMarker([48.8566, 2.3522]);
-      system.addCapitalMarker([51.5074, -0.1278]);
+      system.addClickMarker(/** @type {[number, number]} */ ([48.8566, 2.3522]));
+      system.addCapitalMarker(/** @type {[number, number]} */ ([51.5074, -0.1278]));
 
       expect(system.getMarkerCount()).toBe(2);
     });
 
     it('should use different icons for click and capital markers', () => {
-      system.addClickMarker([48.8566, 2.3522]);
-      system.addCapitalMarker([51.5074, -0.1278]);
+      system.addClickMarker(/** @type {[number, number]} */ ([48.8566, 2.3522]));
+      system.addCapitalMarker(/** @type {[number, number]} */ ([51.5074, -0.1278]));
 
       const calls = mockMarker.mock.calls;
       const icon1 = calls[0][1].icon.html;
@@ -371,24 +362,29 @@ describe('MapSystem', () => {
 
     it('should add capital markers to capitals layer', async () => {
       await system.init('map');
-      
+
       // Verify that layerGroup was called to create the capitals layer
       expect(mockLayerGroup).toHaveBeenCalled();
-      
+
       // Track calls to marker.addTo
+      /** @type {Array<{ marker: any, layer: any }>} */
       const addToCalls = [];
-      const originalAddTo = vi.fn().mockImplementation(function(layer) {
-        addToCalls.push({ marker: this, layer });
-        return this;
-      });
-      
+      const originalAddTo = vi.fn().mockImplementation(
+        /** @this {any} */ function (layer) {
+          addToCalls.push({ marker: this, layer });
+          return this;
+        }
+      );
+
       // Mock marker to track addTo calls
-      mockMarker.mockImplementation((coords, options) => ({
-        addTo: originalAddTo,
-      }));
-      
-      system.addCapitalMarker([48.8566, 2.3522]);
-      
+      mockMarker.mockImplementation(
+        (/** @type {[number, number]} */ coords, /** @type {any} */ options) => ({
+          addTo: originalAddTo,
+        })
+      );
+
+      system.addCapitalMarker(/** @type {[number, number]} */ ([48.8566, 2.3522]));
+
       // Verify marker was created and added to a layerGroup
       expect(mockMarker).toHaveBeenCalled();
       expect(addToCalls.length).toBe(1);
@@ -404,7 +400,9 @@ describe('MapSystem', () => {
     });
 
     it('should draw line between two points', () => {
+      /** @type {[number, number]} */
       const from = [48.8566, 2.3522];
+      /** @type {[number, number]} */
       const to = [51.5074, -0.1278];
 
       system.drawLine(from, to, 344);
@@ -415,14 +413,24 @@ describe('MapSystem', () => {
     });
 
     it('should track multiple lines', () => {
-      system.drawLine([48, 2], [51, 0], 344);
-      system.drawLine([40, -3], [41, 2], 567);
+      system.drawLine(
+        /** @type {[number, number]} */ ([48, 2]),
+        /** @type {[number, number]} */ ([51, 0]),
+        344
+      );
+      system.drawLine(
+        /** @type {[number, number]} */ ([40, -3]),
+        /** @type {[number, number]} */ ([41, 2]),
+        567
+      );
 
       expect(system.getPolylineCount()).toBe(2);
     });
 
     it('should use normalized segment for antimeridian (shortest arc)', () => {
+      /** @type {[number, number]} */
       const from = [0, 170];
+      /** @type {[number, number]} */
       const to = [0, -170];
       system.drawLine(from, to, 222);
       expect(mockPolyline).toHaveBeenCalled();
@@ -445,7 +453,9 @@ describe('MapSystem', () => {
     });
 
     it('should show round result with markers and line', async () => {
+      /** @type {[number, number]} */
       const clickCoords = [48.8566, 2.3522];
+      /** @type {[number, number]} */
       const capitalCoords = [51.5074, -0.1278];
 
       const resultPromise = system.showRoundResult(clickCoords, capitalCoords, 344);
@@ -461,7 +471,9 @@ describe('MapSystem', () => {
       const handler = vi.fn();
       eventBus.subscribe('map:result-shown', handler);
 
+      /** @type {[number, number]} */
       const clickCoords = [48.8566, 2.3522];
+      /** @type {[number, number]} */
       const capitalCoords = [51.5074, -0.1278];
 
       const resultPromise = system.showRoundResult(clickCoords, capitalCoords, 344);
@@ -478,7 +490,9 @@ describe('MapSystem', () => {
     });
 
     it('should use flyToBounds to show both markers', async () => {
+      /** @type {[number, number]} */
       const clickCoords = [40, 10];
+      /** @type {[number, number]} */
       const capitalCoords = [50, 20];
 
       const resultPromise = system.showRoundResult(clickCoords, capitalCoords, 100);
@@ -494,7 +508,7 @@ describe('MapSystem', () => {
         expect.objectContaining({
           padding: [60, 60],
           maxZoom: 14,
-          duration: 2.0,
+          duration: 1.5,
           easeLinearity: 0.15,
           animate: true,
         })
@@ -505,10 +519,14 @@ describe('MapSystem', () => {
       const handler = vi.fn();
       eventBus.subscribe('map:result-shown', handler);
 
+      /** @type {[number, number]} */
       const clickCoords = [48.8566, 2.3522];
+      /** @type {[number, number]} */
       const capitalCoords = [51.5074, -0.1278];
 
-      const resultPromise = system.showRoundResult(clickCoords, capitalCoords, 344, { skipResultLine: true });
+      const resultPromise = system.showRoundResult(clickCoords, capitalCoords, 344, {
+        skipResultLine: true,
+      });
       await resultPromise;
 
       expect(system.getMarkerCount()).toBe(2);
@@ -548,9 +566,13 @@ describe('MapSystem', () => {
     });
 
     it('should clear all markers and polylines', () => {
-      system.addClickMarker([48, 2]);
-      system.addCapitalMarker([51, 0]);
-      system.drawLine([48, 2], [51, 0], 344);
+      system.addClickMarker(/** @type {[number, number]} */ ([48, 2]));
+      system.addCapitalMarker(/** @type {[number, number]} */ ([51, 0]));
+      system.drawLine(
+        /** @type {[number, number]} */ ([48, 2]),
+        /** @type {[number, number]} */ ([51, 0]),
+        344
+      );
 
       system.clearMap();
 
@@ -568,16 +590,18 @@ describe('MapSystem', () => {
     });
 
     it('should clear only capital markers', async () => {
-      const clickMarker = system.addClickMarker([48, 2]);
-      const capitalMarker1 = system.addCapitalMarker([51, 0]);
-      const capitalMarker2 = system.addCapitalMarker([52, 1]);
+      const clickMarker = system.addClickMarker(/** @type {[number, number]} */ ([48, 2]));
+      const capitalMarker1 = system.addCapitalMarker(/** @type {[number, number]} */ ([51, 0]));
+      const capitalMarker2 = system.addCapitalMarker(/** @type {[number, number]} */ ([52, 1]));
 
       expect(system.getMarkerCount()).toBe(3);
 
       // Get all layerGroup instances created (first one should be the capitals layer)
-      const allLayerGroups = mockLayerGroup.mock.results.map(r => r.value);
+      const allLayerGroups = mockLayerGroup.mock.results.map(
+        (/** @type {{ value: any }} */ r) => r.value
+      );
       const capitalsLayerInstance = allLayerGroups[0]; // First call is for capitals layer
-      
+
       // Reset clearLayers mock to track this specific call
       capitalsLayerInstance.clearLayers.mockClear();
 
@@ -585,8 +609,8 @@ describe('MapSystem', () => {
 
       // Verify clearLayers was called on the capitals layer
       // Check that clearLayers was called on at least one layerGroup instance
-      const clearLayersCalled = allLayerGroups.some(layer => 
-        layer.clearLayers.mock.calls.length > 0
+      const clearLayersCalled = allLayerGroups.some(
+        (/** @type {any} */ layer) => layer.clearLayers.mock.calls.length > 0
       );
       expect(clearLayersCalled).toBe(true);
 
@@ -598,7 +622,7 @@ describe('MapSystem', () => {
       const handler = vi.fn();
       eventBus.subscribe('map:capitals-cleared', handler);
 
-      system.addCapitalMarker([51, 0]);
+      system.addCapitalMarker(/** @type {[number, number]} */ ([51, 0]));
       system.clearCapitals();
 
       expect(handler).toHaveBeenCalled();
@@ -626,11 +650,7 @@ describe('MapSystem', () => {
     it('should fly to specific coordinates', () => {
       system.flyTo([48.8566, 2.3522], 10);
 
-      expect(mockLeafletMap.flyTo).toHaveBeenCalledWith(
-        [48.8566, 2.3522],
-        10,
-        expect.any(Object)
-      );
+      expect(mockLeafletMap.flyTo).toHaveBeenCalledWith([48.8566, 2.3522], 10, expect.any(Object));
     });
 
     it('should get center coordinates', () => {
@@ -656,7 +676,7 @@ describe('MapSystem', () => {
       vi.mocked(leaflet.tileLayer).mockClear();
 
       // Emit theme change event
-      eventBus.emit('theme:changed');
+      eventBus.emit('theme:changed', { theme: 'dark' });
 
       // Should have created new tile layer
       expect(leaflet.tileLayer).toHaveBeenCalled();
@@ -666,7 +686,7 @@ describe('MapSystem', () => {
   describe('Destroy', () => {
     it('should clean up all resources', async () => {
       await system.init('map');
-      system.addClickMarker([48, 2]);
+      system.addClickMarker(/** @type {[number, number]} */ ([48, 2]));
       system.enableClicks(() => {});
 
       system.destroy();
@@ -701,7 +721,7 @@ describe('MapSystem', () => {
       system.destroy();
 
       // Emit theme change - should not create new tile layer
-      eventBus.emit('theme:changed');
+      eventBus.emit('theme:changed', { theme: 'dark' });
 
       const finalCount = vi.mocked(leaflet.tileLayer).mock.calls.length;
       expect(finalCount).toBe(initialCount);

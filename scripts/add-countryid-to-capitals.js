@@ -26,7 +26,8 @@ if (!capitalsMatch) {
 
 // Parse capitals (simple regex-based parsing)
 const capitals = [];
-const capitalRegex = /\{\s*name:\s*"([^"]+)"\s*,\s*country:\s*"([^"]+)"\s*,\s*lat:\s*([-\d.]+)\s*,\s*lng:\s*([-\d.]+)\s*,\s*popular:\s*(true|false)\s*\}/g;
+const capitalRegex =
+  /\{\s*name:\s*"([^"]+)"\s*,\s*country:\s*"([^"]+)"\s*,\s*lat:\s*([-\d.]+)\s*,\s*lng:\s*([-\d.]+)\s*,\s*popular:\s*(true|false)\s*\}/g;
 
 let match;
 while ((match = capitalRegex.exec(capitalsMatch[1])) !== null) {
@@ -35,7 +36,7 @@ while ((match = capitalRegex.exec(capitalsMatch[1])) !== null) {
     country: match[2],
     lat: parseFloat(match[3]),
     lng: parseFloat(match[4]),
-    popular: match[5] === 'true'
+    popular: match[5] === 'true',
   });
 }
 
@@ -43,7 +44,7 @@ console.log(`Found ${capitals.length} capitals`);
 
 // Create mapping from English country name to ISO code
 const engNameToId = {};
-geojson.features.forEach(feature => {
+geojson.features.forEach((feature) => {
   const name = feature.properties.ADMIN || feature.properties.NAME;
   let isoCode = feature.properties.ISO_A3;
 
@@ -57,7 +58,7 @@ geojson.features.forEach(feature => {
 });
 
 // Add countryId to each capital
-capitals.forEach(capital => {
+capitals.forEach((capital) => {
   // Translate French name to English
   const englishName = frenchToEnglish[capital.country];
 
@@ -103,9 +104,12 @@ const header = `/**
 export const capitals = [
 `;
 
-const capitalEntries = capitals.map(c =>
-  `  { name: "${c.name}", country: "${c.country}", countryId: "${c.countryId}", lat: ${c.lat}, lng: ${c.lng}, popular: ${c.popular} }`
-).join(',\n');
+const capitalEntries = capitals
+  .map(
+    (c) =>
+      `  { name: "${c.name}", country: "${c.country}", countryId: "${c.countryId}", lat: ${c.lat}, lng: ${c.lng}, popular: ${c.popular} }`
+  )
+  .join(',\n');
 
 const footer = `
 ];
@@ -118,4 +122,4 @@ writeFileSync(capitalsPath, newContent, 'utf-8');
 
 console.log(`✅ Updated capitals.js with countryId field`);
 console.log(`   Total capitals: ${capitals.length}`);
-console.log(`   Missing countryId: ${capitals.filter(c => c.countryId === 'UNK').length}`);
+console.log(`   Missing countryId: ${capitals.filter((c) => c.countryId === 'UNK').length}`);

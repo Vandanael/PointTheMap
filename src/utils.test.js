@@ -3,7 +3,9 @@ import { haversine, formatScore, generateId, isIOS } from './utils.js';
 
 describe('haversine', () => {
   it('calculates distance between Paris and London', () => {
+    /** @type {[number, number]} */
     const paris = [48.8566, 2.3522];
+    /** @type {[number, number]} */
     const london = [51.5074, -0.1278];
     const distance = haversine(paris, london);
 
@@ -12,12 +14,15 @@ describe('haversine', () => {
   });
 
   it('returns 0 for identical coordinates', () => {
+    /** @type {[number, number]} */
     const coords = [48.8566, 2.3522];
     expect(haversine(coords, coords)).toBe(0);
   });
 
   it('handles coordinates across the antimeridian', () => {
+    /** @type {[number, number]} */
     const point1 = [0, 179];
+    /** @type {[number, number]} */
     const point2 = [0, -179];
     const distance = haversine(point1, point2);
 
@@ -26,7 +31,9 @@ describe('haversine', () => {
   });
 
   it('handles poles correctly', () => {
+    /** @type {[number, number]} */
     const northPole = [90, 0];
+    /** @type {[number, number]} */
     const southPole = [-90, 0];
     const distance = haversine(northPole, southPole);
 
@@ -35,7 +42,9 @@ describe('haversine', () => {
   });
 
   it('calculates distance between New York and Tokyo', () => {
-    const newYork = [40.7128, -74.0060];
+    /** @type {[number, number]} */
+    const newYork = [40.7128, -74.006];
+    /** @type {[number, number]} */
     const tokyo = [35.6762, 139.6503];
     const distance = haversine(newYork, tokyo);
 

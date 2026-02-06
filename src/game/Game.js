@@ -1,4 +1,5 @@
-import { GAME } from "../config.js";
+// @ts-check
+import { GAME } from '../config.js';
 import {
   MODE_IDS,
   getRuntimeGameConfig,
@@ -7,11 +8,10 @@ import {
   getRoundGameType,
   getNoTargetsError,
   getSessionBestScore,
-} from "../config/game-modes.js";
-import { api } from "../services/api.js";
-import { createRound, recordClick, timeoutRound } from "./Round.js";
-import { getStats } from "../features/StatsManager.js";
-import { mapSystem } from "../systems/MapSystem.js";
+} from '../config/game-modes.js';
+import { api } from '../services/api.js';
+import { createRound, recordClick, timeoutRound } from './Round.js';
+import { getStats } from '../features/StatsManager.js';
 
 /**
  * @typedef {'idle' | 'loading' | 'playing' | 'round_result' | 'game_over'} GameStatusType
@@ -89,10 +89,11 @@ import { mapSystem } from "../systems/MapSystem.js";
  * @typedef {Object} GameState
  * @property {GameStatusType} status
  * @property {string | null} token
- * @property {Capital[]} capitals
- * @property {Country[]} countries
- * @property {Stadium[]} stadiums
- * @property {import('./Game.js').Civilization[]} civilizations
+ * @property {Array<Capital|Country|Stadium|Civilization>} [targets] - Domain model: generic session targets
+ * @property {Capital[]} capitals - Legacy: only populated for capital modes
+ * @property {Country[]} countries - Legacy: only populated for country modes
+ * @property {Stadium[]} stadiums - Legacy: only populated for stadium modes
+ * @property {import('./Game.js').Civilization[]} civilizations - Legacy: only populated for civilization modes
  * @property {Round[]} rounds
  * @property {number} currentRoundIndex
  * @property {Round | null} currentRound
@@ -106,11 +107,11 @@ import { mapSystem } from "../systems/MapSystem.js";
  */
 
 export const GameStatus = {
-  IDLE: "idle",
-  LOADING: "loading",
-  PLAYING: "playing",
-  ROUND_RESULT: "round_result",
-  GAME_OVER: "game_over",
+  IDLE: 'idle',
+  LOADING: 'loading',
+  PLAYING: 'playing',
+  ROUND_RESULT: 'round_result',
+  GAME_OVER: 'game_over',
 };
 
 /**
@@ -120,6 +121,8 @@ export const GameStatus = {
 export const createGameState = () => ({
   status: GameStatus.IDLE,
   token: null,
+  targets: [], // Domain model: generic session targets
+  // Legacy compatibility fields - avoid writing these outside of startGame.
   capitals: [],
   countries: [],
   stadiums: [],
@@ -134,6 +137,18 @@ export const createGameState = () => ({
   sessionBestScore: 0,
   gameType: MODE_IDS.CLASSIC,
   runtimeConfig: null,
+});
+
+/**
+ * Build legacy compatibility fields from targets.
+ * @param {Array<Capital|Country|Stadium|Civilization>} targets
+ * @param {string} roundGameType
+ */
+const buildLegacyTargetFields = (targets, roundGameType) => ({
+  capitals: roundGameType === 'capital' ? targets : [],
+  countries: roundGameType === MODE_IDS.COUNTRY ? targets : [],
+  stadiums: roundGameType === MODE_IDS.STADIUM ? targets : [],
+  civilizations: roundGameType === MODE_IDS.CIVILIZATION ? targets : [],
 });
 
 /**
@@ -163,10 +178,10 @@ export const startGame = async (state, gameType = MODE_IDS.CLASSIC) => {
     ...createGameState(),
     status: GameStatus.PLAYING,
     token: session.token,
-    capitals: roundGameType === 'capital' ? session.capitals ?? [] : [],
-    countries: roundGameType === MODE_IDS.COUNTRY ? session.countries ?? [] : [],
-    stadiums: roundGameType === MODE_IDS.STADIUM ? session.stadiums ?? [] : [],
-    civilizations: roundGameType === MODE_IDS.CIVILIZATION ? session.civilizations ?? [] : [],
+    // Domain model: store targets semantically (not mode-specific field names)
+    targets: targets,
+    // Legacy fields: maintained for backward compatibility with existing code
+    ...buildLegacyTargetFields(targets, roundGameType),
     currentRound: createRound(targets[0], 0, roundGameType),
     gameType,
     sessionBestScore: previousBestScore,
@@ -178,9 +193,11 @@ export const startGame = async (state, gameType = MODE_IDS.CLASSIC) => {
  * Process a round with user click
  * @param {GameState} state - Current game state
  * @param {[number, number]} clickCoords - [lat, lng] of user click
+ * @param {import('./ports.js').MapQueryPort} mapQuery - Map query interface for geographic lookups
+ * @param {import('./ports.js').RoundRulesPort} roundRules - Round rules interface for validation and scoring
  * @returns {GameState}
  */
-export const playRound = (state, clickCoords) => {
+export const playRound = (state, clickCoords, mapQuery, roundRules) => {
   if (state.status !== GameStatus.PLAYING || !state.currentRound) {
     return state;
   }
@@ -195,10 +212,10 @@ export const playRound = (state, clickCoords) => {
   // Handle country mode
   if (state.gameType === MODE_IDS.COUNTRY && state.currentRound.country) {
     const targetCountryId = state.currentRound.country.countryId;
-    const clickedCountryId = mapSystem.getCountryAtLatLng(clickCoords);
+    const clickedCountryId = mapQuery.getCountryAtLatLng(clickCoords);
 
     // Get target country feature from GeoJSON
-    const targetCountryFeature = mapSystem.getCountryFeatureById(targetCountryId);
+    const targetCountryFeature = mapQuery.getCountryFeatureById(targetCountryId);
 
     countryData = {
       targetCountryFeature,
@@ -210,8 +227,8 @@ export const playRound = (state, clickCoords) => {
   // Handle civilization mode
   if (state.gameType === MODE_IDS.CIVILIZATION && state.currentRound.civilization) {
     const targetCivilizationId = state.currentRound.civilization.id;
-    const clickedCivilizationId = mapSystem.getCivilizationAtLatLng(clickCoords);
-    const targetCivilizationFeature = mapSystem.getCivilizationFeatureById(targetCivilizationId);
+    const clickedCivilizationId = mapQuery.getCivilizationAtLatLng(clickCoords);
+    const targetCivilizationFeature = mapQuery.getCivilizationFeatureById(targetCivilizationId);
 
     civilizationData = {
       targetCivilizationFeature,
@@ -226,7 +243,8 @@ export const playRound = (state, clickCoords) => {
     state.gameType,
     totalTimeAllowed,
     countryData,
-    civilizationData
+    civilizationData,
+    roundRules
   );
 
   return {
@@ -338,8 +356,7 @@ export const getProgress = (state) => {
  * @param {number} score - Score to check
  * @returns {boolean}
  */
-export const checkIfNewSessionBest = (state, score) =>
-  score > state.sessionBestScore;
+export const checkIfNewSessionBest = (state, score) => score > state.sessionBestScore;
 
 /**
  * Update session best score if new score is higher
@@ -348,6 +365,4 @@ export const checkIfNewSessionBest = (state, score) =>
  * @returns {GameState}
  */
 export const updateSessionBestScore = (state, score) =>
-  score > state.sessionBestScore
-    ? { ...state, sessionBestScore: score }
-    : state;
+  score > state.sessionBestScore ? { ...state, sessionBestScore: score } : state;

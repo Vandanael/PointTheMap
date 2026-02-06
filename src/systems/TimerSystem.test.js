@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { TimerSystem } from './TimerSystem.js';
 import { eventBus } from '../core/EventBus.js';
-import { GAME } from '../config.js';
+import { GAME } from '@lib/config';
 
 describe('TimerSystem', () => {
+  /** @type {TimerSystem} */
   let timer;
+  /** @type {Array<() => void>} */
   let unsubscribers = [];
 
   beforeEach(() => {
@@ -16,12 +18,17 @@ describe('TimerSystem', () => {
   afterEach(() => {
     timer.stop();
     // Cleanup all event listeners
-    unsubscribers.forEach(unsub => unsub());
+    unsubscribers.forEach((unsub) => unsub());
     unsubscribers = [];
     vi.restoreAllMocks();
   });
 
   // Helper to subscribe and track unsubscribers
+  /**
+   * @param {string} event
+   * @param {Function} handler
+   * @returns {() => void}
+   */
   const subscribe = (event, handler) => {
     const unsub = eventBus.subscribe(event, handler);
     unsubscribers.push(unsub);

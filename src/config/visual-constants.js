@@ -39,19 +39,19 @@ const LINE_STYLE = {
 export const LINES = LINE_STYLE;
 export const RESULT_LINES = LINE_STYLE;
 
-import { SCORING_THRESHOLDS } from '../config.js';
+import { SCORING_THRESHOLDS } from '@lib/config';
 
 // Distance thresholds and colors (using shared constants)
 export const DISTANCE_COLORS = {
-  EXCELLENT: { threshold: SCORING_THRESHOLDS.VISUAL_EXCELLENT, color: '#22c55e' },    // < 100km → green
-  GOOD: { threshold: SCORING_THRESHOLDS.VISUAL_GOOD, color: '#facc15' },         // < 500km → yellow
-  DEFAULT: { color: '#94a3b8' },                      // >= 500km → gray
+  EXCELLENT: { threshold: SCORING_THRESHOLDS.VISUAL_EXCELLENT, color: '#22c55e' }, // < 100km → green
+  GOOD: { threshold: SCORING_THRESHOLDS.VISUAL_GOOD, color: '#facc15' }, // < 500km → yellow
+  DEFAULT: { color: '#94a3b8' }, // >= 500km → gray
 };
 
 // Map animations
 export const MAP_ANIMATIONS = {
   SHOW_RESULT: {
-    duration: 2.0,
+    duration: 1.5,
     easeLinearity: 0.15,
     animate: true,
   },
@@ -68,12 +68,12 @@ export const MAP_ANIMATIONS = {
 
 // UI timings
 export const UI_TIMING = {
-  QUESTION_AUTO_CLOSE: 1500,        // Auto-close question modal after 1.5s
-  ERROR_DISPLAY: 4000,              // Error message display duration
-  CHALLENGE_CARD_FADE: 200,         // Challenge card fade transition duration
-  INPUT_ERROR_SHAKE: 500,           // Duration to keep shake animation class
-  TOAST_SLIDE_OUT: 300,             // Toast slide-out animation duration
-  DEBOUNCE_SUBMIT: 1000,            // Debounce delay for submit button
+  QUESTION_AUTO_CLOSE: 2400, // Auto-close question modal after 2.4s
+  ERROR_DISPLAY: 4000, // Error message display duration
+  CHALLENGE_CARD_FADE: 200, // Challenge card fade transition duration
+  INPUT_ERROR_SHAKE: 500, // Duration to keep shake animation class
+  TOAST_SLIDE_OUT: 300, // Toast slide-out animation duration
+  DEBOUNCE_SUBMIT: 1000, // Debounce delay for submit button
 };
 
 /**

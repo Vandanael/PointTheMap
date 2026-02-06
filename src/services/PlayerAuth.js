@@ -44,7 +44,10 @@ class PlayerAuth {
     if (storedToken && storedPlayerId && !this.isTokenExpired(storedToken)) {
       this.token = storedToken;
       this.playerId = storedPlayerId;
-      logger.debug('[PlayerAuth] Loaded existing token for player:', storedPlayerId.substring(0, 8) + '...');
+      logger.debug(
+        '[PlayerAuth] Loaded existing token for player:',
+        storedPlayerId.substring(0, 8) + '...'
+      );
       return;
     }
 
@@ -77,7 +80,10 @@ class PlayerAuth {
       localStorage.setItem(TOKEN_KEY, data.token);
       localStorage.setItem(PLAYER_ID_KEY, data.player_id);
 
-      logger.debug('[PlayerAuth] New token generated for player:', data.player_id.substring(0, 8) + '...');
+      logger.debug(
+        '[PlayerAuth] New token generated for player:',
+        data.player_id.substring(0, 8) + '...'
+      );
       return data;
     } catch (error) {
       logger.error('[PlayerAuth] Error generating token:', error);
@@ -98,7 +104,7 @@ class PlayerAuth {
 
       // Consider expired if less than 1 day remaining
       const oneDayMs = 24 * 60 * 60 * 1000;
-      return (expiresAt - now) < oneDayMs;
+      return expiresAt - now < oneDayMs;
     } catch (error) {
       logger.error('[PlayerAuth] Error parsing token:', error);
       return true; // Consider invalid tokens as expired

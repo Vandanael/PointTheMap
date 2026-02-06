@@ -32,7 +32,7 @@ describe('AnimationController', () => {
       const callback = vi.fn(() => false); // Return false to stop after 1 frame
       controller.start(callback);
 
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         requestAnimationFrame(() => {
           expect(callback).toHaveBeenCalled();
           resolve();
@@ -51,7 +51,7 @@ describe('AnimationController', () => {
 
       controller.start(callback);
 
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         setTimeout(() => {
           expect(callCount).toBe(3);
           expect(controller.isRunning).toBe(false);
@@ -64,7 +64,7 @@ describe('AnimationController', () => {
       const callback = vi.fn(() => true);
       controller.start(callback);
 
-      return new Promise(resolve => {
+      return new Promise((resolve) => {
         setTimeout(() => {
           controller.stop();
           expect(callback.mock.calls.length).toBeGreaterThan(1);
@@ -153,7 +153,7 @@ describe('animateValue', () => {
   it('animates from start to end value', () => {
     const controller = animateValue(element, 0, 100, 100);
 
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       setTimeout(() => {
         const value = parseInt(element.textContent);
         expect(value).toBeGreaterThan(0);
@@ -167,7 +167,7 @@ describe('animateValue', () => {
   it('reaches target value at end', () => {
     const controller = animateValue(element, 0, 100, 50);
 
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       setTimeout(() => {
         expect(element.textContent).toBe('100');
         expect(controller.isRunning).toBe(false);
@@ -180,7 +180,7 @@ describe('animateValue', () => {
     const formatter = (v) => `$${v}`;
     const controller = animateValue(element, 0, 100, 50, formatter);
 
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       setTimeout(() => {
         expect(element.textContent).toMatch(/^\$\d+$/);
         controller.stop();
@@ -197,7 +197,7 @@ describe('animateValue', () => {
       element.remove();
     }, 25);
 
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       setTimeout(() => {
         expect(controller.isRunning).toBe(false);
         resolve();
@@ -212,7 +212,7 @@ describe('animateValue', () => {
       controller.stop();
     }, 25);
 
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       setTimeout(() => {
         expect(controller.isRunning).toBe(false);
         resolve();
@@ -223,7 +223,7 @@ describe('animateValue', () => {
   it('handles start value equal to end value', () => {
     const controller = animateValue(element, 100, 100, 50);
 
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       setTimeout(() => {
         expect(element.textContent).toBe('100');
         expect(controller.isRunning).toBe(false);
@@ -235,7 +235,7 @@ describe('animateValue', () => {
   it('handles negative values', () => {
     const controller = animateValue(element, -50, 50, 50);
 
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       setTimeout(() => {
         expect(element.textContent).toBe('50');
         expect(controller.isRunning).toBe(false);
@@ -251,7 +251,7 @@ describe('animateValue', () => {
       controller.stop();
     }, 100);
 
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       setTimeout(() => {
         const value = parseInt(element.textContent);
         expect(value).toBeLessThan(1000); // Should not reach target

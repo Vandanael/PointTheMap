@@ -1,21 +1,14 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock dependencies BEFORE imports
-vi.mock("../core/EventBus.js", () => ({
+vi.mock('../core/EventBus.js', () => ({
   eventBus: {
     subscribe: vi.fn((event, handler) => () => {}), // Return unsubscribe function
     emit: vi.fn(),
   },
 }));
 
-vi.mock("../ui/UI.js", () => ({
-  UI: {
-    init: vi.fn(),
-    destroy: vi.fn(),
-  },
-}));
-
-vi.mock("../config.js", () => ({
+vi.mock('@lib/config', () => ({
   GAME: {
     TIMER_MS: 10000,
   },
@@ -24,17 +17,17 @@ vi.mock("../config.js", () => ({
   },
 }));
 
-vi.mock("../utils.js", () => ({
+vi.mock('../utils.js', () => ({
   formatScore: vi.fn((score) => score.toLocaleString()),
 }));
 
-vi.mock("./AnimationController.js", () => ({
+vi.mock('./AnimationController.js', () => ({
   animateValue: vi.fn(() => ({
     stop: vi.fn(),
   })),
 }));
 
-vi.mock("../utils/logger.js", () => ({
+vi.mock('../utils/logger.js', () => ({
   logger: {
     debug: vi.fn(),
     info: vi.fn(),
@@ -44,42 +37,57 @@ vi.mock("../utils/logger.js", () => ({
 }));
 
 // Import AFTER mocks
-import { UISystem, uiSystem } from "./UISystem.js";
-import { eventBus } from "../core/EventBus.js";
-import { UI } from "../ui/UI.js";
-import { formatScore } from "../utils.js";
-import { animateValue } from "./AnimationController.js";
-import { logger } from "../utils/logger.js";
+import { UISystem, uiSystem } from './UISystem.js';
+import { eventBus } from '../core/EventBus.js';
+import { formatScore } from '../utils.js';
+import { animateValue } from './AnimationController.js';
+import { logger } from '../utils/logger.js';
 
-describe("UISystem", () => {
+/** @type {import('vitest').Mock} */
+const mockSubscribe = /** @type {any} */ (eventBus.subscribe);
+/** @type {import('vitest').Mock} */
+const mockAnimateValue = /** @type {any} */ (animateValue);
+
+describe('UISystem', () => {
+  /** @type {UISystem} */
   let system;
+  /** @type {any} */
   let mockTimerProgress;
+  /** @type {any} */
   let mockScoreEl;
+  /** @type {import('vitest').Mock} */
+  let mockGetElementById;
+  /** @type {import('vitest').Mock} */
+  let mockQuerySelector;
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     // Setup DOM mocks
     mockTimerProgress = {
-      style: { transition: "", width: "" },
+      style: { transition: '', width: '' },
       classList: { add: vi.fn(), remove: vi.fn() },
     };
 
     mockScoreEl = {
-      textContent: "0",
+      textContent: '0',
+      classList: { add: vi.fn(), remove: vi.fn() },
+      offsetWidth: 0,
     };
 
     // Mock document methods
-    global.document = {
+    /** @type {any} */ (global).document = {
       getElementById: vi.fn((id) => {
-        if (id === "timer-progress") return mockTimerProgress;
+        if (id === 'timer-progress') return mockTimerProgress;
         return null;
       }),
       querySelector: vi.fn((selector) => {
-        if (selector === "#game-header .text-yellow-400") return mockScoreEl;
+        if (selector === '#game-header .text-yellow-400') return mockScoreEl;
         return null;
       }),
     };
+    mockGetElementById = /** @type {any} */ (global.document.getElementById);
+    mockQuerySelector = /** @type {any} */ (global.document.querySelector);
 
     // Create fresh instance
     system = new UISystem();
@@ -91,51 +99,43 @@ describe("UISystem", () => {
     }
   });
 
-  describe("Constructor", () => {
-    it("should create UISystem instance", () => {
+  /** @param {string} eventName */
+  const getHandler = (eventName) =>
+    mockSubscribe.mock.calls.find((call) => call[0] === eventName)?.[1];
+
+  describe('Constructor', () => {
+    it('should create UISystem instance', () => {
       expect(system).toBeInstanceOf(UISystem);
     });
 
-    it("should setup event listeners", () => {
-      expect(eventBus.subscribe).toHaveBeenCalledWith(
-        "timer:started",
-        expect.any(Function)
-      );
-      expect(eventBus.subscribe).toHaveBeenCalledWith(
-        "timer:danger",
-        expect.any(Function)
-      );
-      expect(eventBus.subscribe).toHaveBeenCalledWith(
-        "score:updated",
-        expect.any(Function)
-      );
+    it('should setup event listeners', () => {
+      expect(mockSubscribe).toHaveBeenCalledWith('timer:started', expect.any(Function));
+      expect(mockSubscribe).toHaveBeenCalledWith('timer:danger', expect.any(Function));
+      expect(mockSubscribe).toHaveBeenCalledWith('score:updated', expect.any(Function));
     });
 
-    it("should log debug message after setup", () => {
-      expect(logger.debug).toHaveBeenCalledWith(
-        "UISystem: Event listeners setup complete"
-      );
+    it('should log debug message after setup', () => {
+      expect(logger.debug).toHaveBeenCalledWith('UISystem: Event listeners setup complete');
     });
   });
 
-  describe("init", () => {
-    it("should initialize UI", () => {
+  describe('init', () => {
+    it('should log init', () => {
       system.init();
 
-      expect(UI.init).toHaveBeenCalled();
-      expect(logger.info).toHaveBeenCalledWith("UISystem initialized");
+      expect(logger.info).toHaveBeenCalledWith('UISystem initialized');
     });
   });
 
-  describe("destroy", () => {
-    it("should call all unsubscribers", () => {
+  describe('destroy', () => {
+    it('should call all unsubscribers', () => {
       const mockUnsub1 = vi.fn();
       const mockUnsub2 = vi.fn();
       const mockUnsub3 = vi.fn();
 
-      eventBus.subscribe.mockReturnValueOnce(mockUnsub1);
-      eventBus.subscribe.mockReturnValueOnce(mockUnsub2);
-      eventBus.subscribe.mockReturnValueOnce(mockUnsub3);
+      mockSubscribe.mockReturnValueOnce(mockUnsub1);
+      mockSubscribe.mockReturnValueOnce(mockUnsub2);
+      mockSubscribe.mockReturnValueOnce(mockUnsub3);
 
       const tempSystem = new UISystem();
       tempSystem.destroy();
@@ -145,14 +145,12 @@ describe("UISystem", () => {
       expect(mockUnsub3).toHaveBeenCalled();
     });
 
-    it("should stop score animation if running", () => {
+    it('should stop score animation if running', () => {
       const mockController = { stop: vi.fn() };
-      animateValue.mockReturnValue(mockController);
+      mockAnimateValue.mockReturnValue(mockController);
 
       // Trigger score animation
-      const scoreHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "score:updated"
-      )?.[1];
+      const scoreHandler = getHandler('score:updated');
 
       scoreHandler?.({ oldScore: 0, newScore: 100 });
 
@@ -162,90 +160,72 @@ describe("UISystem", () => {
       expect(mockController.stop).toHaveBeenCalled();
     });
 
-    it("should log info message", () => {
+    it('should log info message', () => {
       system.destroy();
 
-      expect(logger.info).toHaveBeenCalledWith("UISystem destroyed");
+      expect(logger.info).toHaveBeenCalledWith('UISystem destroyed');
     });
 
-    it("should handle destroy when no animation is running", () => {
+    it('should handle destroy when no animation is running', () => {
       expect(() => system.destroy()).not.toThrow();
     });
   });
 
-  describe("timer:started event", () => {
-    it("should update timer progress bar", () => {
-      const timerHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "timer:started"
-      )?.[1];
+  describe('timer:started event', () => {
+    it('should update timer progress bar', () => {
+      const timerHandler = getHandler('timer:started');
 
       timerHandler?.();
 
-      expect(mockTimerProgress.style.transition).toBe("width 10000ms linear");
-      expect(mockTimerProgress.style.width).toBe("0%");
+      expect(mockTimerProgress.style.transition).toBe('width 10000ms linear');
+      expect(mockTimerProgress.style.width).toBe('0%');
     });
 
-    it("should handle missing timer element", () => {
-      global.document.getElementById.mockReturnValue(null);
+    it('should handle missing timer element', () => {
+      mockGetElementById.mockReturnValue(null);
 
-      const timerHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "timer:started"
-      )?.[1];
+      const timerHandler = getHandler('timer:started');
 
       expect(() => timerHandler?.()).not.toThrow();
     });
   });
 
-  describe("timer:danger event", () => {
-    it("should add danger class to timer", () => {
-      const dangerHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "timer:danger"
-      )?.[1];
+  describe('timer:danger event', () => {
+    it('should add danger class to timer', () => {
+      const dangerHandler = getHandler('timer:danger');
 
       dangerHandler?.();
 
-      expect(mockTimerProgress.classList.add).toHaveBeenCalledWith("timer-danger");
+      expect(mockTimerProgress.classList.add).toHaveBeenCalledWith('timer-danger');
     });
 
-    it("should handle missing timer element", () => {
-      global.document.getElementById.mockReturnValue(null);
+    it('should handle missing timer element', () => {
+      mockGetElementById.mockReturnValue(null);
 
-      const dangerHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "timer:danger"
-      )?.[1];
+      const dangerHandler = getHandler('timer:danger');
 
       expect(() => dangerHandler?.()).not.toThrow();
     });
   });
 
-  describe("score:updated event", () => {
-    it("should animate score from old to new value", () => {
-      const scoreHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "score:updated"
+  describe('score:updated event', () => {
+    it('should animate score from old to new value', () => {
+      const scoreHandler = mockSubscribe.mock.calls.find(
+        ([event]) => event === 'score:updated'
       )?.[1];
 
       scoreHandler?.({ oldScore: 100, newScore: 250 });
 
-      expect(animateValue).toHaveBeenCalledWith(
-        mockScoreEl,
-        100,
-        250,
-        500,
-        formatScore
-      );
+      expect(animateValue).toHaveBeenCalledWith(mockScoreEl, 100, 250, 500, formatScore);
     });
 
-    it("should stop previous animation before starting new one", () => {
+    it('should stop previous animation before starting new one', () => {
       const mockController1 = { stop: vi.fn() };
       const mockController2 = { stop: vi.fn() };
 
-      animateValue
-        .mockReturnValueOnce(mockController1)
-        .mockReturnValueOnce(mockController2);
+      mockAnimateValue.mockReturnValueOnce(mockController1).mockReturnValueOnce(mockController2);
 
-      const scoreHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "score:updated"
-      )?.[1];
+      const scoreHandler = getHandler('score:updated');
 
       // First animation
       scoreHandler?.({ oldScore: 0, newScore: 100 });
@@ -256,71 +236,45 @@ describe("UISystem", () => {
       expect(mockController1.stop).toHaveBeenCalled();
     });
 
-    it("should handle missing score element", () => {
-      global.document.querySelector.mockReturnValue(null);
+    it('should handle missing score element', () => {
+      mockQuerySelector.mockReturnValue(null);
 
-      const scoreHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "score:updated"
-      )?.[1];
+      const scoreHandler = getHandler('score:updated');
 
       expect(() => scoreHandler?.({ oldScore: 0, newScore: 100 })).not.toThrow();
     });
 
-    it("should use formatScore function", () => {
-      const scoreHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "score:updated"
-      )?.[1];
+    it('should use formatScore function', () => {
+      const scoreHandler = getHandler('score:updated');
 
       scoreHandler?.({ oldScore: 1000, newScore: 2500 });
 
-      expect(animateValue).toHaveBeenCalledWith(
-        mockScoreEl,
-        1000,
-        2500,
-        500,
-        formatScore
-      );
+      expect(animateValue).toHaveBeenCalledWith(mockScoreEl, 1000, 2500, 500, formatScore);
     });
 
-    it("should handle score decrease", () => {
-      const scoreHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "score:updated"
-      )?.[1];
+    it('should handle score decrease', () => {
+      const scoreHandler = getHandler('score:updated');
 
       scoreHandler?.({ oldScore: 500, newScore: 250 });
 
-      expect(animateValue).toHaveBeenCalledWith(
-        mockScoreEl,
-        500,
-        250,
-        500,
-        formatScore
-      );
+      expect(animateValue).toHaveBeenCalledWith(mockScoreEl, 500, 250, 500, formatScore);
     });
 
-    it("should handle zero to non-zero score", () => {
-      const scoreHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "score:updated"
-      )?.[1];
+    it('should handle zero to non-zero score', () => {
+      const scoreHandler = getHandler('score:updated');
 
       scoreHandler?.({ oldScore: 0, newScore: 1000 });
 
-      expect(animateValue).toHaveBeenCalledWith(
-        mockScoreEl,
-        0,
-        1000,
-        500,
-        formatScore
-      );
+      expect(animateValue).toHaveBeenCalledWith(mockScoreEl, 0, 1000, 500, formatScore);
     });
   });
 
-  describe("Singleton instance", () => {
-    it("should export singleton instance", () => {
+  describe('Singleton instance', () => {
+    it('should export singleton instance', () => {
       expect(uiSystem).toBeInstanceOf(UISystem);
     });
 
-    it("should have the same instance", () => {
+    it('should have the same instance', () => {
       const instance1 = uiSystem;
       const instance2 = uiSystem;
 
@@ -328,36 +282,28 @@ describe("UISystem", () => {
     });
   });
 
-  describe("Integration: Full event flow", () => {
-    it("should handle complete timer lifecycle", () => {
-      const timerStartedHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "timer:started"
-      )?.[1];
+  describe('Integration: Full event flow', () => {
+    it('should handle complete timer lifecycle', () => {
+      const timerStartedHandler = getHandler('timer:started');
 
-      const timerDangerHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "timer:danger"
-      )?.[1];
+      const timerDangerHandler = getHandler('timer:danger');
 
       // Simulate timer lifecycle (started -> danger)
       timerStartedHandler?.();
-      expect(mockTimerProgress.style.width).toBe("0%");
+      expect(mockTimerProgress.style.width).toBe('0%');
 
       timerDangerHandler?.();
-      expect(mockTimerProgress.classList.add).toHaveBeenCalledWith("timer-danger");
+      expect(mockTimerProgress.classList.add).toHaveBeenCalledWith('timer-danger');
     });
 
-    it("should handle multiple score updates", () => {
-      const scoreHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "score:updated"
+    it('should handle multiple score updates', () => {
+      const scoreHandler = mockSubscribe.mock.calls.find(
+        ([event]) => event === 'score:updated'
       )?.[1];
 
-      const mockControllers = [
-        { stop: vi.fn() },
-        { stop: vi.fn() },
-        { stop: vi.fn() },
-      ];
+      const mockControllers = [{ stop: vi.fn() }, { stop: vi.fn() }, { stop: vi.fn() }];
 
-      animateValue
+      mockAnimateValue
         .mockReturnValueOnce(mockControllers[0])
         .mockReturnValueOnce(mockControllers[1])
         .mockReturnValueOnce(mockControllers[2]);
@@ -374,15 +320,18 @@ describe("UISystem", () => {
     });
   });
 
-  describe("Memory management", () => {
-    it("should not leak event listeners", () => {
+  describe('Memory management', () => {
+    it('should not leak event listeners', () => {
+      /** @type {Array<import('vitest').Mock>} */
       const unsubscribers = [];
 
-      eventBus.subscribe.mockImplementation((event, handler) => {
-        const unsub = vi.fn();
-        unsubscribers.push(unsub);
-        return unsub;
-      });
+      mockSubscribe.mockImplementation(
+        (/** @type {string} */ event, /** @type {Function} */ handler) => {
+          const unsub = vi.fn();
+          unsubscribers.push(unsub);
+          return unsub;
+        }
+      );
 
       const tempSystem = new UISystem();
       tempSystem.destroy();
@@ -393,13 +342,11 @@ describe("UISystem", () => {
       });
     });
 
-    it("should clear animation controller on destroy", () => {
+    it('should clear animation controller on destroy', () => {
       const mockController = { stop: vi.fn() };
-      animateValue.mockReturnValue(mockController);
+      mockAnimateValue.mockReturnValue(mockController);
 
-      const scoreHandler = eventBus.subscribe.mock.calls.find(
-        ([event]) => event === "score:updated"
-      )?.[1];
+      const scoreHandler = getHandler('score:updated');
 
       scoreHandler?.({ oldScore: 0, newScore: 100 });
 

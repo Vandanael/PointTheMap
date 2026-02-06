@@ -5,6 +5,7 @@
  * @typedef {'debug' | 'info' | 'log' | 'warn' | 'error' | 'fatal'} LogLevel
  */
 
+/** @type {Record<LogLevel, number>} */
 const LOG_LEVELS = {
   debug: 0,
   info: 1,
@@ -15,7 +16,22 @@ const LOG_LEVELS = {
 };
 
 const isDev = import.meta.env.DEV;
-const minLevel = isDev ? LOG_LEVELS.debug : LOG_LEVELS.warn;
+const isVitest = typeof import.meta !== 'undefined' && /** @type {any} */ (import.meta).vitest;
+const globalProcess =
+  typeof globalThis !== 'undefined' ? /** @type {any} */ (globalThis).process : undefined;
+const isNodeTest =
+  globalProcess?.env && (globalProcess.env.VITEST || globalProcess.env.NODE_ENV === 'test');
+const isGlobalVitest =
+  typeof globalThis !== 'undefined' &&
+  /** @type {any} */ (globalThis.__vitest__ || /** @type {any} */ (globalThis).__VITEST__);
+const isTest = Boolean(
+  isVitest ||
+  isNodeTest ||
+  isGlobalVitest ||
+  import.meta.env.MODE === 'test' ||
+  import.meta.env.TEST
+);
+const minLevel = isTest ? LOG_LEVELS.fatal : isDev ? LOG_LEVELS.debug : LOG_LEVELS.warn;
 
 /**
  * Format log message with timestamp and level
@@ -24,7 +40,7 @@ const minLevel = isDev ? LOG_LEVELS.debug : LOG_LEVELS.warn;
  * @returns {any[]}
  */
 const formatMessage = (level, args) => {
-  if (!isDev) return args; // No formatting in production
+  if (!isDev) return args; // No formatting in production/test
 
   const timestamp = new Date().toISOString().substring(11, 23); // HH:MM:SS.mmm
   const prefix = `[${timestamp}] [${level.toUpperCase()}]`;
@@ -37,10 +53,15 @@ const formatMessage = (level, args) => {
  * @returns {Logger}
  */
 const createLogger = (category = 'app') => {
+  /**
+   * @param {LogLevel} level
+   * @param {...any} args
+   */
   const log = (level, ...args) => {
     if (LOG_LEVELS[level] < minLevel) return;
 
     const formatted = formatMessage(level, args);
+    /** @type {keyof Console} */
     const method = level === 'fatal' ? 'error' : level;
 
     if (category !== 'app' && isDev) {

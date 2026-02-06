@@ -9,8 +9,12 @@
  */
 
 import { calculateScore as calculateScoreLib, haversine } from '@lib/game-math/index.js';
-import { distanceToPolygonBorder, calculateCountryScore as calculateCountryScoreLib } from '@lib/geo-utils/index.js';
-import { GAME, SCORING_THRESHOLDS, SCORING_FORMULA, SCORING } from '../config.js';
+import {
+  distanceToPolygonBorder,
+  calculateCountryScore as calculateCountryScoreLib,
+} from '@lib/geo-utils/index.js';
+import { GAME, SCORING_THRESHOLDS, SCORING_FORMULA, SCORING } from '@lib/config';
+import { FEATURES } from '../config/features.js';
 import { MODE_IDS } from '../config/game-modes.js';
 import { eventBus } from '../core/EventBus.js';
 import { t } from '../i18n.js';
@@ -40,17 +44,25 @@ export class ScoringSystem {
     }
 
     // Subscribe to round completed event to emit score calculated
-    const unsubRoundComplete = eventBus.subscribe('game:round:completed', (/** @type {{ round: import('../game/Game.js').Round }} */ { round }) => {
-      if (round.score !== null) {
-        const targetName = round.capital?.name || round.country?.name || round.civilization?.name || round.stadium?.name || 'Unknown';
-        eventBus.emit('score:calculated', {
-          round: round.roundNumber,
-          distance: round.distance,
-          score: round.score,
-          capital: targetName,
-        });
+    const unsubRoundComplete = eventBus.subscribe(
+      'game:round:completed',
+      (/** @type {{ round: import('../game/Game.js').Round }} */ { round }) => {
+        if (round.score !== null) {
+          const targetName =
+            round.capital?.name ||
+            round.country?.name ||
+            round.civilization?.name ||
+            round.stadium?.name ||
+            'Unknown';
+          eventBus.emit('score:calculated', {
+            round: round.roundNumber,
+            distance: round.distance,
+            score: round.score,
+            capital: targetName,
+          });
+        }
       }
-    });
+    );
 
     this.#eventUnsubscribers.push(/** @type {() => void} */ (unsubRoundComplete));
     this.#initialized = true;
@@ -75,12 +87,19 @@ export class ScoringSystem {
    * @param {string} [gameMode='classic'] - Game mode ('classic' or 'daily')
    * @returns {number} Time bonus (0-maxBonus)
    */
-  calculateTimeBonus(baseScore, totalTimeMs, timeRemainingMs, distanceKm, gameMode = MODE_IDS.CLASSIC) {
+  calculateTimeBonus(
+    baseScore,
+    totalTimeMs,
+    timeRemainingMs,
+    distanceKm,
+    gameMode = MODE_IDS.CLASSIC
+  ) {
     // Get mode-specific config
-    const config = SCORING.TIME_BONUS_BY_MODE[gameMode];
+    const config =
+      SCORING.TIME_BONUS_BY_MODE[/** @type {keyof typeof SCORING.TIME_BONUS_BY_MODE} */ (gameMode)];
 
     // Check global and mode-specific flags
-    if (!SCORING.ENABLE_TIME_BONUS || !config || !config.enabled) {
+    if (!FEATURES.TIME_BONUS || !config || !config.enabled) {
       return 0;
     }
 
@@ -106,13 +125,19 @@ export class ScoringSystem {
    * @param {string} [gameMode='classic'] - Game mode ('classic' or 'daily')
    * @returns {ScoreResult}
    */
-  calculateScoreWithTime(distanceKm, timeRemainingMs, totalTimeMs = null, gameMode = MODE_IDS.CLASSIC) {
+  calculateScoreWithTime(
+    distanceKm,
+    timeRemainingMs,
+    totalTimeMs = null,
+    gameMode = MODE_IDS.CLASSIC
+  ) {
     const baseScore = this.calculateScore(distanceKm);
 
     // Calculate time bonus
-    const timeBonus = totalTimeMs !== null
-      ? this.calculateTimeBonus(baseScore, totalTimeMs, timeRemainingMs, distanceKm, gameMode)
-      : 0;
+    const timeBonus =
+      totalTimeMs !== null
+        ? this.calculateTimeBonus(baseScore, totalTimeMs, timeRemainingMs, distanceKm, gameMode)
+        : 0;
 
     return {
       distance: Math.round(distanceKm),
@@ -143,8 +168,14 @@ export class ScoringSystem {
    * @param {number | null} [totalTimeAllowed] - From state.runtimeConfig (timerMs + graceMs); null = fallback GAME for tests
    * @returns {ScoreResult}
    */
-  calculateClickScore(clickCoords, targetCoords, timeElapsedMs, gameMode = MODE_IDS.CLASSIC, totalTimeAllowed = null) {
-    const total = totalTimeAllowed ?? (GAME.TIMER_MS + GAME.GRACE_PERIOD_MS);
+  calculateClickScore(
+    clickCoords,
+    targetCoords,
+    timeElapsedMs,
+    gameMode = MODE_IDS.CLASSIC,
+    totalTimeAllowed = null
+  ) {
+    const total = totalTimeAllowed ?? GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
 
     // Check if timed out
     if (timeElapsedMs > total) {
@@ -166,7 +197,7 @@ export class ScoringSystem {
 
   /**
    * Calculate total score from multiple rounds
-   * @param {Array<{score: number}>} rounds - Array of rounds with scores
+   * @param {Array<{score: number | null | undefined}>} rounds - Array of rounds with scores
    * @returns {number} Total score
    */
   calculateTotalScore(rounds) {
@@ -181,7 +212,7 @@ export class ScoringSystem {
    */
   getScoreCategory(distanceKm) {
     const { PERFECT_MAX, EXCELLENT_MAX, GOOD_MAX, FAIR_MAX } = SCORING_THRESHOLDS;
-    
+
     if (distanceKm < PERFECT_MAX) return 'perfect';
     if (distanceKm < EXCELLENT_MAX) return 'excellent';
     if (distanceKm < GOOD_MAX) return 'good';
@@ -218,7 +249,7 @@ export class ScoringSystem {
    * Uses shared geo-utils library
    *
    * @param {[number, number]} clickCoords - [lat, lng] of click
-   * @param {Object} countryFeature - GeoJSON feature of the country
+   * @param {{ geometry?: any }} countryFeature - GeoJSON feature of the country
    * @param {boolean} isInsideCountry - Whether click is inside the country
    * @returns {number} Distance in kilometers (0 if inside)
    */
@@ -243,12 +274,12 @@ export class ScoringSystem {
    * Calculate score for a country click
    *
    * @param {[number, number]} clickCoords - [lat, lng] of user click
-   * @param {Object} targetCountryFeature - GeoJSON feature of target country
+   * @param {{ geometry?: any }} targetCountryFeature - GeoJSON feature of target country
    * @param {boolean} isInsideTargetCountry - Whether click is inside target country
    * @param {number} timeElapsedMs - Time elapsed since round start
    * @param {string} [gameMode='country'] - Game mode
    * @param {number | null} [totalTimeAllowed] - Total time allowed
-   * @returns {ScoreResult & { distanceToCountry: number }}
+   * @returns {ScoreResult & { distanceToCountry: number | null }}
    */
   calculateCountryClickScore(
     clickCoords,
@@ -258,7 +289,7 @@ export class ScoringSystem {
     gameMode = MODE_IDS.COUNTRY,
     totalTimeAllowed = null
   ) {
-    const total = totalTimeAllowed ?? (GAME.TIMER_MS + GAME.GRACE_PERIOD_MS);
+    const total = totalTimeAllowed ?? GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
 
     // Check if timed out
     if (timeElapsedMs > total) {
@@ -303,7 +334,7 @@ export class ScoringSystem {
    * Unsubscribes from all events
    */
   destroy() {
-    this.#eventUnsubscribers.forEach(unsub => unsub());
+    this.#eventUnsubscribers.forEach((unsub) => unsub());
     this.#eventUnsubscribers = [];
     this.#initialized = false;
   }

@@ -35,32 +35,7 @@ class ErrorMonitoring {
    * Initialize error monitoring provider (Sentry, Rollbar, etc.)
    * @private
    */
-  #initializeProvider() {
-    // Example: Sentry
-    // if (window.Sentry) {
-    //   window.Sentry.init({
-    //     dsn: import.meta.env.VITE_SENTRY_DSN,
-    //     environment: import.meta.env.MODE,
-    //     release: import.meta.env.VITE_APP_VERSION,
-    //     tracesSampleRate: 0.1,
-    //     beforeSend(event, hint) {
-    //       // Filter out errors we don't want to track
-    //       if (event.message?.includes('ResizeObserver loop')) {
-    //         return null;
-    //       }
-    //       return event;
-    //     },
-    //   });
-    // }
-
-    // Example: Rollbar
-    // if (window.Rollbar) {
-    //   window.Rollbar.configure({
-    //     accessToken: import.meta.env.VITE_ROLLBAR_TOKEN,
-    //     environment: import.meta.env.MODE,
-    //   });
-    // }
-  }
+  #initializeProvider() {}
 
   /**
    * Setup global error handlers
@@ -124,31 +99,6 @@ class ErrorMonitoring {
    * @param {Object} context - Additional context
    */
   #sendToProvider(error, context) {
-    // Example: Sentry
-    // if (window.Sentry) {
-    //   window.Sentry.captureException(error, {
-    //     extra: context,
-    //     tags: {
-    //       component: context.component,
-    //       action: context.action,
-    //     },
-    //   });
-    // }
-
-    // Example: Rollbar
-    // if (window.Rollbar) {
-    //   window.Rollbar.error(error, context);
-    // }
-
-    // Example: Custom endpoint
-    // this.#sendBeacon('/api/errors', {
-    //   error: this.#serializeError(error),
-    //   context,
-    //   timestamp: Date.now(),
-    //   userAgent: navigator.userAgent,
-    //   url: window.location.href,
-    // });
-
     // For now, just log
     logger.error('[ErrorMonitoring] Error captured:', error, context);
   }
@@ -200,14 +150,6 @@ class ErrorMonitoring {
       return;
     }
 
-    // Example: Sentry
-    // if (window.Sentry) {
-    //   window.Sentry.captureMessage(message, {
-    //     level,
-    //     extra: context,
-    //   });
-    // }
-
     logger[level](`[ErrorMonitoring] Message: ${message}`, context);
   }
 
@@ -215,16 +157,8 @@ class ErrorMonitoring {
    * Set user context for error tracking
    * @param {Object} user - User information (no PII)
    */
-  setUser(user) {
+  setUser(_user) {
     if (!this.#enabled) return;
-
-    // Example: Sentry
-    // if (window.Sentry) {
-    //   window.Sentry.setUser({
-    //     id: user.id,
-    //     // Don't include PII like email or name
-    //   });
-    // }
 
     logger.debug('[ErrorMonitoring] User context set');
   }

@@ -3,8 +3,10 @@
  * Centralized cross-cutting concerns like database connection
  */
 
-import { getDatabase } from "./db.js";
-import { errorResponse, handleDatabaseError } from "./_utils.js";
+import { getDatabase } from './db.js';
+import { errorResponse, handleDatabaseError, createLogger } from './_utils.js';
+
+const logger = createLogger('middleware');
 
 /**
  * Middleware to attach database connection to context
@@ -37,11 +39,8 @@ export function withDatabase(handler) {
       sql = getDatabase(context);
     } catch (dbError) {
       const errorMessage = dbError instanceof Error ? dbError.message : String(dbError);
-      console.error("Database connection failed:", errorMessage);
-      return errorResponse(
-        "Database connection failed. Please try again later.",
-        503
-      );
+      logger.error('Database connection failed:', errorMessage);
+      return errorResponse('Database connection failed. Please try again later.', 503);
     }
 
     // Attach to context for handler access
@@ -56,8 +55,8 @@ export function withDatabase(handler) {
         return handleDatabaseError(err, 'middleware');
       }
       // Log and return 500 instead of re-throwing (unhandled exceptions → 502 in production)
-      console.error('[middleware] Unhandled error:', err?.message, err?.stack);
-      return errorResponse("An error occurred. Please try again later.", 500);
+      logger.error('Unhandled error:', err?.message, err?.stack);
+      return errorResponse('An error occurred. Please try again later.', 500);
     }
   };
 }
@@ -81,7 +80,7 @@ export function withMethod(expectedMethod, handler) {
    */
   return async (req, context) => {
     if (req.method !== expectedMethod) {
-      return errorResponse("Method not allowed", 405);
+      return errorResponse('Method not allowed', 405);
     }
     return await handler(req, context);
   };

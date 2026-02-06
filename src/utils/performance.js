@@ -4,15 +4,21 @@
 
 /**
  * Debounce function - Delays execution until after wait time has elapsed since last call
- * @param {Function} func - Function to debounce
+ * @template {(...args: any[]) => any} F
+ * @param {F} func - Function to debounce
  * @param {number} wait - Wait time in milliseconds
  * @param {boolean} immediate - If true, trigger on leading edge instead of trailing
- * @returns {Function} Debounced function
+ * @returns {F} Debounced function
  */
 export function debounce(func, wait = 300, immediate = false) {
-  let timeout;
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let timeout = null;
 
-  return function executedFunction(...args) {
+  /**
+   * @this {unknown}
+   * @param {...any} args
+   */
+  const executedFunction = function (...args) {
     const context = this;
 
     const later = () => {
@@ -22,9 +28,13 @@ export function debounce(func, wait = 300, immediate = false) {
 
     const callNow = immediate && !timeout;
 
-    clearTimeout(timeout);
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
     timeout = setTimeout(later, wait);
 
     if (callNow) func.apply(context, args);
   };
+
+  return /** @type {F} */ (executedFunction);
 }

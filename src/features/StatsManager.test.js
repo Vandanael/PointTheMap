@@ -7,8 +7,12 @@ vi.mock('../storage/StorageManager.js', () => {
   return {
     storageManager: {
       get: vi.fn((key) => store[key] ?? null),
-      set: vi.fn((key, value) => { store[key] = value; }),
-      _reset: () => { store = {}; },
+      set: vi.fn((key, value) => {
+        store[key] = value;
+      }),
+      _reset: () => {
+        store = {};
+      },
       _store: store,
     },
   };
@@ -195,7 +199,10 @@ describe('StatsManager', () => {
   describe('updateStats emits event', () => {
     it('should emit stats:updated', () => {
       updateStats(makeRounds(), MODE_IDS.CLASSIC);
-      expect(eventBus.emit).toHaveBeenCalledWith('stats:updated', expect.objectContaining({ stats: expect.any(Object) }));
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        'stats:updated',
+        expect.objectContaining({ stats: expect.any(Object) })
+      );
     });
   });
 });

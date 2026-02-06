@@ -1,13 +1,14 @@
-import { GAME } from "../config.js";
-import { MODE_IDS } from "../config/game-modes.js";
+import { GAME } from '../config.js';
+import { MODE_IDS } from '../config/game-modes.js';
 import { normalizeCoords } from '@lib/game-math/index.js';
-import { validationSystem } from "../systems/ValidationSystem.js";
-import { scoringSystem } from "../systems/ScoringSystem.js";
-import { logger } from "../utils/logger.js";
+import { logger } from '../utils/logger.js';
+
+const COORD_WARN_INTERVAL_MS = 5000;
+let lastCoordWarnAt = 0;
 
 /** @param {number} [totalTimeAllowed] - From state.runtimeConfig (timerMs + graceMs); fallback GAME for tests */
 function getTotalTimeAllowed(totalTimeAllowed) {
-  return totalTimeAllowed ?? (GAME.TIMER_MS + GAME.GRACE_PERIOD_MS);
+  return totalTimeAllowed ?? GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
 }
 
 /**
@@ -28,7 +29,7 @@ export const createRound = (target, roundNumber, gameType = 'capital') => ({
   click: null,
   distance: null,
   score: null,
-  status: "playing",
+  status: 'playing',
   gameType,
 });
 
@@ -40,18 +41,31 @@ export const createRound = (target, roundNumber, gameType = 'capital') => ({
  * @param {number} [totalTimeAllowed] - From state.runtimeConfig (timerMs + graceMs); fallback GAME for tests
  * @param {Object} [countryData] - Country-specific data for country mode
  * @param {Object} [civilizationData] - Civilization-specific data for civilization mode
+ * @param {import('./ports.js').RoundRulesPort} roundRules - Round rules interface for validation and scoring
  * @returns {import('./Game.js').Round}
  */
-export const recordClick = (round, clickCoords, gameMode = MODE_IDS.CLASSIC, totalTimeAllowed = undefined, countryData = null, civilizationData = null) => {
+export const recordClick = (
+  round,
+  clickCoords,
+  gameMode = MODE_IDS.CLASSIC,
+  totalTimeAllowed = undefined,
+  countryData = null,
+  civilizationData = null,
+  roundRules
+) => {
   const endTime = Date.now();
   const elapsed = endTime - round.startTime;
   const total = getTotalTimeAllowed(totalTimeAllowed);
 
   // Validate coordinates before processing
-  const coordValidation = validationSystem.validateCoordinates(clickCoords[0], clickCoords[1]);
+  const coordValidation = roundRules.validateCoordinates(clickCoords[0], clickCoords[1]);
   if (!coordValidation.valid) {
     // Log error and use normalized values as fallback
-    logger.warn('Invalid coordinates:', coordValidation.error);
+    const now = Date.now();
+    if (now - lastCoordWarnAt >= COORD_WARN_INTERVAL_MS) {
+      logger.warn('Invalid coordinates:', coordValidation.error);
+      lastCoordWarnAt = now;
+    }
   }
 
   // Normalize coordinates to valid ranges
@@ -66,13 +80,13 @@ export const recordClick = (round, clickCoords, gameMode = MODE_IDS.CLASSIC, tot
       click: { lat: normalizedLat, lng: normalizedLng },
       distance: null,
       score: 0,
-      status: "timeout",
+      status: 'timeout',
     };
   }
 
   // Handle country mode
   if (round.gameType === MODE_IDS.COUNTRY && countryData) {
-    const scoreResult = scoringSystem.calculateCountryClickScore(
+    const scoreResult = roundRules.calculateCountryClickScore(
       normalizedCoords,
       countryData.targetCountryFeature,
       countryData.isInsideTargetCountry,
@@ -92,7 +106,7 @@ export const recordClick = (round, clickCoords, gameMode = MODE_IDS.CLASSIC, tot
       timeBonus: Math.round(scoreResult.timeBonus),
       correctCountryId: round.country.countryId,
       clickedCountryId: countryData.clickedCountryId,
-      status: "completed",
+      status: 'completed',
     };
   }
 
@@ -101,7 +115,7 @@ export const recordClick = (round, clickCoords, gameMode = MODE_IDS.CLASSIC, tot
   if (round.gameType === MODE_IDS.CIVILIZATION && civilizationData && round.civilization) {
     const feature = civilizationData.targetCivilizationFeature;
     const scoreResult = feature
-      ? scoringSystem.calculateCountryClickScore(
+      ? roundRules.calculateCountryClickScore(
           normalizedCoords,
           feature,
           civilizationData.isInsideTargetCivilization,
@@ -128,14 +142,14 @@ export const recordClick = (round, clickCoords, gameMode = MODE_IDS.CLASSIC, tot
       timeBonus: Math.round(scoreResult.timeBonus),
       correctCivilizationId: round.civilization.id,
       clickedCivilizationId: civilizationData.clickedCivilizationId,
-      status: "completed",
+      status: 'completed',
     };
   }
 
   // Handle stadium mode (point-to-point, same as capital)
   if (round.gameType === MODE_IDS.STADIUM && round.stadium) {
     const stadiumCoords = [round.stadium.lat, round.stadium.lng];
-    const scoreResult = scoringSystem.calculateClickScore(
+    const scoreResult = roundRules.calculateClickScore(
       normalizedCoords,
       stadiumCoords,
       elapsed,
@@ -147,19 +161,20 @@ export const recordClick = (round, clickCoords, gameMode = MODE_IDS.CLASSIC, tot
       ...round,
       endTime,
       click: { lat: normalizedLat, lng: normalizedLng },
-      distance: scoreResult.distance !== null && scoreResult.distance !== undefined
-        ? Math.round(scoreResult.distance)
-        : null,
+      distance:
+        scoreResult.distance !== null && scoreResult.distance !== undefined
+          ? Math.round(scoreResult.distance)
+          : null,
       score: Math.round(scoreResult.totalScore),
       baseScore: Math.round(scoreResult.score),
       timeBonus: Math.round(scoreResult.timeBonus),
-      status: "completed",
+      status: 'completed',
     };
   }
 
   // Handle capital mode (default)
   const capitalCoords = [round.capital.lat, round.capital.lng];
-  const scoreResult = scoringSystem.calculateClickScore(
+  const scoreResult = roundRules.calculateClickScore(
     normalizedCoords,
     capitalCoords,
     elapsed,
@@ -171,13 +186,14 @@ export const recordClick = (round, clickCoords, gameMode = MODE_IDS.CLASSIC, tot
     ...round,
     endTime,
     click: { lat: normalizedLat, lng: normalizedLng },
-    distance: scoreResult.distance !== null && scoreResult.distance !== undefined
-      ? Math.round(scoreResult.distance)
-      : null,
+    distance:
+      scoreResult.distance !== null && scoreResult.distance !== undefined
+        ? Math.round(scoreResult.distance)
+        : null,
     score: Math.round(scoreResult.totalScore), // Use totalScore (includes time bonus)
-    baseScore: Math.round(scoreResult.score),   // Base score before bonus
+    baseScore: Math.round(scoreResult.score), // Base score before bonus
     timeBonus: Math.round(scoreResult.timeBonus), // Time bonus points
-    status: "completed",
+    status: 'completed',
   };
 };
 
@@ -192,7 +208,7 @@ export const timeoutRound = (round) => ({
   click: null,
   distance: null,
   score: 0,
-  status: "timeout",
+  status: 'timeout',
 });
 
 /**

@@ -69,7 +69,13 @@ vi.mock('./game/Game.js', () => ({
   checkIfNewSessionBest: vi.fn(),
   updateSessionBestScore: vi.fn(),
   resetGame: vi.fn(),
-  GameStatus: { PLAYING: 'playing', ROUND_RESULT: 'round_result', IDLE: 'idle', LOADING: 'loading', GAME_OVER: 'game_over' },
+  GameStatus: {
+    PLAYING: 'playing',
+    ROUND_RESULT: 'round_result',
+    IDLE: 'idle',
+    LOADING: 'loading',
+    GAME_OVER: 'game_over',
+  },
 }));
 
 const disableClicks = vi.fn();
@@ -114,7 +120,9 @@ vi.mock('./systems/UISystem.js', () => ({
 }));
 
 vi.mock('./ui/UI.js', () => ({
+  configureUI: vi.fn(),
   UI: {
+    init: vi.fn(),
     showLoader: vi.fn(),
     hideLoader: vi.fn(),
     updateLoader: vi.fn(),
@@ -142,7 +150,10 @@ vi.mock('./services/api.js', () => ({
   submitWithRetry: vi.fn(),
 }));
 
-vi.mock('./services/storage.js', () => ({ setLastPseudo: vi.fn(), getRetryQueue: vi.fn(() => []) }));
+vi.mock('./services/storage.js', () => ({
+  setLastPseudo: vi.fn(),
+  getRetryQueue: vi.fn(() => []),
+}));
 
 vi.mock('./services/Analytics.js', () => ({ analytics: { init: vi.fn(), track: vi.fn() } }));
 vi.mock('./services/ErrorMonitoring.js', () => ({ errorMonitoring: { init: vi.fn() } }));
@@ -151,17 +162,28 @@ vi.mock('./utils.js', () => ({ isIOS: vi.fn(() => false) }));
 vi.mock('./utils/logger.js', () => ({ logger: { log: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('./utils/performance.js', () => ({ debounce: vi.fn((fn) => fn) }));
 
-vi.mock('./core/ErrorHandler.js', () => ({
-  errorHandler: { handle: vi.fn() },
-  APIError: class APIError extends Error {},
-  safeAsync: vi.fn((fn) => fn()),
-}));
+vi.mock('./core/ErrorHandler.js', () => {
+  const errorHandler = { handle: vi.fn() };
+  return {
+    errorHandler,
+    APIError: class APIError extends Error {},
+    safeAsync: vi.fn((fn) => fn()),
+    handleError: vi.fn((error, context, options) => errorHandler.handle(error, context, options)),
+  };
+});
 
 vi.mock('./game/Round.js', () => ({ getRemainingTime: vi.fn(() => 1000) }));
 
-vi.mock('./features/StatsManager.js', () => ({ updateStats: vi.fn(), getStats: vi.fn(() => ({})) }));
+vi.mock('./features/StatsManager.js', () => ({
+  updateStats: vi.fn(),
+  getStats: vi.fn(() => ({})),
+}));
 vi.mock('./features/AchievementManager.js', () => ({ checkAchievements: vi.fn() }));
-vi.mock('./features/Share.js', () => ({ formatShareText: vi.fn(), shareGameResults: vi.fn(), getDailyNumber: vi.fn() }));
+vi.mock('./features/Share.js', () => ({
+  formatShareText: vi.fn(),
+  shareGameResults: vi.fn(),
+  getDailyNumber: vi.fn(),
+}));
 
 vi.mock('./i18n.js', () => ({ getLang: vi.fn(() => 'en'), t: vi.fn((k) => k) }));
 vi.mock('./ui/components.js', () => ({ AchievementUnlockModal: vi.fn(() => '') }));
@@ -225,7 +247,10 @@ describe('main.js wiring', () => {
       mockState = { ...submitState };
       const lockedPseudo = 'LOCKED';
       submitWithRetry
-        .mockRejectedValueOnce({ status: 409, data: { error: 'pseudo_already_set_for_this_ip', pseudo: lockedPseudo } })
+        .mockRejectedValueOnce({
+          status: 409,
+          data: { error: 'pseudo_already_set_for_this_ip', pseudo: lockedPseudo },
+        })
         .mockResolvedValueOnce({ score: 10000, rank: 1, isTopFifty: false });
 
       UI.showPseudoLockedDialog.mockImplementation((_pseudo, onConfirm) => {
@@ -240,16 +265,36 @@ describe('main.js wiring', () => {
       await vi.waitFor(() => expect(submitWithRetry).toHaveBeenCalledTimes(2));
 
       expect(UI.showPseudoLockedDialog).toHaveBeenCalledWith(lockedPseudo, expect.any(Function));
-      expect(submitWithRetry).toHaveBeenNthCalledWith(1, 'test-token', submitState.rounds, 'USER', 'classic');
-      expect(submitWithRetry).toHaveBeenNthCalledWith(2, 'test-token', submitState.rounds, lockedPseudo, 'classic');
-      expect(UI.showFinalResults).toHaveBeenCalledWith(10000, lockedPseudo, expect.objectContaining({ score: 10000, rank: 1, isTopFifty: false }), undefined);
+      expect(submitWithRetry).toHaveBeenNthCalledWith(
+        1,
+        'test-token',
+        submitState.rounds,
+        'USER',
+        'classic'
+      );
+      expect(submitWithRetry).toHaveBeenNthCalledWith(
+        2,
+        'test-token',
+        submitState.rounds,
+        lockedPseudo,
+        'classic'
+      );
+      expect(UI.showFinalResults).toHaveBeenCalledWith(
+        10000,
+        lockedPseudo,
+        expect.objectContaining({ score: 10000, rank: 1, isTopFifty: false }),
+        undefined
+      );
     });
 
     it('409 then second attempt fails restores UI and surfaces error', async () => {
       mockState = { ...submitState };
       const btn = ensureSubmitButton();
       submitWithRetry
-        .mockRejectedValueOnce({ status: 409, data: { error: 'pseudo_already_set_for_this_ip', pseudo: 'LOCKED' } })
+        .mockRejectedValueOnce({
+          status: 409,
+          data: { error: 'pseudo_already_set_for_this_ip', pseudo: 'LOCKED' },
+        })
         .mockRejectedValueOnce({ status: 500, message: 'Server error' });
 
       UI.showPseudoLockedDialog.mockImplementation((_pseudo, onConfirm) => {
@@ -265,7 +310,10 @@ describe('main.js wiring', () => {
 
       expect(btn.disabled).toBe(false);
       expect(btn.textContent).toBe('save');
-      expect(errorHandler.handle).toHaveBeenCalledWith(expect.any(Error), 'score:submit', { showToUser: true, fatal: false });
+      expect(errorHandler.handle).toHaveBeenCalledWith(expect.any(Error), 'score:submit', {
+        showToUser: true,
+        fatal: false,
+      });
     });
 
     it('non-409 error restores UI and surfaces via ErrorHandler', async () => {
@@ -283,7 +331,10 @@ describe('main.js wiring', () => {
       expect(UI.showPseudoLockedDialog).not.toHaveBeenCalled();
       expect(btn.disabled).toBe(false);
       expect(btn.textContent).toBe('save');
-      expect(errorHandler.handle).toHaveBeenCalledWith(expect.any(Error), 'score:submit', { showToUser: true, fatal: false });
+      expect(errorHandler.handle).toHaveBeenCalledWith(expect.any(Error), 'score:submit', {
+        showToUser: true,
+        fatal: false,
+      });
     });
   });
 });

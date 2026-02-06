@@ -8,7 +8,7 @@
  * - down: function (rollback logic - optional)
  */
 
-import { logger } from "../utils/logger.js";
+import { logger } from '../utils/logger.js';
 
 /**
  * Migration v1: Add timestamps to existing data
@@ -18,7 +18,7 @@ import { logger } from "../utils/logger.js";
  */
 const migrationV1 = {
   version: 1,
-  name: "Add timestamps to existing data",
+  name: 'Add timestamps to existing data',
   up: (storageManager) => {
     const keys = storageManager.getAllKeys();
     const now = Date.now();
@@ -27,7 +27,7 @@ const migrationV1 = {
       try {
         const value = storageManager.get(key);
 
-        if (value && typeof value === "object") {
+        if (value && typeof value === 'object') {
           // Add lastAccess if not present
           if (!value.lastAccess && !value.addedAt && !value.timestamp) {
             value.lastAccess = now;
@@ -49,7 +49,7 @@ const migrationV1 = {
       try {
         const value = storageManager.get(key);
 
-        if (value && typeof value === "object" && value.lastAccess) {
+        if (value && typeof value === 'object' && value.lastAccess) {
           delete value.lastAccess;
           storageManager.set(key, value);
         }
@@ -67,7 +67,7 @@ const migrationV1 = {
  */
 const migrationV2 = {
   version: 2,
-  name: "Initialize stats and achievements",
+  name: 'Initialize stats and achievements',
   up: (storageManager) => {
     // Initialize stats with defaults
     if (!storageManager.get('stats')) {
@@ -82,9 +82,9 @@ const migrationV2 = {
         totalRoundsPlayed: 0,
         under20kmCount: 0,
         lastUpdated: Date.now(),
-        lastAccess: Date.now()
+        lastAccess: Date.now(),
       });
-      logger.info("Migration v2: Initialized stats");
+      logger.info('Migration v2: Initialized stats');
     }
 
     // Initialize achievements with all false
@@ -98,16 +98,16 @@ const migrationV2 = {
         streak3: false,
         play10: false,
         play50: false,
-        lastAccess: Date.now()
+        lastAccess: Date.now(),
       });
-      logger.info("Migration v2: Initialized achievements");
+      logger.info('Migration v2: Initialized achievements');
     }
   },
   down: (storageManager) => {
     // Rollback: remove stats and achievements
     storageManager.remove('stats');
     storageManager.remove('achievements');
-    logger.info("Migration v2: Removed stats and achievements");
+    logger.info('Migration v2: Removed stats and achievements');
   },
 };
 
@@ -115,7 +115,4 @@ const migrationV2 = {
  * All migrations in order
  * Add new migrations to this array
  */
-export const migrations = [
-  migrationV1,
-  migrationV2,
-];
+export const migrations = [migrationV1, migrationV2];

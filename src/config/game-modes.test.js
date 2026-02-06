@@ -1,6 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import { getGameMode, getRuntimeGameConfig, isValidMode, getAllModes, getModeIds, GAME_MODES, MODE_IDS, isDailyVariant, isCapitalCategory, isStadiumCategory, isCountryCategory, isCivilizationCategory } from './game-modes.js';
-import { GAME } from '../config.js';
+import {
+  getGameMode,
+  getRuntimeGameConfig,
+  isValidMode,
+  getAllModes,
+  getModeIds,
+  GAME_MODES,
+  MODE_IDS,
+  isDailyVariant,
+  isCapitalCategory,
+  isStadiumCategory,
+  isCountryCategory,
+  isCivilizationCategory,
+} from './game-modes.js';
+import { GAME } from '@lib/config';
 
 describe('Game Modes Configuration', () => {
   describe('isValidMode', () => {
@@ -142,14 +155,14 @@ describe('Game Modes Configuration', () => {
     it('should return all available modes (capital, country, stadium, civilization)', () => {
       const modes = getAllModes();
       expect(modes).toHaveLength(4);
-      expect(modes.map(m => m.id)).toContain('capital');
-      expect(modes.map(m => m.id)).toContain('country');
-      expect(modes.map(m => m.id)).toContain('stadium');
-      expect(modes.map(m => m.id)).toContain('civilization');
-      const capital = modes.find(m => m.id === 'capital');
-      const country = modes.find(m => m.id === 'country');
-      const stadium = modes.find(m => m.id === 'stadium');
-      const civilization = modes.find(m => m.id === 'civilization');
+      expect(modes.map((m) => m.id)).toContain('capital');
+      expect(modes.map((m) => m.id)).toContain('country');
+      expect(modes.map((m) => m.id)).toContain('stadium');
+      expect(modes.map((m) => m.id)).toContain('civilization');
+      const capital = modes.find((m) => m.id === 'capital');
+      const country = modes.find((m) => m.id === 'country');
+      const stadium = modes.find((m) => m.id === 'stadium');
+      const civilization = modes.find((m) => m.id === 'civilization');
       expect(capital.variants).toEqual(['classic', 'daily']);
       expect(country.variants).toEqual(['classic', 'daily']);
       expect(stadium.variants).toEqual(['classic', 'daily']);
@@ -274,7 +287,7 @@ describe('Game Modes Configuration', () => {
       expect(daily.scoring.maxPerRound).toBe(5000);
       expect(daily.scoring.timeBonus.enabled).toBe(true);
       expect(daily.scoring.timeBonus.maxBonus).toBe(1000);
-      expect(daily.scoring.timeBonus.maxBonusPercent).toBe(0.20);
+      expect(daily.scoring.timeBonus.maxBonusPercent).toBe(0.2);
     });
 
     it('should generate consistent seed from date', () => {

@@ -40,24 +40,26 @@ export class InputSystem {
    */
   #setupKeyboardListeners() {
     // Enter and Space can be used to trigger actions
-    this.#keyboardHandler = /** @type {(e: KeyboardEvent) => void} */ ((e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        // Check if focus is on a button or input
-        const activeElement = document.activeElement;
-        if (activeElement && activeElement.tagName === 'BUTTON') {
-          // Let the button handle it naturally
-          return;
+    this.#keyboardHandler = /** @type {(e: KeyboardEvent) => void} */ (
+      (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          // Check if focus is on a button or input
+          const activeElement = document.activeElement;
+          if (activeElement && activeElement.tagName === 'BUTTON') {
+            // Let the button handle it naturally
+            return;
+          }
+
+          // Otherwise, emit a generic action event
+          eventBus.emit('input:action', { key: e.key });
         }
 
-        // Otherwise, emit a generic action event
-        eventBus.emit('input:action', { key: e.key });
+        // Escape key
+        if (e.key === 'Escape') {
+          eventBus.emit('input:escape', {});
+        }
       }
-
-      // Escape key
-      if (e.key === 'Escape') {
-        eventBus.emit('input:escape', {});
-      }
-    });
+    );
     document.addEventListener('keydown', this.#keyboardHandler);
   }
 
@@ -76,11 +78,14 @@ export class InputSystem {
     this.#mapClickCallback = callback;
 
     // Subscribe to map:click events
-    this.#mapClickUnsubscribe = eventBus.subscribe('map:click', (/** @type {{ lat: any, lng: any }} */ { lat, lng }) => {
-      if (this.#mapClickEnabled && this.#mapClickCallback) {
-        this.#mapClickCallback([lat, lng]);
+    this.#mapClickUnsubscribe = eventBus.subscribe(
+      'map:click',
+      (/** @type {{ lat: any, lng: any }} */ { lat, lng }) => {
+        if (this.#mapClickEnabled && this.#mapClickCallback) {
+          this.#mapClickCallback([lat, lng]);
+        }
       }
-    });
+    );
 
     eventBus.emit('input:map-enabled', {});
   }

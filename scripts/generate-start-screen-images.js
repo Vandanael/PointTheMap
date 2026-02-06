@@ -48,8 +48,7 @@ function latLngToTile(lat, lng, zoom) {
   const n = 2 ** zoom;
   const x = ((lng + 180) / 360) * n;
   const latRad = (lat * Math.PI) / 180;
-  const y =
-    ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n;
+  const y = ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n;
   return { x, y };
 }
 
@@ -139,10 +138,7 @@ async function generateImage(name, viewport, outDir, theme, themeName) {
   let final = composite;
   const meta = await sharp(composite).metadata();
   if (meta.width !== w || meta.height !== h) {
-    final = await sharp(composite)
-      .resize(w, h, { fit: 'cover' })
-      .png()
-      .toBuffer();
+    final = await sharp(composite).resize(w, h, { fit: 'cover' }).png().toBuffer();
   }
 
   const outPath = join(outDir, `start-screen-${name}-${themeName}.png`);

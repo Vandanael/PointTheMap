@@ -48,7 +48,7 @@ export async function loadSelectBalancedCapitals() {
  */
 export function preloadCapitals() {
   // Fire and forget - just trigger the import
-  loadCapitals().catch(err => {
+  loadCapitals().catch((err) => {
     logger.error('Failed to preload capitals:', err);
   });
 }

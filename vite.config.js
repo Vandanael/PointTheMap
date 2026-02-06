@@ -1,48 +1,50 @@
-import { defineConfig } from "vite";
-import { resolve } from "path";
-import { readFileSync } from "fs";
-import { visualizer } from "rollup-plugin-visualizer";
+import { defineConfig } from 'vite';
+import { resolve } from 'path';
+import { readFileSync } from 'fs';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 /** Inlines critical CSS and loads full stylesheet async to shorten the critical request chain (avoids blocking LCP). */
 function criticalCssPreload() {
-  const criticalPath = resolve(process.cwd(), "src/critical.css");
-  let criticalCss = "";
+  const criticalPath = resolve(process.cwd(), 'src/critical.css');
+  let criticalCss = '';
   try {
-    criticalCss = readFileSync(criticalPath, "utf-8");
+    criticalCss = readFileSync(criticalPath, 'utf-8');
   } catch {
-    criticalCss = "/* critical.css not found */";
+    criticalCss = '/* critical.css not found */';
   }
-  const inlineCritical = `<style>${criticalCss.replace(/<\/style>/gi, "\\3c/style>")}</style>`;
+  const inlineCritical = `<style>${criticalCss.replace(/<\/style>/gi, '\\3c/style>')}</style>`;
 
   return {
-    name: "critical-css-preload",
-    apply: "build",
+    name: 'critical-css-preload',
+    apply: 'build',
     transformIndexHtml: {
-      order: "post",
+      order: 'post',
       handler(html) {
         const styleTagRe = /<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"[^>]*>/g;
         const tags = [];
         let m;
         while ((m = styleTagRe.exec(html)) !== null) tags.push({ full: m[0], href: m[1] });
         if (!tags.length) return html;
-        const local = tags.filter((t) => t.href.startsWith("/"));
+        const local = tags.filter((t) => t.href.startsWith('/'));
         if (!local.length) return html;
 
         // Preload full CSS so it fetches early; load async so it does not block first paint.
-        const preloads = local.map((t) => `<link rel="preload" href="${t.href}" as="style">`).join("\n  ");
+        const preloads = local
+          .map((t) => `<link rel="preload" href="${t.href}" as="style">`)
+          .join('\n  ');
         const asyncStyles = local
           .map(
             (t) =>
               `<link rel="stylesheet" href="${t.href}" media="print" onload="this.media='all'">`
           )
-          .join("\n  ");
+          .join('\n  ');
         const noscriptFallback = local
           .map((t) => `<link rel="stylesheet" href="${t.href}">`)
-          .join("");
+          .join('');
         const noscript = `<noscript>${noscriptFallback}</noscript>`;
 
         let out = html;
-        for (const t of local) out = out.replace(t.full, "");
+        for (const t of local) out = out.replace(t.full, '');
         out = out.replace(
           /(<head[^>]*>)/i,
           `$1\n  ${inlineCritical}\n  ${preloads}\n  ${asyncStyles}\n  ${noscript}`
@@ -54,14 +56,15 @@ function criticalCssPreload() {
 }
 
 export default defineConfig({
-  publicDir: "public",
+  // Enable bundle visualizer with ANALYZE=1
+  publicDir: 'public',
   server: {
     // Disable HMR when WebSocket gets 400 (e.g. Cursor browser, embedded iframes).
     // Use: DISABLE_HMR=1 npm run dev
-    hmr: process.env.DISABLE_HMR === "1" ? false : true,
+    hmr: process.env.DISABLE_HMR === '1' ? false : true,
   },
   build: {
-    outDir: "dist",
+    outDir: 'dist',
     // Enable minification and compression
     minify: 'esbuild',
     cssMinify: true,
@@ -98,17 +101,15 @@ export default defineConfig({
             return 'game';
           }
 
-          // UI + Systems: single chunk to avoid ui→systems→ui cycle
+          // UI + Systems (+ Features): single chunk to avoid ui↔systems and features↔ui cycles
           if (id.includes('/src/systems/') || id.includes('\\src\\systems\\')) {
             return 'ui-systems';
           }
           if (id.includes('/src/ui/') || id.includes('\\src\\ui\\')) {
             return 'ui-systems';
           }
-
-          // Features: New features added here
           if (id.includes('/src/features/') || id.includes('\\src\\features\\')) {
-            return 'features';
+            return 'ui-systems';
           }
         },
         // Optimize asset file names for better caching
@@ -126,14 +127,17 @@ export default defineConfig({
         chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',
       },
-      plugins: [
-        visualizer({
-          open: false,
-          filename: "dist/stats.html",
-          gzipSize: true,
-          brotliSize: true,
-        }),
-      ],
+      plugins:
+        process.env.ANALYZE === '1'
+          ? [
+              visualizer({
+                open: false,
+                filename: 'dist/stats.html',
+                gzipSize: true,
+                brotliSize: true,
+              }),
+            ]
+          : [],
     },
     // Increase chunk size warning limit (for better code splitting)
     chunkSizeWarningLimit: 1000,

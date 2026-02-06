@@ -8,12 +8,12 @@
  * - Better performance than localStorage
  */
 
-import { MODE_IDS } from "../config/game-modes.js";
-import { logger } from "../utils/logger.js";
+import { MODE_IDS } from '../config/game-modes.js';
+import { logger } from '../utils/logger.js';
 
-const DB_NAME = "ptm_retry_queue";
+const DB_NAME = 'ptm_retry_queue';
 const DB_VERSION = 1;
-const STORE_NAME = "retry_queue";
+const STORE_NAME = 'retry_queue';
 
 /**
  * @typedef {Object} RetryQueueEntry
@@ -45,21 +45,21 @@ export class IndexedDBQueue {
 
     // Check IndexedDB support
     if (!window.indexedDB) {
-      logger.warn("IndexedDB not supported, will use localStorage fallback");
-      throw new Error("IndexedDB not supported");
+      logger.warn('IndexedDB not supported, will use localStorage fallback');
+      throw new Error('IndexedDB not supported');
     }
 
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onerror = () => {
-        logger.error("IndexedDB open failed", request.error);
+        logger.error('IndexedDB open failed', request.error);
         reject(request.error);
       };
 
       request.onsuccess = () => {
         this.#db = request.result;
-        logger.info("IndexedDB opened successfully");
+        logger.info('IndexedDB opened successfully');
         resolve(this.#db);
       };
 
@@ -68,14 +68,14 @@ export class IndexedDBQueue {
 
         // Create object store if it doesn't exist
         if (!db.objectStoreNames.contains(STORE_NAME)) {
-          const store = db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: false });
+          const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: false });
 
           // Create indexes
-          store.createIndex("addedAt", "addedAt", { unique: false });
-          store.createIndex("attempts", "attempts", { unique: false });
-          store.createIndex("gameType", "gameType", { unique: false });
+          store.createIndex('addedAt', 'addedAt', { unique: false });
+          store.createIndex('attempts', 'attempts', { unique: false });
+          store.createIndex('gameType', 'gameType', { unique: false });
 
-          logger.info("IndexedDB object store created");
+          logger.info('IndexedDB object store created');
         }
       };
     });
@@ -114,7 +114,7 @@ export class IndexedDBQueue {
   async add(token, rounds, pseudo, gameType = MODE_IDS.CLASSIC) {
     try {
       const db = await this.#getDB();
-      const transaction = db.transaction([STORE_NAME], "readwrite");
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
 
       const entry = {
@@ -136,7 +136,7 @@ export class IndexedDBQueue {
       logger.debug(`IndexedDBQueue: Added entry ${entry.id}`);
       return entry.id;
     } catch (error) {
-      logger.error("IndexedDBQueue: Failed to add entry", error);
+      logger.error('IndexedDBQueue: Failed to add entry', error);
       throw error;
     }
   }
@@ -148,7 +148,7 @@ export class IndexedDBQueue {
   async getAll() {
     try {
       const db = await this.#getDB();
-      const transaction = db.transaction([STORE_NAME], "readonly");
+      const transaction = db.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
 
       return await new Promise((resolve, reject) => {
@@ -157,7 +157,7 @@ export class IndexedDBQueue {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      logger.error("IndexedDBQueue: Failed to get all entries", error);
+      logger.error('IndexedDBQueue: Failed to get all entries', error);
       return [];
     }
   }
@@ -170,7 +170,7 @@ export class IndexedDBQueue {
   async get(id) {
     try {
       const db = await this.#getDB();
-      const transaction = db.transaction([STORE_NAME], "readonly");
+      const transaction = db.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
 
       return await new Promise((resolve, reject) => {
@@ -193,7 +193,7 @@ export class IndexedDBQueue {
   async update(id, updates) {
     try {
       const db = await this.#getDB();
-      const transaction = db.transaction([STORE_NAME], "readwrite");
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
 
       // Get existing entry
@@ -233,7 +233,7 @@ export class IndexedDBQueue {
   async remove(id) {
     try {
       const db = await this.#getDB();
-      const transaction = db.transaction([STORE_NAME], "readwrite");
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
 
       await new Promise((resolve, reject) => {
@@ -258,17 +258,17 @@ export class IndexedDBQueue {
     try {
       // Check if DB is closed
       if (!this.#db && !this.#dbPromise) {
-        logger.warn("IndexedDBQueue: Cannot clear - database is closed");
+        logger.warn('IndexedDBQueue: Cannot clear - database is closed');
         return false;
       }
 
       const db = await this.#getDB();
       if (!db) {
-        logger.warn("IndexedDBQueue: Cannot clear - database is null");
+        logger.warn('IndexedDBQueue: Cannot clear - database is null');
         return false;
       }
 
-      const transaction = db.transaction([STORE_NAME], "readwrite");
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
       const store = transaction.objectStore(STORE_NAME);
 
       await new Promise((resolve, reject) => {
@@ -277,10 +277,10 @@ export class IndexedDBQueue {
         request.onerror = () => reject(request.error);
       });
 
-      logger.info("IndexedDBQueue: Cleared all entries");
+      logger.info('IndexedDBQueue: Cleared all entries');
       return true;
     } catch (error) {
-      logger.error("IndexedDBQueue: Failed to clear", error);
+      logger.error('IndexedDBQueue: Failed to clear', error);
       return false;
     }
   }
@@ -292,7 +292,7 @@ export class IndexedDBQueue {
   async count() {
     try {
       const db = await this.#getDB();
-      const transaction = db.transaction([STORE_NAME], "readonly");
+      const transaction = db.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
 
       return await new Promise((resolve, reject) => {
@@ -301,7 +301,7 @@ export class IndexedDBQueue {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      logger.error("IndexedDBQueue: Failed to count", error);
+      logger.error('IndexedDBQueue: Failed to count', error);
       return 0;
     }
   }
@@ -336,12 +336,12 @@ export class IndexedDBQueue {
   async getOldest(limit = 10) {
     try {
       const db = await this.#getDB();
-      const transaction = db.transaction([STORE_NAME], "readonly");
+      const transaction = db.transaction([STORE_NAME], 'readonly');
       const store = transaction.objectStore(STORE_NAME);
-      const index = store.index("addedAt");
+      const index = store.index('addedAt');
 
       return await new Promise((resolve, reject) => {
-        const request = index.openCursor(null, "next");
+        const request = index.openCursor(null, 'next');
         const results = [];
         let transactionEnded = false;
 
@@ -356,7 +356,7 @@ export class IndexedDBQueue {
         transaction.onerror = () => {
           if (!transactionEnded) {
             transactionEnded = true;
-            reject(transaction.error || new Error("Transaction failed"));
+            reject(transaction.error || new Error('Transaction failed'));
           }
         };
 
@@ -382,7 +382,7 @@ export class IndexedDBQueue {
         };
       });
     } catch (error) {
-      logger.error("IndexedDBQueue: Failed to get oldest entries", error);
+      logger.error('IndexedDBQueue: Failed to get oldest entries', error);
       return [];
     }
   }
@@ -395,7 +395,7 @@ export class IndexedDBQueue {
       this.#db.close();
       this.#db = null;
       this.#dbPromise = null;
-      logger.info("IndexedDBQueue: Database closed");
+      logger.info('IndexedDBQueue: Database closed');
     }
   }
 }

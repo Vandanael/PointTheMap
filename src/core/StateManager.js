@@ -46,9 +46,10 @@ export class StateManager {
 
     // Support updater function pattern
     // Clone prevState to prevent accidental mutations in updater functions
-    const nextState = typeof stateOrUpdater === 'function'
-      ? stateOrUpdater(structuredClone(prevState))
-      : stateOrUpdater;
+    const nextState =
+      typeof stateOrUpdater === 'function'
+        ? stateOrUpdater(structuredClone(prevState))
+        : stateOrUpdater;
 
     // Validate new state
     this.#validate(nextState, prevState);
@@ -154,7 +155,7 @@ export class StateManager {
     const parts = path.split('.');
     let value = obj;
     for (const part of parts) {
-      if (value == null) return undefined;
+      if (value === null || value === undefined) return undefined;
       value = value[part];
     }
     return value;
@@ -183,7 +184,7 @@ export class StateManager {
    * @private
    */
   #notifySubscribers(nextState, prevState, action) {
-    this.#subscribers.forEach(callback => {
+    this.#subscribers.forEach((callback) => {
       try {
         callback(nextState, prevState, action);
       } catch (error) {

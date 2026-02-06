@@ -1,3 +1,4 @@
+// @ts-check
 // Point The Map - API Service
 
 /**
@@ -29,26 +30,127 @@
  * @property {number} attempts
  */
 
-import { GAME } from "../config.js";
-import { MODE_IDS } from "../config/game-modes.js";
-import { generateId } from "../utils.js";
-import { logger } from "../utils/logger.js";
-import { loadCapitals, loadSelectBalancedCapitals } from "../data/capitals-loader.js";
-import { loadStadiums, loadSelectBalancedStadiums } from "../data/stadiums-loader.js";
-import { APIError, GameError } from "../core/ErrorHandler.js";
-import {
-  getRetryQueue,
-  removeFromRetryQueue,
-  addToRetryQueue,
-  saveRetryQueue,
-} from "./storage.js";
-import { playerAuth } from "./PlayerAuth.js";
+import { MODE_IDS, getGameMode } from '../config/game-modes.js';
+import { generateId } from '../utils.js';
+import { logger } from '../utils/logger.js';
+import { loadCapitals, loadSelectBalancedCapitals } from '../data/capitals-loader.js';
+import { loadStadiums, loadSelectBalancedStadiums } from '../data/stadiums-loader.js';
+import { APIError, GameError } from '../core/ErrorHandler.js';
+import { StartSessionSchema } from '@lib/schemas/session.js';
+import { getRetryQueue, removeFromRetryQueue, addToRetryQueue, saveRetryQueue } from './storage.js';
+import { playerAuth } from './PlayerAuth.js';
 
-const API_BASE = "/.netlify/functions";
-const USE_MOCK = import.meta.env.DEV && !import.meta.env.VITE_USE_API;
+const API_BASE = '/.netlify/functions';
+const USE_MOCK =
+  (import.meta.env.DEV && !import.meta.env.VITE_USE_API) ||
+  import.meta.env.VITE_USE_MOCK === 'true';
 
 // Store current CSRF token
 let currentCsrfToken = null;
+
+/**
+ * @typedef {import('../types/session.js').StartSessionPayload} StartSessionPayload
+ */
+
+/**
+ * @param {unknown} value
+ * @returns {value is Record<string, any>}
+ */
+const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+
+/**
+ * @param {any} target
+ * @returns {boolean}
+ */
+const isValidCapital = (target) =>
+  isObject(target) &&
+  typeof target.name === 'string' &&
+  typeof target.country === 'string' &&
+  Number.isFinite(target.lat) &&
+  Number.isFinite(target.lng);
+
+/**
+ * @param {any} target
+ * @returns {boolean}
+ */
+const isValidCountry = (target) =>
+  isObject(target) && typeof target.name === 'string' && typeof target.countryId === 'string';
+
+/**
+ * @param {any} target
+ * @returns {boolean}
+ */
+const isValidStadium = (target) =>
+  isObject(target) &&
+  typeof target.name === 'string' &&
+  typeof target.city === 'string' &&
+  typeof target.country === 'string' &&
+  Number.isFinite(target.lat) &&
+  Number.isFinite(target.lng);
+
+/**
+ * @param {any} target
+ * @returns {boolean}
+ */
+const isValidCivilization = (target) =>
+  isObject(target) && typeof target.id === 'string' && typeof target.name === 'string';
+
+/**
+ * Validate the session payload from server or mock.
+ * @param {StartSessionPayload} payload
+ * @param {string} gameType
+ * @returns {{ valid: boolean, error?: string }}
+ */
+export const validateStartSessionPayload = (payload, gameType) => {
+  const parsed = StartSessionSchema.safeParse(payload);
+  if (!parsed.success) {
+    return { valid: false, error: 'Invalid payload schema' };
+  }
+  const safePayload = parsed.data;
+
+  const isCountryMode = gameType === MODE_IDS.COUNTRY || gameType === MODE_IDS.COUNTRY_DAILY;
+  const isCivilizationMode =
+    gameType === MODE_IDS.CIVILIZATION || gameType === MODE_IDS.CIVILIZATION_DAILY;
+  const isStadiumMode = gameType === MODE_IDS.STADIUM || gameType === MODE_IDS.STADIUM_DAILY;
+
+  if (isCountryMode) {
+    if (!Array.isArray(safePayload.countries) || safePayload.countries.length === 0) {
+      return { valid: false, error: 'Missing countries' };
+    }
+    if (!safePayload.countries.every(isValidCountry)) {
+      return { valid: false, error: 'Invalid country payload' };
+    }
+    return { valid: true };
+  }
+
+  if (isCivilizationMode) {
+    if (!Array.isArray(safePayload.civilizations) || safePayload.civilizations.length === 0) {
+      return { valid: false, error: 'Missing civilizations' };
+    }
+    if (!safePayload.civilizations.every(isValidCivilization)) {
+      return { valid: false, error: 'Invalid civilization payload' };
+    }
+    return { valid: true };
+  }
+
+  if (isStadiumMode) {
+    if (!Array.isArray(safePayload.stadiums) || safePayload.stadiums.length === 0) {
+      return { valid: false, error: 'Missing stadiums' };
+    }
+    if (!safePayload.stadiums.every(isValidStadium)) {
+      return { valid: false, error: 'Invalid stadium payload' };
+    }
+    return { valid: true };
+  }
+
+  if (!Array.isArray(safePayload.capitals) || safePayload.capitals.length === 0) {
+    return { valid: false, error: 'Missing capitals' };
+  }
+  if (!safePayload.capitals.every(isValidCapital)) {
+    return { valid: false, error: 'Invalid capital payload' };
+  }
+  return { valid: true };
+};
 
 /**
  * Mock implementation of start API
@@ -63,26 +165,29 @@ const mockStart = async (gameType = MODE_IDS.CLASSIC) => {
 
     // Create unique countries list from capitals, filtering out UNK
     const countryMap = new Map();
-    capitals.forEach(cap => {
+    capitals.forEach((cap) => {
       if (cap.countryId && cap.countryId !== 'UNK' && !countryMap.has(cap.countryId)) {
         countryMap.set(cap.countryId, {
           name: cap.country,
           countryId: cap.countryId,
-          popular: cap.popular
+          popular: cap.popular,
         });
       }
     });
     const countries = Array.from(countryMap.values());
 
     const selector = new RandomSelector();
-    const selected = selector.select(countries, { count: 5, balancing: { popular: 2, obscure: 3 } });
+    const selected = selector.select(countries, {
+      count: 5,
+      balancing: { popular: 2, obscure: 3 },
+    });
 
     return {
       token: generateId(),
-      countries: selected.map(c => ({
+      countries: selected.map((c) => ({
         name: c.name,
         countryId: c.countryId,
-        popular: c.popular
+        popular: c.popular,
       })),
       startTime: Date.now(),
       csrfToken: generateId(),
@@ -92,13 +197,13 @@ const mockStart = async (gameType = MODE_IDS.CLASSIC) => {
   if (gameType === MODE_IDS.STADIUM) {
     const [stadiums, selectBalancedStadiums] = await Promise.all([
       loadStadiums(),
-      loadSelectBalancedStadiums()
+      loadSelectBalancedStadiums(),
     ]);
 
     const selected = selectBalancedStadiums(stadiums);
     return {
       token: generateId(),
-      stadiums: selected.map(s => ({
+      stadiums: selected.map((s) => ({
         name: s.name,
         city: s.city,
         country: s.country,
@@ -114,15 +219,14 @@ const mockStart = async (gameType = MODE_IDS.CLASSIC) => {
   if (gameType === MODE_IDS.CIVILIZATION) {
     const { civilizations } = await import('../data/civilizations.js');
     const { selectCivilizations } = await import('@lib/capital-selection/index.js');
-    const { getGameMode } = await import('../config/game-modes.js');
     const mode = getGameMode(MODE_IDS.CIVILIZATION);
     const selected = selectCivilizations(mode, civilizations, new Date());
     return {
       token: generateId(),
-      civilizations: selected.map(c => ({
+      civilizations: selected.map((c) => ({
         id: c.id,
         name: c.name,
-        popular: c.popular
+        popular: c.popular,
       })),
       startTime: Date.now(),
       csrfToken: generateId(),
@@ -132,7 +236,7 @@ const mockStart = async (gameType = MODE_IDS.CLASSIC) => {
   // Lazy load capitals data (only loaded when needed)
   const [capitals, selectBalancedCapitals] = await Promise.all([
     loadCapitals(),
-    loadSelectBalancedCapitals()
+    loadSelectBalancedCapitals(),
   ]);
 
   const selected = selectBalancedCapitals(capitals);
@@ -156,7 +260,7 @@ const mockStart = async (gameType = MODE_IDS.CLASSIC) => {
  * @param {string} pseudo
  * @returns {import('../game/Game.js').SubmitResult}
  */
-const mockSubmit = (token, rounds, pseudo) => {
+const mockSubmit = (_token, rounds, _pseudo) => {
   const totalScore = rounds.reduce((sum, r) => sum + (r.score || 0), 0);
   return {
     score: Math.round(totalScore),
@@ -173,22 +277,22 @@ const mockSubmit = (token, rounds, pseudo) => {
  */
 const fetchApi = async (endpoint, options = {}) => {
   const headers = {
-    "Content-Type": "application/json",
-    ...(options.headers || {})
+    'Content-Type': 'application/json',
+    ...(options.headers || {}),
   };
 
   // Add player token to all requests
   try {
     const authHeader = await playerAuth.getAuthHeader();
-    headers["Authorization"] = authHeader;
+    headers['Authorization'] = authHeader;
   } catch (error) {
-    logger.error("[API] Failed to get player token:", error);
+    logger.error('[API] Failed to get player token:', error);
     // Continue without token - server will handle missing token
   }
 
   // Add CSRF token to protected endpoints
-  if (currentCsrfToken && endpoint === "submit") {
-    headers["X-CSRF-Token"] = currentCsrfToken;
+  if (currentCsrfToken && endpoint === 'submit') {
+    headers['X-CSRF-Token'] = currentCsrfToken;
   }
 
   let res;
@@ -209,25 +313,17 @@ const fetchApi = async (endpoint, options = {}) => {
 
   // Handle 502/503 errors before trying to parse JSON
   if (res.status === 502 || res.status === 503) {
-    const data = await res.json().catch(() => ({ 
-      error: res.status === 502 ? "Bad Gateway - Server error" : "Service Unavailable" 
+    const data = await res.json().catch(() => ({
+      error: res.status === 502 ? 'Bad Gateway - Server error' : 'Service Unavailable',
     }));
-    const error = new APIError(
-      data.error || `HTTP ${res.status}`,
-      res.status,
-      data
-    );
+    const error = new APIError(data.error || `HTTP ${res.status}`, res.status, data);
     throw error;
   }
 
-  const data = await res.json().catch(() => ({ error: "Invalid response" }));
+  const data = await res.json().catch(() => ({ error: 'Invalid response' }));
 
   if (!res.ok) {
-    const error = new APIError(
-      data.error || `HTTP ${res.status}`,
-      res.status,
-      data
-    );
+    const error = new APIError(data.error || `HTTP ${res.status}`, res.status, data);
     throw error;
   }
 
@@ -288,15 +384,29 @@ const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
 export const api = {
   start: async (gameType = MODE_IDS.CLASSIC) => {
     if (USE_MOCK) {
-      logger.log("[API] Mode mock activé");
+      logger.log('[API] Mode mock activé');
       const session = await mockStart(gameType);
+      const validation = validateStartSessionPayload(session, gameType);
+      if (!validation.valid) {
+        throw new GameError(`Session payload invalid: ${validation.error}`, 'VALIDATION_ERROR', {
+          gameType,
+          source: 'mock-start',
+        });
+      }
       currentCsrfToken = session.csrfToken; // Store CSRF token
       return session;
     }
-    const session = await fetchApi("start", {
-      method: "POST",
+    const session = await fetchApi('start', {
+      method: 'POST',
       body: JSON.stringify({ gameType }),
     });
+    const validation = validateStartSessionPayload(session, gameType);
+    if (!validation.valid) {
+      throw new GameError(`Session payload invalid: ${validation.error}`, 'VALIDATION_ERROR', {
+        gameType,
+        source: 'start',
+      });
+    }
     currentCsrfToken = session.csrfToken; // Store CSRF token
     return session;
   },
@@ -305,8 +415,8 @@ export const api = {
     if (USE_MOCK) {
       return mockSubmit(token, rounds, pseudo);
     }
-    return fetchApi("submit", {
-      method: "POST",
+    return fetchApi('submit', {
+      method: 'POST',
       body: JSON.stringify({
         token,
         rounds: formatRoundsForSubmit(rounds, gameType),
@@ -336,9 +446,7 @@ export const submitWithRetry = async (token, rounds, pseudo, gameType = MODE_IDS
   try {
     const result = await api.submit(token, rounds, pseudo, gameType);
     const queue = getRetryQueue();
-    const index = queue.findIndex(
-      (e) => e.token === token && e.pseudo === pseudo
-    );
+    const index = queue.findIndex((e) => e.token === token && e.pseudo === pseudo);
     if (index !== -1) {
       removeFromRetryQueue(index);
     }
@@ -347,26 +455,25 @@ export const submitWithRetry = async (token, rounds, pseudo, gameType = MODE_IDS
     if (error instanceof APIError && (error.status === 409 || error.status === 400)) {
       throw error;
     }
-    
+
     // Check for network errors or server errors that should trigger retry
-    const isNetworkError = 
-      error instanceof APIError && (
-        error.status === 0 || // Network error
-        error.status === 502 || // Bad Gateway
-        error.status === 503 || // Service Unavailable
-        error.status === 500 || // Internal Server Error
-        error.status >= 504 // Gateway Timeout, etc.
-      ) ||
-      error.message.includes("Failed to fetch") ||
-      error.message.includes("Network error") ||
-      error.message.includes("502") ||
-      error.message.includes("503") ||
-      error.message.includes("500");
-    
+    const isNetworkError =
+      (error instanceof APIError &&
+        (error.status === 0 || // Network error
+          error.status === 502 || // Bad Gateway
+          error.status === 503 || // Service Unavailable
+          error.status === 500 || // Internal Server Error
+          error.status >= 504)) || // Gateway Timeout, etc.
+      error.message.includes('Failed to fetch') ||
+      error.message.includes('Network error') ||
+      error.message.includes('502') ||
+      error.message.includes('503') ||
+      error.message.includes('500');
+
     if (isNetworkError) {
       addToRetryQueue(token, rounds, pseudo, gameType);
       throw new GameError(
-        "Score en attente de synchronisation (connexion perdue). Réessai automatique...",
+        'Score en attente de synchronisation (connexion perdue). Réessai automatique...',
         'NETWORK_ERROR'
       );
     }
@@ -404,7 +511,7 @@ export const processRetryQueue = async () => {
       await api.submit(entry.token, entry.rounds, entry.pseudo, entry.gameType || MODE_IDS.CLASSIC);
       removeFromRetryQueue(i);
       successful++;
-    } catch (error) {
+    } catch {
       entry.attempts++;
       const updatedQueue = getRetryQueue();
       updatedQueue[i] = entry;

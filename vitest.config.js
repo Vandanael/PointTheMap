@@ -6,20 +6,12 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     testTimeout: 10000,
-    exclude: [
-      '**/node_modules/**',
-      '**/dist/**',
-      '.netlify/**',
-    ],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/tests/e2e/**', '.netlify/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.js', 'lib/**/*.js'],
-      exclude: [
-        'src/main.js',
-        'src/**/*.test.js',
-        'src/**/*.spec.js',
-      ],
+      exclude: ['src/main.js', 'src/**/*.test.js', 'src/**/*.spec.js'],
     },
     setupFiles: ['./src/test/setup.js'],
   },

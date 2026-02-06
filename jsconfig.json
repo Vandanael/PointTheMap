@@ -2,9 +2,13 @@
   "compilerOptions": {
     "checkJs": true,
     "strict": true,
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
     "module": "ES2022",
     "target": "ES2022",
     "moduleResolution": "bundler",
+    "maxNodeModuleJsDepth": 0,
     "allowImportingTsExtensions": false,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
@@ -14,14 +18,6 @@
       "@lib/*": ["./lib/*"]
     }
   },
-  "include": [
-    "src/**/*",
-    "lib/**/*",
-    "netlify/functions/**/*",
-    "vite-env.d.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["src/**/*", "lib/**/*", "netlify/functions/**/*", "src/vite-env.d.ts"],
+  "exclude": ["node_modules", "dist", "tests/e2e"]
 }

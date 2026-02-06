@@ -4,10 +4,10 @@
  * Manages personal statistics tracking (local-only, no backend sync)
  */
 
-import { MODE_IDS } from "../config/game-modes.js";
-import { storageManager } from "../storage/StorageManager.js";
-import { logger } from "../utils/logger.js";
-import { eventBus } from "../core/EventBus.js";
+import { MODE_IDS } from '../config/game-modes.js';
+import { storageManager } from '../storage/StorageManager.js';
+import { logger } from '../utils/logger.js';
+import { eventBus } from '../core/EventBus.js';
 
 /**
  * Default stats object
@@ -37,7 +37,7 @@ const DEFAULT_STATS = {
   totalRoundsPlayed: 0,
   under20kmCount: 0,
   lastUpdated: Date.now(),
-  lastAccess: Date.now()
+  lastAccess: Date.now(),
 };
 
 /**
@@ -67,7 +67,8 @@ export const getStats = () => {
 const getToday = () => {
   const now = new Date();
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-    .toISOString().split('T')[0];
+    .toISOString()
+    .split('T')[0];
 };
 
 /**
@@ -76,7 +77,9 @@ const getToday = () => {
  */
 const getYesterday = () => {
   const now = new Date();
-  const yesterday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1));
+  const yesterday = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1)
+  );
   return yesterday.toISOString().split('T')[0];
 };
 
@@ -114,8 +117,8 @@ export const updateStats = (rounds, gameType) => {
     // Calculate game metrics
     const avgDistance = rounds.reduce((sum, r) => sum + (r.distance || 0), 0) / rounds.length;
     const totalScore = rounds.reduce((sum, r) => sum + (r.score || 0), 0);
-    const perfectRounds = rounds.filter(r => r.distance < 1).length;
-    const under20kmRounds = rounds.filter(r => r.distance < 20).length;
+    const perfectRounds = rounds.filter((r) => r.distance < 1).length;
+    const under20kmRounds = rounds.filter((r) => r.distance < 20).length;
 
     // Update play count
     stats.playCount += 1;
@@ -134,7 +137,8 @@ export const updateStats = (rounds, gameType) => {
     if (stats.playCount === 1) {
       stats.averageDistance = avgDistance;
     } else {
-      stats.averageDistance = stats.averageDistance + (avgDistance - stats.averageDistance) / stats.playCount;
+      stats.averageDistance =
+        stats.averageDistance + (avgDistance - stats.averageDistance) / stats.playCount;
     }
 
     // Update best scores by game type
@@ -195,7 +199,13 @@ export const updateStats = (rounds, gameType) => {
         logger.info(`Stats: New best civilization daily score: ${totalScore}`);
       }
       const yesterday = getYesterday();
-      updateDailyStreak(stats, 'streakCivilizationDaily', 'lastCivilizationDailyDate', today, yesterday);
+      updateDailyStreak(
+        stats,
+        'streakCivilizationDaily',
+        'lastCivilizationDailyDate',
+        today,
+        yesterday
+      );
     }
 
     // Update timestamps

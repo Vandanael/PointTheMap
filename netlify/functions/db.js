@@ -1,14 +1,21 @@
-import { neon } from "@netlify/neon";
+import { neon } from '@netlify/neon';
+import { createLogger } from './_utils.js';
 
+const logger = createLogger('db');
+
+/**
+ * @param {{ env?: { NETLIFY_DATABASE_URL?: string }, NETLIFY_DATABASE_URL?: string }} context
+ */
 export function getDatabase(context) {
   try {
-    const databaseUrl = context?.env?.NETLIFY_DATABASE_URL ||
-                        context?.NETLIFY_DATABASE_URL ||
-                        process.env.NETLIFY_DATABASE_URL;
+    const databaseUrl =
+      context?.env?.NETLIFY_DATABASE_URL ||
+      context?.NETLIFY_DATABASE_URL ||
+      process.env.NETLIFY_DATABASE_URL;
 
     if (!databaseUrl) {
-      console.error("NETLIFY_DATABASE_URL not found in context or environment");
-      throw new Error("Database URL not configured");
+      logger.error('NETLIFY_DATABASE_URL not found in context or environment');
+      throw new Error('Database URL not configured');
     }
 
     // Configure with connection options for better reliability
@@ -21,8 +28,8 @@ export function getDatabase(context) {
     return sql;
   } catch (error) {
     const err = /** @type {Error & {code?: string}} */ (error);
-    const errorMessage = err.message || "Unknown database connection error";
-    console.error("Database connection error:", errorMessage, err.code);
+    const errorMessage = err.message || 'Unknown database connection error';
+    logger.error('Database connection error:', errorMessage, err.code);
     throw new Error(`Failed to connect to database: ${errorMessage}`);
   }
 }

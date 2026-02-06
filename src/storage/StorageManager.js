@@ -8,10 +8,10 @@
  * - Error handling
  */
 
-import { logger } from "../utils/logger.js";
-import { migrations } from "./migrations.js";
+import { logger } from '../utils/logger.js';
+import { migrations } from './migrations.js';
 
-const STORAGE_VERSION_KEY = "ptm_storage_version";
+const STORAGE_VERSION_KEY = 'ptm_storage_version';
 const CURRENT_VERSION = 2;
 
 /**
@@ -22,7 +22,7 @@ const CURRENT_VERSION = 2;
  */
 
 export class StorageManager {
-  #prefix = "ptm_";
+  #prefix = 'ptm_';
   #version = CURRENT_VERSION;
 
   constructor() {
@@ -38,7 +38,7 @@ export class StorageManager {
 
       if (storedVersion === null) {
         // First time initialization
-        logger.info("Storage: First initialization");
+        logger.info('Storage: First initialization');
         this.#setStorageVersion(this.#version);
       } else if (storedVersion < this.#version) {
         // Run migrations
@@ -47,10 +47,12 @@ export class StorageManager {
         this.#setStorageVersion(this.#version);
       } else if (storedVersion > this.#version) {
         // Newer version than current (downgrade scenario)
-        logger.warn(`Storage: Stored version (${storedVersion}) is newer than current (${this.#version})`);
+        logger.warn(
+          `Storage: Stored version (${storedVersion}) is newer than current (${this.#version})`
+        );
       }
     } catch (error) {
-      logger.error("Storage: Initialization failed", error);
+      logger.error('Storage: Initialization failed', error);
     }
   }
 
@@ -75,7 +77,7 @@ export class StorageManager {
     try {
       localStorage.setItem(STORAGE_VERSION_KEY, version.toString());
     } catch (error) {
-      logger.error("Storage: Failed to set version", error);
+      logger.error('Storage: Failed to set version', error);
     }
   }
 
@@ -128,8 +130,8 @@ export class StorageManager {
       return true;
     } catch (error) {
       if (this.#isQuotaExceeded(error)) {
-        logger.error("Storage: Quota exceeded", error);
-        throw new QuotaExceededError("Storage quota exceeded");
+        logger.error('Storage: Quota exceeded', error);
+        throw new QuotaExceededError('Storage quota exceeded');
       }
       logger.error(`Storage: Failed to set ${key}`, error);
       return false;
@@ -163,7 +165,7 @@ export class StorageManager {
       }
       return true;
     } catch (error) {
-      logger.error("Storage: Failed to clear", error);
+      logger.error('Storage: Failed to clear', error);
       return false;
     }
   }
@@ -212,7 +214,7 @@ export class StorageManager {
         percentage,
       };
     } catch (error) {
-      logger.error("Storage: Failed to get storage info", error);
+      logger.error('Storage: Failed to get storage info', error);
       return { used: 0, quota: 0, percentage: 0 };
     }
   }
@@ -270,8 +272,8 @@ export class StorageManager {
         // Firefox
         error.code === 1014 ||
         // Test name field too, because code might not be present
-        error.name === "QuotaExceededError" ||
-        error.name === "NS_ERROR_DOM_QUOTA_REACHED")
+        error.name === 'QuotaExceededError' ||
+        error.name === 'NS_ERROR_DOM_QUOTA_REACHED')
     );
   }
 
@@ -281,7 +283,7 @@ export class StorageManager {
    * @returns {number} - Bytes freed
    */
   autoCleanup(targetBytes = 1024 * 1024) {
-    logger.info("Storage: Starting auto-cleanup");
+    logger.info('Storage: Starting auto-cleanup');
 
     try {
       const items = [];
@@ -325,7 +327,7 @@ export class StorageManager {
       logger.info(`Storage: Cleanup freed ${freedBytes} bytes`);
       return freedBytes;
     } catch (error) {
-      logger.error("Storage: Auto-cleanup failed", error);
+      logger.error('Storage: Auto-cleanup failed', error);
       return 0;
     }
   }
@@ -337,7 +339,7 @@ export class StorageManager {
 export class QuotaExceededError extends Error {
   constructor(message) {
     super(message);
-    this.name = "QuotaExceededError";
+    this.name = 'QuotaExceededError';
   }
 }
 

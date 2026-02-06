@@ -4,8 +4,8 @@
  * Handle sharing game results via native share API or clipboard fallback
  */
 
-import { logger } from "../utils/logger.js";
-import { t } from "../i18n.js";
+import { logger } from '../utils/logger.js';
+import { t } from '../i18n.js';
 
 /**
  * Calculate daily challenge number from a date
@@ -42,8 +42,8 @@ export const getDailyNumber = (dailyDate) => {
 export const formatShareText = (dailyNumber, avgDistance, rounds, lang) => {
   try {
     // Calculate badges
-    const perfectRounds = rounds.filter(r => r.distance < 1).length;
-    const under20kmRounds = rounds.filter(r => r.distance < 20).length;
+    const perfectRounds = rounds.filter((r) => r.distance < 1).length;
+    const under20kmRounds = rounds.filter((r) => r.distance < 20).length;
 
     // Build share text
     const lines = [];
@@ -64,7 +64,6 @@ export const formatShareText = (dailyNumber, avgDistance, rounds, lang) => {
     const badges = [];
     if (perfectRounds > 0) {
       // Use translation system - temporarily set language if needed
-      const currentLang = lang || 'en';
       const perfectLabel = t('category.perfect');
       badges.push(`${perfectLabel} x${perfectRounds}`);
     }
@@ -102,7 +101,7 @@ export const shareGameResults = async (text) => {
       try {
         await navigator.share({
           text: text,
-          url: 'https://pointthemap.app'
+          url: 'https://pointthemap.app',
         });
         logger.info('Share: Success via native share');
         return true;

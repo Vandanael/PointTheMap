@@ -1,30 +1,37 @@
 // GET /.netlify/functions/leaderboard
 // Flat handler (no compose) to avoid "w is not a function" after esbuild minification
 
-import { getDatabase } from "./db.js";
-import { successResponse, errorResponse, handleDatabaseError } from "./_utils.js";
+import { getDatabase } from './db.js';
+import { successResponse, errorResponse, handleDatabaseError, createLogger } from './_utils.js';
+
+const logger = createLogger('leaderboard');
 
 const LEADERBOARD_TOP_LIMIT = 50;
 
+/**
+ * @param {Request} req
+ * @param {any} context
+ */
 export default async function leaderboardHandler(req, context) {
   try {
     if (req.method !== 'GET') {
-      return errorResponse("Method not allowed", 405);
+      return errorResponse('Method not allowed', 405);
     }
 
     let sql;
     try {
       sql = getDatabase(context);
     } catch (dbError) {
-      console.error("Database connection failed:", dbError?.message);
-      return errorResponse("Database connection failed. Please try again later.", 503);
+      const error = /** @type {Error} */ (dbError);
+      logger.error('Database connection failed:', error.message);
+      return errorResponse('Database connection failed. Please try again later.', 503);
     }
 
-    const url = new URL(req.url, `http://${req.headers.get("host") || "localhost"}`);
-    const type = url.searchParams.get("type") || "classic";
+    const url = new URL(req.url, `http://${req.headers.get('host') || 'localhost'}`);
+    const type = url.searchParams.get('type') || 'classic';
 
-    const validDailyTypes = ["daily", "country_daily", "stadium_daily", "civilization_daily"];
-    const validClassicTypes = ["classic", "country", "stadium", "civilization"];
+    const validDailyTypes = ['daily', 'country_daily', 'stadium_daily', 'civilization_daily'];
+    const validClassicTypes = ['classic', 'country', 'stadium', 'civilization'];
     let query;
     if (validDailyTypes.includes(type)) {
       const today = new Date();
@@ -55,7 +62,7 @@ export default async function leaderboardHandler(req, context) {
         LIMIT ${LEADERBOARD_TOP_LIMIT}
       `;
     } else {
-      const gameType = validClassicTypes.includes(type) ? type : "classic";
+      const gameType = validClassicTypes.includes(type) ? type : 'classic';
       query = sql`
         WITH ranked_scores AS (
           SELECT
@@ -88,14 +95,14 @@ export default async function leaderboardHandler(req, context) {
     }));
 
     return successResponse(topScores, {
-      "Cache-Control": "public, max-age=30, s-maxage=30",
+      'Cache-Control': 'public, max-age=30, s-maxage=30',
     });
   } catch (error) {
     const err = /** @type {Error & { code?: string }} */ (error);
     if (err?.code || (err?.message && err.message.includes('database'))) {
       return handleDatabaseError(err, 'leaderboard');
     }
-    console.error("[leaderboard] Uncaught error:", err?.message, err?.stack);
-    return errorResponse("An error occurred. Please try again later.", 500);
+    logger.error('Uncaught error:', err?.message, err?.stack);
+    return errorResponse('An error occurred. Please try again later.', 500);
   }
 }

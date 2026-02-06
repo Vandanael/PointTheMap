@@ -1,11 +1,18 @@
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
 import { getDatabase } from './db.js';
+import { createLogger } from './_utils.js';
+
+const logger = createLogger('generate-player-token');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
 const TOKEN_EXPIRY = '1y'; // Token valide 1 an
 
+/**
+ * @param {Request} req
+ * @param {any} context
+ */
 export default async (req, context) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -21,10 +28,7 @@ export default async (req, context) => {
 
   // Only accept POST
   if (req.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
-      { status: 405, headers }
-    );
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
   }
 
   try {
@@ -61,10 +65,10 @@ export default async (req, context) => {
       { status: 200, headers }
     );
   } catch (error) {
-    console.error('Error generating player token:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers }
-    );
+    logger.error('Error generating player token:', error);
+    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+      status: 500,
+      headers,
+    });
   }
 };

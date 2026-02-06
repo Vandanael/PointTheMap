@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createRound, recordClick, timeoutRound, getRemainingTime } from './Round.js';
 import { scoringSystem } from '../systems/ScoringSystem.js';
-import { GAME } from '../config.js';
+import { validationSystem } from '../systems/ValidationSystem.js';
+import { createRoundRulesAdapter } from './ports.js';
+import { GAME } from '@lib/config';
 
 describe('calculateScore (via ScoringSystem)', () => {
   it('returns max score (5000) for distance < 0.1km (perfect zone)', () => {
@@ -55,7 +57,7 @@ describe('calculateScore (via ScoringSystem)', () => {
     // Note: 0.5km is outside perfect zone with V2 balanced formula
     expect(scoringSystem.calculateScore(1)).toBeLessThan(5000);
     expect(scoringSystem.calculateScore(1)).toBeGreaterThan(4900);
-    expect(scoringSystem.calculateScore(50)).toBe(4827);  // V2 balanced (k=800, p=1.2)
+    expect(scoringSystem.calculateScore(50)).toBe(4827); // V2 balanced (k=800, p=1.2)
     expect(scoringSystem.calculateScore(100)).toBe(4619); // V2 balanced
     expect(scoringSystem.calculateScore(500)).toBe(3187); // V2 balanced
   });
@@ -107,6 +109,7 @@ describe('createRound', () => {
 describe('recordClick', () => {
   let capital;
   let round;
+  let roundRules;
 
   beforeEach(() => {
     capital = {
@@ -116,12 +119,13 @@ describe('recordClick', () => {
       lng: 2.3522,
     };
     round = createRound(capital, 0);
+    roundRules = createRoundRulesAdapter(validationSystem, scoringSystem);
   });
 
   it('records a click and calculates score for perfect click', () => {
     // Click exactly on Paris
     const clickCoords = [48.8566, 2.3522];
-    const result = recordClick(round, clickCoords);
+    const result = recordClick(round, clickCoords, 'classic', undefined, null, null, roundRules);
 
     expect(result.status).toBe('completed');
     expect(result.score).toBe(5000);
@@ -133,7 +137,7 @@ describe('recordClick', () => {
   it('records a click and calculates score for nearby click', () => {
     // Click 50km from Paris (approximately)
     const clickCoords = [48.4, 2.3522];
-    const result = recordClick(round, clickCoords);
+    const result = recordClick(round, clickCoords, 'classic', undefined, null, null, roundRules);
 
     expect(result.status).toBe('completed');
     expect(result.score).toBeGreaterThan(0);
@@ -144,7 +148,7 @@ describe('recordClick', () => {
   it('normalizes coordinates > 180 longitude', () => {
     // Longitude > 180 should be normalized
     const clickCoords = [48.8566, 200];
-    const result = recordClick(round, clickCoords);
+    const result = recordClick(round, clickCoords, 'classic', undefined, null, null, roundRules);
 
     expect(result.click.lng).toBe(-160); // 200 - 360 = -160
     expect(result.status).toBe('completed');
@@ -152,7 +156,7 @@ describe('recordClick', () => {
 
   it('normalizes coordinates < -180 longitude', () => {
     const clickCoords = [48.8566, -200];
-    const result = recordClick(round, clickCoords);
+    const result = recordClick(round, clickCoords, 'classic', undefined, null, null, roundRules);
 
     expect(result.click.lng).toBe(160); // -200 + 360 = 160
     expect(result.status).toBe('completed');
@@ -160,7 +164,7 @@ describe('recordClick', () => {
 
   it('clamps latitude > 90', () => {
     const clickCoords = [100, 2.3522];
-    const result = recordClick(round, clickCoords);
+    const result = recordClick(round, clickCoords, 'classic', undefined, null, null, roundRules);
 
     expect(result.click.lat).toBe(90);
     expect(result.status).toBe('completed');
@@ -168,7 +172,7 @@ describe('recordClick', () => {
 
   it('clamps latitude < -90', () => {
     const clickCoords = [-100, 2.3522];
-    const result = recordClick(round, clickCoords);
+    const result = recordClick(round, clickCoords, 'classic', undefined, null, null, roundRules);
 
     expect(result.click.lat).toBe(-90);
     expect(result.status).toBe('completed');
@@ -182,7 +186,15 @@ describe('recordClick', () => {
     };
 
     const clickCoords = [48.8566, 2.3522];
-    const result = recordClick(pastRound, clickCoords);
+    const result = recordClick(
+      pastRound,
+      clickCoords,
+      'classic',
+      undefined,
+      null,
+      null,
+      roundRules
+    );
 
     expect(result.status).toBe('timeout');
     expect(result.score).toBe(0);
@@ -196,7 +208,15 @@ describe('recordClick', () => {
     const feature = {
       geometry: {
         type: 'Polygon',
-        coordinates: [[[2, 36], [3, 36], [3, 37], [2, 37], [2, 36]]],
+        coordinates: [
+          [
+            [2, 36],
+            [3, 36],
+            [3, 37],
+            [2, 37],
+            [2, 36],
+          ],
+        ],
       },
     };
     const civilizationData = {
@@ -205,7 +225,15 @@ describe('recordClick', () => {
       clickedCivilizationId: 'roman_empire',
     };
     const clickCoords = [36.5, 2.5];
-    const result = recordClick(round, clickCoords, 'classic', undefined, null, civilizationData);
+    const result = recordClick(
+      round,
+      clickCoords,
+      'classic',
+      undefined,
+      null,
+      civilizationData,
+      roundRules
+    );
 
     expect(result.status).toBe('completed');
     expect(result.correctCivilizationId).toBe('roman_empire');

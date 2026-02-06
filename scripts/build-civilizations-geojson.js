@@ -21,7 +21,7 @@ async function fetchGeoJSON(url) {
 
 function featureMatchesName(feature, nameInBasemap) {
   const name = feature.properties && (feature.properties.NAME || feature.properties.SUBJECTO);
-  if (name == null) return false;
+  if (name === null || name === undefined) return false;
   return String(name).trim() === String(nameInBasemap).trim();
 }
 
@@ -32,7 +32,7 @@ function mergeGeometries(features) {
   for (let i = 1; i < features.length; i++) {
     try {
       acc = union(acc, features[i]);
-    } catch (_) {}
+    } catch {}
   }
   return acc && acc.geometry ? acc.geometry : null;
 }

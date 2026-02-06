@@ -36,18 +36,7 @@ class Analytics {
    * Initialize analytics provider (Google Analytics, Plausible, etc.)
    * @private
    */
-  #initializeProvider() {
-    // Example: Google Analytics
-    // if (window.gtag) {
-    //   window.gtag('config', import.meta.env.VITE_GA_ID);
-    // }
-
-    // Example: Plausible
-    // Already loaded via script tag in index.html
-
-    // Example: Custom analytics
-    // this.#sendBeacon('/api/analytics/init', { timestamp: Date.now() });
-  }
+  #initializeProvider() {}
 
   /**
    * Track an event
@@ -87,19 +76,6 @@ class Analytics {
    * @param {Object} properties - Event properties
    */
   #sendToProvider(event, properties) {
-    // Example: Google Analytics
-    // if (window.gtag) {
-    //   window.gtag('event', event, properties);
-    // }
-
-    // Example: Plausible
-    // if (window.plausible) {
-    //   window.plausible(event, { props: properties });
-    // }
-
-    // Example: Custom endpoint
-    // this.#sendBeacon('/api/analytics/track', { event, properties });
-
     // For now, just log
     logger.debug(`[Analytics] Event tracked: ${event}`, properties);
   }

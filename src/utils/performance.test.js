@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { debounce } from "./performance.js";
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { debounce } from './performance.js';
 
-describe("Performance Utilities", () => {
+describe('Performance Utilities', () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -10,8 +10,8 @@ describe("Performance Utilities", () => {
     vi.restoreAllMocks();
   });
 
-  describe("debounce", () => {
-    it("should debounce function calls", () => {
+  describe('debounce', () => {
+    it('should debounce function calls', () => {
       const func = vi.fn();
       const debounced = debounce(func, 100);
 
@@ -26,18 +26,18 @@ describe("Performance Utilities", () => {
       expect(func).toHaveBeenCalledTimes(1);
     });
 
-    it("should pass arguments correctly", () => {
+    it('should pass arguments correctly', () => {
       const func = vi.fn();
       const debounced = debounce(func, 100);
 
-      debounced("a", "b", "c");
+      debounced('a', 'b', 'c');
 
       vi.advanceTimersByTime(100);
 
-      expect(func).toHaveBeenCalledWith("a", "b", "c");
+      expect(func).toHaveBeenCalledWith('a', 'b', 'c');
     });
 
-    it("should reset timer on subsequent calls", () => {
+    it('should reset timer on subsequent calls', () => {
       const func = vi.fn();
       const debounced = debounce(func, 100);
 
@@ -53,7 +53,7 @@ describe("Performance Utilities", () => {
       expect(func).toHaveBeenCalledTimes(1);
     });
 
-    it("should call immediately when immediate=true", () => {
+    it('should call immediately when immediate=true', () => {
       const func = vi.fn();
       const debounced = debounce(func, 100, true);
 
@@ -73,8 +73,9 @@ describe("Performance Utilities", () => {
       expect(func).toHaveBeenCalledTimes(2);
     });
 
-    it("should preserve context", () => {
+    it('should preserve context', () => {
       let context;
+      /** @this {unknown} */
       const func = function () {
         context = this;
       };
@@ -89,8 +90,8 @@ describe("Performance Utilities", () => {
     });
   });
 
-  describe("Real-world scenarios", () => {
-    it("should handle window resize with debounce", () => {
+  describe('Real-world scenarios', () => {
+    it('should handle window resize with debounce', () => {
       const handler = vi.fn();
       const debouncedHandler = debounce(handler, 200);
 
@@ -107,27 +108,27 @@ describe("Performance Utilities", () => {
       expect(handler).toHaveBeenCalledTimes(1);
     });
 
-    it("should handle input with debounce for search", () => {
+    it('should handle input with debounce for search', () => {
       const searchFunc = vi.fn();
       const debouncedSearch = debounce(searchFunc, 300);
 
       // User types "hello"
-      debouncedSearch("h");
+      debouncedSearch('h');
       vi.advanceTimersByTime(50);
-      debouncedSearch("he");
+      debouncedSearch('he');
       vi.advanceTimersByTime(50);
-      debouncedSearch("hel");
+      debouncedSearch('hel');
       vi.advanceTimersByTime(50);
-      debouncedSearch("hell");
+      debouncedSearch('hell');
       vi.advanceTimersByTime(50);
-      debouncedSearch("hello");
+      debouncedSearch('hello');
 
       expect(searchFunc).not.toHaveBeenCalled();
 
       vi.advanceTimersByTime(300);
 
       expect(searchFunc).toHaveBeenCalledTimes(1);
-      expect(searchFunc).toHaveBeenCalledWith("hello");
+      expect(searchFunc).toHaveBeenCalledWith('hello');
     });
   });
 });

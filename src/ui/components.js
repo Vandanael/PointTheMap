@@ -1,8 +1,8 @@
-import { SCORING_THRESHOLDS } from "../config.js";
-import { MODE_IDS } from "../config/game-modes.js";
-import { formatScore, escapeHtml } from "../utils.js";
-import { t, getLang } from "../i18n.js";
-import { scoringSystem } from "../systems/ScoringSystem.js";
+import { SCORING_THRESHOLDS } from '../config.js';
+import { MODE_IDS } from '../config/game-modes.js';
+import { formatScore, escapeHtml } from '../utils.js';
+import { t, getLang } from '../i18n.js';
+import { scoringSystem } from '../systems/ScoringSystem.js';
 
 /**
  * @param {string} id
@@ -10,7 +10,7 @@ import { scoringSystem } from "../systems/ScoringSystem.js";
  * @param {boolean} [fullScreen=true]
  */
 export const Modal = (id, content, fullScreen = true) => `
-  <div id="${id}" class="fixed ${fullScreen ? "inset-0 modal-bg" : "bottom-8 left-1/2 -translate-x-1/2"} ${fullScreen ? "flex items-center justify-center" : ""}" style="z-index: var(--z-modal);">
+  <div id="${id}" class="fixed ${fullScreen ? 'inset-0 modal-bg' : 'bottom-8 left-1/2 -translate-x-1/2'} ${fullScreen ? 'flex items-center justify-center' : ''}" style="z-index: var(--z-modal);">
     ${content}
   </div>
 `;
@@ -22,15 +22,15 @@ export const Modal = (id, content, fullScreen = true) => `
  * @param {boolean} [fullWidth=true]
  * @param {boolean} [pulse=false]
  */
-export const Button = (id, text, variant = "primary", fullWidth = true, pulse = false) => {
+export const Button = (id, text, variant = 'primary', fullWidth = true, pulse = false) => {
   /** @type {Record<"primary" | "secondary", string>} */
   const variants = {
-    primary: "bg-yellow-400 hover:bg-yellow-300 text-black",
-    secondary: "btn-secondary",
+    primary: 'bg-yellow-400 hover:bg-yellow-300 text-black',
+    secondary: 'btn-secondary',
   };
 
   return `
-    <button id="${id}" class="${fullWidth ? "w-full" : "px-6"} py-5 ${variants[variant]} font-black rounded-xl text-lg btn-scale ${pulse ? "pulse-button" : ""}" style="text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+    <button id="${id}" class="${fullWidth ? 'w-full' : 'px-6'} py-5 ${variants[variant]} font-black rounded-xl text-lg btn-scale ${pulse ? 'pulse-button' : ''}" style="text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
       ${text}
     </button>
   `;
@@ -53,7 +53,6 @@ export const TimerBar = () => `
   </div>
 `;
 
-
 /**
  * @param {number} roundNum
  * @param {number} totalRounds
@@ -64,11 +63,11 @@ export const GameHeader = (roundNum, totalRounds, totalScore) => {
   <div id="game-header" class="game-header fixed top-0 left-0 right-0" style="z-index: var(--z-base);">
     <div class="px-6 py-2 flex justify-between items-center" style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
       <div class="flex items-center gap-2">
-        <div class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">${t("round")}</div>
+        <div class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">${t('round')}</div>
         <div class="text-lg font-black" style="color: var(--text-primary);">${roundNum}/${totalRounds}</div>
       </div>
       <div class="flex items-center gap-2">
-        <div class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">${t("score")}</div>
+        <div class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">${t('score')}</div>
         <div class="text-lg font-black text-yellow-400">${formatScore(totalScore)}</div>
       </div>
     </div>
@@ -87,12 +86,12 @@ export const QuestionModal = (capitalName, country) => {
   <div id="question-modal" class="fixed inset-0 flex items-center justify-center p-4" style="background: transparent; z-index: var(--z-modal); pointer-events: none;" role="dialog" aria-modal="true" aria-labelledby="capitalName">
     <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content" style="box-shadow: 0 8px 32px rgba(0,0,0,0.4); pointer-events: auto;">
       <div class="text-center">
-        <div class="text-yellow-400 text-3xl font-black mb-4 animate-pulse">${t("getReady")}</div>
-        <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-3" id="findLabel">${t("find")}</div>
+        <div class="text-yellow-400 text-3xl font-black mb-4 animate-pulse">${t('getReady')}</div>
+        <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-3" id="findLabel">${t('find')}</div>
         <h2 class="text-5xl font-black text-primary mb-2" id="capitalName">${escapedCapital}</h2>
         <div class="text-secondary text-base mb-6" id="countryName">${escapedCountry}</div>
         <div class="modal-section rounded-xl p-4 text-secondary text-sm" id="clickMapLabel">
-          ${t("clickOnMap")}
+          ${t('clickOnMap')}
         </div>
       </div>
     </div>
@@ -111,14 +110,14 @@ export const QuestionModalWithButton = (capitalName, country) => {
   <div id="question-modal" class="fixed inset-0 flex items-center justify-center p-4" style="background: transparent; z-index: var(--z-modal); pointer-events: none;" role="dialog" aria-modal="true" aria-labelledby="capitalName">
     <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content" style="box-shadow: 0 8px 32px rgba(0,0,0,0.4); pointer-events: auto;">
       <div class="text-center">
-        <div class="text-yellow-400 text-3xl font-black mb-4 animate-pulse">${t("getReady")}</div>
-        <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-3" id="findLabel">${t("find")}</div>
+        <div class="text-yellow-400 text-3xl font-black mb-4 animate-pulse">${t('getReady')}</div>
+        <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-3" id="findLabel">${t('find')}</div>
         <h2 class="text-5xl font-black text-primary mb-2" id="capitalName">${escapedCapital}</h2>
         <div class="text-secondary text-base mb-6" id="countryName">${escapedCountry}</div>
         <div class="modal-section rounded-xl p-4 text-secondary text-sm mb-6" id="clickMapLabel">
-          ${t("clickOnMap")}
+          ${t('clickOnMap')}
         </div>
-        ${Button("btn-ready", t("start"), "primary")}
+        ${Button('btn-ready', t('start'), 'primary')}
       </div>
     </div>
   </div>
@@ -150,24 +149,23 @@ export const RoundResult = (distance, score, isTimeout, isLast, baseScore, timeB
     return scoringSystem.getScoreCategory(distance);
   };
 
+  const category = getCategory();
   const getCategoryLabel = () => {
-    const category = getCategory();
     if (!category) return null;
     return scoringSystem.getCategoryLabel(category);
   };
 
   // Icon based on category (using shared thresholds)
   const getIcon = () => {
-    if (isTimeout) return "⏱️";
-    const category = getCategory();
-    if (!category || distance === null) return "🤔";
+    if (isTimeout) return '⏱️';
+    if (!category || distance === null) return '🤔';
     const d = distance;
     const { PERFECT_MAX, EXCELLENT_MAX, GOOD_MAX, FAIR_MAX } = SCORING_THRESHOLDS;
-    if (d < PERFECT_MAX) return "🏆";
-    if (d < EXCELLENT_MAX) return "⭐";
-    if (d < GOOD_MAX) return "🎯";
-    if (d < FAIR_MAX) return "👍";
-    return "👌";
+    if (d < PERFECT_MAX) return '🏆';
+    if (d < EXCELLENT_MAX) return '⭐';
+    if (d < GOOD_MAX) return '🎯';
+    if (d < FAIR_MAX) return '👍';
+    return '👌';
   };
 
   if (isTimeout) {
@@ -175,39 +173,58 @@ export const RoundResult = (distance, score, isTimeout, isLast, baseScore, timeB
       <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
         <div class="text-center mb-6">
           <div id="resultIcon" class="text-6xl mb-4">${getIcon()}</div>
-          <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="distanceLabel">${t("timeUp")}</div>
-          <div class="text-3xl font-black text-primary mb-6" id="distanceDisplay">${t("tooSlow")}</div>
-          <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="pointsEarnedLabel">${t("pointsEarned")}</div>
+          <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="distanceLabel">${t('timeUp')}</div>
+          <div class="text-3xl font-black text-primary mb-6" id="distanceDisplay">${t('tooSlow')}</div>
+          <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="pointsEarnedLabel">${t('pointsEarned')}</div>
           <div class="text-6xl font-black text-yellow-400 mb-2" id="pointsDisplay">0</div>
         </div>
-        ${Button("btn-next", isLast ? t("seeResults") : t("continue"), "primary")}
+        ${Button('btn-next', isLast ? t('seeResults') : t('continue'), 'primary')}
       </div>
     `;
   }
 
   const categoryLabel = getCategoryLabel();
   const hasTimeBonus = timeBonus && timeBonus > 0;
+  const isJuicy = category === 'perfect' || category === 'excellent';
+  const stampText =
+    category === 'perfect' ? 'PERFECT' : category === 'excellent' ? 'EXCELLENT' : '';
 
   return `
     <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
+      ${
+        isJuicy
+          ? `
+        <div class="result-stamp ${category === 'perfect' ? 'result-stamp-perfect' : 'result-stamp-excellent'}">
+          ${stampText}
+          <span class="result-confetti"></span>
+          <span class="result-confetti"></span>
+          <span class="result-confetti"></span>
+        </div>
+      `
+          : ''
+      }
       <div class="text-center mb-6">
         <div id="resultIcon" class="text-6xl mb-4">${getIcon()}</div>
         ${categoryLabel ? `<div class="text-xl font-bold text-primary mb-2" id="categoryLabel">${categoryLabel}</div>` : ''}
-        <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="distanceLabel">${t("distance")}</div>
+        <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="distanceLabel">${t('distance')}</div>
         <div class="text-3xl font-black text-primary mb-6" id="distanceDisplay">${formatDistance(distance ?? 0)}</div>
 
-        <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="pointsEarnedLabel">${t("pointsEarned")}</div>
-        ${hasTimeBonus ? `
+        <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="pointsEarnedLabel">${t('pointsEarned')}</div>
+        ${
+          hasTimeBonus
+            ? `
           <div class="mb-4">
-            <div class="text-2xl font-bold text-primary mb-1">${t("base")}: ${formatScore(baseScore || 0)}</div>
-            <div class="text-3xl font-black text-green-400 mb-2 animate-bounce">⚡ ${t("speedBonus")}: +${formatScore(timeBonus)}</div>
+            <div class="text-2xl font-bold text-primary mb-1">${t('base')}: ${formatScore(baseScore || 0)}</div>
+            <div class="text-3xl font-black text-green-400 mb-2 animate-bounce">⚡ ${t('speedBonus')}: +${formatScore(timeBonus)}</div>
             <div class="text-5xl font-black text-yellow-400 animate-pulse" id="pointsDisplay">${formatScore(score)}</div>
           </div>
-        ` : `
+        `
+            : `
           <div class="text-6xl font-black text-yellow-400 mb-2" id="pointsDisplay">${formatScore(score)}</div>
-        `}
+        `
+        }
       </div>
-      ${Button("btn-next", isLast ? t("seeResults") : t("continue"), "primary")}
+      ${Button('btn-next', isLast ? t('seeResults') : t('continue'), 'primary')}
     </div>
   `;
 };
@@ -242,13 +259,13 @@ export const StartScreen = () => `
           <div class="lobby-challenge-wrapper">
             <div id="challenge-card" class="challenge-card">
               <p class="challenge-title" id="challengeText">
-                ${t("challenge")}
+                ${t('challenge')}
               </p>
               <p class="challenge-info">
-                ${t("capitalsInfo")}
+                ${t('capitalsInfo')}
               </p>
               <p class="challenge-desc">
-                ${t("clickToWin")}
+                ${t('clickToWin')}
               </p>
             </div>
           </div>
@@ -263,7 +280,7 @@ export const StartScreen = () => `
                 aria-label="${t('capitals')}"
                 aria-pressed="true"
               >
-                <span aria-hidden="true">${t("capitals")}</span>
+                <span aria-hidden="true">${t('capitals')}</span>
               </button>
               <button
                 id="category-countries"
@@ -272,7 +289,7 @@ export const StartScreen = () => `
                 aria-label="${t('countries')}"
                 aria-pressed="false"
               >
-                <span aria-hidden="true">${t("countries")}</span>
+                <span aria-hidden="true">${t('countries')}</span>
               </button>
               <button
                 id="category-civilizations"
@@ -281,7 +298,7 @@ export const StartScreen = () => `
                 aria-label="${t('civilizations')}"
                 aria-pressed="false"
               >
-                <span aria-hidden="true">${t("civilizations")}</span>
+                <span aria-hidden="true">${t('civilizations')}</span>
               </button>
               <button
                 id="category-stadiums"
@@ -290,7 +307,7 @@ export const StartScreen = () => `
                 aria-label="${t('stadiums')}"
                 aria-pressed="false"
               >
-                <span aria-hidden="true">${t("stadiums")}</span>
+                <span aria-hidden="true">${t('stadiums')}</span>
               </button>
             </div>
           </div>
@@ -300,8 +317,8 @@ export const StartScreen = () => `
         <div class="lobby-actions">
           <!-- Pill Toggle for Mode Selection -->
           <div class="pill-toggle-wrapper">
-            <label class="mode-label">${t("selectMode")}</label>
-            <div class="pill-toggle" role="radiogroup" aria-label="${t("selectMode")}">
+            <label class="mode-label">${t('selectMode')}</label>
+            <div class="pill-toggle" role="radiogroup" aria-label="${t('selectMode')}">
               <div id="pill-slider" class="pill-slider"></div>
               <button
                 id="mode-${MODE_IDS.CLASSIC}"
@@ -310,7 +327,7 @@ export const StartScreen = () => `
                 role="radio"
                 aria-checked="true"
               >
-                ${t("classic")}
+                ${t('classic')}
               </button>
               <button
                 id="mode-${MODE_IDS.DAILY}"
@@ -319,14 +336,14 @@ export const StartScreen = () => `
                 role="radio"
                 aria-checked="false"
               >
-                ${t("daily")}
+                ${t('daily')}
               </button>
             </div>
           </div>
 
           <!-- Main Action Button -->
-          <button id="btn-start-game" class="play-btn" aria-label="${t("play")}">
-            ${t("play")}
+          <button id="btn-start-game" class="play-btn" aria-label="${t('play')}">
+            ${t('play')}
           </button>
         </div>
       </div>
@@ -336,13 +353,13 @@ export const StartScreen = () => `
     <div class="lobby-footer" style="position: relative; z-index: 1;">
       <div class="lobby-footer-content">
         <div class="text-center md:text-left text-tertiary text-sm">
-          ${t("madeBy")}
+          ${t('madeBy')}
           <a href="https://github.com/Vandanael" target="_blank" rel="noopener noreferrer" class="font-semibold transition-colors no-underline hover:underline text-secondary">
             Vandanael
           </a>
         </div>
         <button id="btn-share-game" class="text-secondary hover:underline text-sm font-medium transition-colors" aria-label="Share game">
-          ${t("share")}
+          ${t('share')}
         </button>
       </div>
     </div>
@@ -353,23 +370,23 @@ export const StartScreen = () => `
  * @param {number} totalScore
  * @param {string} [lastPseudo=""]
  */
-export const GameOverScreen = (totalScore, lastPseudo = "") => {
+export const GameOverScreen = (totalScore, lastPseudo = '') => {
   const escapedPseudo = escapeHtml(lastPseudo);
   return `
   <div id="result-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="gameOverLabel">
     <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
       <h2 class="text-5xl font-black text-primary mb-8 text-center tracking-tight uppercase" id="gameOverLabel">
-        ${t("gameOver")}
+        ${t('gameOver')}
       </h2>
       <div class="text-center mb-8">
-        <div class="text-tertiary text-xs uppercase tracking-widest mb-3" id="finalScoreLabel">${t("finalScore")}</div>
+        <div class="text-tertiary text-xs uppercase tracking-widest mb-3" id="finalScoreLabel">${t('finalScore')}</div>
         <div class="text-8xl font-black text-primary mb-4" id="finalScoreDisplay">${formatScore(totalScore)}</div>
       </div>
 
       <!-- Pseudo input -->
       <div class="mb-6" style="overflow: hidden;">
         <label for="pseudo-input" class="text-secondary text-sm uppercase tracking-widest mb-2 block" id="pseudoLabel">
-          ${t("yourPseudo")}
+          ${t('yourPseudo')}
         </label>
         <div style="width: 100%; overflow: hidden; box-sizing: border-box;">
           <input
@@ -387,13 +404,13 @@ export const GameOverScreen = (totalScore, lastPseudo = "") => {
             style="width: 100%; letter-spacing: 0.1em; box-sizing: border-box; overflow: hidden; text-overflow: clip; max-width: 100%; border: 2px solid var(--accent);"
           />
         </div>
-        <p class="text-tertiary text-xs mt-2 text-center" id="pseudoHint">${t("pseudoHint")}</p>
-        <p id="pseudo-error" class="text-red-400 text-sm mt-2 hidden" role="alert">${t("pseudoError")}</p>
+        <p class="text-tertiary text-xs mt-2 text-center" id="pseudoHint">${t('pseudoHint')}</p>
+        <p id="pseudo-error" class="text-red-400 text-sm mt-2 hidden" role="alert">${t('pseudoError')}</p>
       </div>
 
       <div class="space-y-3">
-        ${Button("btn-submit", t("save"), "primary")}
-        ${Button("btn-replay", t("replayNoSave"), "secondary")}
+        ${Button('btn-submit', t('save'), 'primary')}
+        ${Button('btn-replay', t('replayNoSave'), 'secondary')}
       </div>
     </div>
   </div>
@@ -411,22 +428,22 @@ export const FinalResults = (totalScore, pseudo, rank, isTopFifty, isNewSessionB
   const escapedPseudo = escapeHtml(pseudo);
   return `
   <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
-    ${isNewSessionBest ? `<div class="text-center mb-4 text-4xl animate-bounce">🏆</div>` : ""}
+    ${isNewSessionBest ? `<div class="text-center mb-4 text-4xl animate-bounce">🏆</div>` : ''}
     <h2 class="text-4xl font-black text-primary mb-6 text-center tracking-tight uppercase" id="newRecordLabel">
-      ${isNewSessionBest ? t("newPersonalBest") : isTopFifty ? t("top50") : t("scoreSaved")}
+      ${isNewSessionBest ? t('newPersonalBest') : isTopFifty ? t('top50') : t('scoreSaved')}
     </h2>
     <div class="text-center mb-6">
       <div class="text-8xl font-black text-yellow-400 mb-2">${formatScore(totalScore)}</div>
       <div class="text-secondary text-xl">
-        <span class="font-mono font-bold text-primary">${escapedPseudo}</span> · ${t("rank")} #${rank}
+        <span class="font-mono font-bold text-primary">${escapedPseudo}</span> · ${t('rank')} #${rank}
       </div>
     </div>
 
     <div class="mb-3">
-      ${Button("btn-share", t("share"), "secondary", true, false)}
+      ${Button('btn-share', t('share'), 'secondary', true, false)}
     </div>
 
-    ${Button("btn-replay", t("replay"), "primary", true, true)}
+    ${Button('btn-replay', t('replay'), 'primary', true, true)}
   </div>
 `;
 };
@@ -439,18 +456,18 @@ export const FinalResults = (totalScore, pseudo, rank, isTopFifty, isNewSessionB
  * @param {boolean} [isHighlighted=false]
  */
 export const LeaderboardRow = (rank, pseudo, score, time, isHighlighted = false) => {
-  const medals = ["🥇", "🥈", "🥉"];
+  const medals = ['🥇', '🥈', '🥉'];
   const rankDisplay = rank <= 3 ? medals[rank - 1] : `#${rank}`;
   const escapedPseudo = escapeHtml(pseudo);
 
   return `
-    <div role="listitem" class="flex items-center justify-between py-3 px-4 ${isHighlighted ? "rounded-xl" : ""}" style="${isHighlighted ? "background: rgba(250, 204, 21, 0.1); border: 1px solid rgba(250, 204, 21, 0.3);" : "border-bottom: 1px solid var(--border-color);"}">
+    <div role="listitem" class="flex items-center justify-between py-3 px-4 ${isHighlighted ? 'rounded-xl' : ''}" style="${isHighlighted ? 'background: rgba(250, 204, 21, 0.1); border: 1px solid rgba(250, 204, 21, 0.3);' : 'border-bottom: 1px solid var(--border-color);'}">
       <div class="flex items-center gap-3">
-        <span class="w-8 text-center font-bold ${rank <= 3 ? "text-yellow-400" : ""}" style="${rank > 3 ? "color: var(--text-tertiary);" : ""}">${rankDisplay}</span>
-        <span class="font-mono font-bold ${isHighlighted ? "text-yellow-400" : ""}" style="${!isHighlighted ? "color: var(--text-primary);" : ""}">${escapedPseudo}</span>
+        <span class="w-8 text-center font-bold ${rank <= 3 ? 'text-yellow-400' : ''}" style="${rank > 3 ? 'color: var(--text-tertiary);' : ''}">${rankDisplay}</span>
+        <span class="font-mono font-bold ${isHighlighted ? 'text-yellow-400' : ''}" style="${!isHighlighted ? 'color: var(--text-primary);' : ''}">${escapedPseudo}</span>
       </div>
       <div class="text-right">
-        <span class="font-bold ${isHighlighted ? "text-yellow-400" : ""}" style="${!isHighlighted ? "color: var(--text-primary);" : ""}">${formatScore(score)}</span>
+        <span class="font-bold ${isHighlighted ? 'text-yellow-400' : ''}" style="${!isHighlighted ? 'color: var(--text-primary);' : ''}">${formatScore(score)}</span>
         <span class="text-sm ml-2" style="color: var(--text-tertiary);">${(time / 1000).toFixed(1)}s</span>
       </div>
     </div>
@@ -477,11 +494,16 @@ export const LeaderboardSkeletonRow = () => `
  * @param {boolean} [loading=false]
  */
 export const Leaderboard = (scores, highlightPseudo = null, loading = false, error = null) => `
-  <div id="leaderboard-content" class="rounded-xl max-h-[400px]" role="list" aria-label="${t("leaderboardTitle")}" style="background: var(--bg-tertiary); overflow: hidden;">
-    ${loading ?
-      // Skeleton loading
-      Array(10).fill(0).map(() => LeaderboardSkeletonRow()).join('')
-    : error ? `
+  <div id="leaderboard-content" class="rounded-xl max-h-[400px]" role="list" aria-label="${t('leaderboardTitle')}" style="background: var(--bg-tertiary); overflow: hidden;">
+    ${
+      loading
+        ? // Skeleton loading
+          Array(10)
+            .fill(0)
+            .map(() => LeaderboardSkeletonRow())
+            .join('')
+        : error
+          ? `
       <!-- Network/server error -->
       <div class="text-center py-8">
         <div class="text-4xl mb-4">⚠️</div>
@@ -490,16 +512,23 @@ export const Leaderboard = (scores, highlightPseudo = null, loading = false, err
           ${t('error.retry')}
         </button>
       </div>
-    ` : scores.length === 0 ? `
+    `
+          : scores.length === 0
+            ? `
       <!-- No scores yet (empty state) -->
       <div class="text-center py-8">
         <div class="text-4xl mb-4">🏆</div>
         <p class="text-primary font-bold mb-2">${t('leaderboard.empty.title')}</p>
         <p class="text-tertiary text-sm">${t('leaderboard.empty.description')}</p>
       </div>
-    ` :
-      // Normal leaderboard display
-      scores.map((/** @type {{rank: number, pseudo: string, score: number, time: number}} */ s) => LeaderboardRow(s.rank, s.pseudo, s.score, s.time, s.pseudo === highlightPseudo)).join("")
+    `
+            : // Normal leaderboard display
+              scores
+                .map(
+                  (/** @type {{rank: number, pseudo: string, score: number, time: number}} */ s) =>
+                    LeaderboardRow(s.rank, s.pseudo, s.score, s.time, s.pseudo === highlightPseudo)
+                )
+                .join('')
     }
   </div>
 `;
@@ -526,17 +555,18 @@ export const leaderboardTypeFromSelection = (variant, category) => {
  * @returns {{ variant: "classic"|"daily", category: "capitals"|"countries"|"stadiums"|"civilizations" }}
  */
 export const selectionFromLeaderboardType = (type) => {
+  /** @type {Record<string, { variant: "classic"|"daily", category: "capitals"|"countries"|"stadiums"|"civilizations" }>} */
   const map = {
-    [MODE_IDS.CLASSIC]: { variant: "classic", category: "capitals" },
-    [MODE_IDS.DAILY]: { variant: "daily", category: "capitals" },
-    [MODE_IDS.COUNTRY]: { variant: "classic", category: "countries" },
-    [MODE_IDS.COUNTRY_DAILY]: { variant: "daily", category: "countries" },
-    [MODE_IDS.STADIUM]: { variant: "classic", category: "stadiums" },
-    [MODE_IDS.STADIUM_DAILY]: { variant: "daily", category: "stadiums" },
-    [MODE_IDS.CIVILIZATION]: { variant: "classic", category: "civilizations" },
-    [MODE_IDS.CIVILIZATION_DAILY]: { variant: "daily", category: "civilizations" },
+    [MODE_IDS.CLASSIC]: { variant: 'classic', category: 'capitals' },
+    [MODE_IDS.DAILY]: { variant: 'daily', category: 'capitals' },
+    [MODE_IDS.COUNTRY]: { variant: 'classic', category: 'countries' },
+    [MODE_IDS.COUNTRY_DAILY]: { variant: 'daily', category: 'countries' },
+    [MODE_IDS.STADIUM]: { variant: 'classic', category: 'stadiums' },
+    [MODE_IDS.STADIUM_DAILY]: { variant: 'daily', category: 'stadiums' },
+    [MODE_IDS.CIVILIZATION]: { variant: 'classic', category: 'civilizations' },
+    [MODE_IDS.CIVILIZATION_DAILY]: { variant: 'daily', category: 'civilizations' },
   };
-  return map[type] ?? { variant: "classic", category: "capitals" };
+  return map[type] ?? { variant: 'classic', category: 'capitals' };
 };
 
 /**
@@ -547,13 +577,16 @@ export const selectionFromLeaderboardType = (type) => {
 export const LeaderboardModal = (scores, currentType = MODE_IDS.CLASSIC, loading = false) => {
   const { variant, category } = selectionFromLeaderboardType(currentType);
 
+  /**
+   * @param {string} id
+   * @param {string} label
+   * @param {"classic"|"daily"} value
+   */
   const variantBtn = (id, label, value) => `
     <button
       id="${id}"
       class="flex-1 py-2 px-3 rounded-xl font-black text-base transition-all ${
-        value === variant
-          ? "bg-yellow-400 text-black"
-          : "btn-secondary"
+        value === variant ? 'bg-yellow-400 text-black' : 'btn-secondary'
       }"
       ${loading ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
     >
@@ -561,13 +594,16 @@ export const LeaderboardModal = (scores, currentType = MODE_IDS.CLASSIC, loading
     </button>
   `;
 
+  /**
+   * @param {string} id
+   * @param {string} label
+   * @param {"capitals"|"countries"|"stadiums"|"civilizations"} value
+   */
   const categoryBtn = (id, label, value) => `
     <button
       id="${id}"
       class="flex-1 py-2 px-2 rounded-xl font-bold text-sm transition-all ${
-        value === category
-          ? "bg-yellow-400 text-black"
-          : "btn-secondary"
+        value === category ? 'bg-yellow-400 text-black' : 'btn-secondary'
       }"
       ${loading ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
     >
@@ -579,26 +615,26 @@ export const LeaderboardModal = (scores, currentType = MODE_IDS.CLASSIC, loading
     <div id="leaderboard-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-overlay);" role="dialog" aria-modal="true">
       <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
         <h2 class="text-3xl font-black text-primary mb-6 text-center tracking-tight uppercase" id="leaderboardTitle">
-          ${t("leaderboardTitle")}
+          ${t('leaderboardTitle')}
         </h2>
 
         <!-- Row 1: Variant (Classic / Daily) -->
         <div class="flex gap-2 mb-3">
-          ${variantBtn("btn-leaderboard-classic", t("classic"), "classic")}
-          ${variantBtn("btn-leaderboard-daily", t("daily"), "daily")}
+          ${variantBtn('btn-leaderboard-classic', t('classic'), 'classic')}
+          ${variantBtn('btn-leaderboard-daily', t('daily'), 'daily')}
         </div>
 
         <!-- Row 2: Category -->
         <div class="flex gap-2 mb-6">
-          ${categoryBtn("btn-leaderboard-cat-capitals", t("capitals"), "capitals")}
-          ${categoryBtn("btn-leaderboard-cat-countries", t("countries"), "countries")}
-          ${categoryBtn("btn-leaderboard-cat-stadiums", t("stadiums"), "stadiums")}
-          ${categoryBtn("btn-leaderboard-cat-civilizations", t("civilizations"), "civilizations")}
+          ${categoryBtn('btn-leaderboard-cat-capitals', t('capitals'), 'capitals')}
+          ${categoryBtn('btn-leaderboard-cat-countries', t('countries'), 'countries')}
+          ${categoryBtn('btn-leaderboard-cat-stadiums', t('stadiums'), 'stadiums')}
+          ${categoryBtn('btn-leaderboard-cat-civilizations', t('civilizations'), 'civilizations')}
         </div>
 
         ${Leaderboard(scores, null, loading)}
         <div class="mt-6">
-          ${Button("btn-close-leaderboard", t("close"), "secondary")}
+          ${Button('btn-close-leaderboard', t('close'), 'secondary')}
         </div>
       </div>
     </div>
@@ -619,7 +655,7 @@ export const PseudoLockedDialog = (pseudo) => {
           <div class="text-secondary text-lg mb-2">${t('pseudoLocked.message', { pseudo: escapedPseudo })}</div>
           <div class="text-tertiary text-sm">${t('pseudoLocked.rule')}</div>
         </div>
-        ${Button("btn-pseudo-locked-ok", t('ok'), "primary")}
+        ${Button('btn-pseudo-locked-ok', t('ok'), 'primary')}
       </div>
     </div>
   `;
@@ -633,36 +669,36 @@ export const PseudoLockedDialog = (pseudo) => {
  * @param {{ compact?: boolean, center?: boolean }} [options] - compact: smaller modal, no emoji, text only; center: center text horizontally
  * @returns {string} HTML string
  */
-export const Toast = (id, message, type = "info", options = {}) => {
+export const Toast = (id, message, type = 'info', options = {}) => {
   const { compact = false, center = false } = options;
 
   /** @type {Record<"info" | "warning" | "error" | "success", string>} */
   const icons = {
-    info: "ℹ️",
-    warning: "⚠️",
-    error: "❌",
-    success: "",
+    info: 'ℹ️',
+    warning: '⚠️',
+    error: '❌',
+    success: '',
   };
 
-  const icon = compact ? "" : (icons[type] || icons.info);
+  const icon = compact ? '' : icons[type] || icons.info;
   const colorClass = `toast-${type}`;
   const wrapperClass = compact
-    ? "fixed bottom-8 left-1/2 -translate-x-1/2 max-w-xs w-full px-3 toast-slide-up"
-    : "fixed bottom-8 left-1/2 -translate-x-1/2 max-w-md w-full px-4 toast-slide-up";
+    ? 'fixed bottom-8 left-1/2 -translate-x-1/2 max-w-xs w-full px-3 toast-slide-up'
+    : 'fixed bottom-8 left-1/2 -translate-x-1/2 max-w-md w-full px-4 toast-slide-up';
   const innerClass = compact
-    ? `${colorClass} text-white rounded-lg shadow-lg py-2.5 px-3 flex items-center gap-2 ${center ? "justify-center" : ""}`
+    ? `${colorClass} text-white rounded-lg shadow-lg py-2.5 px-3 flex items-center gap-2 ${center ? 'justify-center' : ''}`
     : `${colorClass} text-white rounded-xl shadow-lg p-4 flex items-start gap-3`;
   const textClass = compact
-    ? `flex-1 text-sm font-medium ${center ? "text-center" : ""}`
-    : "flex-1 text-sm font-medium";
+    ? `flex-1 text-sm font-medium ${center ? 'text-center' : ''}`
+    : 'flex-1 text-sm font-medium';
   const closeClass = compact
-    ? "shrink-0 text-white hover:text-gray-200 text-lg leading-none"
-    : "shrink-0 text-white hover:text-gray-200 text-xl leading-none";
+    ? 'shrink-0 text-white hover:text-gray-200 text-lg leading-none'
+    : 'shrink-0 text-white hover:text-gray-200 text-xl leading-none';
 
   return `
     <div id="${id}" class="${wrapperClass}" style="z-index: var(--z-toast);" role="alert" aria-live="assertive">
       <div class="${innerClass}">
-        ${icon ? `<span class="text-2xl shrink-0">${icon}</span>` : ""}
+        ${icon ? `<span class="text-2xl shrink-0">${icon}</span>` : ''}
         <div class="${textClass}" style="line-height: 1.5;">${escapeHtml(message)}</div>
         <button id="${id}-close" class="${closeClass}" aria-label="Close notification">×</button>
       </div>
@@ -725,7 +761,7 @@ export const MyStatsModal = (stats) => {
           </div>
         </div>
 
-        ${Button("btn-close-stats", t("close"), "secondary")}
+        ${Button('btn-close-stats', t('close'), 'secondary')}
       </div>
     </div>
   `;
@@ -750,13 +786,12 @@ export const AchievementUnlockModal = (achievementId, achievement) => {
           <p class="text-secondary text-sm mb-6">${t(achievement.descKey)}</p>
 
           <div class="mb-3">
-            ${Button(`btn-share-achievement-${achievementId}`, t("shareOnAchievement"), "secondary", true, false)}
+            ${Button(`btn-share-achievement-${achievementId}`, t('shareOnAchievement'), 'secondary', true, false)}
           </div>
 
-          ${Button("btn-close-achievement", t("continue"), "secondary")}
+          ${Button('btn-close-achievement', t('continue'), 'secondary')}
         </div>
       </div>
     </div>
   `;
 };
-

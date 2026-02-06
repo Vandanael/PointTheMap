@@ -104,7 +104,7 @@ class EventBus {
     // Collect exact matches
     const exactListeners = this._listeners.get(event);
     if (exactListeners) {
-      exactListeners.forEach(h => handlers.add(h));
+      exactListeners.forEach((h) => handlers.add(h));
     }
 
     // Collect wildcard matches (e.g., "timer:*" matches "timer:started")
@@ -113,13 +113,13 @@ class EventBus {
         const pattern = listenerEvent.replace(/\*/g, '.*');
         const regex = new RegExp(`^${pattern}$`);
         if (regex.test(event)) {
-          listeners.forEach(h => handlers.add(h));
+          listeners.forEach((h) => handlers.add(h));
         }
       }
     }
 
     // Execute handlers with error isolation
-    handlers.forEach(handler => {
+    handlers.forEach((handler) => {
       try {
         handler(data);
       } catch (error) {

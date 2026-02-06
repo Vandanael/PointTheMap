@@ -12,7 +12,7 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(', ');
 
-/** @type {Element | null} */
+/** @type {HTMLElement | null} */
 let _previousActiveElement = null;
 /** @type {((e: KeyboardEvent) => void) | null} */
 let _keydownHandler = null;
@@ -27,6 +27,7 @@ let _onEscape = null;
  * @returns {HTMLElement[]}
  */
 function getFocusableElements(container) {
+  /** @type {NodeListOf<HTMLElement>} */
   const nodes = container.querySelectorAll(FOCUSABLE_SELECTOR);
   return Array.from(nodes).filter((el) => {
     if (el.getAttribute('tabindex') === '-1') return false;
@@ -43,7 +44,8 @@ function getFocusableElements(container) {
  */
 export function activateFocusTrap(container, options = {}) {
   deactivateFocusTrap();
-  _previousActiveElement = document.activeElement instanceof Element ? document.activeElement : null;
+  _previousActiveElement =
+    document.activeElement instanceof HTMLElement ? document.activeElement : null;
   _container = container;
   _onEscape = options.onEscape ?? null;
 
@@ -93,8 +95,12 @@ export function deactivateFocusTrap() {
     _container = null;
   }
   _onEscape = null;
-  if (_previousActiveElement && typeof _previousActiveElement.focus === 'function' && document.body.contains(_previousActiveElement)) {
-    (/** @type {HTMLElement} */ (_previousActiveElement)).focus({ preventScroll: true });
+  if (
+    _previousActiveElement &&
+    typeof _previousActiveElement.focus === 'function' &&
+    document.body.contains(_previousActiveElement)
+  ) {
+    _previousActiveElement.focus({ preventScroll: true });
   }
   _previousActiveElement = null;
 }

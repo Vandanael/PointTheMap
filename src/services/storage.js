@@ -1,9 +1,9 @@
 // Point The Map - Storage Service
 
-import { MODE_IDS } from "../config/game-modes.js";
-import { storageManager, QuotaExceededError } from "../storage/StorageManager.js";
-import { logger } from "../utils/logger.js";
-import { eventBus } from "../core/EventBus.js";
+import { MODE_IDS } from '../config/game-modes.js';
+import { storageManager, QuotaExceededError } from '../storage/StorageManager.js';
+import { logger } from '../utils/logger.js';
+import { eventBus } from '../core/EventBus.js';
 
 // Export storage manager for direct access if needed
 export { storageManager, QuotaExceededError };
@@ -19,11 +19,11 @@ export const storage = {
     } catch (error) {
       if (error instanceof QuotaExceededError) {
         // Handle quota exceeded
-        logger.error("Storage quota exceeded. Attempting cleanup...");
+        logger.error('Storage quota exceeded. Attempting cleanup...');
 
         // Emit event for UI notification
-        eventBus.emit("storage:quota-exceeded", {
-          message: "Storage limit reached. Cleaning up old data...",
+        eventBus.emit('storage:quota-exceeded', {
+          message: 'Storage limit reached. Cleaning up old data...',
         });
 
         try {
@@ -36,24 +36,24 @@ export const storage = {
 
           if (success) {
             // Emit success event
-            eventBus.emit("storage:quota-recovered", {
+            eventBus.emit('storage:quota-recovered', {
               message: `Cleaned up ${Math.round(freed / 1024)}KB successfully.`,
               freedBytes: freed,
             });
           } else {
             // Emit failure event
-            eventBus.emit("storage:quota-failed", {
-              message: "Unable to free enough space. Some data may not be saved.",
+            eventBus.emit('storage:quota-failed', {
+              message: 'Unable to free enough space. Some data may not be saved.',
             });
           }
 
           return success;
         } catch (retryError) {
-          logger.error("Failed to save after cleanup", retryError);
+          logger.error('Failed to save after cleanup', retryError);
 
           // Emit failure event
-          eventBus.emit("storage:quota-failed", {
-            message: "Storage full. Unable to save data.",
+          eventBus.emit('storage:quota-failed', {
+            message: 'Storage full. Unable to save data.',
           });
 
           return false;
@@ -64,25 +64,25 @@ export const storage = {
   },
 };
 
-export const getLastPseudo = () => storage.get("lastPseudo");
+export const getLastPseudo = () => storage.get('lastPseudo');
 /** @param {string} pseudo */
-export const setLastPseudo = (pseudo) => storage.set("lastPseudo", pseudo);
-export const getTheme = () => storage.get("theme") || "dark";
+export const setLastPseudo = (pseudo) => storage.set('lastPseudo', pseudo);
+export const getTheme = () => storage.get('theme') || 'dark';
 /** @param {string} theme */
-export const setTheme = (theme) => storage.set("theme", theme);
+export const setTheme = (theme) => storage.set('theme', theme);
 
-export const getMapView = () => storage.get("mapView");
+export const getMapView = () => storage.get('mapView');
 /** @param {{ lat: number; lng: number } | [number, number]} center @param {number} zoom */
-export const setMapView = (center, zoom) => storage.set("mapView", { center, zoom });
+export const setMapView = (center, zoom) => storage.set('mapView', { center, zoom });
 
-const RETRY_QUEUE_KEY = "retry_queue";
+const RETRY_QUEUE_KEY = 'retry_queue';
 
 export const getRetryQueue = () => {
   try {
     const queue = storageManager.get(RETRY_QUEUE_KEY);
     return queue || [];
   } catch (error) {
-    logger.error("Erreur parsing retry queue:", error);
+    logger.error('Erreur parsing retry queue:', error);
     try {
       storageManager.remove(RETRY_QUEUE_KEY); // Nettoyer la valeur corrompue
     } catch {
@@ -98,7 +98,7 @@ export const saveRetryQueue = (queue) => {
     return storageManager.set(RETRY_QUEUE_KEY, queue);
   } catch (error) {
     if (error instanceof QuotaExceededError) {
-      logger.warn("Quota exceeded while saving retry queue. Attempting cleanup...");
+      logger.warn('Quota exceeded while saving retry queue. Attempting cleanup...');
 
       try {
         // Try to clean up old queue entries
@@ -108,13 +108,13 @@ export const saveRetryQueue = (queue) => {
         // Retry
         return storageManager.set(RETRY_QUEUE_KEY, queue);
       } catch (retryError) {
-        logger.error("Failed to save retry queue after cleanup", retryError);
+        logger.error('Failed to save retry queue after cleanup', retryError);
         return false;
       }
     }
 
     // iOS Private Mode: localStorage.setItem échoue complètement
-    logger.warn("Impossible de sauvegarder la retry queue (iOS Private Mode?)", error);
+    logger.warn('Impossible de sauvegarder la retry queue (iOS Private Mode?)', error);
     return false;
   }
 };
@@ -132,7 +132,7 @@ export const addToRetryQueue = (token, rounds, pseudo, gameType = MODE_IDS.CLASS
   });
   const saved = saveRetryQueue(queue);
   if (!saved) {
-    logger.warn("⚠️ Retry queue non sauvegardée (mode privé iOS?)");
+    logger.warn('⚠️ Retry queue non sauvegardée (mode privé iOS?)');
   }
   return saved;
 };

@@ -14,9 +14,10 @@ vi.mock('../services/storage.js', () => ({
 
 import { ScoringSystem, getScoringSystem, scoringSystem } from './ScoringSystem.js';
 import { eventBus } from '../core/EventBus.js';
-import { GAME } from '../config.js';
+import { GAME } from '@lib/config';
 
 describe('ScoringSystem', () => {
+  /** @type {ScoringSystem} */
   let system;
 
   beforeEach(() => {
@@ -127,7 +128,9 @@ describe('ScoringSystem', () => {
   describe('calculateDistance', () => {
     it('should calculate distance between two points', () => {
       // Paris to London
+      /** @type {[number, number]} */
       const paris = [48.8566, 2.3522];
+      /** @type {[number, number]} */
       const london = [51.5074, -0.1278];
 
       const distance = system.calculateDistance(paris, london);
@@ -138,6 +141,7 @@ describe('ScoringSystem', () => {
     });
 
     it('should return 0 for same coordinates', () => {
+      /** @type {[number, number]} */
       const coords = [48.8566, 2.3522];
       const distance = system.calculateDistance(coords, coords);
 
@@ -145,7 +149,9 @@ describe('ScoringSystem', () => {
     });
 
     it('should handle edge cases (antipodes)', () => {
+      /** @type {[number, number]} */
       const point1 = [0, 0];
+      /** @type {[number, number]} */
       const point2 = [0, 180];
 
       const distance = system.calculateDistance(point1, point2);
@@ -191,7 +197,9 @@ describe('ScoringSystem', () => {
     });
 
     it('should calculate score for a valid click', () => {
+      /** @type {[number, number]} */
       const clickCoords = [48.8566, 2.3522]; // Paris
+      /** @type {[number, number]} */
       const targetCoords = [48.8566, 2.3522]; // Same location
 
       const result = system.calculateClickScore(clickCoords, targetCoords, 5000);
@@ -201,22 +209,22 @@ describe('ScoringSystem', () => {
     });
 
     it('should return 0 score if timed out', () => {
+      /** @type {[number, number]} */
       const clickCoords = [48.8566, 2.3522];
+      /** @type {[number, number]} */
       const targetCoords = [51.5074, -0.1278];
 
       const totalTime = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
-      const result = system.calculateClickScore(
-        clickCoords,
-        targetCoords,
-        totalTime + 1
-      );
+      const result = system.calculateClickScore(clickCoords, targetCoords, totalTime + 1);
 
       expect(result.score).toBe(0);
       expect(result.distance).toBeNull();
     });
 
     it('should allow clicks within grace period', () => {
+      /** @type {[number, number]} */
       const clickCoords = [48.8566, 2.3522];
+      /** @type {[number, number]} */
       const targetCoords = [48.8566, 2.3522];
 
       const timeElapsed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS - 100;
@@ -228,11 +236,7 @@ describe('ScoringSystem', () => {
 
   describe('calculateTotalScore', () => {
     it('should sum all round scores', () => {
-      const rounds = [
-        { score: 5000 },
-        { score: 3000 },
-        { score: 2000 },
-      ];
+      const rounds = [{ score: 5000 }, { score: 3000 }, { score: 2000 }];
 
       const total = system.calculateTotalScore(rounds);
       expect(total).toBe(10000);
@@ -310,20 +314,20 @@ describe('ScoringSystem', () => {
     });
 
     it('should return "Unknown" for invalid category', () => {
-      expect(system.getCategoryLabel('invalid')).toBe('Unknown');
+      expect(system.getCategoryLabel(/** @type {any} */ ('invalid'))).toBe('Unknown');
     });
   });
 
   describe('calculateTimeBonus', () => {
     it('should return 0 when feature flag is disabled', () => {
-      const bonus = system.calculateTimeBonus(5000, 4000, 50);
+      const bonus = system.calculateTimeBonus(5000, 4000, 50, 50);
       expect(bonus).toBe(0);
     });
 
     it('should return 0 for distances >= 200km even if enabled', () => {
       // Note: Feature flag is disabled, but testing the logic
       // In a real scenario, this would test with flag enabled
-      const bonus = system.calculateTimeBonus(5000, 4000, 200);
+      const bonus = system.calculateTimeBonus(5000, 4000, 200, 200);
       expect(bonus).toBe(0);
     });
   });
@@ -385,13 +389,24 @@ describe('ScoringSystem', () => {
 
     describe('calculateCountryClickScore', () => {
       const minimalPolygonFeature = {
-        geometry: { type: 'Polygon', coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]] },
+        geometry: {
+          type: 'Polygon',
+          coordinates: [
+            [
+              [0, 0],
+              [1, 0],
+              [1, 1],
+              [0, 1],
+              [0, 0],
+            ],
+          ],
+        },
       };
       const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
 
       it('should return totalScore 5000 when click is inside country and not timed out', () => {
         const result = system.calculateCountryClickScore(
-          [0.5, 0.5],
+          /** @type {[number, number]} */ ([0.5, 0.5]),
           minimalPolygonFeature,
           true,
           1000,
@@ -405,7 +420,7 @@ describe('ScoringSystem', () => {
 
       it('should return totalScore 0 when timed out', () => {
         const result = system.calculateCountryClickScore(
-          [0.5, 0.5],
+          /** @type {[number, number]} */ ([0.5, 0.5]),
           minimalPolygonFeature,
           true,
           totalTimeAllowed + 1,
@@ -419,6 +434,7 @@ describe('ScoringSystem', () => {
       });
 
       it('should return finite non-negative score for boundary distances (range-based)', () => {
+        /** @type {[number, number]} */
         const clickCoords = [48, 2];
         const resultInside = system.calculateCountryClickScore(
           clickCoords,

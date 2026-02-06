@@ -9,7 +9,7 @@
  * - Reusable across client and server
  */
 
-import { GAME } from '../config.js';
+import { GAME } from '@lib/config';
 
 /**
  * @typedef {Object} ValidationResult
@@ -249,7 +249,7 @@ export class ValidationSystem {
 
   /**
    * Validate round structure
-   * @param {Object} round - Round object to validate
+   * @param {{ capital?: string, status?: string, click?: { lat: number, lng: number } | null } | null} round - Round object to validate
    * @param {number} roundIndex - Expected round index
    * @returns {ValidationResult}
    */
@@ -270,6 +270,13 @@ export class ValidationSystem {
     }
 
     // Validate status
+    if (!round.status || typeof round.status !== 'string') {
+      return {
+        valid: false,
+        error: `Round ${roundIndex + 1} has invalid status`,
+      };
+    }
+
     const validStatuses = ['playing', 'completed', 'timeout'];
     if (!validStatuses.includes(round.status)) {
       return {
@@ -294,7 +301,7 @@ export class ValidationSystem {
 
   /**
    * Validate all rounds for a session
-   * @param {Array<Object>} rounds - Array of rounds
+   * @param {Array<{ capital?: string, status?: string, click?: { lat: number, lng: number } | null }>} rounds - Array of rounds
    * @param {Array<{name: string}>} [expectedCapitals] - Expected capitals for this session
    * @param {number} [expectedCount] - From state.runtimeConfig.roundCount; fallback GAME.ROUNDS for tests
    * @returns {ValidationResult}
@@ -343,7 +350,7 @@ export class ValidationSystem {
    * Validate complete game session
    * @param {Object} session - Session object
    * @param {string} session.token - Session token
-   * @param {Array<Object>} session.rounds - Rounds array
+   * @param {Array<{ capital?: string, status?: string, click?: { lat: number, lng: number } | null }>} session.rounds - Rounds array
    * @param {string} session.pseudo - Player pseudo
    * @param {number} [session.startTime] - Session start time
    * @param {number} [session.endTime] - Session end time
@@ -409,6 +416,7 @@ export class ValidationSystem {
 }
 
 // Singleton instance
+/** @type {ValidationSystem | null} */
 let _validationSystemInstance = null;
 
 /**

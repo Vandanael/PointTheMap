@@ -8,7 +8,7 @@
  * - Uses EventBus for decoupled communication
  */
 
-import { GAME } from '../config.js';
+import { GAME } from '@lib/config';
 import { eventBus } from '../core/EventBus.js';
 
 /**
@@ -27,7 +27,9 @@ import { eventBus } from '../core/EventBus.js';
  */
 
 export class TimerSystem {
+  /** @type {Array<ReturnType<typeof setTimeout>>} */
   #timeouts = [];
+  /** @type {Array<ReturnType<typeof setInterval>>} */
   #intervals = [];
   #isRunning = false;
 
@@ -64,7 +66,7 @@ export class TimerSystem {
       // Danger zone timeout (visual warning)
       const dangerZoneTimeout = setTimeout(() => {
         if (!this.#isRunning) return;
-        eventBus.emit('timer:danger');
+        eventBus.emit('timer:danger', undefined);
       }, timerMs - dangerZoneMs);
 
       this.#timeouts.push(dangerZoneTimeout);
@@ -72,7 +74,7 @@ export class TimerSystem {
       // Main timeout (game over)
       const mainTimeout = setTimeout(() => {
         if (!this.#isRunning) return;
-        eventBus.emit('timer:timeout');
+        eventBus.emit('timer:timeout', undefined);
         this.stop();
       }, timerMs);
 
@@ -101,11 +103,11 @@ export class TimerSystem {
     this.#isRunning = false;
 
     // Clear all timeouts
-    this.#timeouts.forEach(timeout => clearTimeout(timeout));
+    this.#timeouts.forEach((timeout) => clearTimeout(timeout));
     this.#timeouts = [];
 
     // Clear all intervals
-    this.#intervals.forEach(interval => clearInterval(interval));
+    this.#intervals.forEach((interval) => clearInterval(interval));
     this.#intervals = [];
   }
 

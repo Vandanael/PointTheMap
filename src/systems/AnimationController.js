@@ -74,7 +74,13 @@ export class AnimationController {
  * @param {(value: number) => string} formatter - Format function
  * @returns {AnimationController} Controller instance
  */
-export function animateValue(element, startValue, endValue, duration, formatter = (v) => String(v)) {
+export function animateValue(
+  element,
+  startValue,
+  endValue,
+  duration,
+  formatter = (v) => String(v)
+) {
   const controller = new AnimationController();
   const startTime = performance.now();
   const delta = endValue - startValue;

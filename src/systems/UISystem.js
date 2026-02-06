@@ -11,14 +11,15 @@
  */
 
 import { eventBus } from '../core/EventBus.js';
-import { UI } from '../ui/UI.js';
-import { GAME, TIMING } from '../config.js';
+import { GAME, TIMING } from '@lib/config';
 import { formatScore } from '../utils.js';
 import { animateValue } from './AnimationController.js';
 import { logger } from '../utils/logger.js';
 
 export class UISystem {
+  /** @type {import('./AnimationController.js').AnimationController | null} */
   #scoreAnimationController = null;
+  /** @type {Array<() => void>} */
   #unsubscribers = [];
 
   constructor() {
@@ -27,14 +28,16 @@ export class UISystem {
 
   /**
    * Setup all EventBus subscriptions
-   * @private
    */
   #setupEventListeners() {
     // Timer UI events
     this.#unsubscribers.push(
-      eventBus.subscribe('timer:started', (/** @type {{ timerMs?: number } | undefined } */ payload) => {
-        this.#onTimerStarted(payload);
-      })
+      eventBus.subscribe(
+        'timer:started',
+        (/** @type {{ timerMs?: number } | undefined } */ payload) => {
+          this.#onTimerStarted(payload);
+        }
+      )
     );
 
     this.#unsubscribers.push(
@@ -45,9 +48,12 @@ export class UISystem {
 
     // Score update events
     this.#unsubscribers.push(
-      eventBus.subscribe('score:updated', ({ oldScore, newScore }) => {
-        this.#animateScore(oldScore, newScore);
-      })
+      eventBus.subscribe(
+        'score:updated',
+        (/** @type {{ oldScore: number, newScore: number }} */ payload) => {
+          this.#animateScore(payload.oldScore, payload.newScore);
+        }
+      )
     );
 
     logger.debug('UISystem: Event listeners setup complete');
@@ -55,26 +61,24 @@ export class UISystem {
 
   /**
    * Timer started - update progress bar (duration from runtime config via event payload)
-   * @private
    * @param {{ timerMs?: number } | undefined} payload - From timer:started; timerMs from state.runtimeConfig
    */
   #onTimerStarted(payload) {
-    const timerProgress = document.getElementById("timer-progress");
+    const timerProgress = document.getElementById('timer-progress');
     if (!timerProgress) return;
 
     const timerMs = payload?.timerMs ?? GAME.TIMER_MS;
     timerProgress.style.transition = `width ${timerMs}ms linear`;
-    timerProgress.style.width = "0%";
+    timerProgress.style.width = '0%';
   }
 
   /**
    * Timer entered danger zone - visual warning
-   * @private
    */
   #onTimerDanger() {
-    const progress = document.getElementById("timer-progress");
+    const progress = document.getElementById('timer-progress');
     if (progress) {
-      progress.classList.add("timer-danger");
+      progress.classList.add('timer-danger');
     }
   }
 
@@ -82,7 +86,6 @@ export class UISystem {
    * Animate score count-up
    * @param {number} oldScore - Previous score
    * @param {number} newScore - New score
-   * @private
    */
   #animateScore(oldScore, newScore) {
     // Stop any existing animation
@@ -90,8 +93,14 @@ export class UISystem {
       this.#scoreAnimationController.stop();
     }
 
-    const scoreEl = document.querySelector("#game-header .text-yellow-400");
+    const scoreEl = /** @type {HTMLElement | null} */ (
+      document.querySelector('#game-header .text-yellow-400')
+    );
     if (!scoreEl) return; // No element to animate
+
+    scoreEl.classList.remove('score-burst');
+    void scoreEl.offsetWidth;
+    scoreEl.classList.add('score-burst');
 
     // Use AnimationController for proper cleanup
     this.#scoreAnimationController = animateValue(
@@ -101,13 +110,16 @@ export class UISystem {
       TIMING.SCORE_ANIMATION_MS,
       formatScore
     );
+
+    setTimeout(() => {
+      scoreEl.classList.remove('score-burst');
+    }, 450);
   }
 
   /**
    * Initialize UI system
    */
   init() {
-    UI.init();
     logger.info('UISystem initialized');
   }
 
@@ -115,16 +127,13 @@ export class UISystem {
    * Cleanup - unsubscribe from all events
    */
   destroy() {
-    this.#unsubscribers.forEach(unsub => unsub());
+    this.#unsubscribers.forEach((unsub) => unsub());
     this.#unsubscribers = [];
 
     if (this.#scoreAnimationController) {
       this.#scoreAnimationController.stop();
       this.#scoreAnimationController = null;
     }
-
-    // Also cleanup UI subscriptions
-    UI.destroy();
 
     logger.info('UISystem destroyed');
   }

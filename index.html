@@ -1,73 +1,100 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes"
+    />
 
-  <!-- Main CSS (in production: inlined critical + async full CSS via build plugin) -->
-  <link rel="stylesheet" href="/src/styles.css">
+    <!-- Main CSS (in production: inlined critical + async full CSS via build plugin) -->
+    <link rel="stylesheet" href="/src/styles.css" />
 
-  <!-- SEO Meta Description -->
-  <meta name="description" content="Jeu de géographie addictif : localisez 5 capitales mondiales en 5 secondes par ville. Testez vos connaissances géographiques, gagnez des points et défiez vos amis !">
+    <!-- SEO Meta Description -->
+    <meta
+      name="description"
+      content="Jeu de géographie addictif : localisez 5 capitales mondiales en 5 secondes par ville. Testez vos connaissances géographiques, gagnez des points et défiez vos amis !"
+    />
 
-  <title>Point The Map</title>
-  <link rel="icon" href="/favicon.svg">
+    <title>Point The Map</title>
+    <link rel="icon" href="/favicon.svg" />
 
-  <!-- Resource Hints - Early connection to external domains -->
-  <link rel="dns-prefetch" href="https://fonts.googleapis.com">
-  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
-  <link rel="dns-prefetch" href="https://basemaps.cartocdn.com">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Resource Hints - Early connection to external domains -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+    <link rel="dns-prefetch" href="https://basemaps.cartocdn.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-  <!-- Preload only mobile start-screen (LCP candidate); tablet/desktop load via CSS when shown to avoid "preloaded but not used" (bg is display:none until start-screen-visible) -->
-  <link rel="preload" href="/assets/start-screen-mobile-dark.webp" as="image" type="image/webp" media="(max-width: 767px)">
+    <!-- Preload only mobile start-screen (LCP candidate); tablet/desktop load via CSS when shown to avoid "preloaded but not used" (bg is display:none until start-screen-visible) -->
+    <link
+      rel="preload"
+      href="/assets/start-screen-mobile-dark.webp"
+      as="image"
+      type="image/webp"
+      media="(max-width: 767px)"
+    />
 
-  <!-- Open Graph / Facebook -->
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="Point The Map">
-  <meta property="og:description" content="5 capitales · 5 secondes par ville. Cliquez sur la carte, gagnez des points !">
-  <meta property="og:image" content="/og-image.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Point The Map" />
+    <meta
+      property="og:description"
+      content="5 capitales · 5 secondes par ville. Cliquez sur la carte, gagnez des points !"
+    />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
 
-  <!-- Twitter -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Point The Map">
-  <meta name="twitter:description" content="5 capitales · 5 secondes par ville. Cliquez sur la carte, gagnez des points !">
-  <meta name="twitter:image" content="/og-image.png">
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Point The Map" />
+    <meta
+      name="twitter:description"
+      content="5 capitales · 5 secondes par ville. Cliquez sur la carte, gagnez des points !"
+    />
+    <meta name="twitter:image" content="/og-image.png" />
 
-  <!-- Google Fonts - Deferred (media=print then media=all) to avoid chaining on critical path -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap"></noscript>
+    <!-- Google Fonts - Deferred (media=print then media=all) to avoid chaining on critical path -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap"
+      media="print"
+      onload="this.media = 'all'"
+    />
+    <noscript
+      ><link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap"
+    /></noscript>
 
-  <!-- Preload main module for faster execution -->
-  <link rel="modulepreload" href="/src/main.js">
-</head>
-<body>
-  <a href="#main-content" class="skip-link">Skip to main content</a>
-  <main id="main-content">
-    <div id="app">
-      <div id="map"></div>
-      <div id="start-screen-bg" class="start-screen-bg" aria-hidden="true"></div>
-      <!-- LCP skeleton - matches start screen layout exactly, removed after start screen paints on top -->
-      <div id="start-skeleton" class="start-skeleton">
-        <div class="flex-1 flex items-center justify-center px-4 md:px-6 lobby-container">
-          <div class="w-full lobby-content">
-            <h1 class="lobby-title">
-              <div class="lobby-title-line">POINT</div>
-              <div class="lobby-title-line">THE MAP</div>
-            </h1>
-            <div class="skeleton-loader">
-              <div class="skeleton-loader-track">
-                <div id="loading-progress" class="skeleton-loader-bar"></div>
+    <!-- Preload main module for faster execution -->
+    <link rel="modulepreload" href="/src/main.js" />
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <main id="main-content">
+      <div id="app">
+        <div id="map"></div>
+        <div id="start-screen-bg" class="start-screen-bg" aria-hidden="true"></div>
+        <!-- LCP skeleton - matches start screen layout exactly, removed after start screen paints on top -->
+        <div id="start-skeleton" class="start-skeleton">
+          <div class="flex-1 flex items-center justify-center px-4 md:px-6 lobby-container">
+            <div class="w-full lobby-content">
+              <h1 class="lobby-title">
+                <div class="lobby-title-line">POINT</div>
+                <div class="lobby-title-line">THE MAP</div>
+              </h1>
+              <div class="skeleton-loader">
+                <div class="skeleton-loader-track">
+                  <div id="loading-progress" class="skeleton-loader-bar"></div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </main>
-  <script type="module" src="/src/main.js"></script>
-</body>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
 </html>

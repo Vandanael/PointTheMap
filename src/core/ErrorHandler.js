@@ -1,9 +1,9 @@
 // Point The Map - Centralized Error Handler
 // Sprint 6 - Error handling system
 
-import { logger } from "../utils/logger.js";
-import { eventBus } from "./EventBus.js";
-import { t } from "../i18n.js";
+import { logger } from '../utils/logger.js';
+import { eventBus } from './EventBus.js';
+import { t } from '../i18n.js';
 
 /**
  * @typedef {'NETWORK_ERROR' | 'TIMEOUT' | 'VALIDATION_ERROR' | 'API_ERROR' | 'GAME_ERROR' | 'STORAGE_ERROR' | 'UNKNOWN'} ErrorCode
@@ -295,11 +295,32 @@ export const errorHandler = new ErrorHandler();
  * @param {any} fallback - Fallback value on error
  * @returns {Promise<any>} Result or fallback
  */
+/**
+ * Normalize unknown error values to Error instances.
+ * @param {unknown} error
+ * @returns {Error}
+ */
+export const toError = (error) => {
+  if (error instanceof Error) return error;
+  return new Error(typeof error === 'string' ? error : String(error));
+};
+
+/**
+ * Handle any error through the centralized error handler.
+ * @param {unknown} error
+ * @param {string} context
+ * @param {{ showToUser?: boolean, fatal?: boolean }} [options]
+ * @returns {Error}
+ */
+export const handleError = (error, context = 'unknown', options = {}) => {
+  return errorHandler.handle(toError(error), context, options);
+};
+
 export const safeAsync = async (fn, context, fallback = null) => {
   try {
     return await fn();
   } catch (error) {
-    errorHandler.handle(error, context, { showToUser: true });
+    handleError(error, context, { showToUser: true });
     return fallback;
   }
 };
@@ -315,7 +336,7 @@ export const safe = (fn, context, fallback = null) => {
   try {
     return fn();
   } catch (error) {
-    errorHandler.handle(error, context, { showToUser: true });
+    handleError(error, context, { showToUser: true });
     return fallback;
   }
 };

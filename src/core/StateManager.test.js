@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { StateManager } from './StateManager.js';
 import { eventBus } from './EventBus.js';
+import { logger } from '../utils/logger.js';
 
 describe('StateManager', () => {
   let stateManager;
@@ -70,11 +71,7 @@ describe('StateManager', () => {
       stateManager.setState(newState, 'update');
 
       expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith(
-        newState,
-        { count: 0, name: 'test' },
-        'update'
-      );
+      expect(callback).toHaveBeenCalledWith(newState, { count: 0, name: 'test' }, 'update');
     });
 
     it('should support multiple subscribers', () => {
@@ -107,7 +104,7 @@ describe('StateManager', () => {
       });
       const successCallback = vi.fn();
 
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => {});
 
       stateManager.subscribe(errorCallback);
       stateManager.subscribe(successCallback);
@@ -116,9 +113,9 @@ describe('StateManager', () => {
 
       expect(errorCallback).toHaveBeenCalled();
       expect(successCallback).toHaveBeenCalled();
-      expect(consoleError).toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalled();
 
-      consoleError.mockRestore();
+      errorSpy.mockRestore();
     });
 
     it('should throw error for invalid callback', () => {
@@ -194,11 +191,7 @@ describe('StateManager', () => {
       const newState = { count: 5, name: 'test' };
       stateManager.setState(newState, 'update');
 
-      expect(validator).toHaveBeenCalledWith(
-        5,
-        newState,
-        { count: 0, name: 'test' }
-      );
+      expect(validator).toHaveBeenCalledWith(5, newState, { count: 0, name: 'test' });
     });
   });
 

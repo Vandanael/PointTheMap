@@ -1,50 +1,68 @@
 // POST /.netlify/functions/start
 // Flat handler (no compose) to avoid "w is not a function" after esbuild minification
 
-import { randomUUID } from "crypto";
-import { capitals } from "../../src/data/capitals.js";
-import { civilizations } from "../../src/data/civilizations.js";
-import { stadiums } from "../../src/data/stadiums.js";
-import { selectCapitals, selectCountries, selectCivilizations, selectStadiums } from "../../lib/capital-selection/index.js";
-import { getGameMode, isValidMode } from "../../src/config/game-modes.js";
-import { API } from "../../src/config.js";
-import { getDatabase } from "./db.js";
-import { errorResponse, successResponse, parseJsonBody, handleDatabaseError } from "./_utils.js";
-import jwt from "jsonwebtoken";
+import { randomUUID } from 'crypto';
+import { capitals } from '../../src/data/capitals.js';
+import { civilizations } from '../../src/data/civilizations.js';
+import { stadiums } from '../../src/data/stadiums.js';
+import {
+  selectCapitals,
+  selectCountries,
+  selectCivilizations,
+  selectStadiums,
+} from '../../lib/capital-selection/index.js';
+import { getGameMode, isValidMode } from '../../lib/config/game-modes.js';
+import { API } from '../../lib/config/index.js';
+import { getDatabase } from './db.js';
+import {
+  errorResponse,
+  successResponse,
+  parseJsonBody,
+  handleDatabaseError,
+  createLogger,
+} from './_utils.js';
+import jwt from 'jsonwebtoken';
 
+const logger = createLogger('start');
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
 
 // Derive countries list from capitals (unique countries with valid countryId)
 const countryMap = new Map();
-capitals.forEach(cap => {
+capitals.forEach((cap) => {
   if (cap.countryId && cap.countryId !== 'UNK' && !countryMap.has(cap.countryId)) {
     countryMap.set(cap.countryId, {
       name: cap.country,
       countryId: cap.countryId,
-      popular: cap.popular
+      popular: cap.popular,
     });
   }
 });
 const countries = Array.from(countryMap.values());
 
+/**
+ * @param {Request} req
+ * @param {any} context
+ */
 export default async function startHandler(req, context) {
   try {
     if (req.method !== 'POST') {
-      return errorResponse("Method not allowed", 405);
+      return errorResponse('Method not allowed', 405);
     }
 
     let sql;
     try {
       sql = getDatabase(context);
     } catch (dbError) {
-      console.error("Database connection failed:", dbError?.message);
-      return errorResponse("Database connection failed. Please try again later.", 503);
+      const error = /** @type {Error} */ (dbError);
+      logger.error('Database connection failed:', error.message);
+      return errorResponse('Database connection failed. Please try again later.', 503);
     }
     context.sql = sql;
 
+    /** @type {{ gameType?: string }} */
     const body = await parseJsonBody(req);
-    const gameType = body.gameType || "classic";
+    const gameType = body.gameType || 'classic';
 
     if (!isValidMode(gameType)) {
       return errorResponse(`Invalid game mode: ${gameType}`, 400);
@@ -69,7 +87,8 @@ export default async function startHandler(req, context) {
           `;
         }
       } catch (jwtError) {
-        console.warn('Invalid player token:', jwtError?.message);
+        const error = /** @type {Error} */ (jwtError);
+        logger.warn('Invalid player token:', error.message);
       }
     }
 
@@ -82,33 +101,45 @@ export default async function startHandler(req, context) {
     let clientData;
 
     if (isCountryMode) {
-      selectedTargets = selectCountries(mode, countries, new Date());
+      selectedTargets = selectCountries(
+        /** @type {{ countrySelection: any }} */ (mode),
+        countries,
+        new Date()
+      );
       clientData = {
-        countries: selectedTargets.map(c => ({
+        countries: selectedTargets.map((c) => ({
           name: c.name,
           countryId: c.countryId,
-          popular: c.popular
-        }))
+          popular: c.popular,
+        })),
       };
     } else if (isCivilizationMode) {
-      selectedTargets = selectCivilizations(mode, civilizations, new Date());
+      selectedTargets = selectCivilizations(
+        /** @type {{ civilizationSelection: any }} */ (mode),
+        civilizations,
+        new Date()
+      );
       clientData = {
-        civilizations: selectedTargets.map(c => ({
+        civilizations: selectedTargets.map((c) => ({
           id: c.id,
           name: c.name,
-          popular: c.popular
-        }))
+          popular: c.popular,
+        })),
       };
     } else if (isStadiumMode) {
-      selectedTargets = selectStadiums(mode, stadiums, new Date());
+      selectedTargets = selectStadiums(
+        /** @type {{ stadiumSelection: any }} */ (mode),
+        stadiums,
+        new Date()
+      );
       clientData = {
-        stadiums: selectedTargets.map(s => ({
+        stadiums: selectedTargets.map((s) => ({
           name: s.name,
           city: s.city,
           country: s.country,
           lat: s.lat,
           lng: s.lng,
-        }))
+        })),
       };
     } else {
       selectedTargets = selectCapitals(mode, capitals, new Date());
@@ -118,7 +149,7 @@ export default async function startHandler(req, context) {
           country: c.country,
           lat: c.lat,
           lng: c.lng,
-        }))
+        })),
       };
     }
 
@@ -141,7 +172,7 @@ export default async function startHandler(req, context) {
     if (err?.code || (err?.message && err.message.includes('database'))) {
       return handleDatabaseError(err, 'start');
     }
-    console.error("[start] Uncaught error:", err?.message, err?.stack);
-    return errorResponse("An error occurred. Please try again later.", 500);
+    logger.error('Uncaught error:', err?.message, err?.stack);
+    return errorResponse('An error occurred. Please try again later.', 500);
   }
 }

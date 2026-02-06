@@ -6,6 +6,10 @@
 import { readFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { createLogger } from './_utils.js';
+import { GeoJSONSchema } from '../../lib/schemas/geojson.js';
+
+const logger = createLogger('geo-data');
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -24,7 +28,14 @@ function loadCountries() {
 
   try {
     const filePath = resolve(__dirname, '../../public/data/countries.geojson');
-    const data = JSON.parse(readFileSync(filePath, 'utf-8'));
+    const parsed = JSON.parse(readFileSync(filePath, 'utf-8'));
+    const validated = GeoJSONSchema.safeParse(parsed);
+    if (!validated.success) {
+      logger.error('Invalid countries GeoJSON schema');
+      countryLookup = new Map();
+      return countryLookup;
+    }
+    const data = validated.data;
     countryLookup = new Map();
 
     for (const feature of data.features) {
@@ -32,10 +43,11 @@ function loadCountries() {
       if (id) countryLookup.set(id, feature);
     }
 
-    console.log(`[geo-data] Loaded ${countryLookup.size} countries`);
+    logger.info(`Loaded ${countryLookup.size} countries`);
     return countryLookup;
   } catch (err) {
-    console.error('[geo-data] Failed to load countries.geojson:', err.message);
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error('Failed to load countries.geojson:', message);
     countryLookup = new Map();
     return countryLookup;
   }
@@ -50,7 +62,14 @@ function loadCivilizations() {
 
   try {
     const filePath = resolve(__dirname, '../../public/data/civilizations.geojson');
-    const data = JSON.parse(readFileSync(filePath, 'utf-8'));
+    const parsed = JSON.parse(readFileSync(filePath, 'utf-8'));
+    const validated = GeoJSONSchema.safeParse(parsed);
+    if (!validated.success) {
+      logger.error('Invalid civilizations GeoJSON schema');
+      civilizationLookup = new Map();
+      return civilizationLookup;
+    }
+    const data = validated.data;
     civilizationLookup = new Map();
 
     for (const feature of data.features) {
@@ -58,10 +77,11 @@ function loadCivilizations() {
       if (id) civilizationLookup.set(id, feature);
     }
 
-    console.log(`[geo-data] Loaded ${civilizationLookup.size} civilizations`);
+    logger.info(`Loaded ${civilizationLookup.size} civilizations`);
     return civilizationLookup;
   } catch (err) {
-    console.error('[geo-data] Failed to load civilizations.geojson:', err.message);
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error('Failed to load civilizations.geojson:', message);
     civilizationLookup = new Map();
     return civilizationLookup;
   }

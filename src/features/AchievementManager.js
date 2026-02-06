@@ -4,10 +4,10 @@
  * Manages achievement unlocking and tracking (local-only, no backend sync)
  */
 
-import { storageManager } from "../storage/StorageManager.js";
-import { logger } from "../utils/logger.js";
-import { eventBus } from "../core/EventBus.js";
-import { SCORING_THRESHOLDS } from "../config.js";
+import { storageManager } from '../storage/StorageManager.js';
+import { logger } from '../utils/logger.js';
+import { eventBus } from '../core/EventBus.js';
+import { SCORING_THRESHOLDS } from '../config.js';
 
 /**
  * Achievement definitions
@@ -22,50 +22,50 @@ export const ACHIEVEMENTS = {
     id: 'perfectRound',
     icon: '🎯',
     labelKey: 'achievement.perfectRound',
-    descKey: 'achievement.perfectRoundDesc'
+    descKey: 'achievement.perfectRoundDesc',
   },
   perfectGame: {
     id: 'perfectGame',
     icon: '🏆',
     labelKey: 'achievement.perfectGame',
-    descKey: 'achievement.perfectGameDesc'
+    descKey: 'achievement.perfectGameDesc',
   },
   avgUnder10: {
     id: 'avgUnder10',
     icon: '⭐',
     labelKey: 'achievement.avgUnder10',
-    descKey: 'achievement.avgUnder10Desc'
+    descKey: 'achievement.avgUnder10Desc',
   },
   avgUnder50: {
     id: 'avgUnder50',
     icon: '✨',
     labelKey: 'achievement.avgUnder50',
-    descKey: 'achievement.avgUnder50Desc'
+    descKey: 'achievement.avgUnder50Desc',
   },
   top1pct: {
     id: 'top1pct',
     icon: '👑',
     labelKey: 'achievement.top1pct',
-    descKey: 'achievement.top1pctDesc'
+    descKey: 'achievement.top1pctDesc',
   },
   streak3: {
     id: 'streak3',
     icon: '🔥',
     labelKey: 'achievement.streak3',
-    descKey: 'achievement.streak3Desc'
+    descKey: 'achievement.streak3Desc',
   },
   play10: {
     id: 'play10',
     icon: '🎮',
     labelKey: 'achievement.play10',
-    descKey: 'achievement.play10Desc'
+    descKey: 'achievement.play10Desc',
   },
   play50: {
     id: 'play50',
     icon: '🚀',
     labelKey: 'achievement.play50',
-    descKey: 'achievement.play50Desc'
-  }
+    descKey: 'achievement.play50Desc',
+  },
 };
 
 /**
@@ -80,7 +80,7 @@ const DEFAULT_ACHIEVEMENTS = {
   streak3: false,
   play10: false,
   play50: false,
-  lastAccess: Date.now()
+  lastAccess: Date.now(),
 };
 
 /**
@@ -117,8 +117,11 @@ export const checkAchievements = (rounds, stats, rank) => {
 
     // Calculate game metrics
     const avgDistance = rounds.reduce((sum, r) => sum + (r.distance || 0), 0) / rounds.length;
-    const perfectRounds = rounds.filter(r =>
-      r.distance != null && r.distance < SCORING_THRESHOLDS.ACHIEVEMENT_PERFECT
+    const perfectRounds = rounds.filter(
+      (r) =>
+        r.distance !== null &&
+        r.distance !== undefined &&
+        r.distance < SCORING_THRESHOLDS.ACHIEVEMENT_PERFECT
     ).length;
     const allPerfect = perfectRounds === rounds.length && rounds.length > 0;
 
@@ -234,34 +237,38 @@ export const getAchievementProgress = (achievementId, stats, rounds = null, rank
       case 'perfectRound':
       case 'perfectGame':
         // These are binary achievements, no partial progress
-        return { current: stats.perfectCount, target: 1, percent: stats.perfectCount > 0 ? 100 : 0 };
+        return {
+          current: stats.perfectCount,
+          target: 1,
+          percent: stats.perfectCount > 0 ? 100 : 0,
+        };
 
       case 'avgUnder10':
         return {
           current: Math.round(stats.averageDistance * 10) / 10, // Round to 1 decimal
           target: 10,
-          percent: Math.min(100, ((10 - stats.averageDistance) / 10) * 100)
+          percent: Math.min(100, ((10 - stats.averageDistance) / 10) * 100),
         };
 
       case 'play10':
         return {
           current: stats.playCount,
           target: 10,
-          percent: Math.min(100, (stats.playCount / 10) * 100)
+          percent: Math.min(100, (stats.playCount / 10) * 100),
         };
 
       case 'play50':
         return {
           current: stats.playCount,
           target: 50,
-          percent: Math.min(100, (stats.playCount / 50) * 100)
+          percent: Math.min(100, (stats.playCount / 50) * 100),
         };
 
       case 'streak3':
         return {
           current: stats.streakDaily,
           target: 3,
-          percent: Math.min(100, (stats.streakDaily / 3) * 100)
+          percent: Math.min(100, (stats.streakDaily / 3) * 100),
         };
 
       case 'top1pct':
@@ -272,7 +279,7 @@ export const getAchievementProgress = (achievementId, stats, rounds = null, rank
         return {
           current: rank,
           target: 5,
-          percent: rank <= 5 ? 100 : Math.max(0, ((50 - rank) / 45) * 100)
+          percent: rank <= 5 ? 100 : Math.max(0, ((50 - rank) / 45) * 100),
         };
 
       case 'speedDemon':
@@ -280,11 +287,11 @@ export const getAchievementProgress = (achievementId, stats, rounds = null, rank
         if (!rounds || rounds.length === 0) {
           return defaultProgress;
         }
-        const fastRounds = rounds.filter(r => r.timeBonus && r.timeBonus > 500).length;
+        const fastRounds = rounds.filter((r) => r.timeBonus && r.timeBonus > 500).length;
         return {
           current: fastRounds,
           target: 5,
-          percent: Math.min(100, (fastRounds / 5) * 100)
+          percent: Math.min(100, (fastRounds / 5) * 100),
         };
 
       default:

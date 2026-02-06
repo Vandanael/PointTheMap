@@ -71,7 +71,9 @@ export class StateDevTools {
         const index = parseInt(target.dataset.index || '0');
         const history = this.#stateManager.getHistory();
         const entry = history[index];
-        logger.debug(`State at ${new Date(entry.timestamp).toLocaleTimeString()} (${entry.action})`);
+        logger.debug(
+          `State at ${new Date(entry.timestamp).toLocaleTimeString()} (${entry.action})`
+        );
         logger.debug('State:', entry.state);
         logger.debug('Previous State:', entry.prevState);
       }

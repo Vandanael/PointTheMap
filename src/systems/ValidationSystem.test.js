@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { ValidationSystem, getValidationSystem, validationSystem } from './ValidationSystem.js';
 
 describe('ValidationSystem', () => {
+  /** @type {ValidationSystem} */
   let system;
 
   beforeEach(() => {
@@ -46,14 +47,14 @@ describe('ValidationSystem', () => {
 
     it('should reject empty or null pseudos', () => {
       expect(system.validatePseudo('').valid).toBe(false);
-      expect(system.validatePseudo(null).valid).toBe(false);
-      expect(system.validatePseudo(undefined).valid).toBe(false);
+      expect(system.validatePseudo(/** @type {any} */ (null)).valid).toBe(false);
+      expect(system.validatePseudo(/** @type {any} */ (undefined)).valid).toBe(false);
     });
 
     it('should reject non-string pseudos', () => {
-      expect(system.validatePseudo(123).valid).toBe(false);
-      expect(system.validatePseudo({}).valid).toBe(false);
-      expect(system.validatePseudo([]).valid).toBe(false);
+      expect(system.validatePseudo(/** @type {any} */ (123)).valid).toBe(false);
+      expect(system.validatePseudo(/** @type {any} */ ({})).valid).toBe(false);
+      expect(system.validatePseudo(/** @type {any} */ ([])).valid).toBe(false);
     });
 
     it('should handle whitespace trimming', () => {
@@ -92,9 +93,9 @@ describe('ValidationSystem', () => {
     });
 
     it('should reject non-numeric latitudes', () => {
-      expect(system.validateLatitude('45').valid).toBe(false);
-      expect(system.validateLatitude(null).valid).toBe(false);
-      expect(system.validateLatitude(undefined).valid).toBe(false);
+      expect(system.validateLatitude(/** @type {any} */ ('45')).valid).toBe(false);
+      expect(system.validateLatitude(/** @type {any} */ (null)).valid).toBe(false);
+      expect(system.validateLatitude(/** @type {any} */ (undefined)).valid).toBe(false);
     });
 
     it('should reject infinite and NaN values', () => {
@@ -106,9 +107,10 @@ describe('ValidationSystem', () => {
     it('should provide details in error', () => {
       const result = system.validateLatitude(100);
       expect(result.details).toBeDefined();
-      expect(result.details.value).toBe(100);
-      expect(result.details.min).toBe(-90);
-      expect(result.details.max).toBe(90);
+      const details = /** @type {{ value: number, min: number, max: number }} */ (result.details);
+      expect(details.value).toBe(100);
+      expect(details.min).toBe(-90);
+      expect(details.max).toBe(90);
     });
   });
 
@@ -130,8 +132,8 @@ describe('ValidationSystem', () => {
     });
 
     it('should reject non-numeric longitudes', () => {
-      expect(system.validateLongitude('90').valid).toBe(false);
-      expect(system.validateLongitude(null).valid).toBe(false);
+      expect(system.validateLongitude(/** @type {any} */ ('90')).valid).toBe(false);
+      expect(system.validateLongitude(/** @type {any} */ (null)).valid).toBe(false);
     });
 
     it('should reject infinite and NaN values', () => {
@@ -178,14 +180,14 @@ describe('ValidationSystem', () => {
     });
 
     it('should reject invalid click objects', () => {
-      expect(system.validateClick({}).valid).toBe(false);
-      expect(system.validateClick({ lat: 48.8566 }).valid).toBe(false);
-      expect(system.validateClick({ lng: 2.3522 }).valid).toBe(false);
+      expect(system.validateClick(/** @type {any} */ ({})).valid).toBe(false);
+      expect(system.validateClick(/** @type {any} */ ({ lat: 48.8566 })).valid).toBe(false);
+      expect(system.validateClick(/** @type {any} */ ({ lng: 2.3522 })).valid).toBe(false);
     });
 
     it('should reject non-object clicks', () => {
-      expect(system.validateClick('invalid').valid).toBe(false);
-      expect(system.validateClick(123).valid).toBe(false);
+      expect(system.validateClick(/** @type {any} */ ('invalid')).valid).toBe(false);
+      expect(system.validateClick(/** @type {any} */ (123)).valid).toBe(false);
     });
 
     it('should validate coordinates in click', () => {
@@ -209,13 +211,13 @@ describe('ValidationSystem', () => {
     });
 
     it('should reject null or undefined tokens', () => {
-      expect(system.validateToken(null).valid).toBe(false);
-      expect(system.validateToken(undefined).valid).toBe(false);
+      expect(system.validateToken(/** @type {any} */ (null)).valid).toBe(false);
+      expect(system.validateToken(/** @type {any} */ (undefined)).valid).toBe(false);
     });
 
     it('should reject non-string tokens', () => {
-      expect(system.validateToken(123).valid).toBe(false);
-      expect(system.validateToken({}).valid).toBe(false);
+      expect(system.validateToken(/** @type {any} */ (123)).valid).toBe(false);
+      expect(system.validateToken(/** @type {any} */ ({})).valid).toBe(false);
     });
   });
 
@@ -239,8 +241,8 @@ describe('ValidationSystem', () => {
     });
 
     it('should reject non-numeric durations', () => {
-      expect(system.validateGameDuration('100').valid).toBe(false);
-      expect(system.validateGameDuration(null).valid).toBe(false);
+      expect(system.validateGameDuration(/** @type {any} */ ('100')).valid).toBe(false);
+      expect(system.validateGameDuration(/** @type {any} */ (null)).valid).toBe(false);
     });
 
     it('should reject infinite durations', () => {
@@ -251,8 +253,9 @@ describe('ValidationSystem', () => {
     it('should provide duration details in error', () => {
       const result = system.validateGameDuration(1000);
       expect(result.details).toBeDefined();
-      expect(result.details.duration).toBe(1000);
-      expect(result.details.minimum).toBeDefined();
+      const details = /** @type {{ duration: number, minimum: number }} */ (result.details);
+      expect(details.duration).toBe(1000);
+      expect(details.minimum).toBeDefined();
     });
   });
 
@@ -276,7 +279,7 @@ describe('ValidationSystem', () => {
     });
 
     it('should reject rounds without capital', () => {
-      const round = { status: 'completed' };
+      const round = /** @type {any} */ ({ status: 'completed' });
       const result = system.validateRound(round, 0);
       expect(result.valid).toBe(false);
       expect(result.error).toContain('capital');
@@ -285,7 +288,7 @@ describe('ValidationSystem', () => {
     it('should reject rounds with invalid status', () => {
       const round = {
         capital: 'Paris',
-        status: 'invalid-status',
+        status: /** @type {any} */ ('invalid-status'),
       };
       const result = system.validateRound(round, 0);
       expect(result.valid).toBe(false);
@@ -303,7 +306,7 @@ describe('ValidationSystem', () => {
     });
 
     it('should include round index in error messages', () => {
-      const round = { capital: null, status: 'completed' };
+      const round = { capital: /** @type {any} */ (null), status: 'completed' };
       const result = system.validateRound(round, 2);
       expect(result.error).toContain('3'); // Round index 2 = Round 3
     });
@@ -323,8 +326,8 @@ describe('ValidationSystem', () => {
     });
 
     it('should reject non-array rounds', () => {
-      expect(system.validateRounds('not-array').valid).toBe(false);
-      expect(system.validateRounds(null).valid).toBe(false);
+      expect(system.validateRounds(/** @type {any} */ ('not-array')).valid).toBe(false);
+      expect(system.validateRounds(/** @type {any} */ (null)).valid).toBe(false);
     });
 
     it('should reject wrong number of rounds', () => {
@@ -337,7 +340,7 @@ describe('ValidationSystem', () => {
 
     it('should validate each round', () => {
       const invalidRounds = [...validRounds];
-      invalidRounds[2] = { ...invalidRounds[2], capital: null };
+      invalidRounds[2] = { ...invalidRounds[2], capital: /** @type {any} */ (null) };
 
       const result = system.validateRounds(invalidRounds);
       expect(result.valid).toBe(false);
@@ -423,8 +426,8 @@ describe('ValidationSystem', () => {
     });
 
     it('should reject non-object sessions', () => {
-      expect(system.validateSession(null).valid).toBe(false);
-      expect(system.validateSession('session').valid).toBe(false);
+      expect(system.validateSession(/** @type {any} */ (null)).valid).toBe(false);
+      expect(system.validateSession(/** @type {any} */ ('session')).valid).toBe(false);
     });
   });
 

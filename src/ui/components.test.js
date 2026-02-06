@@ -35,45 +35,74 @@ describe('leaderboardTypeFromSelection', () => {
   });
 
   it('invalid input → classic (fallback)', () => {
-    expect(leaderboardTypeFromSelection('classic', 'unknown')).toBe('classic');
-    expect(leaderboardTypeFromSelection('invalid', 'capitals')).toBe('classic');
+    expect(leaderboardTypeFromSelection('classic', /** @type {any} */ ('unknown'))).toBe('classic');
+    expect(leaderboardTypeFromSelection(/** @type {any} */ ('invalid'), 'capitals')).toBe(
+      'classic'
+    );
   });
 });
 
 describe('selectionFromLeaderboardType', () => {
   it('classic → {variant: classic, category: capitals}', () => {
-    expect(selectionFromLeaderboardType('classic')).toEqual({ variant: 'classic', category: 'capitals' });
+    expect(selectionFromLeaderboardType('classic')).toEqual({
+      variant: 'classic',
+      category: 'capitals',
+    });
   });
 
   it('daily → {variant: daily, category: capitals}', () => {
-    expect(selectionFromLeaderboardType('daily')).toEqual({ variant: 'daily', category: 'capitals' });
+    expect(selectionFromLeaderboardType('daily')).toEqual({
+      variant: 'daily',
+      category: 'capitals',
+    });
   });
 
   it('country → {variant: classic, category: countries}', () => {
-    expect(selectionFromLeaderboardType('country')).toEqual({ variant: 'classic', category: 'countries' });
+    expect(selectionFromLeaderboardType('country')).toEqual({
+      variant: 'classic',
+      category: 'countries',
+    });
   });
 
   it('country_daily → {variant: daily, category: countries}', () => {
-    expect(selectionFromLeaderboardType('country_daily')).toEqual({ variant: 'daily', category: 'countries' });
+    expect(selectionFromLeaderboardType('country_daily')).toEqual({
+      variant: 'daily',
+      category: 'countries',
+    });
   });
 
   it('stadium → {variant: classic, category: stadiums}', () => {
-    expect(selectionFromLeaderboardType('stadium')).toEqual({ variant: 'classic', category: 'stadiums' });
+    expect(selectionFromLeaderboardType('stadium')).toEqual({
+      variant: 'classic',
+      category: 'stadiums',
+    });
   });
 
   it('stadium_daily → {variant: daily, category: stadiums}', () => {
-    expect(selectionFromLeaderboardType('stadium_daily')).toEqual({ variant: 'daily', category: 'stadiums' });
+    expect(selectionFromLeaderboardType('stadium_daily')).toEqual({
+      variant: 'daily',
+      category: 'stadiums',
+    });
   });
 
   it('civilization → {variant: classic, category: civilizations}', () => {
-    expect(selectionFromLeaderboardType('civilization')).toEqual({ variant: 'classic', category: 'civilizations' });
+    expect(selectionFromLeaderboardType('civilization')).toEqual({
+      variant: 'classic',
+      category: 'civilizations',
+    });
   });
 
   it('civilization_daily → {variant: daily, category: civilizations}', () => {
-    expect(selectionFromLeaderboardType('civilization_daily')).toEqual({ variant: 'daily', category: 'civilizations' });
+    expect(selectionFromLeaderboardType('civilization_daily')).toEqual({
+      variant: 'daily',
+      category: 'civilizations',
+    });
   });
 
   it('unknown type → {variant: classic, category: capitals} (fallback)', () => {
-    expect(selectionFromLeaderboardType('nonexistent')).toEqual({ variant: 'classic', category: 'capitals' });
+    expect(selectionFromLeaderboardType('nonexistent')).toEqual({
+      variant: 'classic',
+      category: 'capitals',
+    });
   });
 });

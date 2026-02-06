@@ -51,11 +51,14 @@ describe('ErrorHandler - getUserFriendlyMessage', () => {
 
       errorHandler.handle(error, 'test-context', { showToUser: true, fatal: false });
 
-      expect(eventBus.emit).toHaveBeenCalledWith('error:show', expect.objectContaining({
-        message: 'Too many requests',
-        error,
-        context: 'test-context',
-      }));
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        'error:show',
+        expect.objectContaining({
+          message: 'Too many requests',
+          error,
+          context: 'test-context',
+        })
+      );
     });
 
     it('should return user-friendly message for APIError with status 500 (server error)', () => {
@@ -63,9 +66,12 @@ describe('ErrorHandler - getUserFriendlyMessage', () => {
 
       errorHandler.handle(error, 'test-context', { showToUser: true, fatal: false });
 
-      expect(eventBus.emit).toHaveBeenCalledWith('error:show', expect.objectContaining({
-        message: 'Server error',
-      }));
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        'error:show',
+        expect.objectContaining({
+          message: 'Server error',
+        })
+      );
     });
 
     it('should return user-friendly message for APIError with status 0 (connection failed)', () => {
@@ -73,9 +79,12 @@ describe('ErrorHandler - getUserFriendlyMessage', () => {
 
       errorHandler.handle(error, 'test-context', { showToUser: true, fatal: false });
 
-      expect(eventBus.emit).toHaveBeenCalledWith('error:show', expect.objectContaining({
-        message: 'Connection failed',
-      }));
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        'error:show',
+        expect.objectContaining({
+          message: 'Connection failed',
+        })
+      );
     });
   });
 
@@ -85,9 +94,12 @@ describe('ErrorHandler - getUserFriendlyMessage', () => {
 
       errorHandler.handle(error, 'test-context', { showToUser: true, fatal: false });
 
-      expect(eventBus.emit).toHaveBeenCalledWith('error:show', expect.objectContaining({
-        message: 'Connection failed',
-      }));
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        'error:show',
+        expect.objectContaining({
+          message: 'Connection failed',
+        })
+      );
     });
 
     it('should return user-friendly message for timeout errors', () => {
@@ -95,9 +107,12 @@ describe('ErrorHandler - getUserFriendlyMessage', () => {
 
       errorHandler.handle(error, 'test-context', { showToUser: true, fatal: false });
 
-      expect(eventBus.emit).toHaveBeenCalledWith('error:show', expect.objectContaining({
-        message: 'Load timeout',
-      }));
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        'error:show',
+        expect.objectContaining({
+          message: 'Load timeout',
+        })
+      );
     });
 
     it('should return user-friendly message for GameError with NETWORK_ERROR code', () => {
@@ -105,9 +120,12 @@ describe('ErrorHandler - getUserFriendlyMessage', () => {
 
       errorHandler.handle(error, 'test-context', { showToUser: true, fatal: false });
 
-      expect(eventBus.emit).toHaveBeenCalledWith('error:show', expect.objectContaining({
-        message: 'Network error',
-      }));
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        'error:show',
+        expect.objectContaining({
+          message: 'Network error',
+        })
+      );
     });
   });
 
@@ -117,9 +135,12 @@ describe('ErrorHandler - getUserFriendlyMessage', () => {
 
       errorHandler.handle(error, 'leaderboard:load', { showToUser: true, fatal: false });
 
-      expect(eventBus.emit).toHaveBeenCalledWith('error:show', expect.objectContaining({
-        message: 'Leaderboard unavailable',
-      }));
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        'error:show',
+        expect.objectContaining({
+          message: 'Leaderboard unavailable',
+        })
+      );
     });
 
     it('should return context-specific message for score:submit context', () => {
@@ -127,9 +148,12 @@ describe('ErrorHandler - getUserFriendlyMessage', () => {
 
       errorHandler.handle(error, 'score:submit', { showToUser: true, fatal: false });
 
-      expect(eventBus.emit).toHaveBeenCalledWith('error:show', expect.objectContaining({
-        message: 'Submit failed',
-      }));
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        'error:show',
+        expect.objectContaining({
+          message: 'Submit failed',
+        })
+      );
     });
   });
 
@@ -139,7 +163,7 @@ describe('ErrorHandler - getUserFriendlyMessage', () => {
 
       errorHandler.handle(technicalError, 'database', { showToUser: true, fatal: false });
 
-      const emitCall = eventBus.emit.mock.calls.find(call => call[0] === 'error:show');
+      const emitCall = eventBus.emit.mock.calls.find((call) => call[0] === 'error:show');
       const message = emitCall[1].message;
 
       // Should not contain technical details
@@ -156,9 +180,12 @@ describe('ErrorHandler - getUserFriendlyMessage', () => {
 
       errorHandler.handle(error, 'validation', { showToUser: true, fatal: false });
 
-      expect(eventBus.emit).toHaveBeenCalledWith('error:show', expect.objectContaining({
-        message: 'Pseudo must be 3-5 characters',
-      }));
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        'error:show',
+        expect.objectContaining({
+          message: 'Pseudo must be 3-5 characters',
+        })
+      );
     });
   });
 
@@ -168,11 +195,14 @@ describe('ErrorHandler - getUserFriendlyMessage', () => {
 
       errorHandler.handle(error, 'test-context', { showToUser: false, fatal: false });
 
-      expect(eventBus.emit).toHaveBeenCalledWith('error:occurred', expect.objectContaining({
-        error,
-        context: 'test-context',
-        fatal: false,
-      }));
+      expect(eventBus.emit).toHaveBeenCalledWith(
+        'error:occurred',
+        expect.objectContaining({
+          error,
+          context: 'test-context',
+          fatal: false,
+        })
+      );
     });
   });
 });

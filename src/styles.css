@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Variables de thème Dark/Light */
 :root {
@@ -12,16 +12,16 @@
   --accent: #facc15;
 
   /* Button colors */
-  --btn-primary: #facc15;        /* yellow-400 */
+  --btn-primary: #facc15; /* yellow-400 */
   --btn-primary-hover: #fde047; /* yellow-300 */
-  --btn-secondary: #1e293b;     /* slate-700 */
+  --btn-secondary: #1e293b; /* slate-700 */
   --btn-secondary-hover: #334155; /* slate-600 */
 
   /* Toast colors */
-  --toast-info: #3b82f6;        /* blue-500 */
-  --toast-error: #ef4444;       /* red-500 */
-  --toast-warning: #f59e0b;     /* yellow-500 */
-  --toast-success: #10b981;     /* green-500 */
+  --toast-info: #3b82f6; /* blue-500 */
+  --toast-error: #ef4444; /* red-500 */
+  --toast-warning: #f59e0b; /* yellow-500 */
+  --toast-success: #10b981; /* green-500 */
 
   /* Z-index constants */
   --z-base: 1000;
@@ -35,16 +35,16 @@
 
 body.light-theme {
   /* Light mode classique - tons chauds et doux, reprend la structure du dark mode */
-  --bg-primary: #f5f3f0;      /* Beige/gris chaud - fond principal doux */
-  --bg-secondary: #ebe8e3;    /* Beige/gris moyen - cartes et éléments secondaires */
-  --bg-tertiary: #ddd9d2;     /* Beige/gris foncé - éléments tertiaires */
-  --text-primary: #1a1816;    /* Presque noir mais légèrement adouci */
-  --text-secondary: #3a3834;  /* Darker for better contrast (was #4a4844) */
-  --text-tertiary: #5b5853;   /* Darker for better contrast (was #6b6863) */
-  --border-color: #c9c5be;    /* Bordure visible mais douce */
+  --bg-primary: #f5f3f0; /* Beige/gris chaud - fond principal doux */
+  --bg-secondary: #ebe8e3; /* Beige/gris moyen - cartes et éléments secondaires */
+  --bg-tertiary: #ddd9d2; /* Beige/gris foncé - éléments tertiaires */
+  --text-primary: #1a1816; /* Presque noir mais légèrement adouci */
+  --text-secondary: #3a3834; /* Darker for better contrast (was #4a4844) */
+  --text-tertiary: #5b5853; /* Darker for better contrast (was #6b6863) */
+  --border-color: #c9c5be; /* Bordure visible mais douce */
 
   /* Button colors for light theme */
-  --btn-secondary: #e2e8f0;     /* slate-200 */
+  --btn-secondary: #e2e8f0; /* slate-200 */
   --btn-secondary-hover: #cbd5e1; /* slate-300 */
 }
 
@@ -53,7 +53,8 @@ body.light-theme {
   -webkit-tap-highlight-color: rgba(250, 204, 21, 0.3);
 }
 
-html, body {
+html,
+body {
   overflow: hidden;
   width: 100%;
   height: 100%;
@@ -65,7 +66,12 @@ html, body {
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
 }
@@ -83,18 +89,20 @@ body {
 
 /* Uniquement en dark mode (body sans .light-theme) : éclaircir la carte pour mieux distinguer mers et océans (tuiles Carto inchangées) */
 body:not(.light-theme) #map {
-  filter: brightness(1.14) contrast(1.04);
+  filter: brightness(1.1) contrast(1.15) saturate(1.05);
 }
 
-/* Light mode : pas de filtre par défaut (tuiles Carto light_nolabels) */
+body.light-theme #map {
+  filter: brightness(0.95) contrast(1.25) saturate(1.1);
+}
 
 /* Mobile : renforcer la lisibilité de la carte dans les deux thèmes (écrans petits, luminosité variable) */
 @media (max-width: 768px) {
   body:not(.light-theme) #map {
-    filter: brightness(1.2) contrast(1.12);
+    filter: brightness(1.15) contrast(1.2) saturate(1.1);
   }
   body.light-theme #map {
-    filter: brightness(0.98) contrast(1.1);
+    filter: brightness(0.93) contrast(1.3) saturate(1.15);
   }
 }
 
@@ -149,11 +157,8 @@ body:not(.light-theme) #map {
   background-position: center;
   background-repeat: no-repeat;
   pointer-events: none;
-  background-image: url("/assets/start-screen-mobile-dark.png");
-  background-image: image-set(
-    url("/assets/start-screen-mobile-dark.webp") type("image/webp"),
-    url("/assets/start-screen-mobile-dark.png") type("image/png")
-  );
+  background-image: url('/assets/start-screen-mobile-dark.webp');
+  background-image: image-set(url('/assets/start-screen-mobile-dark.webp') type('image/webp'));
 }
 
 body.start-screen-visible .start-screen-bg {
@@ -162,69 +167,48 @@ body.start-screen-visible .start-screen-bg {
 
 @media (min-width: 768px) {
   .start-screen-bg {
-    background-image: url("/assets/start-screen-tablet-dark.png");
-    background-image: image-set(
-      url("/assets/start-screen-tablet-dark.webp") type("image/webp"),
-      url("/assets/start-screen-tablet-dark.png") type("image/png")
-    );
+    background-image: url('/assets/start-screen-tablet-dark.webp');
+    background-image: image-set(url('/assets/start-screen-tablet-dark.webp') type('image/webp'));
   }
 }
 
 @media (min-width: 1280px) {
   .start-screen-bg {
-    background-image: url("/assets/start-screen-desktop-dark.png");
-    background-image: image-set(
-      url("/assets/start-screen-desktop-dark.webp") type("image/webp"),
-      url("/assets/start-screen-desktop-dark.png") type("image/png")
-    );
+    background-image: url('/assets/start-screen-desktop-dark.webp');
+    background-image: image-set(url('/assets/start-screen-desktop-dark.webp') type('image/webp'));
   }
 }
 
 @media (min-width: 2560px) {
   .start-screen-bg {
-    background-image: url("/assets/start-screen-2k-dark.png");
-    background-image: image-set(
-      url("/assets/start-screen-2k-dark.webp") type("image/webp"),
-      url("/assets/start-screen-2k-dark.png") type("image/png")
-    );
+    background-image: url('/assets/start-screen-2k-dark.webp');
+    background-image: image-set(url('/assets/start-screen-2k-dark.webp') type('image/webp'));
   }
 }
 
 body.light-theme .start-screen-bg {
-  background-image: url("/assets/start-screen-mobile-light.png");
-  background-image: image-set(
-    url("/assets/start-screen-mobile-light.webp") type("image/webp"),
-    url("/assets/start-screen-mobile-light.png") type("image/png")
-  );
+  background-image: url('/assets/start-screen-mobile-light.webp');
+  background-image: image-set(url('/assets/start-screen-mobile-light.webp') type('image/webp'));
 }
 
 @media (min-width: 768px) {
   body.light-theme .start-screen-bg {
-    background-image: url("/assets/start-screen-tablet-light.png");
-    background-image: image-set(
-      url("/assets/start-screen-tablet-light.webp") type("image/webp"),
-      url("/assets/start-screen-tablet-light.png") type("image/png")
-    );
+    background-image: url('/assets/start-screen-tablet-light.webp');
+    background-image: image-set(url('/assets/start-screen-tablet-light.webp') type('image/webp'));
   }
 }
 
 @media (min-width: 1280px) {
   body.light-theme .start-screen-bg {
-    background-image: url("/assets/start-screen-desktop-light.png");
-    background-image: image-set(
-      url("/assets/start-screen-desktop-light.webp") type("image/webp"),
-      url("/assets/start-screen-desktop-light.png") type("image/png")
-    );
+    background-image: url('/assets/start-screen-desktop-light.webp');
+    background-image: image-set(url('/assets/start-screen-desktop-light.webp') type('image/webp'));
   }
 }
 
 @media (min-width: 2560px) {
   body.light-theme .start-screen-bg {
-    background-image: url("/assets/start-screen-2k-light.png");
-    background-image: image-set(
-      url("/assets/start-screen-2k-light.webp") type("image/webp"),
-      url("/assets/start-screen-2k-light.png") type("image/png")
-    );
+    background-image: url('/assets/start-screen-2k-light.webp');
+    background-image: image-set(url('/assets/start-screen-2k-light.webp') type('image/webp'));
   }
 }
 
@@ -263,20 +247,40 @@ body.light-theme .start-modal-overlay {
 
 body.light-theme .marker-target {
   border-color: #1a1816;
-  box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.8), 0 0 8px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 0 0 0 rgba(250, 204, 21, 0.8),
+    0 0 8px rgba(0, 0, 0, 0.3);
   animation: ripple-light 2s ease-out infinite;
 }
 
 @keyframes ripple {
-  0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); }
-  50% { box-shadow: 0 0 0 15px rgba(250, 204, 21, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 15px rgba(250, 204, 21, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(250, 204, 21, 0);
+  }
 }
 
 @keyframes ripple-light {
-  0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.8), 0 0 8px rgba(0, 0, 0, 0.3); }
-  50% { box-shadow: 0 0 0 15px rgba(250, 204, 21, 0), 0 0 8px rgba(0, 0, 0, 0.1); }
-  100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0), 0 0 8px rgba(0, 0, 0, 0.3); }
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(250, 204, 21, 0.8),
+      0 0 8px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 0 15px rgba(250, 204, 21, 0),
+      0 0 8px rgba(0, 0, 0, 0.1);
+  }
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(250, 204, 21, 0),
+      0 0 8px rgba(0, 0, 0, 0.3);
+  }
 }
 
 /* Marqueur joueur - Cercle blanc/noir */
@@ -287,12 +291,49 @@ body.light-theme .marker-target {
   border: 2px solid #000000;
   border-radius: 50%;
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+  position: relative;
 }
 
 body.light-theme .marker-player {
   background-color: #1a1816;
   border-color: #ffffff;
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+}
+
+.marker-pop {
+  animation: marker-pop 240ms ease-out;
+}
+
+.marker-shockwave {
+  position: absolute;
+  inset: -12px;
+  border-radius: 9999px;
+  border: 2px solid rgba(250, 204, 21, 0.6);
+  animation: shockwave 700ms ease-out;
+  pointer-events: none;
+}
+
+@keyframes marker-pop {
+  0% {
+    transform: scale(0.7);
+  }
+  70% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes shockwave {
+  0% {
+    transform: scale(0.3);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
 }
 
 /* Distance label on result line (midpoint) */
@@ -313,6 +354,7 @@ body.light-theme .marker-player {
   border: 1px solid var(--border-color);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   pointer-events: none;
+  animation: result-pop 300ms ease-out;
 }
 
 body.light-theme .result-line-distance {
@@ -330,20 +372,41 @@ body.light-theme .result-line-distance {
 
 /* Danger shake animation */
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
-  20%, 40%, 60%, 80% { transform: translateX(2px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-2px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(2px);
+  }
 }
 
 .timer-danger {
   background: #dc2626 !important;
-  animation: shake 0.5s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.6);
+  animation: heartbeat 0.9s ease-in-out infinite;
 }
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .modal-content {
@@ -351,7 +414,8 @@ body.light-theme .result-line-distance {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -359,10 +423,14 @@ body.light-theme .result-line-distance {
   }
 }
 
-
 @keyframes pulse-button {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.02); }
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
 }
 
 .pulse-button {
@@ -370,17 +438,154 @@ body.light-theme .result-line-distance {
 }
 
 .pulse-button:hover {
-  animation-play-state: paused;  /* Pause instead of stopping */
+  animation-play-state: paused; /* Pause instead of stopping */
 }
 
 @keyframes inputErrorShake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-  20%, 40%, 60%, 80% { transform: translateX(5px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-5px);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(5px);
+  }
 }
 
 .input-error-shake {
   animation: inputErrorShake 0.4s ease-in-out;
+}
+
+@keyframes heartbeat {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  45% {
+    transform: scaleY(0.85);
+  }
+  60% {
+    transform: scaleY(1.1);
+  }
+}
+
+@keyframes result-pop {
+  0% {
+    transform: translateY(4px) scale(0.96);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes score-burst {
+  0% {
+    transform: scale(1);
+    text-shadow: 0 0 0 rgba(250, 204, 21, 0);
+  }
+  60% {
+    transform: scale(1.08);
+    text-shadow: 0 0 12px rgba(250, 204, 21, 0.6);
+  }
+  100% {
+    transform: scale(1);
+    text-shadow: 0 0 0 rgba(250, 204, 21, 0);
+  }
+}
+
+.score-burst {
+  animation: score-burst 420ms ease-out;
+}
+
+.result-stamp {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  color: #0f172a;
+  background: #facc15;
+  transform: rotate(-6deg);
+  animation: stamp-pop 420ms ease-out;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+}
+
+.result-stamp-excellent {
+  background: #22c55e;
+}
+
+.result-stamp-perfect {
+  background: #facc15;
+}
+
+.result-confetti {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: #fff;
+  opacity: 0.85;
+  animation: confetti-pop 700ms ease-out;
+}
+
+.result-confetti:nth-of-type(1) {
+  top: -8px;
+  left: 6px;
+  background: #facc15;
+}
+.result-confetti:nth-of-type(2) {
+  top: 6px;
+  left: -8px;
+  background: #60a5fa;
+}
+.result-confetti:nth-of-type(3) {
+  top: -6px;
+  right: -8px;
+  background: #34d399;
+}
+
+@keyframes stamp-pop {
+  0% {
+    transform: scale(0.8) rotate(-12deg);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.05) rotate(-6deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(-6deg);
+    opacity: 1;
+  }
+}
+
+@keyframes confetti-pop {
+  0% {
+    transform: translateY(0) scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(-6px) scale(1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(2px) scale(0.8);
+    opacity: 0;
+  }
 }
 
 /* Boutons */
@@ -403,8 +608,8 @@ body.light-theme .result-line-distance {
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
-  width: 44px;   /* WCAG 2.1 AA - minimum 44x44px touch target */
-  height: 44px;  /* WCAG 2.1 AA - minimum 44x44px touch target */
+  width: 44px; /* WCAG 2.1 AA - minimum 44x44px touch target */
+  height: 44px; /* WCAG 2.1 AA - minimum 44x44px touch target */
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -415,8 +620,10 @@ body.light-theme .result-line-distance {
   font-weight: 600;
 }
 
-.toggle-btn:hover {
-  background: var(--bg-secondary);
+@media (hover: hover) and (pointer: fine) {
+  .toggle-btn:hover {
+    background: var(--bg-secondary);
+  }
 }
 
 .toggle-btn:active {
@@ -431,6 +638,7 @@ body.light-theme .result-line-distance {
 .modal-card {
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
+  position: relative;
 }
 
 /* Prevent text overflow in UI elements */
@@ -542,7 +750,6 @@ button:focus:not(:focus-visible),
   pointer-events: none;
 }
 
-
 /* Disabled buttons */
 button:disabled,
 button[disabled] {
@@ -552,14 +759,24 @@ button[disabled] {
 }
 
 /* Toast colors */
-.toast-info { background: var(--toast-info); }
-.toast-error { background: var(--toast-error); }
-.toast-warning { background: var(--toast-warning); }
-.toast-success { background: var(--toast-success); }
+.toast-info {
+  background: var(--toast-info);
+}
+.toast-error {
+  background: var(--toast-error);
+}
+.toast-warning {
+  background: var(--toast-warning);
+}
+.toast-success {
+  background: var(--toast-success);
+}
 
 /* Theme transition animation */
 body {
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .modal-card,
@@ -573,9 +790,10 @@ body {
 .lobby-footer,
 .btn-secondary,
 .game-header > div {
-  transition: background-color 0.3s ease,
-              color 0.3s ease,
-              border-color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
 }
 
 /* Safe area padding pour iPhone notch */
@@ -628,7 +846,8 @@ body {
 /* Duplicate fadeIn removed - using the one at line 267 */
 
 @keyframes bounce {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {

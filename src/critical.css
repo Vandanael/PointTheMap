@@ -36,7 +36,8 @@ body.light-theme {
   -webkit-tap-highlight-color: rgba(250, 204, 21, 0.3);
 }
 
-html, body {
+html,
+body {
   overflow: hidden;
   width: 100%;
   height: 100%;
@@ -48,7 +49,12 @@ html, body {
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
 }
@@ -64,10 +70,15 @@ body {
 }
 
 body:not(.light-theme) #map {
-  filter: brightness(1.14) contrast(1.04);
+  filter: brightness(1.1) contrast(1.15) saturate(1.05);
 }
 
-#map, #map * {
+body.light-theme #map {
+  filter: brightness(0.95) contrast(1.25) saturate(1.1);
+}
+
+#map,
+#map * {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
@@ -82,7 +93,7 @@ body:not(.light-theme) #map {
   background-position: center;
   background-repeat: no-repeat;
   pointer-events: none;
-  background-image: url("/assets/start-screen-mobile-dark.png");
+  background-image: url('/assets/start-screen-mobile-dark.webp');
 }
 
 body.start-screen-visible .start-screen-bg {
@@ -90,31 +101,43 @@ body.start-screen-visible .start-screen-bg {
 }
 
 @media (min-width: 768px) {
-  .start-screen-bg { background-image: url("/assets/start-screen-tablet-dark.png"); }
+  .start-screen-bg {
+    background-image: url('/assets/start-screen-tablet-dark.webp');
+  }
 }
 
 @media (min-width: 1280px) {
-  .start-screen-bg { background-image: url("/assets/start-screen-desktop-dark.png"); }
+  .start-screen-bg {
+    background-image: url('/assets/start-screen-desktop-dark.webp');
+  }
 }
 
 @media (min-width: 2560px) {
-  .start-screen-bg { background-image: url("/assets/start-screen-2k-dark.png"); }
+  .start-screen-bg {
+    background-image: url('/assets/start-screen-2k-dark.webp');
+  }
 }
 
 body.light-theme .start-screen-bg {
-  background-image: url("/assets/start-screen-mobile-light.png");
+  background-image: url('/assets/start-screen-mobile-light.webp');
 }
 
 @media (min-width: 768px) {
-  body.light-theme .start-screen-bg { background-image: url("/assets/start-screen-tablet-light.png"); }
+  body.light-theme .start-screen-bg {
+    background-image: url('/assets/start-screen-tablet-light.webp');
+  }
 }
 
 @media (min-width: 1280px) {
-  body.light-theme .start-screen-bg { background-image: url("/assets/start-screen-desktop-light.png"); }
+  body.light-theme .start-screen-bg {
+    background-image: url('/assets/start-screen-desktop-light.webp');
+  }
 }
 
 @media (min-width: 2560px) {
-  body.light-theme .start-screen-bg { background-image: url("/assets/start-screen-2k-light.png"); }
+  body.light-theme .start-screen-bg {
+    background-image: url('/assets/start-screen-2k-light.webp');
+  }
 }
 
 .skip-link {
