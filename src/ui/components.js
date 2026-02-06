@@ -37,7 +37,7 @@ export const Button = (id, text, variant = "primary", fullWidth = true, pulse = 
 };
 
 export const LoadingSpinner = () => `
-  <div id="loading-spinner" class="fixed inset-0 flex items-center justify-center" style="background: transparent; z-index: var(--z-overlay);" role="status" aria-live="polite" aria-busy="true">
+  <div id="loading-spinner" class="fixed inset-0 flex items-center justify-center" style="background: var(--bg-primary); z-index: var(--z-overlay);" role="status" aria-live="polite" aria-busy="true">
     <div class="w-full max-w-md px-8">
       <!-- Barre de progression jaune -->
       <div class="w-full h-1 rounded-full overflow-hidden" style="background: var(--bg-tertiary);">
