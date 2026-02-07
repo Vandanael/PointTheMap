@@ -147,6 +147,127 @@ body.light-theme #map {
   transition: transform 300ms ease-out;
 }
 
+.start-skeleton-header {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  z-index: 1;
+}
+
+@media (min-width: 768px) {
+  .start-skeleton-header {
+    top: 1.5rem;
+    right: 1.5rem;
+  }
+}
+
+.skeleton-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.skeleton-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 9.5rem;
+}
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.skeleton-tile {
+  min-height: 2.75rem;
+  border-radius: 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.skeleton-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.skeleton-pill-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.skeleton-pill {
+  height: 2.5rem;
+  border-radius: 9999px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.skeleton-play {
+  height: 3.5rem;
+  border-radius: 1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+@media (min-width: 1024px) {
+  .skeleton-play {
+    min-width: 12rem;
+  }
+}
+
+.skeleton-line {
+  height: 0.75rem;
+  border-radius: 9999px;
+  background: var(--bg-tertiary);
+}
+
+.skeleton-line-lg {
+  height: 1.1rem;
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+body.light-theme .skeleton-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.04) 0%,
+    rgba(0, 0, 0, 0.1) 50%,
+    rgba(0, 0, 0, 0.04) 100%
+  );
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 /* Start screen: static background image (Auray) by viewport + theme, then overlay on top */
 .start-screen-bg {
   display: none;
@@ -630,6 +751,17 @@ body.light-theme .result-line-distance {
   transform: scale(0.95);
 }
 
+/* Leaderboard button: no hover/active visual state on load */
+@media (hover: hover) and (pointer: fine) {
+  #btn-leaderboard:hover {
+    background: var(--bg-tertiary);
+  }
+}
+
+#btn-leaderboard:active {
+  transform: none;
+}
+
 /* Modal styles */
 .modal-bg {
   background: var(--bg-primary);
@@ -733,6 +865,12 @@ button:focus-visible,
 .pill-option:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* Leaderboard button: no focus ring */
+#btn-leaderboard:focus-visible,
+#btn-leaderboard:focus {
+  outline: none;
 }
 
 /* Remove focus ring for mouse clicks */

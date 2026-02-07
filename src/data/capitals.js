@@ -1443,8 +1443,14 @@ export const capitals = [
  * @returns {CapitalEntry[]} - 5 capitales mélangées pour la session
  */
 export function selectBalancedCapitals(allCapitals) {
+  const isDev =
+    typeof import.meta !== 'undefined' &&
+    import.meta &&
+    typeof import.meta.env !== 'undefined' &&
+    import.meta.env &&
+    import.meta.env.DEV;
   const logInsufficient = (message) => {
-    if (import.meta.env.DEV) {
+    if (isDev) {
       logger.warn(message);
     }
   };

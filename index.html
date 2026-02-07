@@ -71,14 +71,31 @@
     <!-- Preload main module for faster execution -->
     <link rel="modulepreload" href="/src/main.js" />
   </head>
-  <body>
+  <body class="dark-theme">
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('theme');
+          var theme = stored === 'light' ? 'light' : 'dark';
+          document.body.classList.remove('light-theme', 'dark-theme');
+          document.body.classList.add(theme === 'light' ? 'light-theme' : 'dark-theme');
+        } catch (e) {
+          document.body.classList.add('dark-theme');
+        }
+      })();
+    </script>
     <a href="#main-content" class="skip-link">Skip to main content</a>
     <main id="main-content">
       <div id="app">
         <div id="map"></div>
         <div id="start-screen-bg" class="start-screen-bg" aria-hidden="true"></div>
         <!-- LCP skeleton - matches start screen layout exactly, removed after start screen paints on top -->
-        <div id="start-skeleton" class="start-skeleton">
+        <div id="start-skeleton" class="start-skeleton" aria-hidden="true">
+          <div class="start-skeleton-header">
+            <div class="skeleton-icon skeleton-shimmer"></div>
+            <div class="skeleton-icon skeleton-shimmer"></div>
+            <div class="skeleton-icon skeleton-shimmer"></div>
+          </div>
           <div class="flex-1 flex items-center justify-center px-4 md:px-6 lobby-container">
             <div class="w-full lobby-content">
               <h1 class="lobby-title">
@@ -90,6 +107,42 @@
                   <div id="loading-progress" class="skeleton-loader-bar"></div>
                 </div>
               </div>
+
+              <div class="lobby-main">
+                <div class="lobby-challenge-wrapper">
+                  <div class="skeleton-card">
+                    <div class="skeleton-line skeleton-line-lg skeleton-shimmer" style="width: 70%;"></div>
+                    <div class="skeleton-line skeleton-shimmer" style="width: 90%;"></div>
+                    <div class="skeleton-line skeleton-shimmer" style="width: 80%;"></div>
+                  </div>
+                </div>
+                <div class="lobby-categories-wrapper">
+                  <div class="skeleton-grid">
+                    <div class="skeleton-tile skeleton-shimmer"></div>
+                    <div class="skeleton-tile skeleton-shimmer"></div>
+                    <div class="skeleton-tile skeleton-shimmer"></div>
+                    <div class="skeleton-tile skeleton-shimmer"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="lobby-actions">
+                <div class="skeleton-mode">
+                  <div class="skeleton-line skeleton-shimmer" style="width: 45%;"></div>
+                  <div class="skeleton-pill-toggle">
+                    <div class="skeleton-pill skeleton-shimmer"></div>
+                    <div class="skeleton-pill skeleton-shimmer"></div>
+                  </div>
+                </div>
+                <div class="skeleton-play skeleton-shimmer"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="lobby-footer">
+            <div class="lobby-footer-content">
+              <div class="skeleton-line skeleton-shimmer" style="width: 220px;"></div>
+              <div class="skeleton-line skeleton-shimmer" style="width: 120px;"></div>
             </div>
           </div>
         </div>

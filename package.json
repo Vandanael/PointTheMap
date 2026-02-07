@@ -22,7 +22,8 @@
     "generate:start-screen": "node scripts/generate-start-screen-images.js",
     "optimize:geojson": "node scripts/optimize-countries-geojson.js",
     "optimize:civilizations": "node scripts/optimize-civilizations-geojson.js",
-    "measure:geojson": "node scripts/measure-geojson-size.js"
+    "measure:geojson": "node scripts/measure-geojson-size.js",
+    "lighthouse": "npx lighthouse https://pointthemap.netlify.app/ --only-categories=performance,accessibility,best-practices,seo"
   },
   "dependencies": {
     "@netlify/functions": "^3.0.0",

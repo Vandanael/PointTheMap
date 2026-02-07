@@ -977,8 +977,14 @@ export const stadiums = [
  * @returns {StadiumEntry[]} - 5 stades mélangés pour la session
  */
 export function selectBalancedStadiums(allStadiums) {
+  const isDev =
+    typeof import.meta !== 'undefined' &&
+    import.meta &&
+    typeof import.meta.env !== 'undefined' &&
+    import.meta.env &&
+    import.meta.env.DEV;
   const logInsufficient = (message) => {
-    if (import.meta.env.DEV) {
+    if (isDev) {
       logger.warn(message);
     }
   };

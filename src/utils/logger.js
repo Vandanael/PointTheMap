@@ -15,7 +15,9 @@ const LOG_LEVELS = {
   fatal: 5,
 };
 
-const isDev = import.meta.env.DEV;
+const metaEnv =
+  typeof import.meta !== 'undefined' && import.meta && import.meta.env ? import.meta.env : undefined;
+const isDev = Boolean(metaEnv && metaEnv.DEV);
 const isVitest = typeof import.meta !== 'undefined' && /** @type {any} */ (import.meta).vitest;
 const globalProcess =
   typeof globalThis !== 'undefined' ? /** @type {any} */ (globalThis).process : undefined;
@@ -28,8 +30,8 @@ const isTest = Boolean(
   isVitest ||
   isNodeTest ||
   isGlobalVitest ||
-  import.meta.env.MODE === 'test' ||
-  import.meta.env.TEST
+  metaEnv?.MODE === 'test' ||
+  metaEnv?.TEST
 );
 const minLevel = isTest ? LOG_LEVELS.fatal : isDev ? LOG_LEVELS.debug : LOG_LEVELS.warn;
 

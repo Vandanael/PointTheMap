@@ -509,7 +509,9 @@ export const createStartScreen = (deps) => {
         { compact: true }
       );
     });
-    bindClick('btn-stats', showStatsModal);
+    if (document.getElementById('btn-stats')) {
+      bindClick('btn-stats', showStatsModal);
+    }
 
     applyTheme(getTheme());
   };
