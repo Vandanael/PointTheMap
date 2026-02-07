@@ -129,7 +129,9 @@ describe('TimerSystem', () => {
       timer.start();
       vi.advanceTimersByTime(GAME.GRACE_PERIOD_MS + 50);
 
-      expect(listener).toHaveBeenCalledWith({ timestamp: expect.any(Number) });
+      expect(listener).toHaveBeenCalledWith(
+        expect.objectContaining({ timestamp: expect.any(Number) })
+      );
     });
   });
 

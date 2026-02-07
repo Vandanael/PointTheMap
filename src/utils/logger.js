@@ -30,7 +30,7 @@ const isGlobalVitest = Boolean(globalAny.__vitest__ || globalAny.__VITEST__);
 const isTest = Boolean(
   isVitest || isNodeTest || isGlobalVitest || metaEnv?.MODE === 'test' || metaEnv?.TEST
 );
-const minLevel = isTest ? LOG_LEVELS.fatal : isDev ? LOG_LEVELS.debug : LOG_LEVELS.warn;
+const minLevel = isTest ? LOG_LEVELS.fatal : isDev ? LOG_LEVELS.debug : LOG_LEVELS.error;
 
 /**
  * Format log message with timestamp and level

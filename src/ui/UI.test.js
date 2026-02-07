@@ -238,6 +238,45 @@ describe('UI - Cleanup', () => {
   });
 });
 
+describe('UI - Map Lock Visual State', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    document.body.removeAttribute('data-map-lock-label');
+    document.body.classList.remove('map-locked');
+  });
+
+  afterEach(() => {
+    UI.destroy();
+    document.body.removeAttribute('data-map-lock-label');
+    document.body.classList.remove('map-locked');
+  });
+
+  it('sets localized map lock label on init', () => {
+    UI.init();
+    expect(document.body.getAttribute('data-map-lock-label')).toBe('mapLockedHint');
+  });
+
+  it('toggles body map-locked class from input events', () => {
+    UI.init();
+
+    const mapDisabledCb = mockSubscribe.mock.calls.find(
+      (/** @type {any[]} */ call) => call[0] === 'input:map-disabled'
+    )?.[1];
+    const mapEnabledCb = mockSubscribe.mock.calls.find(
+      (/** @type {any[]} */ call) => call[0] === 'input:map-enabled'
+    )?.[1];
+
+    expect(mapDisabledCb).toBeTypeOf('function');
+    expect(mapEnabledCb).toBeTypeOf('function');
+
+    mapDisabledCb();
+    expect(document.body.classList.contains('map-locked')).toBe(true);
+
+    mapEnabledCb();
+    expect(document.body.classList.contains('map-locked')).toBe(false);
+  });
+});
+
 describe('UI - Leaderboard Timeout', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -355,5 +394,31 @@ describe('UI - Leaderboard Timeout', () => {
 
     showModalSpy.mockRestore();
     document.body.innerHTML = '';
+  });
+});
+
+describe('UI - Resume Prompt', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('resolves true when resume is clicked', async () => {
+    const promise = UI.showResumePrompt();
+    const resumeBtn = document.getElementById('btn-resume-continue');
+    expect(resumeBtn).toBeTruthy();
+    resumeBtn?.click();
+    await expect(promise).resolves.toBe(true);
+  });
+
+  it('resolves false when discard is clicked', async () => {
+    const promise = UI.showResumePrompt();
+    const discardBtn = document.getElementById('btn-resume-discard');
+    expect(discardBtn).toBeTruthy();
+    discardBtn?.click();
+    await expect(promise).resolves.toBe(false);
   });
 });

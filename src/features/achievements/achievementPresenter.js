@@ -8,6 +8,8 @@
 import { AchievementUnlockModal } from '../../ui/components.js';
 import { activateFocusTrap, deactivateFocusTrap } from '../../utils/focusTrap.js';
 
+const PUBLIC_URL = import.meta.env?.VITE_PUBLIC_URL || 'https://pointthemap.net';
+
 /**
  * @typedef {Object} AchievementPresenterDeps
  * @property {typeof import('../../ui/UI.js').UI} ui
@@ -98,7 +100,7 @@ export function createAchievementPresenter(deps) {
     const shareBtn = document.getElementById(`btn-share-achievement-${id}`);
     if (shareBtn) {
       currentAchievementShareHandler = async () => {
-        const shareText = `${i18n.t('achievement.unlocked')}\n${i18n.t(achievement.labelKey)}: ${i18n.t(achievement.descKey)}\n\nhttps://pointthemap.app`;
+        const shareText = `${i18n.t('achievement.unlocked')}\n${i18n.t(achievement.labelKey)}: ${i18n.t(achievement.descKey)}\n\n${PUBLIC_URL}`;
         const success = await share.shareGameResults(shareText);
         if (analytics)
           analytics.track('share_clicked', { source: 'achievement', achievementId: id, success });

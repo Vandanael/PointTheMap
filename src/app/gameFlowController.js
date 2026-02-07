@@ -8,7 +8,7 @@
 
 import { safeAsync, handleError, APIError } from '../core/ErrorHandler.js';
 import { createMapQueryAdapter, createRoundRulesAdapter } from '../game/ports.js';
-import { MAP_ANIMATIONS } from '../config/visual-constants.js';
+import { MAP_ANIMATIONS, UI_TIMING } from '../config/visual-constants.js';
 
 /**
  * @typedef {Object} GameFlowDeps
@@ -43,6 +43,7 @@ import { MAP_ANIMATIONS } from '../config/visual-constants.js';
  *   handleNext: () => void,
  *   handleSubmit: (pseudo: string) => Promise<void>,
  *   handleReplay: () => void,
+ *   resumeFromState: (state: any) => Promise<boolean>,
  *   cleanup: () => void
  * }}
  */
@@ -68,6 +69,11 @@ export function createGameFlowController(deps) {
     i18n,
     config,
   } = deps;
+
+  const showToast = ui?.showToast
+    ? ui.showToast.bind(ui)
+    : () => /** @type {string | null} */ (null);
+  const closeToast = ui?.closeToast ? ui.closeToast.bind(ui) : () => {};
 
   const {
     TIMING,
@@ -95,7 +101,8 @@ export function createGameFlowController(deps) {
     ui.resetTimer();
     /** @type {GameState} */
     const state = stateManager.getState();
-    timerSystem.start(state.runtimeConfig ?? undefined);
+    const roundId = state.currentRound?.roundId ?? null;
+    timerSystem.start(state.runtimeConfig ?? undefined, { roundId });
   };
 
   /**
@@ -119,6 +126,52 @@ export function createGameFlowController(deps) {
           : 'error.targetNotFoundCapital';
     ui.showError(i18n.t(errorKey));
   }
+
+  /**
+   * Render the current round UI for an existing state.
+   * @param {GameState} state
+   * @param {{ requireButton?: boolean }} [options]
+   * @returns {boolean}
+   */
+  const renderRoundUI = (state, options = {}) => {
+    const target = game.getCurrentTarget(state);
+    const isCountryMode = isCountryCategory(state.gameType);
+    const isStadiumMode = isStadiumCategory(state.gameType);
+    const isCivilizationMode = isCivilizationCategory(state.gameType);
+
+    if (!target || !target.name) {
+      showTargetNotFoundError(state.gameType);
+      ui.hideQuestion();
+      return false;
+    }
+
+    const progress = game.getProgress(state);
+    ui.showGameUI(progress.current, progress.total, state.totalScore);
+
+    const displayName =
+      isCivilizationMode && target.id
+        ? i18n.getCivilizationName(target.id, target.name)
+        : target.name;
+    const displaySubtitle =
+      isCountryMode || isCivilizationMode
+        ? ''
+        : isStadiumMode
+          ? ''
+          : target && 'country' in target
+            ? target.country
+            : '';
+
+    const onReady = () => {
+      startTimer();
+      mapSystem.enableClicks(() => {}); // InputSystem handles via EventBus
+      inputSystem.enableMapInput(handleMapClick);
+    };
+
+    ui.showQuestion(displayName, displaySubtitle, onReady, {
+      requireButton: Boolean(options.requireButton),
+    });
+    return true;
+  };
 
   /**
    * Handle game start
@@ -178,9 +231,6 @@ export function createGameFlowController(deps) {
     });
 
     const target = game.getCurrentTarget(state);
-    const isCountryMode = isCountryCategory(state.gameType);
-    const isStadiumMode = isStadiumCategory(state.gameType);
-    const isCivilizationMode = isCivilizationCategory(state.gameType);
 
     if (!target || !target.name) {
       showTargetNotFoundError(state.gameType);
@@ -188,38 +238,10 @@ export function createGameFlowController(deps) {
       return;
     }
 
-    const progress = game.getProgress(state);
-
-    ui.showGameUI(progress.current, progress.total, state.totalScore);
-
-    const onReady = () => {
-      startTimer();
-      // MapSystem emits map:click, InputSystem listens to it
-      mapSystem.enableClicks(() => {}); // Empty callback, InputSystem handles via EventBus
-      inputSystem.enableMapInput(handleMapClick);
-    };
-
-    // Update modal with real data
-    // For country/civilization mode: show name only
-    // For stadium mode: show stadium name only (no city)
-    // For capital mode: show capital name + country
-    const displayName =
-      isCivilizationMode && target.id
-        ? i18n.getCivilizationName(target.id, target.name)
-        : target.name;
-    const displaySubtitle =
-      isCountryMode || isCivilizationMode
-        ? ''
-        : isStadiumMode
-          ? ''
-          : target && 'country' in target
-            ? target.country
-            : '';
-
     if (state.currentRoundIndex === 0) {
-      ui.showQuestion(displayName, displaySubtitle, onReady, { requireButton: true });
+      renderRoundUI(state, { requireButton: true });
     } else {
-      ui.showQuestion(displayName, displaySubtitle, onReady);
+      renderRoundUI(state);
     }
   };
 
@@ -233,6 +255,8 @@ export function createGameFlowController(deps) {
     if (state.status !== GameStatus.PLAYING) return;
     // Stop timer to prevent timeout events from firing
     stopTimer();
+    mapSystem.disableClicks();
+    inputSystem.disableMapInput();
     stateManager.setState(game.playRound(state, coords, mapQuery, roundRules), 'round:click');
     onRoundEnd();
   };
@@ -281,23 +305,36 @@ export function createGameFlowController(deps) {
       if (isCountryMode) {
         // Country mode: Highlight countries instead of showing markers
         mapSystem.addClickMarker(clickCoords);
+        const correctCountryId = currentRound.correctCountryId ?? currentRound.country.countryId;
         mapSystem.highlightCountries({
-          correctCountryId: currentRound.correctCountryId,
+          correctCountryId,
           clickedCountryId: currentRound.clickedCountryId,
         });
-        // Slow zoom to the click location (do not center on the answer).
-        if (!mapSystem.isInView(clickCoords, 0.1)) {
+        const correctFeature = mapSystem.getCountryFeatureById(correctCountryId);
+        // Ensure the correct answer is visible.
+        if (
+          !mapSystem.flyToFeatureBounds(correctFeature, {
+            animation: { duration: 2.2, easeLinearity: 0.2 },
+          })
+        ) {
           mapSystem.flyTo(clickCoords, undefined, MAP_ANIMATIONS.SHOW_RESULT);
         }
       } else if (isCivilizationMode) {
         // Civilization mode: highlight zones + show click marker
         mapSystem.addClickMarker(clickCoords);
+        const correctCivilizationId =
+          currentRound.correctCivilizationId ?? currentRound.civilization.id;
         mapSystem.highlightCivilizations({
-          correctCivilizationId: currentRound.correctCivilizationId,
+          correctCivilizationId,
           clickedCivilizationId: currentRound.clickedCivilizationId,
         });
-        // Slow zoom to the click location (do not center on the answer).
-        if (!mapSystem.isInView(clickCoords, 0.1)) {
+        const correctFeature = mapSystem.getCivilizationFeatureById(correctCivilizationId);
+        // Ensure the correct answer is visible.
+        if (
+          !mapSystem.flyToFeatureBounds(correctFeature, {
+            animation: { duration: 2.2, easeLinearity: 0.2 },
+          })
+        ) {
           mapSystem.flyTo(clickCoords, undefined, MAP_ANIMATIONS.SHOW_RESULT);
         }
       } else if (isStadiumMode) {
@@ -306,15 +343,28 @@ export function createGameFlowController(deps) {
           currentRound.stadium.lat,
           currentRound.stadium.lng,
         ]);
-        await mapSystem.showRoundResult(clickCoords, stadiumCoords, currentRound.distance || 0);
+        await mapSystem.showRoundResult(
+          clickCoords,
+          stadiumCoords,
+          Number.isFinite(currentRound.distance) ? currentRound.distance : 0
+        );
       } else {
         // Capital mode: Show capital markers and line
         const capitalCoords = /** @type {[number, number]} */ ([
           currentRound.capital.lat,
           currentRound.capital.lng,
         ]);
-        await mapSystem.showRoundResult(clickCoords, capitalCoords, currentRound.distance || 0);
+        await mapSystem.showRoundResult(
+          clickCoords,
+          capitalCoords,
+          Number.isFinite(currentRound.distance) ? currentRound.distance : 0
+        );
       }
+
+      const continueToastId = showToast(i18n.t('tapToContinue'), 'info', 0, {
+        compact: true,
+        center: true,
+      });
 
       // Tap/click to continue to modal, or wait RESULT_READ_TIME_MS
       /** @type {Promise<void>} */
@@ -323,6 +373,7 @@ export function createGameFlowController(deps) {
       const timeoutPromise = new Promise((r) => setTimeout(r, TIMING.RESULT_READ_TIME_MS));
       await Promise.race([userContinued, timeoutPromise]);
       mapSystem.clearOnResultContinue();
+      if (continueToastId) closeToast(continueToastId);
 
       // Emit score updated event
       eventBus.emit('score:updated', {
@@ -334,7 +385,11 @@ export function createGameFlowController(deps) {
       // For country/civilization mode, distance is always computed (including when clicking water)
       const displayDistance =
         isCountryMode || isCivilizationMode
-          ? (currentRound.distance ?? currentRound.distanceToTargetKm ?? 0)
+          ? Number.isFinite(currentRound.distance)
+            ? currentRound.distance
+            : Number.isFinite(currentRound.distanceToTargetKm)
+              ? currentRound.distanceToTargetKm
+              : null
           : currentRound.distance;
       ui.showRoundResult(
         displayDistance,
@@ -347,14 +402,24 @@ export function createGameFlowController(deps) {
     } else if (currentRound.status === 'timeout') {
       // Timeout with no click: reveal correct target so the player learns where it was
       if (isCountryMode && currentRound.country) {
+        const correctCountryId = currentRound.country.countryId;
         mapSystem.highlightCountries({
-          correctCountryId: currentRound.country.countryId,
+          correctCountryId,
           clickedCountryId: null,
         });
+        const correctFeature = mapSystem.getCountryFeatureById(correctCountryId);
+        mapSystem.flyToFeatureBounds(correctFeature, {
+          animation: { duration: 2.2, easeLinearity: 0.2 },
+        });
       } else if (isCivilizationMode && currentRound.civilization) {
+        const correctCivilizationId = currentRound.civilization.id;
         mapSystem.highlightCivilizations({
-          correctCivilizationId: currentRound.civilization.id,
+          correctCivilizationId,
           clickedCivilizationId: null,
+        });
+        const correctFeature = mapSystem.getCivilizationFeatureById(correctCivilizationId);
+        mapSystem.flyToFeatureBounds(correctFeature, {
+          animation: { duration: 2.2, easeLinearity: 0.2 },
         });
       } else if (isStadiumMode && currentRound.stadium) {
         mapSystem.addCapitalMarker(
@@ -366,12 +431,18 @@ export function createGameFlowController(deps) {
         );
       }
 
+      const continueToastId = showToast(i18n.t('tapToContinue'), 'info', 0, {
+        compact: true,
+        center: true,
+      });
+
       /** @type {Promise<void>} */
       const userContinuedTimeout = new Promise((r) => mapSystem.setOnResultContinue(() => r()));
       /** @type {Promise<void>} */
       const timeoutPromiseResult = new Promise((r) => setTimeout(r, TIMING.RESULT_READ_TIME_MS));
       await Promise.race([userContinuedTimeout, timeoutPromiseResult]);
       mapSystem.clearOnResultContinue();
+      if (continueToastId) closeToast(continueToastId);
 
       ui.showRoundResult(
         null,
@@ -388,10 +459,12 @@ export function createGameFlowController(deps) {
    * Handle next round
    */
   const handleNext = () => {
+    let state = stateManager.getState();
+    if (state.status !== GameStatus.ROUND_RESULT) {
+      return;
+    }
     ui.hideRoundResult();
     mapSystem.clearMap(); // Nettoie tous les markers (y compris les capitales)
-
-    let state = stateManager.getState();
 
     if (game.isLastRound(state)) {
       ui.showGameOver(state.totalScore);
@@ -434,12 +507,17 @@ export function createGameFlowController(deps) {
             ? target.country
             : '';
 
-    ui.resetTimer();
-    ui.showQuestion(displayName, displaySubtitle, () => {
-      startTimer();
-      mapSystem.enableClicks(() => {}); // Empty callback, InputSystem handles via EventBus
-      inputSystem.enableMapInput(handleMapClick);
-    });
+    ui.showRoundTransition(progress.current, progress.total);
+
+    setTimeout(() => {
+      ui.hideRoundTransition();
+      ui.resetTimer();
+      ui.showQuestion(displayName, displaySubtitle, () => {
+        startTimer();
+        mapSystem.enableClicks(() => {}); // Empty callback, InputSystem handles via EventBus
+        inputSystem.enableMapInput(handleMapClick);
+      });
+    }, UI_TIMING.ROUND_TRANSITION_MS);
   };
 
   const PSEUDO_LOCK_ERROR = 'pseudo_already_set_for_this_ip';
@@ -591,14 +669,66 @@ export function createGameFlowController(deps) {
   const handleReplay = () => {
     const state = stateManager.getState();
     analytics.track('replay_clicked', { gameType: state.gameType });
+    document.body.classList.add('app-resetting');
+    setTimeout(() => {
+      document.body.classList.remove('app-resetting');
+    }, 250);
+    timerSystem.stop();
+    inputSystem.disableMapInput();
+    mapSystem.disableClicks();
     stateManager.setState(game.resetGame(), 'game:reset');
     mapSystem.clearMap();
     mapSystem.flyTo(/** @type {[number, number]} */ (MAP.CENTER), MAP.ZOOM, { animate: false });
+    ui.hideRoundResult();
+    ui.hideQuestion();
     ui.hideGameUI(); // Clear game header and timer from previous game
     ui.hideGameOver();
     // Clean up share button handler
     shareButtonHandler = null;
     ui.showStart();
+  };
+
+  /**
+   * Resume an in-progress game state after reload.
+   * @param {GameState} savedState
+   * @returns {boolean}
+   */
+  const resumeFromState = async (savedState) => {
+    if (!savedState || savedState.status !== GameStatus.PLAYING) return false;
+
+    if (!mapSystem.isInitialized()) {
+      await mapSystem.init('map');
+    }
+    if (isCountryCategory(savedState.gameType)) {
+      await mapSystem.loadCountriesGeoJSON();
+    }
+    if (isCivilizationCategory(savedState.gameType)) {
+      await mapSystem.loadCivilizationsGeoJSON();
+    }
+
+    // Reset round timing to avoid immediate timeout on resume
+    const refreshedState = {
+      ...savedState,
+      currentRound: savedState.currentRound
+        ? {
+            ...savedState.currentRound,
+            startTime: Date.now(),
+            endTime: null,
+            status: 'playing',
+          }
+        : null,
+    };
+
+    ui.hideStart();
+    mapSystem.clearMap();
+    const startCenter = /** @type {[number, number]} */ (
+      isStadiumCategory(refreshedState.gameType) ? MAP.EUROPE_CENTER : MAP.CENTER
+    );
+    const startZoom = isStadiumCategory(refreshedState.gameType) ? MAP.EUROPE_ZOOM : MAP.ZOOM;
+    mapSystem.flyTo(startCenter, startZoom, { animate: false });
+
+    stateManager.setState(refreshedState, 'game:resume');
+    return renderRoundUI(refreshedState, { requireButton: true });
   };
 
   /**
@@ -621,6 +751,7 @@ export function createGameFlowController(deps) {
     handleNext,
     handleSubmit,
     handleReplay,
+    resumeFromState,
     cleanup,
   };
 }

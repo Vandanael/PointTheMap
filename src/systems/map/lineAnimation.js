@@ -14,16 +14,6 @@ export function waitForMapSettled(map) {
 }
 
 /**
- * Format distance for display on the result line (e.g. "344 km", "1 234 km").
- * @param {number} distanceKm - Distance in kilometers
- * @returns {string}
- */
-export function formatDistanceLabel(distanceKm) {
-  const km = Math.round(distanceKm);
-  return `${km} km`;
-}
-
-/**
  * Normalize segment end so the arc from from to to is the shortest (|lon delta| <= 180).
  * @param {[number, number]} from - [lat, lng] start
  * @param {[number, number]} to - [lat, lng] end
@@ -46,7 +36,7 @@ export function normalizeSegmentEnd(from, to) {
  * @param {number} steps - Number of segments (points length = steps + 1)
  * @returns {[number, number][]}
  */
-export function interpolatePoints(from, to, steps) {
+function interpolatePoints(from, to, steps) {
   const toNorm = normalizeSegmentEnd(from, to);
   /** @type {[number, number][]} */
   const points = [];

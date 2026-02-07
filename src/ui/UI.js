@@ -1,9 +1,11 @@
 // Point The Map - UI Controller
 // Clean, minimal UI controller using components
 
-import { domCache as _domCache, render, remove } from './dom.js';
+import { domCache as _domCache, render, remove, bindClick } from './dom.js';
 import { eventBus } from '../core/EventBus.js';
-import { LoadingSpinner } from './components.js';
+import { EVENTS } from '../core/eventTypes.js';
+import { t } from '../i18n.js';
+import { LoadingSpinner, MapTilesErrorBanner } from './components.js';
 import { createStartScreen, loadLeaderboard as _loadLeaderboard } from './screens/StartScreen.js';
 import { createGameScreen } from './screens/GameScreen.js';
 import { createResultScreen } from './screens/ResultScreen.js';
@@ -28,6 +30,8 @@ export const configureUI = (deps = {}) => {
 // Store UI.init() subscriptions for cleanup
 /** @type {Array<() => void>} */
 let _uiInitUnsubscribers = [];
+let _tilesToastId = null;
+let _tilesToastTimeout = null;
 // Export for testing
 export const _domCacheForTesting = _domCache;
 
@@ -74,9 +78,16 @@ export const loadLeaderboard = _loadLeaderboard;
 
 export const UI = {
   init() {
+    const syncMapLockLabel = () => {
+      if (document.body) {
+        document.body.setAttribute('data-map-lock-label', t('mapLockedHint'));
+      }
+    };
+    syncMapLockLabel();
+
     // Subscribe to error events
     _uiInitUnsubscribers.push(
-      eventBus.subscribe('error:show', (/** @type {{ message: string }} */ { message }) => {
+      eventBus.subscribe(EVENTS.ERROR_SHOW, (/** @type {{ message: string }} */ { message }) => {
         UI.showError(message);
       })
     );
@@ -86,7 +97,7 @@ export const UI = {
     // Subscribe to storage quota events
     _uiInitUnsubscribers.push(
       eventBus.subscribe(
-        'storage:quota-exceeded',
+        EVENTS.STORAGE_QUOTA_EXCEEDED,
         (/** @type {{ message: string }} */ { message }) => {
           UI.showToast(message, 'warning', 4000);
         }
@@ -95,7 +106,7 @@ export const UI = {
 
     _uiInitUnsubscribers.push(
       eventBus.subscribe(
-        'storage:quota-recovered',
+        EVENTS.STORAGE_QUOTA_RECOVERED,
         (/** @type {{ message: string }} */ { message }) => {
           UI.showToast(message, 'success', 3000);
         }
@@ -104,11 +115,85 @@ export const UI = {
 
     _uiInitUnsubscribers.push(
       eventBus.subscribe(
-        'storage:quota-failed',
+        EVENTS.STORAGE_QUOTA_FAILED,
         (/** @type {{ message: string }} */ { message }) => {
           UI.showToast(message, 'error', 6000);
         }
       )
+    );
+
+    _uiInitUnsubscribers.push(
+      eventBus.subscribe(EVENTS.INPUT_MAP_ENABLED, () => {
+        document.body.classList.remove('map-locked');
+      })
+    );
+    _uiInitUnsubscribers.push(
+      eventBus.subscribe(EVENTS.INPUT_MAP_DISABLED, () => {
+        syncMapLockLabel();
+        document.body.classList.add('map-locked');
+      })
+    );
+    _uiInitUnsubscribers.push(
+      eventBus.subscribe(EVENTS.LANGUAGE_CHANGED, () => {
+        syncMapLockLabel();
+      })
+    );
+
+    const clearTilesTimeout = () => {
+      if (_tilesToastTimeout) {
+        clearTimeout(_tilesToastTimeout);
+        _tilesToastTimeout = null;
+      }
+    };
+    const hideTilesErrorBanner = () => {
+      remove('tiles-error-banner');
+    };
+    const showTilesErrorBanner = (message) => {
+      hideTilesErrorBanner();
+      render(MapTilesErrorBanner(message, t('error.retry')));
+      bindClick('btn-tiles-retry', () => {
+        hideTilesErrorBanner();
+        eventBus.emit(EVENTS.MAP_TILES_RETRY, {});
+      });
+    };
+
+    _uiInitUnsubscribers.push(
+      eventBus.subscribe(EVENTS.MAP_TILES_LOADING, () => {
+        if (_tilesToastId) return;
+        hideTilesErrorBanner();
+        _tilesToastId = UI.showToast(t('loadingMap'), 'info', 0, {
+          compact: true,
+          center: true,
+        });
+        clearTilesTimeout();
+        _tilesToastTimeout = setTimeout(() => {
+          if (_tilesToastId) {
+            UI.closeToast(_tilesToastId);
+            _tilesToastId = null;
+          }
+          showTilesErrorBanner(t('error.loadTimeout'));
+        }, 8000);
+      })
+    );
+    _uiInitUnsubscribers.push(
+      eventBus.subscribe(EVENTS.MAP_TILES_LOADED, () => {
+        clearTilesTimeout();
+        if (_tilesToastId) {
+          UI.closeToast(_tilesToastId);
+          _tilesToastId = null;
+        }
+        hideTilesErrorBanner();
+      })
+    );
+    _uiInitUnsubscribers.push(
+      eventBus.subscribe(EVENTS.MAP_TILES_ERROR, () => {
+        clearTilesTimeout();
+        if (_tilesToastId) {
+          UI.closeToast(_tilesToastId);
+          _tilesToastId = null;
+        }
+        showTilesErrorBanner(t('error.networkError'));
+      })
     );
   },
 
@@ -121,6 +206,15 @@ export const UI = {
     startScreen.destroy();
     gameScreen.destroy();
     resultScreen.destroy();
+    if (_tilesToastId) {
+      UI.closeToast(_tilesToastId);
+      _tilesToastId = null;
+    }
+    if (_tilesToastTimeout) {
+      clearTimeout(_tilesToastTimeout);
+      _tilesToastTimeout = null;
+    }
+    remove('tiles-error-banner');
     _domCache.invalidate();
   },
 
@@ -161,6 +255,12 @@ export const UI = {
   },
   hideGameUI() {
     gameScreen.hideGameUI();
+  },
+  showRoundTransition(roundNum, totalRounds) {
+    gameScreen.showRoundTransition(roundNum, totalRounds);
+  },
+  hideRoundTransition() {
+    gameScreen.hideRoundTransition();
   },
 
   /**
@@ -232,6 +332,14 @@ export const UI = {
    */
   showPseudoLockedDialog(pseudo, onConfirm) {
     resultScreen.showPseudoLockedDialog(pseudo, onConfirm);
+  },
+
+  /**
+   * Show resume prompt modal
+   * @returns {Promise<boolean>}
+   */
+  showResumePrompt() {
+    return resultScreen.showResumePrompt();
   },
 
   /**

@@ -11,6 +11,7 @@
  */
 
 import { eventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/eventTypes.js';
 import { GAME, TIMING } from '@lib/config';
 import { formatScore } from '../utils/format.js';
 import { animateValue } from './AnimationController.js';
@@ -33,7 +34,7 @@ export class UISystem {
     // Timer UI events
     this.#unsubscribers.push(
       eventBus.subscribe(
-        'timer:started',
+        EVENTS.TIMER_STARTED,
         (/** @type {{ timerMs?: number } | undefined } */ payload) => {
           this.#onTimerStarted(payload);
         }
@@ -41,7 +42,7 @@ export class UISystem {
     );
 
     this.#unsubscribers.push(
-      eventBus.subscribe('timer:danger', () => {
+      eventBus.subscribe(EVENTS.TIMER_DANGER, () => {
         this.#onTimerDanger();
       })
     );
@@ -49,7 +50,7 @@ export class UISystem {
     // Score update events
     this.#unsubscribers.push(
       eventBus.subscribe(
-        'score:updated',
+        EVENTS.SCORE_UPDATED,
         (/** @type {{ oldScore: number, newScore: number }} */ payload) => {
           this.#animateScore(payload.oldScore, payload.newScore);
         }
@@ -79,6 +80,16 @@ export class UISystem {
     const progress = document.getElementById('timer-progress');
     if (progress) {
       progress.classList.add('timer-danger');
+    }
+    const bar = document.getElementById('timer-bar');
+    if (bar) {
+      bar.classList.add('timer-danger');
+      bar.classList.remove('timer-danger-start');
+      void bar.offsetWidth;
+      bar.classList.add('timer-danger-start');
+      setTimeout(() => {
+        bar.classList.remove('timer-danger-start');
+      }, 200);
     }
   }
 

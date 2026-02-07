@@ -21,6 +21,8 @@ const browserGlobals = {
   performance: 'readonly',
   requestAnimationFrame: 'readonly',
   cancelAnimationFrame: 'readonly',
+  AbortController: 'readonly',
+  requestIdleCallback: 'readonly',
 };
 
 const nodeGlobals = {
@@ -59,6 +61,8 @@ export default [
       'coverage/**',
       'playwright-report/**',
       'test-results/**',
+      'public/vendor/**',
+      'public/theme-init.js',
     ],
   },
   {

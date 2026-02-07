@@ -36,17 +36,27 @@ import { logger } from '../utils/logger.js';
 import { loadCapitals, loadSelectBalancedCapitals } from '../data/capitals-loader.js';
 import { loadStadiums, loadSelectBalancedStadiums } from '../data/stadiums-loader.js';
 import { APIError, GameError } from '../core/ErrorHandler.js';
+import { createApiClient } from './apiClient.js';
 import { StartSessionSchema } from '@lib/schemas/session.js';
 import { getRetryQueue, removeFromRetryQueue, addToRetryQueue, saveRetryQueue } from './storage.js';
 import { playerAuth } from './PlayerAuth.js';
 
 const API_BASE = '/.netlify/functions';
 const USE_MOCK =
-  (import.meta.env.DEV && !import.meta.env.VITE_USE_API) ||
-  import.meta.env.VITE_USE_MOCK === 'true';
+  !import.meta.env.PROD &&
+  ((import.meta.env.DEV && !import.meta.env.VITE_USE_API) ||
+    import.meta.env.VITE_USE_MOCK === 'true');
 
 // Store current CSRF token
 let currentCsrfToken = null;
+
+const fetchApi = createApiClient({
+  apiBase: API_BASE,
+  getAuthHeader: () => playerAuth.getAuthHeader(),
+  getCsrfToken: () => currentCsrfToken,
+  logger,
+  APIError,
+});
 
 /**
  * @typedef {import('../types/session.js').StartSessionPayload} StartSessionPayload
@@ -94,6 +104,52 @@ const isValidStadium = (target) =>
  */
 const isValidCivilization = (target) =>
   isObject(target) && typeof target.id === 'string' && typeof target.name === 'string';
+
+/**
+ * @param {any} entry
+ * @returns {entry is { rank?: number, pseudo: string, score: number, time: number }}
+ */
+const isValidLeaderboardEntry = (entry) =>
+  isObject(entry) &&
+  typeof entry.pseudo === 'string' &&
+  Number.isFinite(entry.score) &&
+  Number.isFinite(entry.time);
+
+/**
+ * @param {any} data
+ * @returns {Array<{ rank: number, pseudo: string, score: number, time: number }>}
+ */
+const normalizeLeaderboard = (data) => {
+  if (!Array.isArray(data)) {
+    logger.warn('[API] Leaderboard payload is not an array');
+    return [];
+  }
+
+  let invalidCount = 0;
+  const normalized = data
+    .map((entry, index) => {
+      if (!isValidLeaderboardEntry(entry)) {
+        invalidCount += 1;
+        return null;
+      }
+      const rank = Number.isFinite(entry.rank) ? entry.rank : index + 1;
+      return {
+        rank,
+        pseudo: entry.pseudo,
+        score: entry.score,
+        time: entry.time,
+      };
+    })
+    .filter(Boolean);
+
+  if (invalidCount > 0) {
+    logger.warn(`[API] Dropped ${invalidCount} invalid leaderboard entries`);
+  }
+
+  return /** @type {Array<{ rank: number, pseudo: string, score: number, time: number }>} */ (
+    normalized
+  );
+};
 
 /**
  * Validate the session payload from server or mock.
@@ -273,72 +329,6 @@ const mockSubmit = (token, rounds, _pseudo) => {
   };
 };
 
-/**
- * Fetch API endpoint
- * @param {string} endpoint - API endpoint name
- * @param {RequestInit} [options] - Fetch options
- * @returns {Promise<any>}
- */
-const fetchApi = async (endpoint, options = {}) => {
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
-  };
-
-  // Add player token to all requests
-  try {
-    const authHeader = await playerAuth.getAuthHeader();
-    headers['Authorization'] = authHeader;
-  } catch (error) {
-    logger.error('[API] Failed to get player token:', error);
-    // Continue without token - server will handle missing token
-  }
-
-  // Add CSRF token to protected endpoints
-  if (currentCsrfToken && endpoint === 'submit') {
-    headers['X-CSRF-Token'] = currentCsrfToken;
-  }
-
-  let res;
-  try {
-    res = await fetch(`${API_BASE}/${endpoint}`, {
-      ...options,
-      headers,
-    });
-  } catch (networkError) {
-    // Network errors (connection refused, timeout, etc.)
-    const error = /** @type {Error} */ (networkError);
-    throw new APIError(
-      `Network error: ${error.message}`,
-      0, // 0 indicates network error
-      { error: error.message, networkError: true }
-    );
-  }
-
-  // Handle 502/503 errors before trying to parse JSON
-  if (res.status === 502 || res.status === 503) {
-    const data = await res.json().catch(() => ({
-      error: res.status === 502 ? 'Bad Gateway - Server error' : 'Service Unavailable',
-    }));
-    const error = new APIError(data.error || `HTTP ${res.status}`, res.status, data);
-    throw error;
-  }
-
-  const data = await res.json().catch(() => ({ error: 'Invalid response' }));
-
-  if (!res.ok) {
-    const errorMessage =
-      typeof data?.error === 'string'
-        ? data.error
-        : typeof data?.error?.message === 'string'
-          ? data.error.message
-          : `HTTP ${res.status}`;
-    const error = new APIError(errorMessage, res.status, data);
-    throw error;
-  }
-
-  return data;
-};
 
 /**
  * Format rounds for API submission
@@ -445,7 +435,8 @@ export const api = {
     if (USE_MOCK) {
       return [];
     }
-    return fetchApi(`leaderboard?type=${type}`);
+    const data = await fetchApi(`leaderboard?type=${type}`);
+    return normalizeLeaderboard(data);
   },
 };
 
@@ -486,6 +477,7 @@ export const submitWithRetry = async (
           error.status === 503 || // Service Unavailable
           error.status === 500 || // Internal Server Error
           error.status >= 504)) || // Gateway Timeout, etc.
+      error.message === 'TIMEOUT' ||
       error.message.includes('Failed to fetch') ||
       error.message.includes('Network error') ||
       error.message.includes('502') ||

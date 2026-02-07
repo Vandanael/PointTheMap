@@ -12,7 +12,7 @@ import { logger } from '../utils/logger.js';
 import { isLowEndDevice } from '../utils/device.js';
 import { MAP } from '@lib/config';
 
-const CACHE_NAME = 'ptm-geo-v1';
+const CACHE_NAME = 'ptm-geo-v2';
 const CACHE_URLS = {
   countries: '/data/countries.geojson',
   civilizations: '/data/civilizations.geojson',
@@ -23,6 +23,12 @@ const CACHE_URLS = {
  * @type {Map<string, any>}
  */
 const memoryCache = new Map();
+
+/**
+ * Track in-flight loads to avoid duplicate fetch/parse work
+ * @type {Map<string, Promise<any>>}
+ */
+const inFlight = new Map();
 
 /**
  * Check if CacheStorage API is available
@@ -93,6 +99,11 @@ async function loadGeoJSON(key, url) {
     return memoryCache.get(key);
   }
 
+  if (inFlight.has(key)) {
+    return inFlight.get(key);
+  }
+
+  const loadPromise = (async () => {
   // Layer 2: Check CacheStorage (fast)
   const cachedData = await loadFromCacheStorage(url);
   if (cachedData) {
@@ -124,6 +135,40 @@ async function loadGeoJSON(key, url) {
   memoryCache.set(key, data);
 
   return data;
+  })();
+
+  inFlight.set(key, loadPromise);
+  try {
+    return await loadPromise;
+  } finally {
+    inFlight.delete(key);
+  }
+}
+
+/**
+ * Schedule a task during idle time (fallback to setTimeout).
+ * @template T
+ * @param {() => Promise<T> | T} task
+ * @returns {Promise<T>}
+ */
+function scheduleIdle(task) {
+  return new Promise((resolve) => {
+    const run = () => {
+      Promise.resolve()
+        .then(task)
+        .then(resolve)
+        .catch(resolve);
+    };
+    const idleCallback =
+      typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function'
+        ? window.requestIdleCallback
+        : null;
+    if (idleCallback) {
+      idleCallback(run);
+    } else {
+      setTimeout(run, 0);
+    }
+  });
 }
 
 /**
@@ -140,6 +185,22 @@ export async function getCountriesGeoJSON() {
  */
 export async function getCivilizationsGeoJSON() {
   return loadGeoJSON('civilizations', CACHE_URLS.civilizations);
+}
+
+/**
+ * Preload countries GeoJSON in idle time.
+ * @returns {Promise<any | null>}
+ */
+export function preloadCountriesGeoJSON() {
+  return scheduleIdle(() => loadGeoJSON('countries', CACHE_URLS.countries).catch(() => null));
+}
+
+/**
+ * Preload civilizations GeoJSON in idle time.
+ * @returns {Promise<any | null>}
+ */
+export function preloadCivilizationsGeoJSON() {
+  return scheduleIdle(() => loadGeoJSON('civilizations', CACHE_URLS.civilizations).catch(() => null));
 }
 
 /**

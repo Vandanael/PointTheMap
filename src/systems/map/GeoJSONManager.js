@@ -60,6 +60,16 @@ export class GeoJSONManager {
     }
 
     try {
+      if (!map.getPane('countriesOverlay')) {
+        const countriesPane = map.createPane('countriesOverlay');
+        countriesPane.style.zIndex = 430;
+        countriesPane.style.pointerEvents = 'none';
+      }
+      if (!map.getPane('countriesHighlight')) {
+        const highlightPane = map.createPane('countriesHighlight');
+        highlightPane.style.zIndex = 460;
+        highlightPane.style.pointerEvents = 'none';
+      }
       this.#countriesGeoJSON = await getCountriesGeoJSON();
       this.#countriesLayer = this.#L
         .geoJSON(this.#countriesGeoJSON, {
@@ -69,6 +79,7 @@ export class GeoJSONManager {
             color: 'transparent',
             weight: 0,
             interactive: false,
+            pane: 'countriesOverlay',
           }),
         })
         .addTo(map);
@@ -163,7 +174,7 @@ export class GeoJSONManager {
     };
 
     const correctHighlight = this.#L
-      .geoJSON(correctFeature, { style: () => correctStyle })
+      .geoJSON(correctFeature, { style: () => correctStyle, pane: 'countriesHighlight' })
       .addTo(map);
     this.#countryHighlights.push(correctHighlight);
 
@@ -179,7 +190,7 @@ export class GeoJSONManager {
         };
 
         const clickedHighlight = this.#L
-          .geoJSON(clickedFeature, { style: () => clickedStyle })
+          .geoJSON(clickedFeature, { style: () => clickedStyle, pane: 'countriesHighlight' })
           .addTo(map);
         this.#countryHighlights.push(clickedHighlight);
       }
@@ -225,6 +236,11 @@ export class GeoJSONManager {
         const civPane = map.createPane('civilizationsOverlay');
         civPane.style.zIndex = 450;
         civPane.style.pointerEvents = 'none';
+      }
+      if (!map.getPane('civilizationsHighlight')) {
+        const highlightPane = map.createPane('civilizationsHighlight');
+        highlightPane.style.zIndex = 650;
+        highlightPane.style.pointerEvents = 'none';
       }
       this.#civilizationsLayer = this.#L
         .geoJSON(this.#civilizationsGeoJSON, {
@@ -320,34 +336,19 @@ export class GeoJSONManager {
 
     const correctStyle = {
       fillColor: '#22c55e',
-      fillOpacity: isSame ? 0.45 : 0.35,
+      fillOpacity: isSame ? 0.55 : 0.45,
       color: '#16a34a',
-      weight: 2,
+      weight: 3,
+      opacity: 1,
       interactive: false,
     };
 
     const correctHighlight = this.#L
-      .geoJSON(correctFeature, { style: () => correctStyle })
+      .geoJSON(correctFeature, { style: () => correctStyle, pane: 'civilizationsHighlight' })
       .addTo(map);
     this.#civilizationHighlights.push(correctHighlight);
 
-    if (clickedCivilizationId && !isSame) {
-      const clickedFeature = this.getCivilizationFeatureById(clickedCivilizationId);
-      if (clickedFeature) {
-        const clickedStyle = {
-          fillColor: '#f97316',
-          fillOpacity: 0.3,
-          color: '#ea580c',
-          weight: 2,
-          interactive: false,
-        };
-
-        const clickedHighlight = this.#L
-          .geoJSON(clickedFeature, { style: () => clickedStyle })
-          .addTo(map);
-        this.#civilizationHighlights.push(clickedHighlight);
-      }
-    }
+    // In Civilization mode, only show the correct answer highlight.
 
     eventBus.emit('map:civilizations-highlighted', {
       correctCivilizationId,

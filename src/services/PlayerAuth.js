@@ -13,12 +13,45 @@ import { logger } from '../utils/logger.js';
 const TOKEN_KEY = 'player_token';
 const PLAYER_ID_KEY = 'player_id';
 const TOKEN_ENDPOINT = '/.netlify/functions/generate-player-token';
+const TOKEN_REQUEST_TIMEOUT_MS = 8000;
 
 class PlayerAuth {
   constructor() {
     this.token = null;
     this.playerId = null;
     this.initPromise = null;
+  }
+
+  /** @param {string} key */
+  #safeGetItem(key) {
+    try {
+      return localStorage.getItem(key);
+    } catch (error) {
+      logger.warn('[PlayerAuth] localStorage.getItem failed:', error);
+      return null;
+    }
+  }
+
+  /** @param {string} key @param {string} value */
+  #safeSetItem(key, value) {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (error) {
+      logger.warn('[PlayerAuth] localStorage.setItem failed:', error);
+      return false;
+    }
+  }
+
+  /** @param {string} key */
+  #safeRemoveItem(key) {
+    try {
+      localStorage.removeItem(key);
+      return true;
+    } catch (error) {
+      logger.warn('[PlayerAuth] localStorage.removeItem failed:', error);
+      return false;
+    }
   }
 
   /**
@@ -38,8 +71,8 @@ class PlayerAuth {
 
   async _doInit() {
     // Try to load token from localStorage
-    const storedToken = localStorage.getItem(TOKEN_KEY);
-    const storedPlayerId = localStorage.getItem(PLAYER_ID_KEY);
+    const storedToken = this.#safeGetItem(TOKEN_KEY);
+    const storedPlayerId = this.#safeGetItem(PLAYER_ID_KEY);
 
     if (storedToken && storedPlayerId && !this.isTokenExpired(storedToken)) {
       this.token = storedToken;
@@ -61,12 +94,24 @@ class PlayerAuth {
    */
   async generateNewToken() {
     try {
-      const response = await fetch(TOKEN_ENDPOINT, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const AbortControllerCtor =
+        typeof window !== 'undefined' ? window.AbortController : undefined;
+      const controller = AbortControllerCtor ? new AbortControllerCtor() : null;
+      const timeoutId = controller
+        ? setTimeout(() => controller.abort(), TOKEN_REQUEST_TIMEOUT_MS)
+        : null;
+      let response;
+      try {
+        response = await fetch(TOKEN_ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          signal: controller?.signal,
+        });
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+      }
 
       if (!response.ok) {
         throw new Error(`Failed to generate token: ${response.status} ${response.statusText}`);
@@ -77,8 +122,8 @@ class PlayerAuth {
       this.playerId = data.player_id;
 
       // Store in localStorage
-      localStorage.setItem(TOKEN_KEY, data.token);
-      localStorage.setItem(PLAYER_ID_KEY, data.player_id);
+      this.#safeSetItem(TOKEN_KEY, data.token);
+      this.#safeSetItem(PLAYER_ID_KEY, data.player_id);
 
       logger.debug(
         '[PlayerAuth] New token generated for player:',
@@ -156,8 +201,8 @@ class PlayerAuth {
   clearToken() {
     this.token = null;
     this.playerId = null;
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(PLAYER_ID_KEY);
+    this.#safeRemoveItem(TOKEN_KEY);
+    this.#safeRemoveItem(PLAYER_ID_KEY);
     logger.debug('[PlayerAuth] Token cleared');
   }
 

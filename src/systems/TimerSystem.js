@@ -17,6 +17,10 @@ import { eventBus } from '../core/EventBus.js';
  * @property {number} graceMs - Grace period before timer starts (ms)
  * @property {number} dangerZoneMs - Time before expiry for "danger" visual (ms)
  */
+/**
+ * @typedef {Object} TimerContext
+ * @property {number | null} roundId - Current round id for guard checks
+ */
 
 /**
  * @typedef {Object} TimerCallbacks
@@ -43,10 +47,11 @@ export class TimerSystem {
 
   /**
    * Start the game timer with runtime config (from state.runtimeConfig).
-   * Emits events: timer:started { timerMs }, timer:danger, timer:timeout, timer:tick
+   * Emits events: timer:started { timerMs, roundId }, timer:danger, timer:timeout, timer:tick
    * @param {TimerRuntimeConfig | null} [config] - From state.runtimeConfig; null = fallback GAME for tests
+   * @param {TimerContext} [context]
    */
-  start(config = null) {
+  start(config = null, context = { roundId: null }) {
     // Stop any existing timer first
     this.stop();
 
@@ -61,12 +66,12 @@ export class TimerSystem {
       if (!this.#isRunning) return;
 
       // Emit timer started event with duration for UI (transition)
-      eventBus.emit('timer:started', { timerMs });
+      eventBus.emit('timer:started', { timerMs, roundId: context.roundId });
 
       // Danger zone timeout (visual warning)
       const dangerZoneTimeout = setTimeout(() => {
         if (!this.#isRunning) return;
-        eventBus.emit('timer:danger', undefined);
+        eventBus.emit('timer:danger', { roundId: context.roundId });
       }, timerMs - dangerZoneMs);
 
       this.#timeouts.push(dangerZoneTimeout);
@@ -74,7 +79,7 @@ export class TimerSystem {
       // Main timeout (game over)
       const mainTimeout = setTimeout(() => {
         if (!this.#isRunning) return;
-        eventBus.emit('timer:timeout', undefined);
+        eventBus.emit('timer:timeout', { roundId: context.roundId });
         this.stop();
       }, timerMs);
 
@@ -86,7 +91,7 @@ export class TimerSystem {
           clearInterval(tickInterval);
           return;
         }
-        eventBus.emit('timer:tick', { timestamp: Date.now() });
+        eventBus.emit('timer:tick', { timestamp: Date.now(), roundId: context.roundId });
       }, 50);
 
       this.#intervals.push(tickInterval);

@@ -240,6 +240,30 @@ describe('recordClick', () => {
     expect(result.clickedCivilizationId).toBe('roman_empire');
     expect(result.score).toBe(5000);
   });
+
+  it('returns unknown distance when civilization feature is missing', () => {
+    const civ = { id: 'roman_empire', name: 'Roman Empire', popular: true };
+    const round = createRound(civ, 0, 'civilization');
+    const civilizationData = {
+      targetCivilizationFeature: null,
+      isInsideTargetCivilization: false,
+      clickedCivilizationId: null,
+    };
+    const clickCoords = [36.5, 2.5];
+    const result = recordClick(
+      round,
+      clickCoords,
+      'classic',
+      undefined,
+      null,
+      civilizationData,
+      roundRules
+    );
+
+    expect(result.status).toBe('completed');
+    expect(result.distance).toBeNull();
+    expect(result.distanceToTargetKm).toBeNull();
+  });
 });
 
 describe('timeoutRound', () => {

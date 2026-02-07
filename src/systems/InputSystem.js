@@ -10,6 +10,7 @@
 
 import { MODE_IDS } from '../config/game-modes.js';
 import { eventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/eventTypes.js';
 
 export class InputSystem {
   #initialized = false;
@@ -51,12 +52,12 @@ export class InputSystem {
           }
 
           // Otherwise, emit a generic action event
-          eventBus.emit('input:action', { key: e.key });
+          eventBus.emit(EVENTS.INPUT_ACTION, { key: e.key });
         }
 
         // Escape key
         if (e.key === 'Escape') {
-          eventBus.emit('input:escape', {});
+          eventBus.emit(EVENTS.INPUT_ESCAPE, {});
         }
       }
     );
@@ -79,7 +80,7 @@ export class InputSystem {
 
     // Subscribe to map:click events
     this.#mapClickUnsubscribe = eventBus.subscribe(
-      'map:click',
+      EVENTS.MAP_CLICK,
       (/** @type {{ lat: any, lng: any }} */ { lat, lng }) => {
         if (this.#mapClickEnabled && this.#mapClickCallback) {
           this.#mapClickCallback([lat, lng]);
@@ -87,7 +88,7 @@ export class InputSystem {
       }
     );
 
-    eventBus.emit('input:map-enabled', {});
+    eventBus.emit(EVENTS.INPUT_MAP_ENABLED, {});
   }
 
   /**
@@ -103,7 +104,7 @@ export class InputSystem {
       this.#mapClickUnsubscribe = null;
     }
 
-    eventBus.emit('input:map-disabled', {});
+    eventBus.emit(EVENTS.INPUT_MAP_DISABLED, {});
   }
 
   /**
@@ -111,7 +112,7 @@ export class InputSystem {
    * Emits input:next-round event
    */
   handleNextRound() {
-    eventBus.emit('input:next-round', {});
+    eventBus.emit(EVENTS.INPUT_NEXT_ROUND, {});
   }
 
   /**
@@ -120,7 +121,7 @@ export class InputSystem {
    * @param {string} pseudo - Player pseudo
    */
   handleSubmit(pseudo) {
-    eventBus.emit('input:submit', { pseudo });
+    eventBus.emit(EVENTS.INPUT_SUBMIT, { pseudo });
   }
 
   /**
@@ -128,7 +129,7 @@ export class InputSystem {
    * Emits input:replay event
    */
   handleReplay() {
-    eventBus.emit('input:replay', {});
+    eventBus.emit(EVENTS.INPUT_REPLAY, {});
   }
 
   /**
@@ -137,7 +138,7 @@ export class InputSystem {
    * @param {string} gameType - Game type (classic/daily)
    */
   handleStartGame(gameType = MODE_IDS.CLASSIC) {
-    eventBus.emit('input:start-game', { gameType });
+    eventBus.emit(EVENTS.INPUT_START_GAME, { gameType });
   }
 
   /**

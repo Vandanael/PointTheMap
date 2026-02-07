@@ -12,6 +12,7 @@ import {
 import { api } from '../services/api.js';
 import { createRound, recordClick, timeoutRound } from './Round.js';
 import { getStats } from '../features/StatsManager.js';
+import { pointInPolygon } from '@lib/geo-utils/index.js';
 
 /**
  * @typedef {'idle' | 'loading' | 'playing' | 'round_result' | 'game_over'} GameStatusType
@@ -57,6 +58,7 @@ import { getStats } from '../features/StatsManager.js';
  * @property {Stadium | null} stadium
  * @property {import('./Game.js').Civilization | null} [civilization] - For civilization mode
  * @property {number} roundNumber
+ * @property {number} roundId
  * @property {number} startTime
  * @property {number | null} endTime
  * @property {{lat: number, lng: number} | null} click
@@ -97,6 +99,7 @@ import { getStats } from '../features/StatsManager.js';
  * @property {Round[]} rounds
  * @property {number} currentRoundIndex
  * @property {Round | null} currentRound
+ * @property {number} roundIdSeq
  * @property {number} totalScore
  * @property {string | null} pseudo
  * @property {SubmitResult | null} result
@@ -131,6 +134,7 @@ export const createGameState = () => ({
   rounds: [],
   currentRoundIndex: 0,
   currentRound: null,
+  roundIdSeq: 0,
   totalScore: 0,
   pseudo: null,
   result: null,
@@ -195,7 +199,7 @@ export const startGame = async (
     targets,
     // Legacy fields: maintained for backward compatibility with existing code
     ...buildLegacyTargetFields(targets, roundGameType),
-    currentRound: createRound(targets[0], 0, roundGameType),
+    currentRound: createRound(targets[0], 0, roundGameType, 0),
     gameType: /** @type {'classic' | 'daily' | 'country' | 'stadium' | 'civilization'} */ (
       gameType
     ),
@@ -227,14 +231,28 @@ export const playRound = (state, clickCoords, mapQuery, roundRules) => {
   // Handle country mode
   if (state.gameType === MODE_IDS.COUNTRY && state.currentRound.country) {
     const targetCountryId = state.currentRound.country.countryId;
-    const clickedCountryId = mapQuery.getCountryAtLatLng(clickCoords);
+    let clickedCountryId = mapQuery.getCountryAtLatLng(clickCoords);
 
     // Get target country feature from GeoJSON
     const targetCountryFeature = mapQuery.getCountryFeatureById(targetCountryId);
 
+    let isInsideTargetCountry = clickedCountryId === targetCountryId;
+    if (targetCountryFeature?.geometry && clickedCountryId !== targetCountryId) {
+      const [lat, lng] = clickCoords;
+      const point = {
+        type: 'Point',
+        coordinates: [Number(lng), Number(lat)],
+      };
+      if (pointInPolygon(point, targetCountryFeature.geometry)) {
+        isInsideTargetCountry = true;
+        // Prefer the correct country when polygons overlap.
+        clickedCountryId = targetCountryId;
+      }
+    }
+
     countryData = {
       targetCountryFeature,
-      isInsideTargetCountry: clickedCountryId === targetCountryId,
+      isInsideTargetCountry,
       clickedCountryId,
     };
   }
@@ -242,12 +260,26 @@ export const playRound = (state, clickCoords, mapQuery, roundRules) => {
   // Handle civilization mode
   if (state.gameType === MODE_IDS.CIVILIZATION && state.currentRound.civilization) {
     const targetCivilizationId = state.currentRound.civilization.id;
-    const clickedCivilizationId = mapQuery.getCivilizationAtLatLng(clickCoords);
+    let clickedCivilizationId = mapQuery.getCivilizationAtLatLng(clickCoords);
     const targetCivilizationFeature = mapQuery.getCivilizationFeatureById(targetCivilizationId);
+
+    let isInsideTargetCivilization = clickedCivilizationId === targetCivilizationId;
+    if (targetCivilizationFeature?.geometry && clickedCivilizationId !== targetCivilizationId) {
+      const [lat, lng] = clickCoords;
+      const point = {
+        type: 'Point',
+        coordinates: [Number(lng), Number(lat)],
+      };
+      if (pointInPolygon(point, targetCivilizationFeature.geometry)) {
+        isInsideTargetCivilization = true;
+        // Prefer the correct civilization when polygons overlap.
+        clickedCivilizationId = targetCivilizationId;
+      }
+    }
 
     civilizationData = {
       targetCivilizationFeature,
-      isInsideTargetCivilization: clickedCivilizationId === targetCivilizationId,
+      isInsideTargetCivilization,
       clickedCivilizationId,
     };
   }
@@ -297,6 +329,7 @@ export const handleTimeout = (state) => {
  */
 export const nextRound = (state) => {
   const nextIndex = state.currentRoundIndex + 1;
+  const nextRoundId = state.roundIdSeq + 1;
   const roundCount = state.runtimeConfig?.roundCount ?? GAME.ROUNDS;
   const targets = /** @type {Array<Capital | Country | Stadium | Civilization>} */ (
     getTargetsForMode(state)
@@ -317,7 +350,8 @@ export const nextRound = (state) => {
     ...state,
     status: GameStatus.PLAYING,
     currentRoundIndex: nextIndex,
-    currentRound: createRound(targets[nextIndex], nextIndex, roundGameType),
+    currentRound: createRound(targets[nextIndex], nextIndex, roundGameType, nextRoundId),
+    roundIdSeq: nextRoundId,
   };
 };
 

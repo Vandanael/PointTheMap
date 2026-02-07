@@ -30,6 +30,7 @@ import { eventBus } from '../core/EventBus.js';
 import { logger } from '../utils/logger.js';
 import { MapRenderer } from './map/MapRenderer.js';
 import { GeoJSONManager } from './map/GeoJSONManager.js';
+import { MAP_ANIMATIONS } from '../config/visual-constants.js';
 
 export class MapSystem {
   #initialized = false;
@@ -293,6 +294,30 @@ export class MapSystem {
    */
   getCivilizationFeatureById(civilizationId) {
     return this.#geoManager?.getCivilizationFeatureById(civilizationId) ?? null;
+  }
+
+  /**
+   * Fly to the bounds of a GeoJSON feature.
+   * @param {Object} feature - GeoJSON feature with geometry
+   * @param {{ padding?: [number, number], maxZoom?: number, animation?: { duration?: number, easeLinearity?: number } }} [options]
+   * @returns {boolean} True if bounds were applied
+   */
+  flyToFeatureBounds(feature, options = {}) {
+    if (!feature || !this.#renderer || !L) return false;
+    const map = this.#renderer.getMap();
+    if (!map) return false;
+
+    const layer = L.geoJSON(feature);
+    const bounds = layer.getBounds();
+    if (!bounds || !bounds.isValid || !bounds.isValid()) return false;
+
+    map.flyToBounds(bounds, {
+      ...MAP_ANIMATIONS.SHOW_RESULT,
+      ...(options.animation ?? null),
+      padding: options.padding ?? [60, 60],
+      maxZoom: options.maxZoom ?? 14,
+    });
+    return true;
   }
 
   /**

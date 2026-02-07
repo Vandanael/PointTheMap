@@ -2,6 +2,7 @@
 // Support FR / EN
 
 const LANG_STORAGE_KEY = 'ptm_lang';
+const PUBLIC_URL = import.meta.env?.VITE_PUBLIC_URL || 'https://pointthemap.net';
 
 /**
  * Minimal localStorage access to avoid core/services dependency from i18n.
@@ -35,6 +36,11 @@ const translations = {
     comingSoon: 'Bientôt disponible',
     start: 'COMMENCER',
     madeBy: 'Par',
+    resumePrompt: 'Reprendre votre partie en cours ?',
+    resumePromptTitle: 'Reprendre la partie ?',
+    resumePromptMessage: 'Une partie en cours a été trouvée.',
+    resumePromptResume: 'Reprendre',
+    resumePromptDiscard: 'Ignorer',
 
     // Game Lobby
     selectCategory: 'Choisissez une catégorie',
@@ -55,7 +61,9 @@ const translations = {
     shareCopied: 'Lien copié',
     shareFailed: 'Impossible de partager',
     shareOnAchievement: 'Partager cette réussite',
-    shareGameMessage: 'Point The Map — Devine les capitales ! https://pointthemap.app',
+    shareGameMessage: `Point The Map — Devine les capitales ! ${PUBLIC_URL}`,
+    tapToContinue: 'Touchez pour continuer',
+    mapLockedHint: 'Carte verrouillée',
 
     // Stats
     myStats: 'Mes Statistiques',
@@ -95,6 +103,7 @@ const translations = {
     find: 'Trouvez',
     getReady: 'Prêt ?',
     clickOnMap: '📍 Cliquez sur la carte',
+    nextRoundPreparing: 'Prochain round...',
 
     // Civilization names (FR)
     civilization: {
@@ -131,7 +140,6 @@ const translations = {
       mesopotamia: 'Mésopotamie',
       indus_valley: "Civilisation de l'Indus",
       phoenicia: 'Phénicie',
-      ancient_israel: 'Israël antique',
       ptolemaic_egypt: 'Égypte ptolémaïque',
       seljuk_empire: 'Empire seldjoukide',
       safavid_empire: 'Empire safavide',
@@ -166,6 +174,7 @@ const translations = {
 
     // Results
     distance: 'Distance',
+    distanceUnknown: 'Distance inconnue',
     pointsEarned: 'Points gagnés',
     base: 'Base',
     speedBonus: 'Bonus vitesse',
@@ -193,6 +202,7 @@ const translations = {
     replayNoSave: 'REJOUER SANS SAUVEGARDER',
     replay: 'REJOUER',
     waitSeconds: 'Attendez {{seconds}}s',
+    loadingMap: 'OUVERTURE DE LA CARTE...',
 
     // Final
     top50: '🏆 Top 50 !',
@@ -266,6 +276,7 @@ const translations = {
 
     // Errors
     error: {
+      title: 'Erreur',
       tooFast: '⏳ Veuillez attendre avant de soumettre à nouveau',
       network: '❌ Erreur réseau. Réessayez.',
       timeout: "⏰ Délai d'attente dépassé",
@@ -310,6 +321,11 @@ const translations = {
     comingSoon: 'Coming soon',
     start: 'START',
     madeBy: 'Made by',
+    resumePrompt: 'Resume your in-progress game?',
+    resumePromptTitle: 'Resume game?',
+    resumePromptMessage: 'We found an in-progress game.',
+    resumePromptResume: 'Resume',
+    resumePromptDiscard: 'Discard',
 
     // Game Lobby
     selectCategory: 'Select a category',
@@ -330,7 +346,9 @@ const translations = {
     shareCopied: 'Link copied',
     shareFailed: 'Unable to share',
     shareOnAchievement: 'Share this achievement',
-    shareGameMessage: 'Point The Map — Try to guess the capitals! https://pointthemap.app',
+    shareGameMessage: `Point The Map — Try to guess the capitals! ${PUBLIC_URL}`,
+    tapToContinue: 'Tap to continue',
+    mapLockedHint: 'Map locked',
 
     // Stats
     myStats: 'My Stats',
@@ -370,6 +388,7 @@ const translations = {
     find: 'Find',
     getReady: 'Get Ready!',
     clickOnMap: '📍 Click on the map',
+    nextRoundPreparing: 'Next round...',
 
     // Civilization names (EN)
     civilization: {
@@ -406,7 +425,6 @@ const translations = {
       mesopotamia: 'Mesopotamia',
       indus_valley: 'Indus Valley',
       phoenicia: 'Phoenicia',
-      ancient_israel: 'Ancient Israel',
       ptolemaic_egypt: 'Ptolemaic Egypt',
       seljuk_empire: 'Seljuk Empire',
       safavid_empire: 'Safavid Empire',
@@ -441,6 +459,7 @@ const translations = {
 
     // Results
     distance: 'Distance',
+    distanceUnknown: 'Unknown distance',
     pointsEarned: 'Points earned',
     base: 'Base',
     speedBonus: 'Speed bonus',
@@ -468,6 +487,7 @@ const translations = {
     replayNoSave: 'REPLAY WITHOUT SAVING',
     replay: 'REPLAY',
     waitSeconds: 'Wait {{seconds}}s',
+    loadingMap: 'UNFOLDING THE MAP...',
 
     // Final
     top50: '🏆 Top 50!',
@@ -542,6 +562,7 @@ const translations = {
 
     // Errors
     error: {
+      title: 'Error',
       tooFast: '⏳ Please wait before submitting again',
       network: '❌ Network error. Please retry.',
       timeout: '⏰ Request timeout',

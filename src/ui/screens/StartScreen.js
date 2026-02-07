@@ -7,11 +7,14 @@ import { toggleLang, t } from '../../i18n.js';
 import { logger } from '../../utils/logger.js';
 import { domCache as _domCache, render, remove, bindClick } from '../dom.js';
 import { eventBus } from '../../core/EventBus.js';
+import { EVENTS } from '../../core/eventTypes.js';
 import { UI_TIMING } from '../../config/visual-constants.js';
 import { handleError, safeAsync } from '../../core/ErrorHandler.js';
 import { shareGameResults } from '../../features/Share.js';
 import { analytics } from '../../services/Analytics.js';
 import { activateFocusTrap, deactivateFocusTrap } from '../../utils/focusTrap.js';
+import { isLowEndDevice } from '../../utils/device.js';
+import { preloadCountriesGeoJSON, preloadCivilizationsGeoJSON } from '../../data/geoDataLoader.js';
 import {
   StartScreen,
   Leaderboard,
@@ -19,6 +22,7 @@ import {
   MyStatsModal,
   leaderboardTypeFromSelection,
   selectionFromLeaderboardType,
+  MapErrorModal,
 } from '../components.js';
 import { getStats } from '../../features/StatsManager.js';
 
@@ -73,6 +77,10 @@ export const createStartScreen = (deps) => {
   let _startScreenListeners = [];
   /** @type {null | (() => void)} */
   let _langChangeCleanup = null;
+  const _geoPreloadStarted = {
+    countries: false,
+    civilizations: false,
+  };
 
   /** @param {string} theme */
   const applyTheme = (theme) => {
@@ -91,14 +99,14 @@ export const createStartScreen = (deps) => {
     const next = getTheme() === 'dark' ? 'light' : 'dark';
     setTheme(next);
     applyTheme(next);
-    eventBus.emit('theme:changed', { theme: next });
+    eventBus.emit(EVENTS.THEME_CHANGED, { theme: next });
   };
 
   const handleToggleLang = () => {
     const newLang = toggleLang();
     const icon = _domCache.get('lang-icon');
     if (icon) icon.textContent = newLang.toUpperCase();
-    eventBus.emit('language:changed', { language: newLang });
+    eventBus.emit(EVENTS.LANGUAGE_CHANGED, { language: newLang });
   };
 
   const setupLeaderboardTabs = () => {
@@ -118,7 +126,7 @@ export const createStartScreen = (deps) => {
         const content = _domCache.get('leaderboard-content');
         if (content) {
           content.innerHTML = `
-            <div class="text-center py-8">
+            <div class="leaderboard-center-state text-center py-8">
               <p class="text-tertiary mb-4">${t('error.leaderboardRetry')}</p>
               <button id="btn-retry-leaderboard" class="text-yellow-400 hover:text-yellow-300 font-bold">
                 ${t('error.retry')}
@@ -191,7 +199,7 @@ export const createStartScreen = (deps) => {
       if (contentEl) {
         if (scores.length === 0) {
           contentEl.innerHTML = `
-            <div class="text-center py-8">
+            <div class="leaderboard-center-state text-center py-8">
               <p class="text-tertiary mb-4">${t('error.leaderboardRetry')}</p>
               <button id="btn-retry-leaderboard" class="text-yellow-400 hover:text-yellow-300 font-bold">
                 ${t('error.retry')}
@@ -206,9 +214,20 @@ export const createStartScreen = (deps) => {
             }
           });
         } else {
-          contentEl.outerHTML = Leaderboard(scores, null, false);
+          // Keep the same container node to avoid layout shifts and focus/context churn.
+          const nextMarkup = Leaderboard(scores, null, false);
+          const template = document.createElement('template');
+          template.innerHTML = nextMarkup.trim();
+          const nextNode = template.content.firstElementChild;
+          if (nextNode instanceof HTMLElement) {
+            contentEl.className = nextNode.className;
+            const nextRole = nextNode.getAttribute('role');
+            const nextAriaLabel = nextNode.getAttribute('aria-label');
+            if (nextRole) contentEl.setAttribute('role', nextRole);
+            if (nextAriaLabel) contentEl.setAttribute('aria-label', nextAriaLabel);
+            contentEl.innerHTML = nextNode.innerHTML;
+          }
         }
-        _domCache.invalidate('leaderboard-content');
       }
 
       const btns = [
@@ -260,6 +279,25 @@ export const createStartScreen = (deps) => {
     if (statsModal) {
       requestAnimationFrame(() =>
         activateFocusTrap(/** @type {HTMLElement} */ (statsModal), { onEscape: closeStats })
+      );
+    }
+  };
+
+  /**
+   * @param {string} message
+   */
+  const showMapErrorModal = (message) => {
+    remove('map-error-modal');
+    render(MapErrorModal(message));
+    const close = () => {
+      deactivateFocusTrap();
+      remove('map-error-modal');
+    };
+    bindClick('btn-map-error-ok', close);
+    const modal = document.getElementById('map-error-modal');
+    if (modal) {
+      requestAnimationFrame(() =>
+        activateFocusTrap(/** @type {HTMLElement} */ (modal), { onEscape: close })
       );
     }
   };
@@ -348,6 +386,16 @@ export const createStartScreen = (deps) => {
         const categoryListener = () => {
           selectedCategory = category;
           updateChallengeCard(category);
+          if (!isLowEndDevice()) {
+            if (category === 'countries' && !_geoPreloadStarted.countries) {
+              _geoPreloadStarted.countries = true;
+              preloadCountriesGeoJSON();
+            }
+            if (category === 'civilizations' && !_geoPreloadStarted.civilizations) {
+              _geoPreloadStarted.civilizations = true;
+              preloadCivilizationsGeoJSON();
+            }
+          }
 
           categoryButtons.forEach((cat) => {
             const catBtn = document.getElementById(`category-${cat}`);
@@ -417,6 +465,14 @@ export const createStartScreen = (deps) => {
     bindClick('btn-start-game', async () => {
       if (_startingGame) return;
       _startingGame = true;
+      const startBtn = /** @type {HTMLButtonElement | null} */ (
+        document.getElementById('btn-start-game')
+      );
+      if (startBtn) {
+        startBtn.disabled = true;
+        startBtn.setAttribute('aria-disabled', 'true');
+        startBtn.classList.add('btn-loading');
+      }
       const isDaily = selectedMode === MODE_IDS.DAILY;
       /** @type {Record<"capitals"|"countries"|"civilizations"|"stadiums", string>} */
       const gameModeMap = {
@@ -426,11 +482,25 @@ export const createStartScreen = (deps) => {
         stadiums: isDaily ? MODE_IDS.STADIUM_DAILY : MODE_IDS.STADIUM,
       };
       const gameMode = gameModeMap[selectedCategory];
-      if (!gameMode) return;
+      if (!gameMode) {
+        if (startBtn) {
+          startBtn.disabled = false;
+          startBtn.removeAttribute('aria-disabled');
+          startBtn.classList.remove('btn-loading');
+        }
+        _startingGame = false;
+        return;
+      }
 
       const mapSystem = getMapSystem();
       if (!mapSystem) {
         logger.error('UI: mapSystem not configured');
+        if (startBtn) {
+          startBtn.disabled = false;
+          startBtn.removeAttribute('aria-disabled');
+          startBtn.classList.remove('btn-loading');
+        }
+        _startingGame = false;
         return;
       }
       const needsInit = !mapSystem.isInitialized();
@@ -454,9 +524,14 @@ export const createStartScreen = (deps) => {
           updateLoader(100);
           if (!loaded) {
             hideLoader();
-            showToast(t('error.countriesLoadFailed'), 'error', 4000);
             showStart();
+            showMapErrorModal(t('error.countriesLoadFailed'));
             _startingGame = false;
+            if (startBtn) {
+              startBtn.disabled = false;
+              startBtn.removeAttribute('aria-disabled');
+              startBtn.classList.remove('btn-loading');
+            }
             return;
           }
         } else if (selectedCategory === 'civilizations') {
@@ -464,9 +539,14 @@ export const createStartScreen = (deps) => {
           updateLoader(100);
           if (!loaded) {
             hideLoader();
-            showToast(t('error.civilizationsLoadFailed'), 'error', 4000);
             showStart();
+            showMapErrorModal(t('error.civilizationsLoadFailed'));
             _startingGame = false;
+            if (startBtn) {
+              startBtn.disabled = false;
+              startBtn.removeAttribute('aria-disabled');
+              startBtn.classList.remove('btn-loading');
+            }
             return;
           }
         }
@@ -484,15 +564,25 @@ export const createStartScreen = (deps) => {
             : selectedCategory === 'civilizations'
               ? t('error.civilizationsLoadFailed')
               : t('error.mapLoadFailed');
-        showToast(errorMsg, 'error', 4000);
         showStart();
+        showMapErrorModal(errorMsg);
         _startingGame = false;
+        if (startBtn) {
+          startBtn.disabled = false;
+          startBtn.removeAttribute('aria-disabled');
+          startBtn.classList.remove('btn-loading');
+        }
         return;
       }
 
       const inputSystem = getInputSystem();
       if (!inputSystem) {
         logger.error('UI: inputSystem not configured');
+        if (startBtn) {
+          startBtn.disabled = false;
+          startBtn.removeAttribute('aria-disabled');
+          startBtn.classList.remove('btn-loading');
+        }
         _startingGame = false;
         return;
       }

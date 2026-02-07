@@ -1,16 +1,37 @@
 # Point The Map
 
-A fast‑paced geography game: find the right location on a blank map under time pressure.
+**Live:** https://pointthemap.net/
 
-**Live demo:** https://pointthemap.netlify.app/
+A competitive geography game focused on precision and speed.
 
-## Features
+## Core Features
 
-- 5 rounds, 5 seconds each
-- Multiple modes: Capitals, Countries, Stadiums, Civilizations
-- Distance‑based scoring + time bonus (daily modes)
-- Global leaderboards
-- Mobile‑friendly UI
+- Precision clicking on an interactive map.
+- Dynamic scoring based on distance (km) and time.
+- Real-time visual feedback and a smooth game loop.
+
+## Technical Architecture
+
+The project uses a decoupled, event-driven architecture. User interactions flow through a clear pipeline, and systems communicate through the `EventBus` to avoid tight coupling.
+
+Primary flow:
+
+```txt
+InputSystem -> EventBus -> StateManager -> UI / Map Systems
+```
+
+Key points:
+- `StateManager` applies immutable updates, validates state, and emits changes.
+- `EventBus` orchestrates interactions between Map, Timer, UI, Scoring, and Input systems.
+- Asynchronous geographic data loading with caching and preloading.
+- Asset optimizations: compressed GeoJSON, WebP images, and progressive loading.
+
+## Tech Stack
+
+- Frontend: Vite, Vanilla JS
+- Styles: TailwindCSS
+- Mapping: Leaflet (basemap tiles via Carto)
+- Backend: Netlify Functions, Neon (PostgreSQL)
 
 ## Quick Start
 
@@ -19,7 +40,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:5173`.
+Ouvrir `http://localhost:5173`.
 
 ## Scripts
 
@@ -30,14 +51,9 @@ npm run test:run       # Unit tests (Vitest)
 npm run e2e:dev        # Playwright smoke (dev)
 npm run e2e:preview    # Playwright smoke (build + preview)
 ```
+## License & Copyright
 
-## Tech Stack
+Copyright © 2026 Vandanael. All rights reserved.
 
-- Vite + Vanilla JS
-- Netlify Functions (Node.js)
-- Neon (PostgreSQL)
-- Vitest + Playwright
-
-## License
-
-MIT
+This project is not open-source. The code is provided for educational and review purposes only. 
+No unauthorized copying, modification, or commercial redistribution is permitted.

@@ -50,6 +50,10 @@ export function initLifecycle(deps) {
   let iosOrientationHandler = null;
   /** @type {(() => void) | null} */
   let iosScrollHandler = null;
+  /** @type {(() => void) | null} */
+  let offlineHandler = null;
+  /** @type {(() => void) | null} */
+  let onlineHandler = null;
 
   /**
    * iOS: Fix viewport height dynamique pour gérer la barre d'adresse Safari
@@ -118,17 +122,20 @@ export function initLifecycle(deps) {
    * Setup offline/online status indicators
    */
   const setupNetworkStatusIndicators = () => {
-    window.addEventListener('offline', () => {
+    offlineHandler = () => {
       ui.showToast(
         i18n.t('offline.message') || 'You are offline. Some features may not work.',
         'warning',
         5000
       );
-    });
+    };
 
-    window.addEventListener('online', () => {
+    onlineHandler = () => {
       ui.showToast(i18n.t('online.message') || 'You are back online!', 'success', 2000);
-    });
+    };
+
+    window.addEventListener('offline', offlineHandler);
+    window.addEventListener('online', onlineHandler);
   };
 
   /**
@@ -144,6 +151,12 @@ export function initLifecycle(deps) {
     }
     if (iosScrollHandler) {
       window.removeEventListener('scroll', iosScrollHandler);
+    }
+    if (offlineHandler) {
+      window.removeEventListener('offline', offlineHandler);
+    }
+    if (onlineHandler) {
+      window.removeEventListener('online', onlineHandler);
     }
 
     // Cleanup systems

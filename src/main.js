@@ -30,6 +30,11 @@ import {
 import { getRemainingTime } from './game/Round.js';
 import { UI, configureUI } from './ui/UI.js';
 import { processRetryQueue, submitWithRetry } from './services/api.js';
+import {
+  saveInProgressGame,
+  loadInProgressGame,
+  clearInProgressGame,
+} from './services/gameStatePersistence.js';
 import { timerSystem } from './systems/TimerSystem.js';
 import { getUISystem } from './systems/UISystem.js';
 import { inputSystem } from './systems/InputSystem.js';
@@ -156,8 +161,15 @@ const init = async () => {
     // Subscribe to timer game logic events
     eventUnsubscribers.push(
       /** @type {() => void} */ (
-        eventBus.subscribe('timer:timeout', () => {
+        eventBus.subscribe('timer:timeout', (/** @type {{ roundId?: number | null }} */ payload) => {
           const state = stateManager.getState();
+          if (
+            payload?.roundId !== undefined &&
+            payload?.roundId !== null &&
+            state.currentRound?.roundId !== payload.roundId
+          ) {
+            return;
+          }
           if (state.status === GameStatus.PLAYING && state.currentRound) {
             // Stop timer to prevent tick handler from also firing
             timerSystem.stop();
@@ -175,8 +187,15 @@ const init = async () => {
 
     eventUnsubscribers.push(
       /** @type {() => void} */ (
-        eventBus.subscribe('timer:tick', () => {
+        eventBus.subscribe('timer:tick', (/** @type {{ roundId?: number | null }} */ payload) => {
           const state = stateManager.getState();
+          if (
+            payload?.roundId !== undefined &&
+            payload?.roundId !== null &&
+            state.currentRound?.roundId !== payload.roundId
+          ) {
+            return;
+          }
           if (state.status !== GameStatus.PLAYING || !state.currentRound) {
             timerSystem.stop();
             return;
@@ -242,6 +261,12 @@ const init = async () => {
       'state:changed',
       (/** @type {{ state: { status: string } }} */ { state }) => {
         if (state?.status !== GameStatus.PLAYING) gameAbandonTracked = false;
+        // Persist in-progress game state (best-effort)
+        if (state?.status === GameStatus.PLAYING) {
+          saveInProgressGame(state);
+        } else {
+          clearInProgressGame();
+        }
       }
     );
     eventUnsubscribers.push(/** @type {() => void} */ (unsubStateForAbandon));
@@ -286,6 +311,25 @@ const init = async () => {
 
     // Initialize app (loader, retry queue, show start screen)
     await lifecycle.initializeApp();
+
+    // Resume in-progress game if available
+    const saved = loadInProgressGame();
+    if (saved?.state) {
+      const shouldResume = await UI.showResumePrompt();
+      if (shouldResume) {
+        try {
+          const resumed = await controller.resumeFromState(saved.state);
+          if (!resumed) {
+            clearInProgressGame();
+          }
+        } catch (error) {
+          logger.warn('[Resume] Failed to restore in-progress game', error);
+          clearInProgressGame();
+        }
+      } else {
+        clearInProgressGame();
+      }
+    }
 
     // Store cleanup functions for global cleanup
     /** @type {any} */ (window).__appCleanup = () => {

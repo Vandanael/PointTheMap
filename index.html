@@ -54,35 +54,14 @@
     <!-- Preload main module for faster execution -->
     <link rel="modulepreload" href="/src/main.js" />
 
-    <!-- Privacy-friendly analytics by Plausible -->
-    <script async src="https://plausible.io/js/pa-MWj6kC9TpD2-BKb6Pm-XK.js"></script>
-    <script>
-      ((window.plausible =
-        window.plausible ||
-        function () {
-          (plausible.q = plausible.q || []).push(arguments);
-        }),
-        (plausible.init =
-          plausible.init ||
-          function (i) {
-            plausible.o = i || {};
-          }));
-      plausible.init();
-    </script>
+    <!-- Prefetch GeoJSON data at low priority during idle time -->
+    <link rel="prefetch" href="/data/countries.geojson" as="fetch" crossorigin />
+    <link rel="prefetch" href="/data/civilizations.geojson" as="fetch" crossorigin />
+
+    <!-- Plausible analytics injected on build only (see vite.config.js) -->
   </head>
   <body class="dark-theme">
-    <script>
-      (function () {
-        try {
-          var stored = localStorage.getItem('theme');
-          var theme = stored === 'light' ? 'light' : 'dark';
-          document.body.classList.remove('light-theme', 'dark-theme');
-          document.body.classList.add(theme === 'light' ? 'light-theme' : 'dark-theme');
-        } catch (e) {
-          document.body.classList.add('dark-theme');
-        }
-      })();
-    </script>
+    <script src="/theme-init.js"></script>
     <a href="#main-content" class="skip-link">Skip to main content</a>
     <main id="main-content">
       <div id="app">

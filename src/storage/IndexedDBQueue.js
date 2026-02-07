@@ -400,16 +400,4 @@ export class IndexedDBQueue {
   }
 }
 
-// Lazy singleton instance
-let _instance = null;
-
-/**
- * Get singleton instance of IndexedDBQueue
- * @returns {IndexedDBQueue}
- */
-export function getIndexedDBQueue() {
-  if (!_instance) {
-    _instance = new IndexedDBQueue();
-  }
-  return _instance;
-}
+// Note: no singleton exported; create instances explicitly where needed.

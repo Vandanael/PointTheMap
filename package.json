@@ -59,5 +59,24 @@
     "tar": "^7.5.6",
     "lodash": "^4.17.23",
     "lodash-es": "^4.17.23"
+  },
+  "knip": {
+    "entry": [
+      "netlify/functions/*.js"
+    ],
+    "project": [
+      "src/**/*.js",
+      "lib/**/*.js",
+      "netlify/functions/**/*.js"
+    ],
+    "ignore": [
+      "src/styles/*.css",
+      "src/types/vendor.d.ts"
+    ],
+    "ignoreIssues": {
+      "lib/game-math/index.js": [
+        "duplicates"
+      ]
+    }
   }
 }

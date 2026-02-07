@@ -47,7 +47,6 @@ export const civilizations = [
   { id: 'byzantine_empire', name: 'Byzantine Empire', popular: false },
   { id: 'mesopotamia', name: 'Mesopotamia', popular: false },
   { id: 'indus_valley', name: 'Indus Valley', popular: false },
-  { id: 'ancient_israel', name: 'Ancient Israel', popular: false },
   { id: 'ptolemaic_egypt', name: 'Ptolemaic Egypt', popular: false },
   { id: 'seljuk_empire', name: 'Seljuk Empire', popular: false },
   { id: 'safavid_empire', name: 'Safavid Empire', popular: false },

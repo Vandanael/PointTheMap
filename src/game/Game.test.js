@@ -189,6 +189,7 @@ describe('Game.js', () => {
         rounds: [],
         currentRoundIndex: 0,
         currentRound: null,
+        roundIdSeq: 0,
         totalScore: 0,
         pseudo: null,
         result: null,
@@ -221,7 +222,7 @@ describe('Game.js', () => {
       expect(newState.capitals).toEqual(mockCapitals);
       expect(newState.gameType).toBe('classic');
       expect(newState.currentRound).toBeDefined();
-      expect(createRound).toHaveBeenCalledWith(mockCapitals[0], 0, 'capital');
+      expect(createRound).toHaveBeenCalledWith(mockCapitals[0], 0, 'capital', 0);
     });
 
     it('should start a new game session with daily mode', async () => {
@@ -545,6 +546,67 @@ describe('Game.js', () => {
       expect(newState.currentRound.status).toBe('completed');
       expect(recordClick).toHaveBeenCalledTimes(1);
     });
+
+    it('should treat clicks inside the target civilization as correct even with overlaps', () => {
+      const civ = { id: 'byzantine', name: 'Byzantine Empire', popular: true };
+      const currentRound = {
+        capital: null,
+        country: null,
+        civilization: civ,
+        roundNumber: 0,
+        startTime: Date.now(),
+        endTime: null,
+        click: null,
+        distance: null,
+        score: null,
+        status: 'playing',
+        gameType: 'civilization',
+      };
+      const state = {
+        ...createGameState(),
+        status: GameStatus.PLAYING,
+        gameType: 'civilization',
+        civilizations: [civ],
+        currentRound,
+        runtimeConfig: { roundCount: 5, timerMs: 5000, graceMs: 500, dangerZoneMs: 1500 },
+        rounds: [],
+      };
+      const fakeMapQuery = {
+        getCountryAtLatLng: vi.fn(),
+        getCountryFeatureById: vi.fn(),
+        getCivilizationAtLatLng: vi.fn(() => 'roman_empire'),
+        getCivilizationFeatureById: vi.fn(() => ({
+          geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [10, 40],
+                [15, 40],
+                [15, 45],
+                [10, 45],
+                [10, 40],
+              ],
+            ],
+          },
+        })),
+      };
+
+      const clickCoords = [42.5, 12.5]; // inside polygon above
+      playRound(state, clickCoords, fakeMapQuery, mockRoundRules);
+
+      expect(recordClick).toHaveBeenCalledWith(
+        currentRound,
+        clickCoords,
+        'civilization',
+        5500,
+        null,
+        expect.objectContaining({
+          isInsideTargetCivilization: true,
+          clickedCivilizationId: 'byzantine',
+        }),
+        mockRoundRules
+      );
+    });
   });
 
   describe('handleTimeout', () => {
@@ -628,7 +690,7 @@ describe('Game.js', () => {
 
       expect(newState.status).toBe(GameStatus.PLAYING);
       expect(newState.currentRoundIndex).toBe(1);
-      expect(createRound).toHaveBeenCalledWith(capitals[1], 1, 'capital');
+      expect(createRound).toHaveBeenCalledWith(capitals[1], 1, 'capital', 1);
       expect(newState.currentRound).toBeDefined();
     });
 

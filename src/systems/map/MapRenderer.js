@@ -12,7 +12,13 @@ import { getTheme, getMapView, setMapView } from '../../services/storage.js';
 import { isIOS } from '../../utils/device.js';
 import { eventBus } from '../../core/EventBus.js';
 import { logger } from '../../utils/logger.js';
-import { MARKERS, LINES, MAP_ANIMATIONS, getLineColor } from '../../config/visual-constants.js';
+import {
+  MARKERS,
+  LINES,
+  MAP_ANIMATIONS,
+  MAP_VIEW,
+  getLineColor,
+} from '../../config/visual-constants.js';
 import { waitForMapSettled, normalizeSegmentEnd, animateResultLine } from './lineAnimation.js';
 
 export class MapRenderer {
@@ -140,6 +146,11 @@ export class MapRenderer {
     });
     this.#eventUnsubscribers.push(unsubTheme);
 
+    const unsubTilesRetry = eventBus.subscribe('map:tiles-retry', () => {
+      this.#updateMapTiles();
+    });
+    this.#eventUnsubscribers.push(unsubTilesRetry);
+
     // Persist map view on move/zoom (debounced)
     /** @type {ReturnType<typeof setTimeout> | null} */
     let saveTimeout = null;
@@ -151,7 +162,7 @@ export class MapRenderer {
         const center = this.getCenter();
         const zoom = this.getZoom();
         if (center && zoom !== null) setMapView(center, zoom);
-      }, 300);
+      }, MAP_VIEW.SAVE_VIEW_DEBOUNCE_MS);
     };
     this.#map.on('moveend', saveView);
     this.#eventUnsubscribers.push(() => {
@@ -187,7 +198,15 @@ export class MapRenderer {
       })
       .addTo(this.#map);
 
-    this.#tileLayer.on('tileerror', () => {});
+    this.#tileLayer.on('loading', () => {
+      eventBus.emit('map:tiles-loading', {});
+    });
+    this.#tileLayer.on('load', () => {
+      eventBus.emit('map:tiles-loaded', {});
+    });
+    this.#tileLayer.on('tileerror', (event) => {
+      eventBus.emit('map:tiles-error', { error: event?.error });
+    });
   }
 
   /**
@@ -371,8 +390,8 @@ export class MapRenderer {
     const bounds = this.#L.latLngBounds([clickCoords, endNorm]);
     const fitBoundsOptions = {
       ...MAP_ANIMATIONS.SHOW_RESULT,
-      padding: [60, 60],
-      maxZoom: 14,
+      padding: MAP_VIEW.RESULT_FIT_PADDING,
+      maxZoom: MAP_VIEW.RESULT_FIT_MAX_ZOOM,
     };
     this.#map.flyToBounds(bounds, fitBoundsOptions);
     await waitForMapSettled(this.#map);

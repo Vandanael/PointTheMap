@@ -1,16 +1,27 @@
 /**
  * Error Monitoring Service
  *
- * Centralized error tracking and reporting
- * Ready to connect to: Sentry, Rollbar, or custom error tracking
+ * Centralized error tracking and reporting.
+ * Batches errors and sends them to /api/error-report.
  */
 
 import { logger } from '../utils/logger.js';
 import { eventBus } from '../core/EventBus.js';
 
+const MAX_QUEUE_SIZE = 20;
+const FLUSH_DELAY_MS = 5000;
+const ERROR_REPORT_URL = '/api/error-report';
+
 class ErrorMonitoring {
   #enabled = false;
   #initialized = false;
+  #providerReady = false;
+  /** @type {Array<{message: string, stack?: string, context?: string, type?: string}>} */
+  #queue = [];
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  #flushTimeout = null;
+  /** @type {Set<string>} */
+  #seen = new Set();
 
   /**
    * Initialize error monitoring
@@ -31,10 +42,10 @@ class ErrorMonitoring {
     }
   }
 
-  /**
-   * Initialize error monitoring provider (Sentry, Rollbar, etc.)
-   */
-  #initializeProvider() {}
+  #initializeProvider() {
+    this.#providerReady = true;
+    window.addEventListener('beforeunload', () => this.#flush());
+  }
 
   /**
    * Setup global error handlers
@@ -90,19 +101,65 @@ class ErrorMonitoring {
   }
 
   /**
-   * Send error to monitoring provider
+   * Queue error for batched sending
    * @param {Error|string} error - Error object or message
    * @param {Object} context - Additional context
    */
   #sendToProvider(error, context) {
-    // For now, just log
-    logger.error('[ErrorMonitoring] Error captured:', error, context);
+    const serialized = this.#serializeError(error);
+    const contextStr = context?.type || context?.message || '';
+    const dedupeKey = serialized.message + '|' + contextStr;
+
+    if (this.#seen.has(dedupeKey)) return;
+    this.#seen.add(dedupeKey);
+
+    this.#queue.push({
+      message: serialized.message,
+      stack: serialized.stack,
+      context: contextStr.slice(0, 100),
+      type: serialized.name,
+    });
+
+    // Cap queue size
+    if (this.#queue.length > MAX_QUEUE_SIZE) {
+      this.#queue.shift();
+    }
+
+    // Debounce flush
+    if (this.#flushTimeout) clearTimeout(this.#flushTimeout);
+    this.#flushTimeout = setTimeout(() => this.#flush(), FLUSH_DELAY_MS);
+  }
+
+  /**
+   * Send queued errors to the server
+   */
+  #flush() {
+    if (this.#queue.length === 0 || !this.#providerReady) return;
+
+    const errors = this.#queue.splice(0);
+    this.#flushTimeout = null;
+    const payload = JSON.stringify({ errors });
+
+    // Use sendBeacon for reliability (works during page unload)
+    if (navigator.sendBeacon) {
+      const blob = new Blob([payload], { type: 'application/json' });
+      navigator.sendBeacon(ERROR_REPORT_URL, blob);
+    } else {
+      fetch(ERROR_REPORT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload,
+        keepalive: true,
+      }).catch(() => {
+        // Silently fail — we can't report errors about error reporting
+      });
+    }
   }
 
   /**
    * Serialize error for transmission
    * @param {Error|string} error - Error to serialize
-   * @returns {Object} Serialized error
+   * @returns {{ message: string, stack?: string, name?: string }}
    */
   #serializeError(error) {
     if (typeof error === 'string') {
@@ -118,18 +175,6 @@ class ErrorMonitoring {
     }
 
     return { message: String(error) };
-  }
-
-  /**
-   * Send data using sendBeacon for reliability
-   * @param {string} url - Endpoint URL
-   * @param {Object} data - Data to send
-   */
-  #sendBeacon(url, data) {
-    if (navigator.sendBeacon) {
-      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-      navigator.sendBeacon(url, blob);
-    }
   }
 
   /**

@@ -23,7 +23,7 @@ export const Modal = (id, content, fullScreen = true) => `
  * @param {boolean} [fullWidth=true]
  * @param {boolean} [pulse=false]
  */
-export const Button = (id, text, variant = 'primary', fullWidth = true, pulse = false) => {
+const Button = (id, text, variant = 'primary', fullWidth = true, pulse = false) => {
   /** @type {Record<"primary" | "secondary", string>} */
   const variants = {
     primary: 'bg-yellow-400 hover:bg-yellow-300 text-black',
@@ -39,11 +39,12 @@ export const Button = (id, text, variant = 'primary', fullWidth = true, pulse = 
 
 export const LoadingSpinner = () => `
   <div id="loading-spinner" class="fixed inset-0 flex items-center justify-center" style="background: var(--bg-primary); z-index: var(--z-overlay);" role="status" aria-live="polite" aria-busy="true">
-    <div class="w-full max-w-md px-8">
+    <div class="w-full max-w-md px-8 text-center">
       <!-- Barre de progression jaune -->
       <div class="w-full h-1 rounded-full overflow-hidden" style="background: var(--bg-tertiary);">
         <div id="loading-progress" class="h-full rounded-full" style="background: var(--accent); width: 100%; transform: scaleX(0); transform-origin: left; transition: transform 300ms ease-out;"></div>
       </div>
+      <p class="text-tertiary text-xs uppercase tracking-widest mt-4">${t('loadingMap')}</p>
     </div>
   </div>
 `;
@@ -65,11 +66,11 @@ export const GameHeader = (roundNum, totalRounds, totalScore) => {
     <div class="px-6 py-2 flex justify-between items-center" style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
       <div class="flex items-center gap-2">
         <div class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">${t('round')}</div>
-        <div class="text-lg font-black" style="color: var(--text-primary);">${roundNum}/${totalRounds}</div>
+        <div id="game-round" class="text-lg font-black" style="color: var(--text-primary);">${roundNum}/${totalRounds}</div>
       </div>
       <div class="flex items-center gap-2">
         <div class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">${t('score')}</div>
-        <div class="text-lg font-black text-yellow-400">${formatScore(totalScore)}</div>
+        <div id="game-score" class="text-lg font-black text-yellow-400">${formatScore(totalScore)} pts</div>
       </div>
     </div>
   </div>
@@ -91,7 +92,7 @@ export const QuestionModal = (capitalName, country) => {
         <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-3" id="findLabel">${t('find')}</div>
         <h2 class="text-5xl font-black text-primary mb-2" id="capitalName">${escapedCapital}</h2>
         <div class="text-secondary text-base mb-6" id="countryName">${escapedCountry}</div>
-        <div class="modal-section rounded-xl p-4 text-secondary text-sm" id="clickMapLabel">
+        <div class="modal-section rounded-xl p-4 text-primary text-sm" id="clickMapLabel">
           ${t('clickOnMap')}
         </div>
       </div>
@@ -115,7 +116,7 @@ export const QuestionModalWithButton = (capitalName, country) => {
         <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-3" id="findLabel">${t('find')}</div>
         <h2 class="text-5xl font-black text-primary mb-2" id="capitalName">${escapedCapital}</h2>
         <div class="text-secondary text-base mb-6" id="countryName">${escapedCountry}</div>
-        <div class="modal-section rounded-xl p-4 text-secondary text-sm mb-6" id="clickMapLabel">
+        <div class="modal-section rounded-xl p-4 text-primary text-sm mb-6" id="clickMapLabel">
           ${t('clickOnMap')}
         </div>
         ${Button('btn-ready', t('start'), 'primary')}
@@ -135,9 +136,12 @@ export const QuestionModalWithButton = (capitalName, country) => {
  */
 export const RoundResult = (distance, score, isTimeout, isLast, baseScore, timeBonus) => {
   /**
-   * @param {number} distanceKm
+   * @param {number | null} distanceKm
    */
   const formatDistance = (distanceKm) => {
+    if (distanceKm === null || !Number.isFinite(distanceKm)) {
+      return t('distanceUnknown');
+    }
     if (distanceKm < 1) {
       return `${Math.round(distanceKm * 1000)} m`;
     }
@@ -177,7 +181,7 @@ export const RoundResult = (distance, score, isTimeout, isLast, baseScore, timeB
           <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="distanceLabel">${t('timeUp')}</div>
           <div class="text-3xl font-black text-primary mb-6" id="distanceDisplay">${t('tooSlow')}</div>
           <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="pointsEarnedLabel">${t('pointsEarned')}</div>
-          <div class="text-6xl font-black text-yellow-400 mb-2" id="pointsDisplay">0</div>
+          <div class="text-6xl font-black text-yellow-400 mb-2" id="pointsDisplay">0 pts</div>
         </div>
         ${Button('btn-next', isLast ? t('seeResults') : t('continue'), 'primary')}
       </div>
@@ -208,20 +212,20 @@ export const RoundResult = (distance, score, isTimeout, isLast, baseScore, timeB
         <div id="resultIcon" class="text-6xl mb-4">${getIcon()}</div>
         ${categoryLabel ? `<div class="text-xl font-bold text-primary mb-2" id="categoryLabel">${categoryLabel}</div>` : ''}
         <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="distanceLabel">${t('distance')}</div>
-        <div class="text-3xl font-black text-primary mb-6" id="distanceDisplay">${formatDistance(distance ?? 0)}</div>
+        <div class="text-5xl font-black text-primary mb-6" id="distanceDisplay">${formatDistance(distance)}</div>
 
         <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="pointsEarnedLabel">${t('pointsEarned')}</div>
         ${
           hasTimeBonus
             ? `
           <div class="mb-4">
-            <div class="text-2xl font-bold text-primary mb-1">${t('base')}: ${formatScore(baseScore || 0)}</div>
-            <div class="text-3xl font-black text-green-400 mb-2 animate-bounce">⚡ ${t('speedBonus')}: +${formatScore(timeBonus)}</div>
-            <div class="text-5xl font-black text-yellow-400 animate-pulse" id="pointsDisplay">${formatScore(score)}</div>
+            <div class="text-2xl font-bold text-primary mb-1">${t('base')}: ${formatScore(baseScore || 0)} pts</div>
+            <div class="text-3xl font-black text-green-400 mb-2 animate-bounce">⚡ ${t('speedBonus')}: +${formatScore(timeBonus)} pts</div>
+            <div class="text-5xl font-black text-yellow-400 animate-pulse" id="pointsDisplay">${formatScore(score)} pts</div>
           </div>
         `
             : `
-          <div class="text-6xl font-black text-yellow-400 mb-2" id="pointsDisplay">${formatScore(score)}</div>
+          <div class="text-6xl font-black text-yellow-400 mb-2" id="pointsDisplay">${formatScore(score)} pts</div>
         `
         }
       </div>
@@ -381,7 +385,7 @@ export const GameOverScreen = (totalScore, lastPseudo = '') => {
       </h2>
       <div class="text-center mb-8">
         <div class="text-tertiary text-xs uppercase tracking-widest mb-3" id="finalScoreLabel">${t('finalScore')}</div>
-        <div class="text-8xl font-black text-primary mb-4" id="finalScoreDisplay">${formatScore(totalScore)}</div>
+        <div class="text-6xl md:text-7xl font-black text-primary mb-4" id="finalScoreDisplay">${formatScore(totalScore)} pts</div>
       </div>
 
       <!-- Pseudo input -->
@@ -434,7 +438,7 @@ export const FinalResults = (totalScore, pseudo, rank, isTopFifty, isNewSessionB
       ${isNewSessionBest ? t('newPersonalBest') : isTopFifty ? t('top50') : t('scoreSaved')}
     </h2>
     <div class="text-center mb-6">
-      <div class="text-8xl font-black text-yellow-400 mb-2">${formatScore(totalScore)}</div>
+      <div class="text-6xl md:text-7xl font-black text-yellow-400 mb-2">${formatScore(totalScore)} pts</div>
       <div class="text-secondary text-xl">
         <span class="font-mono font-bold text-primary">${escapedPseudo}</span> · ${t('rank')} #${rank}
       </div>
@@ -456,7 +460,7 @@ export const FinalResults = (totalScore, pseudo, rank, isTopFifty, isNewSessionB
  * @param {number} time
  * @param {boolean} [isHighlighted=false]
  */
-export const LeaderboardRow = (rank, pseudo, score, time, isHighlighted = false) => {
+const LeaderboardRow = (rank, pseudo, score, time, isHighlighted = false) => {
   const medals = ['🥇', '🥈', '🥉'];
   const rankDisplay = rank <= 3 ? medals[rank - 1] : `#${rank}`;
   const escapedPseudo = escapeHtml(pseudo);
@@ -468,7 +472,7 @@ export const LeaderboardRow = (rank, pseudo, score, time, isHighlighted = false)
         <span class="font-mono font-bold ${isHighlighted ? 'text-yellow-400' : ''}" style="${!isHighlighted ? 'color: var(--text-primary);' : ''}">${escapedPseudo}</span>
       </div>
       <div class="text-right">
-        <span class="font-bold ${isHighlighted ? 'text-yellow-400' : ''}" style="${!isHighlighted ? 'color: var(--text-primary);' : ''}">${formatScore(score)}</span>
+        <span class="font-bold ${isHighlighted ? 'text-yellow-400' : ''}" style="${!isHighlighted ? 'color: var(--text-primary);' : ''}">${formatScore(score)} pts</span>
         <span class="text-sm ml-2" style="color: var(--text-tertiary);">${(time / 1000).toFixed(1)}s</span>
       </div>
     </div>
@@ -476,7 +480,7 @@ export const LeaderboardRow = (rank, pseudo, score, time, isHighlighted = false)
 };
 
 // Skeleton row for loading state
-export const LeaderboardSkeletonRow = () => `
+const LeaderboardSkeletonRow = () => `
   <div class="flex items-center justify-between py-3 px-4" style="border-bottom: 1px solid var(--border-color);">
     <div class="flex items-center gap-3">
       <div class="w-8 h-6 rounded" style="background: var(--bg-primary); opacity: 0.3; animation: pulse 1.5s ease-in-out infinite;"></div>
@@ -495,7 +499,7 @@ export const LeaderboardSkeletonRow = () => `
  * @param {boolean} [loading=false]
  */
 export const Leaderboard = (scores, highlightPseudo = null, loading = false, error = null) => `
-  <div id="leaderboard-content" class="rounded-xl max-h-[400px]" role="list" aria-label="${t('leaderboardTitle')}" style="background: var(--bg-tertiary); overflow: hidden;">
+  <div id="leaderboard-content" class="leaderboard-panel rounded-xl max-h-[400px]" role="list" aria-label="${t('leaderboardTitle')}" style="background: var(--bg-tertiary);">
     ${
       loading
         ? // Skeleton loading
@@ -506,7 +510,7 @@ export const Leaderboard = (scores, highlightPseudo = null, loading = false, err
         : error
           ? `
       <!-- Network/server error -->
-      <div class="text-center py-8">
+      <div class="leaderboard-center-state text-center py-8">
         <div class="text-4xl mb-4">⚠️</div>
         <p class="text-tertiary mb-4">${t('error.leaderboardRetry')}</p>
         <button id="btn-retry-leaderboard" class="text-yellow-400 hover:text-yellow-300 font-bold">
@@ -517,7 +521,7 @@ export const Leaderboard = (scores, highlightPseudo = null, loading = false, err
           : scores.length === 0
             ? `
       <!-- No scores yet (empty state) -->
-      <div class="text-center py-8">
+      <div class="leaderboard-center-state text-center py-8">
         <div class="text-4xl mb-4">🏆</div>
         <p class="text-primary font-bold mb-2">${t('leaderboard.empty.title')}</p>
         <p class="text-tertiary text-sm">${t('leaderboard.empty.description')}</p>
@@ -615,18 +619,18 @@ export const LeaderboardModal = (scores, currentType = MODE_IDS.CLASSIC, loading
   return `
     <div id="leaderboard-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-overlay);" role="dialog" aria-modal="true">
       <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
-        <h2 class="text-3xl font-black text-primary mb-6 text-center tracking-tight uppercase" id="leaderboardTitle">
+        <h2 class="text-3xl font-black text-primary mb-6 text-center tracking-tight uppercase leaderboard-title" id="leaderboardTitle">
           ${t('leaderboardTitle')}
         </h2>
 
         <!-- Row 1: Variant (Classic / Daily) -->
-        <div class="flex gap-2 mb-3">
+        <div class="flex gap-2 mb-3 leaderboard-variant-row">
           ${variantBtn('btn-leaderboard-classic', t('classic'), 'classic')}
           ${variantBtn('btn-leaderboard-daily', t('daily'), 'daily')}
         </div>
 
         <!-- Row 2: Category -->
-        <div class="flex gap-2 mb-6">
+        <div class="flex gap-2 mb-6 leaderboard-category-row">
           ${categoryBtn('btn-leaderboard-cat-capitals', t('capitals'), 'capitals')}
           ${categoryBtn('btn-leaderboard-cat-countries', t('countries'), 'countries')}
           ${categoryBtn('btn-leaderboard-cat-stadiums', t('stadiums'), 'stadiums')}
@@ -663,6 +667,38 @@ export const PseudoLockedDialog = (pseudo) => {
 };
 
 /**
+ * Resume in-progress game dialog
+ */
+export const ResumePrompt = () => `
+  <div id="resume-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-modal);" role="dialog" aria-modal="true">
+    <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
+      <div class="text-center mb-6">
+        <div class="text-3xl font-black text-primary mb-3">${t('resumePromptTitle')}</div>
+        <div class="text-secondary text-base">${t('resumePromptMessage')}</div>
+      </div>
+      <div class="flex gap-3">
+        ${Button('btn-resume-continue', t('resumePromptResume'), 'primary')}
+        ${Button('btn-resume-discard', t('resumePromptDiscard'), 'secondary')}
+      </div>
+    </div>
+  </div>
+`;
+
+/**
+ * Map init error modal
+ * @param {string} message
+ */
+export const MapErrorModal = (message) => `
+  <div id="map-error-modal" class="fixed inset-0 modal-bg flex items-start justify-center p-4 modal-top-center" style="z-index: var(--z-modal);" role="dialog" aria-modal="true">
+    <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content text-center">
+      <div class="text-3xl font-black text-primary mb-4">${t('error.title')}</div>
+      <div class="text-secondary text-base mb-8">${escapeHtml(message)}</div>
+      ${Button('btn-map-error-ok', t('ok'), 'primary')}
+    </div>
+  </div>
+`;
+
+/**
  * Toast notification component
  * @param {string} id - Toast ID
  * @param {string} message - Message to display
@@ -684,28 +720,38 @@ export const Toast = (id, message, type = 'info', options = {}) => {
   const icon = compact ? '' : icons[type] || icons.info;
   const colorClass = `toast-${type}`;
   const wrapperClass = compact
-    ? 'fixed bottom-8 left-1/2 -translate-x-1/2 max-w-xs w-full px-3 toast-slide-up'
-    : 'fixed bottom-8 left-1/2 -translate-x-1/2 max-w-md w-full px-4 toast-slide-up';
+    ? 'fixed top-6 left-1/2 -translate-x-1/2 max-w-xs w-full px-3 toast-slide-up'
+    : 'fixed top-6 left-1/2 -translate-x-1/2 max-w-md w-full px-4 toast-slide-up';
   const innerClass = compact
     ? `${colorClass} text-white rounded-lg shadow-lg py-2.5 px-3 flex items-center gap-2 ${center ? 'justify-center' : ''}`
     : `${colorClass} text-white rounded-xl shadow-lg p-4 flex items-start gap-3`;
   const textClass = compact
     ? `flex-1 text-sm font-medium ${center ? 'text-center' : ''}`
     : 'flex-1 text-sm font-medium';
-  const closeClass = compact
-    ? 'shrink-0 text-white hover:text-gray-200 text-lg leading-none'
-    : 'shrink-0 text-white hover:text-gray-200 text-xl leading-none';
 
   return `
     <div id="${id}" class="${wrapperClass}" style="z-index: var(--z-toast);" role="alert" aria-live="assertive">
       <div class="${innerClass}">
         ${icon ? `<span class="text-2xl shrink-0">${icon}</span>` : ''}
         <div class="${textClass}" style="line-height: 1.5;">${escapeHtml(message)}</div>
-        <button id="${id}-close" class="${closeClass}" aria-label="Close notification">×</button>
       </div>
     </div>
   `;
 };
+
+/**
+ * Map tiles error banner with retry action.
+ * @param {string} message
+ * @param {string} buttonLabel
+ */
+export const MapTilesErrorBanner = (message, buttonLabel) => `
+  <div id="tiles-error-banner" class="tiles-error-banner" role="alert" aria-live="assertive">
+    <div class="tiles-error-content">
+      <div class="tiles-error-text">${escapeHtml(message)}</div>
+      <button id="btn-tiles-retry" class="tiles-error-retry">${escapeHtml(buttonLabel)}</button>
+    </div>
+  </div>
+`;
 
 /**
  * Stats modal component
@@ -773,6 +819,7 @@ export const MyStatsModal = (stats) => {
  * @param {string} achievementId
  * @param {{id: string, icon: string, labelKey: string, descKey: string}} achievement
  */
+
 export const AchievementUnlockModal = (achievementId, achievement) => {
   return `
     <div id="achievement-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4 achievement-fade-in"

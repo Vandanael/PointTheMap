@@ -42,7 +42,7 @@ export const RESULT_LINES = LINE_STYLE;
 import { SCORING_THRESHOLDS } from '@lib/config';
 
 // Distance thresholds and colors (using shared constants)
-export const DISTANCE_COLORS = {
+const DISTANCE_COLORS = {
   EXCELLENT: { threshold: SCORING_THRESHOLDS.VISUAL_EXCELLENT, color: '#22c55e' }, // < 100km → green
   GOOD: { threshold: SCORING_THRESHOLDS.VISUAL_GOOD, color: '#facc15' }, // < 500km → yellow
   DEFAULT: { color: '#94a3b8' }, // >= 500km → gray
@@ -66,6 +66,12 @@ export const MAP_ANIMATIONS = {
   },
 };
 
+export const MAP_VIEW = {
+  SAVE_VIEW_DEBOUNCE_MS: 300,
+  RESULT_FIT_PADDING: [60, 60],
+  RESULT_FIT_MAX_ZOOM: 14,
+};
+
 // UI timings
 export const UI_TIMING = {
   QUESTION_AUTO_CLOSE: 2400, // Auto-close question modal after 2.4s
@@ -74,6 +80,7 @@ export const UI_TIMING = {
   INPUT_ERROR_SHAKE: 500, // Duration to keep shake animation class
   TOAST_SLIDE_OUT: 300, // Toast slide-out animation duration
   DEBOUNCE_SUBMIT: 1000, // Debounce delay for submit button
+  ROUND_TRANSITION_MS: 150, // Delay between round result and next question
 };
 
 /**

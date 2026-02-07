@@ -5,7 +5,7 @@
   --bg-secondary: #0f172a;
   --bg-tertiary: #1e293b;
   --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
+  --text-secondary: #a7b4c7;
   --text-tertiary: #64748b;
   --border-color: #1e293b;
   --accent: #facc15;
@@ -38,7 +38,7 @@ body.light-theme {
   --bg-secondary: #ebe8e3; /* Beige/gris moyen - cartes et éléments secondaires */
   --bg-tertiary: #ddd9d2; /* Beige/gris foncé - éléments tertiaires */
   --text-primary: #1a1816; /* Presque noir mais légèrement adouci */
-  --text-secondary: #3a3834; /* Darker for better contrast (was #4a4844) */
+  --text-secondary: #2f2d29; /* Darker for better contrast */
   --text-tertiary: #5b5853; /* Darker for better contrast (was #6b6863) */
   --border-color: #c9c5be; /* Bordure visible mais douce */
 
@@ -83,23 +83,48 @@ body {
   left: 0;
 }
 
-/* Uniquement en dark mode (body sans .light-theme) : éclaircir la carte pour mieux distinguer mers et océans (tuiles Carto inchangées) */
-body:not(.light-theme) #map {
-  filter: brightness(1.1) contrast(1.15) saturate(1.05);
+/* Map lock visual feedback: darken map + lock badge while clicks are disabled */
+#map::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(2, 6, 23, 0.14);
+  opacity: 0;
+  transition: opacity 120ms ease-out;
 }
 
-body.light-theme #map {
-  filter: brightness(0.95) contrast(1.25) saturate(1.1);
+body.map-locked #map {
+  cursor: not-allowed;
 }
 
-/* Mobile : renforcer la lisibilité de la carte dans les deux thèmes (écrans petits, luminosité variable) */
-@media (max-width: 768px) {
-  body:not(.light-theme) #map {
-    filter: brightness(1.15) contrast(1.2) saturate(1.1);
-  }
-  body.light-theme #map {
-    filter: brightness(0.93) contrast(1.3) saturate(1.15);
-  }
+body.map-locked #map::after {
+  opacity: 1;
+}
+
+body.map-locked:not(.start-screen-visible)::before {
+  content: attr(data-map-lock-label);
+  position: fixed;
+  top: calc(max(0.5rem, env(safe-area-inset-top)) + 3rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: calc(var(--z-base) + 3);
+  pointer-events: none;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #020617;
+  background: rgba(250, 204, 21, 0.92);
+  border: 1px solid rgba(250, 204, 21, 1);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+}
+
+body.light-theme.map-locked:not(.start-screen-visible)::before {
+  color: #1a1816;
+  background: rgba(250, 204, 21, 0.9);
 }
 
 /* iOS: Désactiver le callout de sélection lors des appuis longs sur la carte */
@@ -188,8 +213,8 @@ body.light-theme #map {
 }
 
 .skeleton-play {
-  height: 3.5rem;
-  border-radius: 1rem;
+  height: 3.25rem;
+  border-radius: 0.75rem;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
 }
@@ -724,15 +749,10 @@ body.light-theme .result-line-distance {
   transform: scale(0.95);
 }
 
-/* Leaderboard button: no hover/active visual state on load */
 @media (hover: hover) and (pointer: fine) {
   #btn-leaderboard:hover {
-    background: var(--bg-tertiary);
+    box-shadow: 0 0 10px rgba(250, 204, 21, 0.35);
   }
-}
-
-#btn-leaderboard:active {
-  transform: none;
 }
 
 /* Modal styles */
@@ -841,12 +861,6 @@ button:focus-visible,
 }
 
 /* Leaderboard button: no focus ring */
-#btn-leaderboard:focus-visible,
-#btn-leaderboard:focus {
-  outline: none;
-}
-
-/* Remove focus ring for mouse clicks */
 button:focus:not(:focus-visible),
 .toggle-btn:focus:not(:focus-visible),
 .category-btn:focus:not(:focus-visible) {
@@ -867,6 +881,29 @@ button[disabled] {
   opacity: 0.6;
   cursor: not-allowed;
   filter: grayscale(0.3);
+}
+
+button.btn-loading {
+  position: relative;
+}
+
+button.btn-loading::after {
+  content: '';
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-left: 0.6rem;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 999px;
+  vertical-align: -0.1em;
+  animation: btn-spin 0.8s linear infinite;
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Toast colors */
@@ -890,6 +927,11 @@ body {
     color 0.3s ease;
 }
 
+body.app-resetting .game-header > div {
+  opacity: 0.6;
+  transform: translateY(-6px);
+}
+
 .modal-card,
 .modal-bg,
 .modal-section,
@@ -907,11 +949,229 @@ body {
     border-color 0.3s ease;
 }
 
+.modal-top-center {
+  padding-top: 10vh;
+  align-items: flex-start;
+}
+
 /* Safe area padding pour iPhone notch */
 .game-header > div {
   padding-top: max(0.5rem, env(safe-area-inset-top));
   padding-left: max(1.5rem, env(safe-area-inset-left));
   padding-right: max(1.5rem, env(safe-area-inset-right));
+}
+
+#game-score {
+  display: inline-block;
+  min-width: 10ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+/* Leaderboard layout stability */
+#leaderboard-content {
+  min-height: 320px;
+}
+
+.leaderboard-panel {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable both-edges;
+  contain: layout paint;
+}
+
+.leaderboard-center-state {
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.leaderboard-title {
+  min-height: 2.75rem;
+}
+
+.leaderboard-variant-row,
+.leaderboard-category-row {
+  min-height: 2.75rem;
+}
+
+/* Compact HUD for short viewports */
+@media (max-height: 640px) {
+  .game-header > div {
+    padding-top: max(0.25rem, env(safe-area-inset-top));
+    padding-bottom: 0.25rem;
+  }
+
+  #game-header .text-lg {
+    font-size: 1rem;
+  }
+
+  #game-header .text-xs {
+    font-size: 0.65rem;
+  }
+
+  #timer-bar {
+    height: 6px !important;
+  }
+}
+
+/* Extra-compact header for very small screens */
+@media (max-width: 360px) {
+  .game-header > div {
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+  }
+
+  #game-header .text-lg {
+    font-size: 0.95rem;
+  }
+
+  #game-header .text-xs {
+    font-size: 0.6rem;
+  }
+
+  #game-score {
+    min-width: 8ch;
+  }
+}
+
+/* Round change pulse */
+@keyframes round-pulse {
+  0% {
+    transform: scale(1);
+    text-shadow: none;
+  }
+  40% {
+    transform: scale(1.08);
+    text-shadow: 0 0 8px rgba(250, 204, 21, 0.5);
+  }
+  100% {
+    transform: scale(1);
+    text-shadow: none;
+  }
+}
+
+.round-pulse {
+  animation: round-pulse 280ms ease-out;
+}
+
+/* Round transition overlay */
+.round-transition {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 6, 23, 0.35);
+  backdrop-filter: blur(2px);
+  z-index: calc(var(--z-modal) - 1);
+  pointer-events: none;
+}
+
+body.light-theme .round-transition {
+  background: rgba(245, 243, 240, 0.6);
+}
+
+.round-transition-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.round-transition-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.round-transition-title {
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--text-primary);
+}
+
+.round-transition-dots {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+.round-transition-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  animation: round-dot 1s infinite ease-in-out;
+}
+
+.round-transition-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.round-transition-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes round-dot {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+/* Timer danger: add non-color cue */
+#timer-bar {
+  position: relative;
+}
+
+#timer-bar.timer-danger::after {
+  content: 'HURRY';
+  position: absolute;
+  right: 8px;
+  top: -18px;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+  color: #f8fafc;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  animation: pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes danger-wobble {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-2px);
+  }
+  40% {
+    transform: translateX(2px);
+  }
+  60% {
+    transform: translateX(-1px);
+  }
+  80% {
+    transform: translateX(1px);
+  }
+}
+
+#timer-bar.timer-danger-start {
+  animation: danger-wobble 160ms ease-out;
 }
 
 /* Toast notification animations */
@@ -945,6 +1205,46 @@ body {
   animation: toast-slide-down 0.3s cubic-bezier(0.7, 0, 0.84, 0) forwards;
 }
 
+/* Map tiles error banner */
+.tiles-error-banner {
+  position: fixed;
+  top: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-toast);
+  width: min(560px, calc(100vw - 2rem));
+}
+
+.tiles-error-content {
+  background: #dc2626;
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.6rem 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.tiles-error-text {
+  flex: 1;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.tiles-error-retry {
+  background: #fff;
+  color: #7f1d1d;
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-weight: 800;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
 /* Achievement unlock animations */
 .achievement-fade-in {
   animation: fadeIn 0.3s ease-in;
@@ -973,17 +1273,18 @@ body {
 /* Container - fixed top offset so title stays at same position before and after
    load (skeleton vs full start screen), preventing layout shift. */
 .lobby-container {
-  padding-top: 12vh;
-  padding-bottom: 1rem;
-  align-items: flex-start;
-  justify-content: flex-start;
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+  align-items: center;
+  justify-content: center;
 }
 
 @media (min-width: 1024px) {
   .lobby-container {
-    padding-top: 16vh;
-    align-items: flex-start;
-    justify-content: flex-start;
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    align-items: center;
+    justify-content: center;
   }
 }
 

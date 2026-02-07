@@ -48,7 +48,7 @@ export class StateManager {
     // Clone prevState to prevent accidental mutations in updater functions
     const nextState =
       typeof stateOrUpdater === 'function'
-        ? stateOrUpdater(structuredClone(prevState))
+        ? stateOrUpdater(this.#cloneState(prevState))
         : stateOrUpdater;
 
     // Validate new state
@@ -67,6 +67,22 @@ export class StateManager {
     eventBus.emit('state:changed', { state: nextState, prevState, action });
 
     return nextState;
+  }
+
+  /**
+   * Clone state with fallback for older browsers.
+   * @param {any} value
+   * @returns {any}
+   */
+  #cloneState(value) {
+    if (typeof structuredClone === 'function') {
+      return structuredClone(value);
+    }
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch {
+      return value;
+    }
   }
 
   /**

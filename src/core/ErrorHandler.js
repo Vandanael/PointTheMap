@@ -175,6 +175,7 @@ class ErrorHandler {
   getUserFriendlyMessage(error, context) {
     // API errors with specific handling
     if (error instanceof APIError) {
+      if (error.message === 'TIMEOUT' || error.data?.timeout) return t('error.loadTimeout');
       if (error.status === 429) return t('error.rateLimit');
       if (error.status === 403) return t('error.forbidden');
       if (error.status === 401) return t('error.sessionExpired');
@@ -325,7 +326,7 @@ export const errorHandler = new ErrorHandler();
  * @param {unknown} error
  * @returns {Error}
  */
-export const toError = (error) => {
+const toError = (error) => {
   if (error instanceof Error) return error;
   return new Error(typeof error === 'string' ? error : String(error));
 };
@@ -352,22 +353,6 @@ export const handleError = (error, context = 'unknown', options = {}) => {
 export const safeAsync = async (fn, context, fallback = null) => {
   try {
     return await fn();
-  } catch (error) {
-    handleError(error, context, { showToUser: true });
-    return fallback;
-  }
-};
-
-/**
- * Helper to safely execute sync functions with error handling
- * @param {Function} fn - Function to execute
- * @param {string} context - Context name
- * @param {any} fallback - Fallback value on error
- * @returns {any} Result or fallback
- */
-export const safe = (fn, context, fallback = null) => {
-  try {
-    return fn();
   } catch (error) {
     handleError(error, context, { showToUser: true });
     return fallback;

@@ -4,15 +4,13 @@
  */
 
 import { readFileSync } from 'fs';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { resolve } from 'path';
 import { createLogger } from './_utils.js';
 import { GeoJSONSchema } from '../../lib/schemas/geojson.js';
 
 const logger = createLogger('geo-data');
 
-// Use a distinct name to avoid "Identifier '__dirname' has already been declared" when esbuild injects __dirname
-const geoDataDir = dirname(fileURLToPath(import.meta.url));
+const projectRoot = process.cwd();
 
 /** @type {Map<string, Object> | null} */
 let countryLookup = null;
@@ -28,7 +26,7 @@ function loadCountries() {
   if (countryLookup) return countryLookup;
 
   try {
-    const filePath = resolve(geoDataDir, '../../public/data/countries.geojson');
+    const filePath = resolve(projectRoot, 'public/data/countries.geojson');
     const parsed = JSON.parse(readFileSync(filePath, 'utf-8'));
     const validated = GeoJSONSchema.safeParse(parsed);
     if (!validated.success) {
@@ -63,7 +61,7 @@ function loadCivilizations() {
   if (civilizationLookup) return civilizationLookup;
 
   try {
-    const filePath = resolve(geoDataDir, '../../public/data/civilizations.geojson');
+    const filePath = resolve(projectRoot, 'public/data/civilizations.geojson');
     const parsed = JSON.parse(readFileSync(filePath, 'utf-8'));
     const validated = GeoJSONSchema.safeParse(parsed);
     if (!validated.success) {

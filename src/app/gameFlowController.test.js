@@ -19,9 +19,12 @@ describe('gameFlowController', () => {
       mapSystem: {
         clearMap: vi.fn(),
         flyTo: vi.fn(),
+        flyToFeatureBounds: vi.fn(() => true),
         enableClicks: vi.fn(),
         disableClicks: vi.fn(),
         isInView: vi.fn(() => false),
+        getCountryFeatureById: vi.fn(() => ({})),
+        getCivilizationFeatureById: vi.fn(() => ({})),
         highlightCountries: vi.fn(),
         highlightCivilizations: vi.fn(),
         showRoundResult: vi.fn().mockResolvedValue(undefined),
@@ -177,6 +180,8 @@ describe('gameFlowController', () => {
         correctCountryId: 'FRA',
         clickedCountryId: 'ESP',
       });
+      expect(mockDeps.mapSystem.getCountryFeatureById).toHaveBeenCalledWith('FRA');
+      expect(mockDeps.mapSystem.flyToFeatureBounds).toHaveBeenCalled();
       expect(mockDeps.mapSystem.showRoundResult).not.toHaveBeenCalled();
       expect(mockDeps.ui.showRoundResult).toHaveBeenCalled();
     });
@@ -210,6 +215,8 @@ describe('gameFlowController', () => {
         correctCivilizationId: 'roman_empire',
         clickedCivilizationId: 'ancient_greece',
       });
+      expect(mockDeps.mapSystem.getCivilizationFeatureById).toHaveBeenCalledWith('roman_empire');
+      expect(mockDeps.mapSystem.flyToFeatureBounds).toHaveBeenCalled();
       expect(mockDeps.mapSystem.showRoundResult).not.toHaveBeenCalled();
       expect(mockDeps.ui.showRoundResult).toHaveBeenCalled();
     });
@@ -306,6 +313,8 @@ describe('gameFlowController', () => {
         correctCountryId: 'DEU',
         clickedCountryId: null,
       });
+      expect(mockDeps.mapSystem.getCountryFeatureById).toHaveBeenCalledWith('DEU');
+      expect(mockDeps.mapSystem.flyToFeatureBounds).toHaveBeenCalled();
       expect(mockDeps.ui.showRoundResult).toHaveBeenCalledWith(
         null,
         0,

@@ -376,6 +376,22 @@ export default async function submitHandler(req, context) {
       return errorJson('suspicious_fast', 'Suspicious activity: too fast', 400);
     }
 
+    // Aggregate round timing sanity check (prevents impossible time bonuses)
+    const timeElapsedValues = rounds
+      .map((round) => round?.timeElapsed)
+      .filter((value) => typeof value === 'number' && Number.isFinite(value));
+    if (timeElapsedValues.length === rounds.length) {
+      const totalElapsed = timeElapsedValues.reduce((sum, value) => sum + value, 0);
+      if (totalElapsed > gameDuration + 1000) {
+        return errorJson(
+          'invalid_round_times',
+          'Round timings exceed total game duration',
+          400,
+          { totalElapsed, gameDuration }
+        );
+      }
+    }
+
     const validation = validateRounds(rounds, session.targets, session.gameType || 'classic');
     if (!validation.valid) {
       return errorJson('invalid_rounds', validation.error || 'Invalid rounds', 400);
@@ -459,23 +475,23 @@ export default async function submitHandler(req, context) {
             );
           }
         } else {
-          // Fallback: clamp client score (GeoJSON data missing for this country)
-          distance = round.distanceToTargetKm || 0;
-          serverScore = Math.min(
-            Math.max(Math.round(round.score || 0), 0),
-            GAME.MAX_SCORE_PER_ROUND
-          );
+          // If server cannot validate, do NOT trust client score.
+          logger.error('[submit] Missing country GeoJSON feature:', targetCountryId);
+          distance = null;
+          serverScore = 0;
         }
 
+        const safeDistance =
+          typeof distance === 'number' && Number.isFinite(distance) ? Math.round(distance) : null;
         return {
           country: round.country,
           countryId: round.countryId,
           correctCountryId: serverTarget.countryId,
           clickedCountryId: round.clickedCountryId,
           click: round.click,
-          distance: Math.round(distance),
+          distance: safeDistance,
           score: serverScore,
-          status: 'completed',
+          status: targetFeature ? 'completed' : 'invalid',
         };
       }
 
@@ -537,23 +553,23 @@ export default async function submitHandler(req, context) {
             );
           }
         } else {
-          // Fallback: clamp client score (GeoJSON data missing)
-          distance = round.distanceToTargetKm || 0;
-          serverScore = Math.min(
-            Math.max(Math.round(round.score || 0), 0),
-            GAME.MAX_SCORE_PER_ROUND
-          );
+          // If server cannot validate, do NOT trust client score.
+          logger.error('[submit] Missing civilization GeoJSON feature:', targetCivilizationId);
+          distance = null;
+          serverScore = 0;
         }
 
+        const safeDistance =
+          typeof distance === 'number' && Number.isFinite(distance) ? Math.round(distance) : null;
         return {
           civilization: round.civilization,
           civilizationId: round.civilizationId,
           correctCivilizationId: serverTarget.id,
           clickedCivilizationId: round.clickedCivilizationId,
           click: round.click,
-          distance: Math.round(distance),
+          distance: safeDistance,
           score: serverScore,
-          status: 'completed',
+          status: targetFeature ? 'completed' : 'invalid',
         };
       }
 

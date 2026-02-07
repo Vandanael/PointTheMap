@@ -1,10 +1,15 @@
 import { defineConfig } from 'vite';
-import { resolve } from 'path';
-import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import https from 'https';
 import { visualizer } from 'rollup-plugin-visualizer';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 /** Inlines critical CSS and loads full stylesheet async to shorten the critical request chain (avoids blocking LCP). */
-function criticalCssPreload() {
+function criticalCssPreload({ enabled = true } = {}) {
+  if (!enabled) return null;
   const criticalPath = resolve(process.cwd(), 'src/styles/critical.css');
   let criticalCss = '';
   try {
@@ -55,8 +60,116 @@ function criticalCssPreload() {
   };
 }
 
+function fetchUrlToFile(url, destination, maxRedirects = 3) {
+  return new Promise((resolvePromise, reject) => {
+    const request = https.get(url, (res) => {
+      const status = res.statusCode || 0;
+      const location = res.headers.location;
+      if ([301, 302, 303, 307, 308].includes(status) && location && maxRedirects > 0) {
+        res.resume();
+        const nextUrl = new URL(location, url).toString();
+        return resolvePromise(fetchUrlToFile(nextUrl, destination, maxRedirects - 1));
+      }
+      if (status < 200 || status >= 300) {
+        res.resume();
+        return reject(new Error(`Failed to fetch ${url} (status ${status})`));
+      }
+
+      const chunks = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', () => {
+        writeFileSync(destination, Buffer.concat(chunks));
+        resolvePromise();
+      });
+    });
+
+    request.on('error', reject);
+  });
+}
+
+function ensureLocalPlausibleScript() {
+  const plausibleUrl = 'https://plausible.io/js/pa-MWj6kC9TpD2-BKb6Pm-XK.js';
+  const localDir = resolve(process.cwd(), 'public/vendor');
+  const localPath = resolve(localDir, 'plausible.js');
+
+  if (existsSync(localPath) && process.env.PLAUSIBLE_REFRESH !== '1') {
+    return Promise.resolve();
+  }
+
+  mkdirSync(localDir, { recursive: true });
+  return fetchUrlToFile(plausibleUrl, localPath);
+}
+
+function plausibleAnalyticsLocal({ strictCsp = false } = {}) {
+  const inlineInit = `((window.plausible =
+        window.plausible ||
+        function () {
+          (plausible.q = plausible.q || []).push(arguments);
+        }),
+        (plausible.init =
+          plausible.init ||
+          function (i) {
+            plausible.o = i || {};
+          }));
+      plausible.init();`;
+
+  let enabled = true;
+
+  return {
+    name: 'plausible-analytics-local',
+    apply: 'build',
+    async buildStart() {
+      if (process.env.PLAUSIBLE_DISABLED === '1') return;
+      try {
+        await ensureLocalPlausibleScript();
+        if (strictCsp) {
+          const localDir = resolve(process.cwd(), 'public/vendor');
+          const initPath = resolve(localDir, 'plausible-init.js');
+          mkdirSync(localDir, { recursive: true });
+          writeFileSync(initPath, `${inlineInit}\n`);
+        }
+      } catch (error) {
+        enabled = false;
+        this.warn(`Plausible script download failed; analytics disabled. ${error.message}`);
+      }
+    },
+    transformIndexHtml: {
+      order: 'post',
+      handler(html) {
+        if (process.env.PLAUSIBLE_DISABLED === '1' || !enabled) return html;
+        const snippet = strictCsp
+          ? [
+              '<!-- Privacy-friendly analytics by Plausible (local copy) -->',
+              '<script async src="/vendor/plausible.js"></script>',
+              '<script src="/vendor/plausible-init.js"></script>',
+            ].join('\n    ')
+          : [
+              '<!-- Privacy-friendly analytics by Plausible (local copy) -->',
+              '<script async src="/vendor/plausible.js"></script>',
+              `<script>${inlineInit}</script>`,
+            ].join('\n    ');
+        return html.replace(/<\/head>/i, `  ${snippet}\n  </head>`);
+      },
+    },
+  };
+}
+
+const devCsp = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  "img-src 'self' data: https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com",
+  "connect-src 'self' ws: http://localhost:5173 http://localhost:5174 http://localhost:5190 http://localhost:8888 https://plausible.io",
+  "worker-src 'self' blob:",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join('; ');
+
 /** Inline tiny entry chunks to remove a critical JS request on first paint. */
-function inlineSmallEntry({ maxSize = 10 * 1024 } = {}) {
+function inlineSmallEntry({ maxSize = 10 * 1024, enabled = true } = {}) {
+  if (!enabled) return null;
   return {
     name: 'inline-small-entry',
     apply: 'build',
@@ -94,13 +207,27 @@ function inlineSmallEntry({ maxSize = 10 * 1024 } = {}) {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const isProd = mode === 'production';
+  return {
   // Enable bundle visualizer with ANALYZE=1
   publicDir: 'public',
   server: {
     // Disable HMR when WebSocket gets 400 (e.g. Cursor browser, embedded iframes).
     // Use: DISABLE_HMR=1 npm run dev
+    port: 5190,
+    strictPort: true,
     hmr: process.env.DISABLE_HMR === '1' ? false : true,
+    headers: {
+      'Content-Security-Policy': devCsp,
+      'X-Frame-Options': 'DENY',
+    },
+  },
+  preview: {
+    headers: {
+      'Content-Security-Policy': devCsp,
+      'X-Frame-Options': 'DENY',
+    },
   },
   build: {
     outDir: 'dist',
@@ -190,10 +317,16 @@ export default defineConfig({
     // Increase chunk size warning limit (for better code splitting)
     chunkSizeWarningLimit: 1000,
   },
-  plugins: [criticalCssPreload(), inlineSmallEntry()],
+  esbuild: isProd ? { pure: ['console.log', 'console.warn'] } : undefined,
+  plugins: [
+    criticalCssPreload({ enabled: process.env.STRICT_CSP !== '1' }),
+    inlineSmallEntry({ enabled: process.env.STRICT_CSP !== '1' }),
+    plausibleAnalyticsLocal({ strictCsp: process.env.STRICT_CSP === '1' }),
+  ].filter(Boolean),
   resolve: {
     alias: {
       '@lib': resolve(__dirname, './lib'),
     },
   },
+  };
 });

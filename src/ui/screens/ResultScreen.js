@@ -7,7 +7,13 @@ import { domCache as _domCache, render, remove, bindClick, app } from '../dom.js
 import { UI_TIMING } from '../../config/visual-constants.js';
 import { debounce } from '../../utils/performance.js';
 import { activateFocusTrap, deactivateFocusTrap } from '../../utils/focusTrap.js';
-import { GameOverScreen, FinalResults, PseudoLockedDialog, Toast } from '../components.js';
+import {
+  GameOverScreen,
+  FinalResults,
+  PseudoLockedDialog,
+  ResumePrompt,
+  Toast,
+} from '../components.js';
 
 // Rate limiting for submit button
 const MIN_SUBMIT_INTERVAL = 2000; // 2 seconds between submissions
@@ -233,6 +239,35 @@ export const createResultScreen = (deps) => {
   };
 
   /**
+   * Show resume prompt modal and resolve user choice.
+   * @returns {Promise<boolean>}
+   */
+  const showResumePrompt = () =>
+    new Promise((resolve) => {
+      remove('resume-modal');
+      render(ResumePrompt());
+
+      const close = (value) => {
+        deactivateFocusTrap();
+        remove('resume-modal');
+        _domCache.invalidate('resume-modal');
+        resolve(value);
+      };
+
+      bindClick('btn-resume-continue', () => close(true));
+      bindClick('btn-resume-discard', () => close(false));
+
+      const resumeModal = document.getElementById('resume-modal');
+      if (resumeModal) {
+        requestAnimationFrame(() =>
+          activateFocusTrap(/** @type {HTMLElement} */ (resumeModal), {
+            onEscape: () => close(false),
+          })
+        );
+      }
+    });
+
+  /**
    * @param {string} message
    * @param {ToastType} [type='info']
    * @param {number} [duration=5000]
@@ -243,9 +278,12 @@ export const createResultScreen = (deps) => {
     const toastId = `toast-${Date.now()}`;
     render(Toast(toastId, message, type, options));
 
-    bindClick(`${toastId}-close`, () => {
-      closeToast(toastId);
-    });
+    const closeBtn = document.getElementById(`${toastId}-close`);
+    if (closeBtn) {
+      bindClick(`${toastId}-close`, () => {
+        closeToast(toastId);
+      });
+    }
 
     if (duration > 0) {
       const timerId = setTimeout(() => {
@@ -296,6 +334,7 @@ export const createResultScreen = (deps) => {
     hideGameOver,
     showError,
     showPseudoLockedDialog,
+    showResumePrompt,
     showToast,
     closeToast,
     destroy,

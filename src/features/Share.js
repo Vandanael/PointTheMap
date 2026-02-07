@@ -7,6 +7,8 @@
 import { logger } from '../utils/logger.js';
 import { t } from '../i18n.js';
 
+const PUBLIC_URL = import.meta.env?.VITE_PUBLIC_URL || 'https://pointthemap.net';
+
 /**
  * Calculate daily challenge number from a date
  * @param {string | null} dailyDate - ISO date string (YYYY-MM-DD) or null for classic mode
@@ -79,13 +81,13 @@ export const formatShareText = (dailyNumber, avgDistance, rounds, lang) => {
     lines.push(`(${rounds.length} ${roundsLabel})`);
 
     // URL
-    lines.push('https://pointthemap.app');
+    lines.push(PUBLIC_URL);
 
     return lines.join('\n');
   } catch (error) {
     logger.error('Share: Failed to format share text', error);
     // Fallback
-    return 'Point The Map\nhttps://pointthemap.app';
+    return `Point The Map\n${PUBLIC_URL}`;
   }
 };
 
@@ -101,7 +103,7 @@ export const shareGameResults = async (text) => {
       try {
         await navigator.share({
           text: text,
-          url: 'https://pointthemap.app',
+          url: PUBLIC_URL,
         });
         logger.info('Share: Success via native share');
         return true;
@@ -128,32 +130,8 @@ export const shareGameResults = async (text) => {
       }
     }
 
-    // Last resort: temporary textarea with execCommand
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.left = '-9999px';
-    textarea.style.top = '-9999px';
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-
-    try {
-      const success = document.execCommand('copy');
-      document.body.removeChild(textarea);
-
-      if (success) {
-        logger.info('Share: Success via execCommand fallback');
-        return true;
-      } else {
-        logger.error('Share: All methods failed');
-        return false;
-      }
-    } catch (error) {
-      document.body.removeChild(textarea);
-      logger.error('Share: execCommand failed', error);
-      return false;
-    }
+    logger.warn('Share: Clipboard API not available');
+    return false;
   } catch (error) {
     logger.error('Share: Unexpected error', error);
     return false;

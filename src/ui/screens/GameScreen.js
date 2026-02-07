@@ -12,6 +12,8 @@ import {
 } from '../components.js';
 import { activateFocusTrap, deactivateFocusTrap } from '../../utils/focusTrap.js';
 import { logger } from '../../utils/logger.js';
+import { formatScore } from '../../utils/format.js';
+import { t } from '../../i18n.js';
 
 /**
  * @param {{
@@ -23,6 +25,9 @@ export const createGameScreen = (deps) => {
 
   /** @type {null | ((e: Event) => void)} */
   let _questionModalClickHandler = null;
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let _questionAutoCloseTimeout = null;
+  let _lastRoundText = '';
 
   /**
    * @param {number} roundNum
@@ -30,8 +35,14 @@ export const createGameScreen = (deps) => {
    * @param {number} totalScore
    */
   const showGameUI = (roundNum, totalRounds, totalScore) => {
-    render(TimerBar());
-    render(GameHeader(roundNum, totalRounds, totalScore));
+    if (!_domCache.get('timer-bar')) {
+      render(TimerBar());
+    }
+    if (!_domCache.get('game-header')) {
+      render(GameHeader(roundNum, totalRounds, totalScore));
+    } else {
+      updateGameUI(roundNum, totalRounds, totalScore);
+    }
   };
 
   /**
@@ -40,15 +51,56 @@ export const createGameScreen = (deps) => {
    * @param {number} totalScore
    */
   const updateGameUI = (roundNum, totalRounds, totalScore) => {
-    remove('game-header');
-    _domCache.invalidate('game-header');
-    render(GameHeader(roundNum, totalRounds, totalScore));
+    const header = _domCache.get('game-header');
+    if (!header) {
+      render(GameHeader(roundNum, totalRounds, totalScore));
+      return;
+    }
+
+    const roundEl = header.querySelector('#game-round');
+    const nextRoundText = `${roundNum}/${totalRounds}`;
+    if (roundEl && _lastRoundText !== nextRoundText) {
+      roundEl.textContent = nextRoundText;
+      roundEl.classList.remove('round-pulse');
+      void roundEl.offsetWidth;
+      roundEl.classList.add('round-pulse');
+      _lastRoundText = nextRoundText;
+    }
+    const scoreEl = header.querySelector('#game-score');
+    if (scoreEl) {
+      scoreEl.textContent = formatScore(totalScore);
+    }
   };
 
   const hideGameUI = () => {
     remove('game-header');
     remove('timer-bar');
+    remove('round-transition');
     _domCache.invalidate();
+  };
+
+  /**
+   * Show an intermediate transition indicator between rounds.
+   * @param {number} roundNum
+   * @param {number} totalRounds
+   */
+  const showRoundTransition = (roundNum, totalRounds) => {
+    remove('round-transition');
+    render(`
+      <div id="round-transition" class="round-transition" aria-hidden="true">
+        <div class="round-transition-card">
+          <div class="round-transition-label">${t('round')} ${roundNum}/${totalRounds}</div>
+          <div class="round-transition-title">${t('nextRoundPreparing')}</div>
+          <div class="round-transition-dots" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+    `);
+  };
+
+  const hideRoundTransition = () => {
+    remove('round-transition');
   };
 
   const hideQuestion = () => {
@@ -56,6 +108,10 @@ export const createGameScreen = (deps) => {
     const modal = _domCache.get('question-modal');
     if (modal) {
       modal.classList.add('hidden');
+    }
+    if (_questionAutoCloseTimeout) {
+      clearTimeout(_questionAutoCloseTimeout);
+      _questionAutoCloseTimeout = null;
     }
     if (_questionModalClickHandler) {
       modal?.removeEventListener('click', _questionModalClickHandler);
@@ -93,11 +149,7 @@ export const createGameScreen = (deps) => {
       } else {
         document.body.focus({ preventScroll: true });
       }
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          onClose?.();
-        });
-      });
+      onClose?.();
     };
 
     const modalEl = _domCache.get('question-modal');
@@ -119,7 +171,10 @@ export const createGameScreen = (deps) => {
         close();
       };
       if (modal) modal.addEventListener('click', _questionModalClickHandler);
-      setTimeout(close, UI_TIMING.QUESTION_AUTO_CLOSE);
+      if (_questionAutoCloseTimeout) {
+        clearTimeout(_questionAutoCloseTimeout);
+      }
+      _questionAutoCloseTimeout = setTimeout(close, UI_TIMING.QUESTION_AUTO_CLOSE);
     }
   };
 
@@ -129,6 +184,9 @@ export const createGameScreen = (deps) => {
     p.style.transition = 'none';
     p.style.width = '100%';
     p.classList.remove('timer-danger');
+    const bar = _domCache.get('timer-bar');
+    bar?.classList.remove('timer-danger');
+    bar?.classList.remove('timer-danger-start');
     p.offsetHeight;
   };
 
@@ -147,6 +205,13 @@ export const createGameScreen = (deps) => {
       )(distance, score, isTimeout, isLast, baseScore, timeBonus);
     render(Modal('round-result', content, true));
     bindClick('btn-next', () => {
+      const btn = /** @type {HTMLButtonElement | null} */ (_domCache.get('btn-next'));
+      if (btn?.disabled) return;
+      if (btn) {
+        btn.disabled = true;
+        btn.setAttribute('aria-disabled', 'true');
+        btn.classList.add('btn-loading');
+      }
       const inputSystem = getInputSystem();
       if (!inputSystem) {
         logger.error('UI: inputSystem not configured');
@@ -167,12 +232,18 @@ export const createGameScreen = (deps) => {
       modal.removeEventListener('click', _questionModalClickHandler);
     }
     _questionModalClickHandler = null;
+    if (_questionAutoCloseTimeout) {
+      clearTimeout(_questionAutoCloseTimeout);
+      _questionAutoCloseTimeout = null;
+    }
   };
 
   return {
     showGameUI,
     updateGameUI,
     hideGameUI,
+    showRoundTransition,
+    hideRoundTransition,
     showQuestion,
     hideQuestion,
     resetTimer,

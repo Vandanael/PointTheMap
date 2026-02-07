@@ -6,11 +6,16 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[dev]
+  command = "npm run dev"
+  targetPort = 5190
+  port = 8888
+
 # Ensure functions can resolve imports from src/ and lib/
 # If submit returns 502: set "Functions" > "Function timeout" in Netlify UI (e.g. 26s on Pro).
 [functions]
   node_bundler = "esbuild"
-  included_files = ["./src/**", "./lib/**"]
+  included_files = ["./src/**", "./lib/**", "./public/data/**"]
 
 # Security Headers - Applied to all routes
 [[headers]]
@@ -18,14 +23,14 @@
   [headers.values]
     # CORS Configuration
     # In production, restrict to your actual domain
-    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Origin = "https://pointthemap.net"
     Access-Control-Allow-Methods = "GET, POST, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, X-CSRF-Token, Authorization"
     Access-Control-Max-Age = "86400"
 
     # Content Security Policy (CSP)
     # Restricts resource loading to prevent XSS attacks
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://plausible.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com; connect-src 'self' https://*.netlify.app https://*.services-prod.nsvcs.net https://ingesteer.services-prod.nsvcs.net https://plausible.io; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://a.basemaps.cartocdn.com https://b.basemaps.cartocdn.com https://c.basemaps.cartocdn.com https://d.basemaps.cartocdn.com; connect-src 'self' https://plausible.io; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
 
     # Security Headers
     X-Frame-Options = "DENY"
@@ -67,9 +72,27 @@
   to = "/.netlify/functions/:splat"
   status = 200
 
+# SPA fallback (client-side routing)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
 # Environment-specific configuration can be added here
-# [context.production.environment]
-#   NODE_ENV = "production"
+[context.production.environment]
+  NODE_ENV = "production"
+  STRICT_CSP = "1"
+  VITE_PUBLIC_URL = "https://pointthemap.net"
+
+[context.deploy-preview.environment]
+  NODE_ENV = "production"
+  STRICT_CSP = "1"
+  VITE_PUBLIC_URL = "https://pointthemap.net"
+
+[context.branch-deploy.environment]
+  NODE_ENV = "production"
+  STRICT_CSP = "1"
+  VITE_PUBLIC_URL = "https://pointthemap.net"
 
 # [context.deploy-preview.environment]
 #   NODE_ENV = "development"

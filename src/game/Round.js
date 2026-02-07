@@ -16,9 +16,10 @@ function getTotalTimeAllowed(totalTimeAllowed) {
  * @param {import('./Game.js').Capital|import('./Game.js').Country|import('./Game.js').Stadium|import('./Game.js').Civilization} target - Target to find
  * @param {number} roundNumber - Round number (0-indexed)
  * @param {string} [gameType='capital'] - 'capital', 'country', 'stadium', or 'civilization'
+ * @param {number} [roundId=roundNumber] - Stable id for timer/input validation
  * @returns {import('./Game.js').Round}
  */
-export const createRound = (target, roundNumber, gameType = 'capital') => ({
+export const createRound = (target, roundNumber, gameType = 'capital', roundId = roundNumber) => ({
   capital: gameType === 'capital' ? /** @type {import('./Game.js').Capital} */ (target) : null,
   country:
     gameType === MODE_IDS.COUNTRY ? /** @type {import('./Game.js').Country} */ (target) : null,
@@ -29,6 +30,7 @@ export const createRound = (target, roundNumber, gameType = 'capital') => ({
       ? /** @type {import('./Game.js').Civilization} */ (target)
       : null,
   roundNumber,
+  roundId,
   startTime: Date.now(),
   endTime: null,
   click: null,

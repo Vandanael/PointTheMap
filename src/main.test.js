@@ -236,6 +236,25 @@ describe('main.js wiring', () => {
     expect(disableMapInput).toHaveBeenCalledTimes(1);
   });
 
+  it('ignores timer events from a stale roundId', async () => {
+    await import('./main.js');
+
+    document.dispatchEvent(new Event('DOMContentLoaded'));
+    await vi.waitFor(() => {
+      expect(UI.showStart).toHaveBeenCalled();
+    });
+
+    mockState = {
+      ...playingState,
+      currentRound: { ...playingState.currentRound, roundId: 1 },
+    };
+
+    eventBus.emit('timer:timeout', { roundId: 2 });
+
+    expect(disableClicks).not.toHaveBeenCalled();
+    expect(disableMapInput).not.toHaveBeenCalled();
+  });
+
   describe('handleSubmit (pseudo lock retry)', () => {
     /** Ensure btn-submit exists in DOM for restore assertions */
     const ensureSubmitButton = () => {
