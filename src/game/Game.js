@@ -1,5 +1,5 @@
 // @ts-check
-import { GAME } from '../config.js';
+import { GAME } from '../config/index.js';
 import {
   MODE_IDS,
   getRuntimeGameConfig,

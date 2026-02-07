@@ -139,7 +139,7 @@ vi.mock('./ui/UI.js', () => ({
   },
 }));
 
-vi.mock('./config.js', () => ({
+vi.mock('./config/index.js', () => ({
   GAME: { ROUNDS: 5, TIMER_MS: 5000, GRACE_PERIOD_MS: 500, DANGER_ZONE_MS: 1500 },
   TIMING: { RESULT_READ_TIME_MS: 2500 },
   MAP: { CENTER: [30, 10], ZOOM: 3 },
@@ -159,7 +159,7 @@ vi.mock('./services/storage.js', () => ({
 vi.mock('./services/Analytics.js', () => ({ analytics: { init: vi.fn(), track: vi.fn() } }));
 vi.mock('./services/ErrorMonitoring.js', () => ({ errorMonitoring: { init: vi.fn() } }));
 
-vi.mock('./utils.js', () => ({ isIOS: vi.fn(() => false) }));
+vi.mock('./utils/device.js', () => ({ isIOS: vi.fn(() => false) }));
 vi.mock('./utils/logger.js', () => ({ logger: { log: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('./utils/performance.js', () => ({ debounce: vi.fn((fn) => fn) }));
 

@@ -1,4 +1,4 @@
-import { GAME } from '../config.js';
+import { GAME } from '../config/index.js';
 import { MODE_IDS } from '../config/game-modes.js';
 import { normalizeCoords } from '@lib/game-math/index.js';
 import { logger } from '../utils/logger.js';
@@ -107,8 +107,10 @@ export const recordClick = (
       ...round,
       endTime,
       click: { lat: normalizedLat, lng: normalizedLng },
-      distance: scoreResult.distance,
-      distanceToTargetKm: scoreResult.distanceToCountry,
+      distance: Number.isFinite(scoreResult.distance) ? scoreResult.distance : null,
+      distanceToTargetKm: Number.isFinite(scoreResult.distanceToCountry)
+        ? scoreResult.distanceToCountry
+        : null,
       score: Math.round(scoreResult.totalScore),
       baseScore: Math.round(scoreResult.score),
       timeBonus: Math.round(scoreResult.timeBonus),
@@ -143,8 +145,10 @@ export const recordClick = (
       ...round,
       endTime,
       click: { lat: normalizedLat, lng: normalizedLng },
-      distance: scoreResult.distance,
-      distanceToTargetKm: scoreResult.distanceToCountry,
+      distance: Number.isFinite(scoreResult.distance) ? scoreResult.distance : null,
+      distanceToTargetKm: Number.isFinite(scoreResult.distanceToCountry)
+        ? scoreResult.distanceToCountry
+        : null,
       score: Math.round(scoreResult.totalScore),
       baseScore: Math.round(scoreResult.score),
       timeBonus: Math.round(scoreResult.timeBonus),

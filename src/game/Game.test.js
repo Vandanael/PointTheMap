@@ -107,7 +107,7 @@ vi.mock('../features/StatsManager.js', () => ({
   })),
 }));
 
-vi.mock('../config.js', async (importOriginal) => {
+vi.mock('../config/index.js', async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,

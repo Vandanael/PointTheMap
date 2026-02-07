@@ -10,7 +10,7 @@
 
 import './StateDevTools.css';
 import { logger } from '../utils/logger.js';
-import { escapeHtml } from '../utils.js';
+import { escapeHtml } from '../utils/dom.js';
 
 export class StateDevTools {
   /** @type {import('./StateManager.js').StateManager} */

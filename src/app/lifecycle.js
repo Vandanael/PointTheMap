@@ -5,7 +5,7 @@
  * and cleanup on unload.
  */
 
-import { isIOS } from '../utils.js';
+import { isIOS } from '../utils/device.js';
 import { debounce } from '../utils/performance.js';
 import { safeAsync } from '../core/ErrorHandler.js';
 

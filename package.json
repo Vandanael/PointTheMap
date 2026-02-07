@@ -25,11 +25,9 @@
     "measure:geojson": "node scripts/measure-geojson-size.js",
     "build:civilizations": "node scripts/build-civilizations-geojson.js",
     "check:civilizations": "node scripts/check-civilizations.js",
-    "inspect:basemap": "node scripts/inspect-basemap-names.js",
-    "lighthouse": "npx lighthouse https://pointthemap.netlify.app/ --only-categories=performance,accessibility,best-practices,seo"
+    "inspect:basemap": "node scripts/inspect-basemap-names.js"
   },
   "dependencies": {
-    "@netlify/functions": "^3.0.0",
     "@netlify/neon": "^0.1.2",
     "jsonwebtoken": "^9.0.2",
     "leaflet": "^1.9.4",
@@ -42,10 +40,11 @@
     "@turf/union": "^7.3.3",
     "@vitest/coverage-v8": "^4.0.18",
     "@vitest/ui": "^4.0.18",
+    "dependency-cruiser": "^17.3.7",
     "eslint": "^10.0.0",
-    "eslint-config-prettier": "^10.1.8",
     "fake-indexeddb": "^6.2.5",
     "happy-dom": "^20.3.9",
+    "knip": "^5.83.1",
     "playwright": "^1.58.2",
     "postcss": "^8.5.6",
     "prettier": "^3.8.1",

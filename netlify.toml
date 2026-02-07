@@ -25,17 +25,7 @@
 
     # Content Security Policy (CSP)
     # Restricts resource loading to prevent XSS attacks
-    Content-Security-Policy = """
-      default-src 'self';
-      script-src 'self' 'unsafe-inline' https://unpkg.com https://plausible.io;
-      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-      font-src 'self' https://fonts.gstatic.com;
-      img-src 'self' data: https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com;
-      connect-src 'self' https://*.netlify.app https://*.services-prod.nsvcs.net https://ingesteer.services-prod.nsvcs.net https://plausible.io;
-      frame-ancestors 'none';
-      base-uri 'self';
-      form-action 'self';
-    """
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://plausible.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com; connect-src 'self' https://*.netlify.app https://*.services-prod.nsvcs.net https://ingesteer.services-prod.nsvcs.net https://plausible.io; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
 
     # Security Headers
     X-Frame-Options = "DENY"

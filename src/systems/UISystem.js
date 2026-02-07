@@ -12,7 +12,7 @@
 
 import { eventBus } from '../core/EventBus.js';
 import { GAME, TIMING } from '@lib/config';
-import { formatScore } from '../utils.js';
+import { formatScore } from '../utils/format.js';
 import { animateValue } from './AnimationController.js';
 import { logger } from '../utils/logger.js';
 

@@ -31,7 +31,7 @@
  */
 
 import { MODE_IDS, getGameMode } from '../config/game-modes.js';
-import { generateId } from '../utils.js';
+import { generateId } from '../utils/id.js';
 import { logger } from '../utils/logger.js';
 import { loadCapitals, loadSelectBalancedCapitals } from '../data/capitals-loader.js';
 import { loadStadiums, loadSelectBalancedStadiums } from '../data/stadiums-loader.js';
@@ -348,8 +348,13 @@ const fetchApi = async (endpoint, options = {}) => {
  */
 const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
   rounds.map((r) => {
+    const safeClick = r.click ?? null;
+    const safeDistance =
+      typeof r.distanceToTargetKm === 'number' && Number.isFinite(r.distanceToTargetKm)
+        ? r.distanceToTargetKm
+        : undefined;
     const base = {
-      click: r.click,
+      click: safeClick,
       status: r.status,
       score: r.score || 0,
       timeElapsed: r.endTime && r.startTime ? r.endTime - r.startTime : undefined,
@@ -362,7 +367,7 @@ const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
         countryId: r.country?.countryId,
         correctCountryId: r.correctCountryId,
         clickedCountryId: r.clickedCountryId,
-        distanceToTargetKm: r.distanceToTargetKm,
+        distanceToTargetKm: safeDistance,
       };
     }
 
@@ -381,7 +386,7 @@ const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
         civilizationId: r.civilization?.id,
         correctCivilizationId: r.correctCivilizationId,
         clickedCivilizationId: r.clickedCivilizationId,
-        distanceToTargetKm: r.distanceToTargetKm,
+        distanceToTargetKm: safeDistance,
       };
     }
 

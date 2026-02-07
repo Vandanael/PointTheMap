@@ -7,7 +7,7 @@
 import { storageManager } from '../storage/StorageManager.js';
 import { logger } from '../utils/logger.js';
 import { eventBus } from '../core/EventBus.js';
-import { SCORING_THRESHOLDS } from '../config.js';
+import { SCORING_THRESHOLDS } from '../config/index.js';
 
 /**
  * Achievement definitions

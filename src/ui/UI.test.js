@@ -34,7 +34,7 @@ vi.mock('../core/EventBus.js', () => ({
   },
 }));
 
-vi.mock('../config.js', () => ({
+vi.mock('../config/index.js', () => ({
   GAME: {
     TIMER_MS: 5000,
   },

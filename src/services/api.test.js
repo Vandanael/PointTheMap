@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { api, submitWithRetry, processRetryQueue, validateStartSessionPayload } from './api.js';
 
 // Mock dependencies
-vi.mock('../config.js', () => ({
+vi.mock('../config/index.js', () => ({
   capitals: [
     { name: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522, popular: true },
     { name: 'London', country: 'UK', lat: 51.5074, lng: -0.1278, popular: true },
@@ -13,7 +13,7 @@ vi.mock('../config.js', () => ({
   },
 }));
 
-vi.mock('../utils.js', () => ({
+vi.mock('../utils/id.js', () => ({
   generateId: vi.fn(() => 'test-token-123'),
 }));
 
@@ -45,7 +45,7 @@ vi.mock('./storage.js', () => ({
   saveRetryQueue: vi.fn(),
 }));
 
-import { generateId } from '../utils.js';
+import { generateId } from '../utils/id.js';
 import { loadCapitals, loadSelectBalancedCapitals } from '../data/capitals-loader.js';
 import { getRetryQueue, removeFromRetryQueue, addToRetryQueue, saveRetryQueue } from './storage.js';
 

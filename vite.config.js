@@ -5,7 +5,7 @@ import { visualizer } from 'rollup-plugin-visualizer';
 
 /** Inlines critical CSS and loads full stylesheet async to shorten the critical request chain (avoids blocking LCP). */
 function criticalCssPreload() {
-  const criticalPath = resolve(process.cwd(), 'src/critical.css');
+  const criticalPath = resolve(process.cwd(), 'src/styles/critical.css');
   let criticalCss = '';
   try {
     criticalCss = readFileSync(criticalPath, 'utf-8');

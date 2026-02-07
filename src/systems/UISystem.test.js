@@ -17,7 +17,7 @@ vi.mock('@lib/config', () => ({
   },
 }));
 
-vi.mock('../utils.js', () => ({
+vi.mock('../utils/format.js', () => ({
   formatScore: vi.fn((score) => score.toLocaleString()),
 }));
 
@@ -39,7 +39,7 @@ vi.mock('../utils/logger.js', () => ({
 // Import AFTER mocks
 import { UISystem, getUISystem } from './UISystem.js';
 import { eventBus } from '../core/EventBus.js';
-import { formatScore } from '../utils.js';
+import { formatScore } from '../utils/format.js';
 import { animateValue } from './AnimationController.js';
 import { logger } from '../utils/logger.js';
 

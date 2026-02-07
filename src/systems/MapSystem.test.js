@@ -5,7 +5,7 @@ import { logger } from '../utils/logger.js';
 import * as leaflet from 'leaflet';
 
 // Mock utils module (isIOS detection)
-vi.mock('../utils.js', async (importOriginal) => {
+vi.mock('../utils/device.js', async (importOriginal) => {
   const actual = /** @type {any} */ (await importOriginal());
   return {
     ...actual,
@@ -108,7 +108,7 @@ const mockLayerGroup = vi.mocked(leaflet.layerGroup);
 const mockLatLngBounds = vi.mocked(leaflet.latLngBounds);
 
 // Import mocked isIOS function for tests
-import * as utils from '../utils.js';
+import * as utils from '../utils/device.js';
 const mockIsIOS = vi.mocked(utils.isIOS);
 
 describe('MapSystem', () => {

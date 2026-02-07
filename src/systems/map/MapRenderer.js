@@ -7,9 +7,9 @@
  * - Manage map UI interactions (clicks, tiles, view)
  */
 
-import { MAP } from '../../config.js';
+import { MAP } from '../../config/index.js';
 import { getTheme, getMapView, setMapView } from '../../services/storage.js';
-import { isIOS } from '../../utils.js';
+import { isIOS } from '../../utils/device.js';
 import { eventBus } from '../../core/EventBus.js';
 import { logger } from '../../utils/logger.js';
 import { MARKERS, LINES, MAP_ANIMATIONS, getLineColor } from '../../config/visual-constants.js';

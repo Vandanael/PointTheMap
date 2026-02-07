@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { TIMING, MAP } from './config.js';
+import { TIMING, MAP } from './config/index.js';
 import {
   MODE_IDS,
   isDailyVariant,

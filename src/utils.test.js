@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { haversine, formatScore, generateId, isIOS } from './utils.js';
+import { haversine } from '@lib/game-math/index.js';
+import { formatScore } from './utils/format.js';
+import { generateId } from './utils/id.js';
+import { isIOS } from './utils/device.js';
 
 describe('haversine', () => {
   it('calculates distance between Paris and London', () => {
