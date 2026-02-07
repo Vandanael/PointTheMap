@@ -55,6 +55,45 @@ function criticalCssPreload() {
   };
 }
 
+/** Inline tiny entry chunks to remove a critical JS request on first paint. */
+function inlineSmallEntry({ maxSize = 10 * 1024 } = {}) {
+  return {
+    name: 'inline-small-entry',
+    apply: 'build',
+    enforce: 'post',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html, ctx) {
+        const bundle = ctx?.bundle;
+        if (!bundle) return html;
+
+        const entryChunk = Object.values(bundle).find(
+          (chunk) => chunk.type === 'chunk' && chunk.isEntry
+        );
+        if (!entryChunk) return html;
+        if (entryChunk.code.length > maxSize) return html;
+
+        const entryFile = `/${entryChunk.fileName}`;
+        const escapedCode = entryChunk.code.replace(/<\/script>/gi, '<\\/script>');
+
+        let out = html;
+        // Remove modulepreload for the inlined entry.
+        out = out.replace(
+          new RegExp(`<link[^>]+rel="modulepreload"[^>]+href="${entryFile}"[^>]*>\\n?`, 'g'),
+          ''
+        );
+        // Replace the entry script tag with an inline module.
+        out = out.replace(
+          new RegExp(`<script[^>]+type="module"[^>]+src="${entryFile}"[^>]*><\\/script>`),
+          `<script type="module">${escapedCode}</script>`
+        );
+
+        return out;
+      },
+    },
+  };
+}
+
 export default defineConfig({
   // Enable bundle visualizer with ANALYZE=1
   publicDir: 'public',
@@ -142,7 +181,7 @@ export default defineConfig({
     // Increase chunk size warning limit (for better code splitting)
     chunkSizeWarningLimit: 1000,
   },
-  plugins: [criticalCssPreload()],
+  plugins: [criticalCssPreload(), inlineSmallEntry()],
   resolve: {
     alias: {
       '@lib': resolve(__dirname, './lib'),
