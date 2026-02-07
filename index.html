@@ -20,11 +20,7 @@
     <link rel="icon" href="/favicon.svg" />
 
     <!-- Resource Hints - Early connection to external domains -->
-    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
     <link rel="dns-prefetch" href="https://basemaps.cartocdn.com" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
     <!-- Preload only mobile start-screen (LCP candidate); tablet/desktop load via CSS when shown to avoid "preloaded but not used" (bg is display:none until start-screen-visible) -->
     <link
@@ -54,19 +50,6 @@
       content="5 capitales · 5 secondes par ville. Cliquez sur la carte, gagnez des points !"
     />
     <meta name="twitter:image" content="/og-image.png" />
-
-    <!-- Google Fonts - Deferred (media=print then media=all) to avoid chaining on critical path -->
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap"
-      media="print"
-      onload="this.media = 'all'"
-    />
-    <noscript
-      ><link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap"
-    /></noscript>
 
     <!-- Preload main module for faster execution -->
     <link rel="modulepreload" href="/src/main.js" />
@@ -102,11 +85,6 @@
                 <div class="lobby-title-line">POINT</div>
                 <div class="lobby-title-line">THE MAP</div>
               </h1>
-              <div class="skeleton-loader">
-                <div class="skeleton-loader-track">
-                  <div id="loading-progress" class="skeleton-loader-bar"></div>
-                </div>
-              </div>
 
               <div class="lobby-main">
                 <div class="lobby-challenge-wrapper">
