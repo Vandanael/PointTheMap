@@ -8,6 +8,7 @@
   [build.environment]
     NODE_VERSION = "20"
     NPM_VERSION = "10"
+    NPM_CONFIG_PRODUCTION = "false"
 
 [dev]
   command = "npm run dev"
