@@ -753,11 +753,6 @@ body.light-theme .result-line-distance {
   transform: scale(0.95);
 }
 
-@media (hover: hover) and (pointer: fine) {
-  #btn-leaderboard:hover {
-    box-shadow: 0 0 10px rgba(250, 204, 21, 0.35);
-  }
-}
 
 /* Modal styles */
 .modal-bg {

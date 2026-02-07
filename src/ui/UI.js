@@ -30,7 +30,6 @@ export const configureUI = (deps = {}) => {
 // Store UI.init() subscriptions for cleanup
 /** @type {Array<() => void>} */
 let _uiInitUnsubscribers = [];
-let _tilesToastId = null;
 let _tilesToastTimeout = null;
 // Export for testing
 export const _domCacheForTesting = _domCache;
@@ -159,39 +158,19 @@ export const UI = {
 
     _uiInitUnsubscribers.push(
       eventBus.subscribe(EVENTS.MAP_TILES_LOADING, () => {
-        if (_tilesToastId) return;
         hideTilesErrorBanner();
-        _tilesToastId = UI.showToast(t('loadingMap'), 'info', 0, {
-          compact: true,
-          center: true,
-        });
         clearTilesTimeout();
-        _tilesToastTimeout = setTimeout(() => {
-          if (_tilesToastId) {
-            UI.closeToast(_tilesToastId);
-            _tilesToastId = null;
-          }
-          showTilesErrorBanner(t('error.loadTimeout'));
-        }, 8000);
       })
     );
     _uiInitUnsubscribers.push(
       eventBus.subscribe(EVENTS.MAP_TILES_LOADED, () => {
         clearTilesTimeout();
-        if (_tilesToastId) {
-          UI.closeToast(_tilesToastId);
-          _tilesToastId = null;
-        }
         hideTilesErrorBanner();
       })
     );
     _uiInitUnsubscribers.push(
       eventBus.subscribe(EVENTS.MAP_TILES_ERROR, () => {
         clearTilesTimeout();
-        if (_tilesToastId) {
-          UI.closeToast(_tilesToastId);
-          _tilesToastId = null;
-        }
         showTilesErrorBanner(t('error.networkError'));
       })
     );
@@ -206,10 +185,6 @@ export const UI = {
     startScreen.destroy();
     gameScreen.destroy();
     resultScreen.destroy();
-    if (_tilesToastId) {
-      UI.closeToast(_tilesToastId);
-      _tilesToastId = null;
-    }
     if (_tilesToastTimeout) {
       clearTimeout(_tilesToastTimeout);
       _tilesToastTimeout = null;
