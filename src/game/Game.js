@@ -8,6 +8,8 @@ import {
   getRoundGameType,
   getNoTargetsError,
   getSessionBestScore,
+  isCountryCategory,
+  isCivilizationCategory,
 } from '../config/game-modes.js';
 import { api } from '../services/api.js';
 import { createRound, recordClick, timeoutRound } from './Round.js';
@@ -227,9 +229,11 @@ export const playRound = (state, clickCoords, mapQuery, roundRules) => {
 
   let countryData = null;
   let civilizationData = null;
+  const isCountryMode = isCountryCategory(state.gameType);
+  const isCivilizationMode = isCivilizationCategory(state.gameType);
 
   // Handle country mode
-  if (state.gameType === MODE_IDS.COUNTRY && state.currentRound.country) {
+  if (isCountryMode && state.currentRound.country) {
     const targetCountryId = state.currentRound.country.countryId;
     let clickedCountryId = mapQuery.getCountryAtLatLng(clickCoords);
 
@@ -258,7 +262,7 @@ export const playRound = (state, clickCoords, mapQuery, roundRules) => {
   }
 
   // Handle civilization mode
-  if (state.gameType === MODE_IDS.CIVILIZATION && state.currentRound.civilization) {
+  if (isCivilizationMode && state.currentRound.civilization) {
     const targetCivilizationId = state.currentRound.civilization.id;
     let clickedCivilizationId = mapQuery.getCivilizationAtLatLng(clickCoords);
     const targetCivilizationFeature = mapQuery.getCivilizationFeatureById(targetCivilizationId);

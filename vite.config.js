@@ -8,7 +8,7 @@ import { visualizer } from 'rollup-plugin-visualizer';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** Inlines critical CSS and loads full stylesheet async to shorten the critical request chain (avoids blocking LCP). */
-function criticalCssPreload({ enabled = true } = {}) {
+function criticalCssPreload({ enabled = true, strictCsp = false } = {}) {
   if (!enabled) return null;
   const criticalPath = resolve(process.cwd(), 'src/styles/critical.css');
   let criticalCss = '';
@@ -38,15 +38,15 @@ function criticalCssPreload({ enabled = true } = {}) {
           .map((t) => `<link rel="preload" href="${t.href}" as="style">`)
           .join('\n  ');
         const asyncStyles = local
-          .map(
-            (t) =>
-              `<link rel="stylesheet" href="${t.href}" media="print" onload="this.media='all'">`
+          .map((t) =>
+            strictCsp
+              ? `<link rel="stylesheet" href="${t.href}">`
+              : `<link rel="stylesheet" href="${t.href}" media="print" onload="this.media='all'">`
           )
           .join('\n  ');
-        const noscriptFallback = local
-          .map((t) => `<link rel="stylesheet" href="${t.href}">`)
-          .join('');
-        const noscript = `<noscript>${noscriptFallback}</noscript>`;
+        const noscript = strictCsp
+          ? ''
+          : `<noscript>${local.map((t) => `<link rel="stylesheet" href="${t.href}">`).join('')}</noscript>`;
 
         let out = html;
         for (const t of local) out = out.replace(t.full, '');
@@ -319,7 +319,10 @@ export default defineConfig(({ mode }) => {
     },
     esbuild: isProd ? { pure: ['console.log', 'console.warn'] } : undefined,
     plugins: [
-      criticalCssPreload({ enabled: process.env.STRICT_CSP !== '1' }),
+      criticalCssPreload({
+        enabled: true,
+        strictCsp: process.env.STRICT_CSP === '1',
+      }),
       inlineSmallEntry({ enabled: process.env.STRICT_CSP !== '1' }),
       plausibleAnalyticsLocal({ strictCsp: process.env.STRICT_CSP === '1' }),
     ].filter(Boolean),
