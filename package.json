@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Point The Map - Geography game",
+  "packageManager": "npm@10.0.0",
   "engines": {
     "node": "20.x",
     "npm": "10.x"

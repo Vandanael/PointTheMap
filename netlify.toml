@@ -2,7 +2,7 @@
 # Production-ready security headers and build configuration
 
 [build]
-  command = "npm run build"
+  command = "corepack enable && corepack prepare npm@10.0.0 --activate && npm run build"
   publish = "dist"
   functions = "netlify/functions"
   [build.environment]
