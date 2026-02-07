@@ -99,9 +99,6 @@ export function initLifecycle(deps) {
     errorMonitoring.init();
     analytics.init();
 
-    ui.showLoader();
-    ui.updateLoader(50);
-
     const retryResult = await safeAsync(() => api.processRetryQueue(), 'retry-queue', {
       successful: 0,
       failed: 0,
@@ -114,32 +111,6 @@ export function initLifecycle(deps) {
       logger.warn(`⚠️ ${retryResult.failed} score(s) en attente`);
     }
 
-    ui.updateLoader(100);
-
-    // Wait for the progress bar's CSS transition to complete, then one RAF to
-    // guarantee the 100% frame is painted before we remove the element.
-    // Fallback guards against edge cases where transitionend never fires.
-    /** @type {Promise<void>} */
-    const transitionDone = new Promise((resolve) => {
-      const progressEl = document.getElementById('loading-progress');
-      if (!progressEl) {
-        resolve();
-        return;
-      }
-      const done = () => resolve();
-      const fallback = setTimeout(() => requestAnimationFrame(done), 350);
-      progressEl.addEventListener(
-        'transitionend',
-        () => {
-          clearTimeout(fallback);
-          requestAnimationFrame(done);
-        },
-        { once: true }
-      );
-    });
-    await transitionDone;
-
-    ui.hideLoader();
     ui.showStart();
   };
 

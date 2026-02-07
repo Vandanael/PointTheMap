@@ -455,6 +455,7 @@ export const createStartScreen = (deps) => {
             hideLoader();
             showToast(t('error.countriesLoadFailed'), 'error', 4000);
             showStart();
+            _startingGame = false;
             return;
           }
         } else if (selectedCategory === 'civilizations') {
@@ -464,6 +465,7 @@ export const createStartScreen = (deps) => {
             hideLoader();
             showToast(t('error.civilizationsLoadFailed'), 'error', 4000);
             showStart();
+            _startingGame = false;
             return;
           }
         }
@@ -483,12 +485,14 @@ export const createStartScreen = (deps) => {
               : t('error.mapLoadFailed');
         showToast(errorMsg, 'error', 4000);
         showStart();
+        _startingGame = false;
         return;
       }
 
       const inputSystem = getInputSystem();
       if (!inputSystem) {
         logger.error('UI: inputSystem not configured');
+        _startingGame = false;
         return;
       }
       inputSystem.handleStartGame(gameMode);
