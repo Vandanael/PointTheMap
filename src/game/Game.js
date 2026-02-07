@@ -240,8 +240,8 @@ export const playRound = (state, clickCoords, mapQuery, roundRules) => {
     if (targetCountryFeature?.geometry && clickedCountryId !== targetCountryId) {
       const [lat, lng] = clickCoords;
       const point = {
-        type: 'Point',
-        coordinates: [Number(lng), Number(lat)],
+        type: /** @type {'Point'} */ ('Point'),
+        coordinates: /** @type {[number, number]} */ ([Number(lng), Number(lat)]),
       };
       if (pointInPolygon(point, targetCountryFeature.geometry)) {
         isInsideTargetCountry = true;
@@ -267,8 +267,8 @@ export const playRound = (state, clickCoords, mapQuery, roundRules) => {
     if (targetCivilizationFeature?.geometry && clickedCivilizationId !== targetCivilizationId) {
       const [lat, lng] = clickCoords;
       const point = {
-        type: 'Point',
-        coordinates: [Number(lng), Number(lat)],
+        type: /** @type {'Point'} */ ('Point'),
+        coordinates: /** @type {[number, number]} */ ([Number(lng), Number(lat)]),
       };
       if (pointInPolygon(point, targetCivilizationFeature.geometry)) {
         isInsideTargetCivilization = true;

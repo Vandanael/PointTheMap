@@ -383,12 +383,10 @@ export default async function submitHandler(req, context) {
     if (timeElapsedValues.length === rounds.length) {
       const totalElapsed = timeElapsedValues.reduce((sum, value) => sum + value, 0);
       if (totalElapsed > gameDuration + 1000) {
-        return errorJson(
-          'invalid_round_times',
-          'Round timings exceed total game duration',
-          400,
-          { totalElapsed, gameDuration }
-        );
+        return errorJson('invalid_round_times', 'Round timings exceed total game duration', 400, {
+          totalElapsed,
+          gameDuration,
+        });
       }
     }
 

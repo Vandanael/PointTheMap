@@ -4,17 +4,15 @@ module.exports = {
     {
       name: 'no-circular',
       severity: 'warn',
-      comment:
-        'This dependency is part of a circular relationship. Consider breaking the cycle.',
+      comment: 'This dependency is part of a circular relationship. Consider breaking the cycle.',
       from: {},
       to: {
-        circular: true
-      }
+        circular: true,
+      },
     },
     {
       name: 'no-orphans',
-      comment:
-        'This is an orphan module - it is likely not used. Either use it or remove it.',
+      comment: 'This is an orphan module - it is likely not used. Either use it or remove it.',
       severity: 'warn',
       from: {
         orphan: true,
@@ -22,10 +20,10 @@ module.exports = {
           '(^|/)[.][^/]+[.](?:js|cjs|mjs|ts|cts|mts|json)$',
           '[.]d[.]ts$',
           '(^|/)tsconfig[.]json$',
-          '(^|/)(?:babel|webpack)[.]config[.](?:js|cjs|mjs|ts|cts|mts|json)$'
-        ]
+          '(^|/)(?:babel|webpack)[.]config[.](?:js|cjs|mjs|ts|cts|mts|json)$',
+        ],
       },
-      to: {}
+      to: {},
     },
     {
       name: 'not-to-dev-dep',
@@ -37,17 +35,17 @@ module.exports = {
           '^src/.*[.]test[.]js$',
           '^src/test/.*',
           '^src/vite-env[.]d[.]ts$',
-          '^src/main[.]js$'
-        ]
+          '^src/main[.]js$',
+        ],
       },
       to: {
-        dependencyTypes: ['dev']
-      }
-    }
+        dependencyTypes: ['dev'],
+      },
+    },
   ],
   options: {
     doNotFollow: {
-      path: ['node_modules']
-    }
-  }
+      path: ['node_modules'],
+    },
+  },
 };

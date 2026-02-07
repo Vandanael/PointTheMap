@@ -4,44 +4,10 @@
  */
 
 /**
- * @typedef {Object} EventPayloads
- * @property {{ message: string }} 'error:show'
- * @property {{ error: Error, context: string, fatal: boolean, timestamp: number }} 'error:occurred'
- * @property {{ error: Error, type: string, timestamp: number }} 'error:global'
- * @property {{ error: Error, context: string, timestamp: number }} 'error:fatal'
- * @property {{ state: any, prevState: any, action: string }} 'state:changed'
- * @property {{ timerMs?: number, roundId?: number | null }} 'timer:started'
- * @property {{ roundId?: number | null }} 'timer:danger'
- * @property {{ roundId?: number | null }} 'timer:timeout'
- * @property {{ timestamp: number, roundId?: number | null }} 'timer:tick'
- * @property {{ oldScore: number, newScore: number, delta: number }} 'score:updated'
- * @property {{ round: any }} 'game:round:completed'
- * @property {{ gameType: string, capitalCount?: number }} 'game:started'
- * @property {{ theme: string }} 'theme:changed'
- * @property {{ language: string }} 'language:changed'
- * @property {{ message: string }} 'storage:quota-exceeded'
- * @property {{ message: string }} 'storage:quota-recovered'
- * @property {{ message: string }} 'storage:quota-failed'
- * @property {{}} 'input:map-enabled'
- * @property {{}} 'input:map-disabled'
- * @property {{}} 'input:next-round'
- * @property {{ pseudo: string }} 'input:submit'
- * @property {{}} 'input:replay'
- * @property {{ gameType?: string }} 'input:start-game'
- * @property {{ key: string }} 'input:action'
- * @property {{}} 'input:escape'
- * @property {{}} 'map:tiles-retry'
- * @property {{}} 'map:tiles-loading'
- * @property {{}} 'map:tiles-loaded'
- * @property {{ error?: any }} 'map:tiles-error'
- * @property {{ lat: number, lng: number }} 'map:click'
- * @property {{ roundId?: number | null }} 'timer:started'
- * @property {{ id: string, achievement: any }} 'achievement:unlocked'
+ * Event payloads are documented in `docs/event-bus.md`.
+ * This file defines the canonical event name constants.
  */
 
-/**
- * @type {const}
- */
 export const EVENTS = {
   ERROR_SHOW: 'error:show',
   ERROR_OCCURRED: 'error:occurred',

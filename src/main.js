@@ -161,27 +161,30 @@ const init = async () => {
     // Subscribe to timer game logic events
     eventUnsubscribers.push(
       /** @type {() => void} */ (
-        eventBus.subscribe('timer:timeout', (/** @type {{ roundId?: number | null }} */ payload) => {
-          const state = stateManager.getState();
-          if (
-            payload?.roundId !== undefined &&
-            payload?.roundId !== null &&
-            state.currentRound?.roundId !== payload.roundId
-          ) {
-            return;
-          }
-          if (state.status === GameStatus.PLAYING && state.currentRound) {
-            // Stop timer to prevent tick handler from also firing
-            timerSystem.stop();
-            const newState = gameHandleTimeout(state);
-            stateManager.setState(newState, 'timer:timeout');
+        eventBus.subscribe(
+          'timer:timeout',
+          (/** @type {{ roundId?: number | null }} */ payload) => {
+            const state = stateManager.getState();
+            if (
+              payload?.roundId !== undefined &&
+              payload?.roundId !== null &&
+              state.currentRound?.roundId !== payload.roundId
+            ) {
+              return;
+            }
+            if (state.status === GameStatus.PLAYING && state.currentRound) {
+              // Stop timer to prevent tick handler from also firing
+              timerSystem.stop();
+              const newState = gameHandleTimeout(state);
+              stateManager.setState(newState, 'timer:timeout');
 
-            // Only call onRoundEnd if state was actually changed (guard against race condition)
-            if (newState.status === GameStatus.ROUND_RESULT) {
-              controller.onRoundEnd();
+              // Only call onRoundEnd if state was actually changed (guard against race condition)
+              if (newState.status === GameStatus.ROUND_RESULT) {
+                controller.onRoundEnd();
+              }
             }
           }
-        })
+        )
       )
     );
 

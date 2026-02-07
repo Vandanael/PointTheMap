@@ -104,37 +104,37 @@ async function loadGeoJSON(key, url) {
   }
 
   const loadPromise = (async () => {
-  // Layer 2: Check CacheStorage (fast)
-  const cachedData = await loadFromCacheStorage(url);
-  if (cachedData) {
-    memoryCache.set(key, cachedData);
-    return cachedData;
-  }
-
-  // Layer 3: Fetch from network (slow)
-  logger.info(`GeoDataLoader: Fetching from network: ${url}`);
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(`Failed to load ${url}: ${response.status}`);
-  }
-
-  const contentLength = response.headers?.get?.('content-length');
-  if (contentLength) {
-    const sizeMb = Number(contentLength) / (1024 * 1024);
-    if (Number.isFinite(sizeMb) && sizeMb >= MAP.GEOJSON_WARN_MB) {
-      logger.warn(`GeoDataLoader: Large GeoJSON (${sizeMb.toFixed(2)} MB) for ${url}`);
+    // Layer 2: Check CacheStorage (fast)
+    const cachedData = await loadFromCacheStorage(url);
+    if (cachedData) {
+      memoryCache.set(key, cachedData);
+      return cachedData;
     }
-  }
 
-  // Save to CacheStorage for next session
-  await saveToCacheStorage(url, response);
+    // Layer 3: Fetch from network (slow)
+    logger.info(`GeoDataLoader: Fetching from network: ${url}`);
+    const response = await fetch(url);
 
-  // Parse and cache in memory
-  const data = await response.json();
-  memoryCache.set(key, data);
+    if (!response.ok) {
+      throw new Error(`Failed to load ${url}: ${response.status}`);
+    }
 
-  return data;
+    const contentLength = response.headers?.get?.('content-length');
+    if (contentLength) {
+      const sizeMb = Number(contentLength) / (1024 * 1024);
+      if (Number.isFinite(sizeMb) && sizeMb >= MAP.GEOJSON_WARN_MB) {
+        logger.warn(`GeoDataLoader: Large GeoJSON (${sizeMb.toFixed(2)} MB) for ${url}`);
+      }
+    }
+
+    // Save to CacheStorage for next session
+    await saveToCacheStorage(url, response);
+
+    // Parse and cache in memory
+    const data = await response.json();
+    memoryCache.set(key, data);
+
+    return data;
   })();
 
   inFlight.set(key, loadPromise);
@@ -154,10 +154,7 @@ async function loadGeoJSON(key, url) {
 function scheduleIdle(task) {
   return new Promise((resolve) => {
     const run = () => {
-      Promise.resolve()
-        .then(task)
-        .then(resolve)
-        .catch(resolve);
+      Promise.resolve().then(task).then(resolve).catch(resolve);
     };
     const idleCallback =
       typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function'
@@ -200,7 +197,9 @@ export function preloadCountriesGeoJSON() {
  * @returns {Promise<any | null>}
  */
 export function preloadCivilizationsGeoJSON() {
-  return scheduleIdle(() => loadGeoJSON('civilizations', CACHE_URLS.civilizations).catch(() => null));
+  return scheduleIdle(() =>
+    loadGeoJSON('civilizations', CACHE_URLS.civilizations).catch(() => null)
+  );
 }
 
 /**

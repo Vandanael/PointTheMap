@@ -329,7 +329,6 @@ const mockSubmit = (token, rounds, _pseudo) => {
   };
 };
 
-
 /**
  * Format rounds for API submission
  * @param {import('../game/Game.js').Round[]} rounds

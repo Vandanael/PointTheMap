@@ -75,8 +75,7 @@ export default async function errorReportHandler(req, context) {
 
       const message = err.message.slice(0, 1000);
       const stack = typeof err.stack === 'string' ? err.stack.slice(0, MAX_STACK_LENGTH) : null;
-      const errorContext =
-        typeof err.context === 'string' ? err.context.slice(0, 100) : null;
+      const errorContext = typeof err.context === 'string' ? err.context.slice(0, 100) : null;
       const errorType = typeof err.type === 'string' ? err.type.slice(0, 50) : null;
 
       await sql`

@@ -66,11 +66,10 @@ export const createApiClient = (deps) => {
         throw new APIError('TIMEOUT', 0, { timeout: true });
       }
       const error = /** @type {Error} */ (networkError);
-      throw new APIError(
-        `Network error: ${error.message}`,
-        0,
-        { error: error.message, networkError: true }
-      );
+      throw new APIError(`Network error: ${error.message}`, 0, {
+        error: error.message,
+        networkError: true,
+      });
     }
 
     if (res.status === 502 || res.status === 503) {

@@ -691,7 +691,7 @@ export function createGameFlowController(deps) {
   /**
    * Resume an in-progress game state after reload.
    * @param {GameState} savedState
-   * @returns {boolean}
+   * @returns {Promise<boolean>}
    */
   const resumeFromState = async (savedState) => {
     if (!savedState || savedState.status !== GameStatus.PLAYING) return false;
@@ -714,7 +714,7 @@ export function createGameFlowController(deps) {
             ...savedState.currentRound,
             startTime: Date.now(),
             endTime: null,
-            status: 'playing',
+            status: GameStatus.PLAYING,
           }
         : null,
     };
@@ -727,8 +727,8 @@ export function createGameFlowController(deps) {
     const startZoom = isStadiumCategory(refreshedState.gameType) ? MAP.EUROPE_ZOOM : MAP.ZOOM;
     mapSystem.flyTo(startCenter, startZoom, { animate: false });
 
-    stateManager.setState(refreshedState, 'game:resume');
-    return renderRoundUI(refreshedState, { requireButton: true });
+    stateManager.setState(/** @type {GameState} */ (refreshedState), 'game:resume');
+    return renderRoundUI(/** @type {GameState} */ (refreshedState), { requireButton: true });
   };
 
   /**

@@ -21,6 +21,7 @@ InputSystem -> EventBus -> StateManager -> UI / Map Systems
 ```
 
 Key points:
+
 - `StateManager` applies immutable updates, validates state, and emits changes.
 - `EventBus` orchestrates interactions between Map, Timer, UI, Scoring, and Input systems.
 - Asynchronous geographic data loading with caching and preloading.
@@ -51,9 +52,10 @@ npm run test:run       # Unit tests (Vitest)
 npm run e2e:dev        # Playwright smoke (dev)
 npm run e2e:preview    # Playwright smoke (build + preview)
 ```
+
 ## License & Copyright
 
 Copyright © 2026 Vandanael. All rights reserved.
 
-This project is not open-source. The code is provided for educational and review purposes only. 
+This project is not open-source. The code is provided for educational and review purposes only.
 No unauthorized copying, modification, or commercial redistribution is permitted.

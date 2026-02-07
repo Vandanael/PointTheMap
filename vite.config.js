@@ -210,123 +210,123 @@ function inlineSmallEntry({ maxSize = 10 * 1024, enabled = true } = {}) {
 export default defineConfig(({ mode }) => {
   const isProd = mode === 'production';
   return {
-  // Enable bundle visualizer with ANALYZE=1
-  publicDir: 'public',
-  server: {
-    // Disable HMR when WebSocket gets 400 (e.g. Cursor browser, embedded iframes).
-    // Use: DISABLE_HMR=1 npm run dev
-    port: 5190,
-    strictPort: true,
-    hmr: process.env.DISABLE_HMR === '1' ? false : true,
-    headers: {
-      'Content-Security-Policy': devCsp,
-      'X-Frame-Options': 'DENY',
-    },
-  },
-  preview: {
-    headers: {
-      'Content-Security-Policy': devCsp,
-      'X-Frame-Options': 'DENY',
-    },
-  },
-  build: {
-    outDir: 'dist',
-    // Enable minification and compression
-    minify: 'esbuild',
-    cssMinify: true,
-    // Optimize chunk splitting
-    rollupOptions: {
-      output: {
-        // Manual chunk splitting for better caching
-        // Split by change frequency; cyclic pairs grouped to avoid circular chunk warnings:
-        // - core ↔ services (core→i18n→storage, services→EventBus/ErrorHandler)
-        // - ui ↔ systems (ui→ScoringSystem, UISystem→UI)
-        manualChunks: (id) => {
-          // External dependencies
-          if (id.includes('node_modules')) {
-            // Leaflet is large and stable - separate chunk for better caching
-            if (id.includes('leaflet')) {
-              return 'vendor-leaflet';
-            }
-            // All other node_modules dependencies
-            return 'vendor';
-          }
-
-          // Application chunks (cyclic pairs merged to break circular chunk warnings)
-
-          // Core + Services: single chunk to avoid services→core→i18n→services cycle
-          if (id.includes('vite/preload-helper.js')) {
-            return 'core-services';
-          }
-          if (id.includes('/src/i18n.js') || id.includes('\\src\\i18n.js')) {
-            return 'core-services';
-          }
-          if (id.includes('/src/utils.js') || id.includes('\\src\\utils.js')) {
-            return 'core-services';
-          }
-          if (id.includes('/src/core/') || id.includes('\\src\\core\\')) {
-            return 'core-services';
-          }
-          if (id.includes('/src/services/') || id.includes('\\src\\services\\')) {
-            return 'core-services';
-          }
-
-          // Game: Moderate changes (game logic, rounds)
-          if (id.includes('/src/game/') || id.includes('\\src\\game\\')) {
-            return 'game';
-          }
-
-          // UI + Systems (+ Features): single chunk to avoid ui↔systems and features↔ui cycles
-          if (id.includes('/src/systems/') || id.includes('\\src\\systems\\')) {
-            return 'ui-systems';
-          }
-          if (id.includes('/src/ui/') || id.includes('\\src\\ui\\')) {
-            return 'ui-systems';
-          }
-          if (id.includes('/src/features/') || id.includes('\\src\\features\\')) {
-            return 'ui-systems';
-          }
-        },
-        // Optimize asset file names for better caching
-        assetFileNames: (assetInfo) => {
-          const info = assetInfo.name.split('.');
-          const ext = info[info.length - 1];
-          if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
-            return `assets/images/[name]-[hash][extname]`;
-          }
-          if (/woff2?|eot|ttf|otf/i.test(ext)) {
-            return `assets/fonts/[name]-[hash][extname]`;
-          }
-          return `assets/[name]-[hash][extname]`;
-        },
-        chunkFileNames: 'assets/js/[name]-[hash].js',
-        entryFileNames: 'assets/js/[name]-[hash].js',
+    // Enable bundle visualizer with ANALYZE=1
+    publicDir: 'public',
+    server: {
+      // Disable HMR when WebSocket gets 400 (e.g. Cursor browser, embedded iframes).
+      // Use: DISABLE_HMR=1 npm run dev
+      port: 5190,
+      strictPort: true,
+      hmr: process.env.DISABLE_HMR === '1' ? false : true,
+      headers: {
+        'Content-Security-Policy': devCsp,
+        'X-Frame-Options': 'DENY',
       },
-      plugins:
-        process.env.ANALYZE === '1'
-          ? [
-              visualizer({
-                open: false,
-                filename: 'dist/stats.html',
-                gzipSize: true,
-                brotliSize: true,
-              }),
-            ]
-          : [],
     },
-    // Increase chunk size warning limit (for better code splitting)
-    chunkSizeWarningLimit: 1000,
-  },
-  esbuild: isProd ? { pure: ['console.log', 'console.warn'] } : undefined,
-  plugins: [
-    criticalCssPreload({ enabled: process.env.STRICT_CSP !== '1' }),
-    inlineSmallEntry({ enabled: process.env.STRICT_CSP !== '1' }),
-    plausibleAnalyticsLocal({ strictCsp: process.env.STRICT_CSP === '1' }),
-  ].filter(Boolean),
-  resolve: {
-    alias: {
-      '@lib': resolve(__dirname, './lib'),
+    preview: {
+      headers: {
+        'Content-Security-Policy': devCsp,
+        'X-Frame-Options': 'DENY',
+      },
     },
-  },
+    build: {
+      outDir: 'dist',
+      // Enable minification and compression
+      minify: 'esbuild',
+      cssMinify: true,
+      // Optimize chunk splitting
+      rollupOptions: {
+        output: {
+          // Manual chunk splitting for better caching
+          // Split by change frequency; cyclic pairs grouped to avoid circular chunk warnings:
+          // - core ↔ services (core→i18n→storage, services→EventBus/ErrorHandler)
+          // - ui ↔ systems (ui→ScoringSystem, UISystem→UI)
+          manualChunks: (id) => {
+            // External dependencies
+            if (id.includes('node_modules')) {
+              // Leaflet is large and stable - separate chunk for better caching
+              if (id.includes('leaflet')) {
+                return 'vendor-leaflet';
+              }
+              // All other node_modules dependencies
+              return 'vendor';
+            }
+
+            // Application chunks (cyclic pairs merged to break circular chunk warnings)
+
+            // Core + Services: single chunk to avoid services→core→i18n→services cycle
+            if (id.includes('vite/preload-helper.js')) {
+              return 'core-services';
+            }
+            if (id.includes('/src/i18n.js') || id.includes('\\src\\i18n.js')) {
+              return 'core-services';
+            }
+            if (id.includes('/src/utils.js') || id.includes('\\src\\utils.js')) {
+              return 'core-services';
+            }
+            if (id.includes('/src/core/') || id.includes('\\src\\core\\')) {
+              return 'core-services';
+            }
+            if (id.includes('/src/services/') || id.includes('\\src\\services\\')) {
+              return 'core-services';
+            }
+
+            // Game: Moderate changes (game logic, rounds)
+            if (id.includes('/src/game/') || id.includes('\\src\\game\\')) {
+              return 'game';
+            }
+
+            // UI + Systems (+ Features): single chunk to avoid ui↔systems and features↔ui cycles
+            if (id.includes('/src/systems/') || id.includes('\\src\\systems\\')) {
+              return 'ui-systems';
+            }
+            if (id.includes('/src/ui/') || id.includes('\\src\\ui\\')) {
+              return 'ui-systems';
+            }
+            if (id.includes('/src/features/') || id.includes('\\src\\features\\')) {
+              return 'ui-systems';
+            }
+          },
+          // Optimize asset file names for better caching
+          assetFileNames: (assetInfo) => {
+            const info = assetInfo.name.split('.');
+            const ext = info[info.length - 1];
+            if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
+              return `assets/images/[name]-[hash][extname]`;
+            }
+            if (/woff2?|eot|ttf|otf/i.test(ext)) {
+              return `assets/fonts/[name]-[hash][extname]`;
+            }
+            return `assets/[name]-[hash][extname]`;
+          },
+          chunkFileNames: 'assets/js/[name]-[hash].js',
+          entryFileNames: 'assets/js/[name]-[hash].js',
+        },
+        plugins:
+          process.env.ANALYZE === '1'
+            ? [
+                visualizer({
+                  open: false,
+                  filename: 'dist/stats.html',
+                  gzipSize: true,
+                  brotliSize: true,
+                }),
+              ]
+            : [],
+      },
+      // Increase chunk size warning limit (for better code splitting)
+      chunkSizeWarningLimit: 1000,
+    },
+    esbuild: isProd ? { pure: ['console.log', 'console.warn'] } : undefined,
+    plugins: [
+      criticalCssPreload({ enabled: process.env.STRICT_CSP !== '1' }),
+      inlineSmallEntry({ enabled: process.env.STRICT_CSP !== '1' }),
+      plausibleAnalyticsLocal({ strictCsp: process.env.STRICT_CSP === '1' }),
+    ].filter(Boolean),
+    resolve: {
+      alias: {
+        '@lib': resolve(__dirname, './lib'),
+      },
+    },
   };
 });

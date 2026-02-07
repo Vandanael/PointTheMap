@@ -62,7 +62,7 @@ export const createGameScreen = (deps) => {
     if (roundEl && _lastRoundText !== nextRoundText) {
       roundEl.textContent = nextRoundText;
       roundEl.classList.remove('round-pulse');
-      void roundEl.offsetWidth;
+      void (/** @type {HTMLElement} */ (roundEl)).offsetWidth;
       roundEl.classList.add('round-pulse');
       _lastRoundText = nextRoundText;
     }
