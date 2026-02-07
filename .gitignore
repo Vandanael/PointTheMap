@@ -11,6 +11,7 @@ supabase/
 
 # Environment variables
 .env
+.node-version
 .env.local
 .env.development.local
 .env.test.local
@@ -72,6 +73,9 @@ coverage/
 
 # Deno
 deno.lock
+
+# Tooling configs not used in repo
+.dependency-cruiser.cjs
 
 # Documentation Supabase (déjà ignorée par supabase/)
 

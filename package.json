@@ -9,11 +9,14 @@
     "npm": "10.x"
   },
   "scripts": {
+    "clean": "rm -rf dist test-results .netlify .vite",
     "dev": "vite",
     "build": "vite build && npm run check:budget",
+    "prebuild": "npm run clean",
     "check:budget": "node scripts/check-bundle-budget.js",
     "preview": "vite preview",
     "test": "vitest",
+    "pretest": "npm run clean",
     "typecheck": "tsc -p jsconfig.json",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier . --write",
@@ -22,6 +25,7 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
+    "pree2e": "npm run clean",
     "e2e:dev": "E2E_MODE=dev playwright test",
     "e2e:preview": "E2E_MODE=preview playwright test",
     "generate:start-screen": "node scripts/generate-start-screen-images.js",
