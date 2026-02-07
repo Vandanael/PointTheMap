@@ -9,6 +9,8 @@
   --text-tertiary: #64748b;
   --border-color: #1e293b;
   --accent: #facc15;
+  --scrollbar-thumb: rgba(59, 130, 246, 0.6);
+  --scrollbar-track: rgba(148, 163, 184, 0.15);
 
   /* Button colors */
   --btn-primary: #facc15; /* yellow-400 */
@@ -41,6 +43,8 @@ body.light-theme {
   --text-secondary: #2f2d29; /* Darker for better contrast */
   --text-tertiary: #5b5853; /* Darker for better contrast (was #6b6863) */
   --border-color: #c9c5be; /* Bordure visible mais douce */
+  --scrollbar-thumb: rgba(107, 114, 128, 0.6);
+  --scrollbar-track: rgba(107, 114, 128, 0.18);
 
   /* Button colors for light theme */
   --btn-secondary: #e2e8f0; /* slate-200 */
@@ -95,7 +99,7 @@ body {
 }
 
 body.map-locked #map {
-  cursor: not-allowed;
+  cursor: default;
 }
 
 body.map-locked #map::after {
@@ -105,7 +109,7 @@ body.map-locked #map::after {
 body.map-locked:not(.start-screen-visible)::before {
   content: attr(data-map-lock-label);
   position: fixed;
-  top: calc(max(0.5rem, env(safe-area-inset-top)) + 3rem);
+  bottom: calc(max(0.5rem, env(safe-area-inset-bottom)) + 2.5rem);
   left: 50%;
   transform: translateX(-50%);
   z-index: calc(var(--z-base) + 3);
@@ -977,8 +981,22 @@ body.app-resetting .game-header > div {
 .leaderboard-panel {
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-gutter: stable both-edges;
   contain: layout paint;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.leaderboard-panel::-webkit-scrollbar {
+  width: 4px;
+}
+
+.leaderboard-panel::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+.leaderboard-panel::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
 }
 
 .leaderboard-center-state {

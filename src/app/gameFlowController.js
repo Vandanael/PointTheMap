@@ -361,11 +361,6 @@ export function createGameFlowController(deps) {
         );
       }
 
-      const continueToastId = showToast(i18n.t('tapToContinue'), 'info', 0, {
-        compact: true,
-        center: true,
-      });
-
       // Tap/click to continue to modal, or wait RESULT_READ_TIME_MS
       /** @type {Promise<void>} */
       const userContinued = new Promise((r) => mapSystem.setOnResultContinue(() => r()));
@@ -373,7 +368,6 @@ export function createGameFlowController(deps) {
       const timeoutPromise = new Promise((r) => setTimeout(r, TIMING.RESULT_READ_TIME_MS));
       await Promise.race([userContinued, timeoutPromise]);
       mapSystem.clearOnResultContinue();
-      if (continueToastId) closeToast(continueToastId);
 
       // Emit score updated event
       eventBus.emit('score:updated', {
@@ -431,18 +425,12 @@ export function createGameFlowController(deps) {
         );
       }
 
-      const continueToastId = showToast(i18n.t('tapToContinue'), 'info', 0, {
-        compact: true,
-        center: true,
-      });
-
       /** @type {Promise<void>} */
       const userContinuedTimeout = new Promise((r) => mapSystem.setOnResultContinue(() => r()));
       /** @type {Promise<void>} */
       const timeoutPromiseResult = new Promise((r) => setTimeout(r, TIMING.RESULT_READ_TIME_MS));
       await Promise.race([userContinuedTimeout, timeoutPromiseResult]);
       mapSystem.clearOnResultContinue();
-      if (continueToastId) closeToast(continueToastId);
 
       ui.showRoundResult(
         null,

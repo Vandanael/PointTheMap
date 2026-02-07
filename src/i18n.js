@@ -62,7 +62,6 @@ const translations = {
     shareFailed: 'Impossible de partager',
     shareOnAchievement: 'Partager cette réussite',
     shareGameMessage: `Point The Map — Devine les capitales ! ${PUBLIC_URL}`,
-    tapToContinue: 'Touchez pour continuer',
     mapLockedHint: 'Carte verrouillée',
 
     // Stats
@@ -347,7 +346,6 @@ const translations = {
     shareFailed: 'Unable to share',
     shareOnAchievement: 'Share this achievement',
     shareGameMessage: `Point The Map — Try to guess the capitals! ${PUBLIC_URL}`,
-    tapToContinue: 'Tap to continue',
     mapLockedHint: 'Map locked',
 
     // Stats
