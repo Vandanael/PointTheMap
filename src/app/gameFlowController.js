@@ -128,6 +128,64 @@ export function createGameFlowController(deps) {
   }
 
   /**
+   * Build analytics properties for a round.
+   * @param {Round} round
+   * @param {string} gameType
+   */
+  function buildRoundAnalyticsProps(round, gameType) {
+    const isCountryMode = isCountryCategory(gameType);
+    const isStadiumMode = isStadiumCategory(gameType);
+    const isCivilizationMode = isCivilizationCategory(gameType);
+    const targetType = isCountryMode
+      ? 'country'
+      : isStadiumMode
+        ? 'stadium'
+        : isCivilizationMode
+          ? 'civilization'
+          : 'capital';
+
+    const target =
+      targetType === 'country'
+        ? round.country
+        : targetType === 'stadium'
+          ? round.stadium
+          : targetType === 'civilization'
+            ? round.civilization
+            : round.capital;
+
+    return {
+      gameType,
+      roundNumber: round.roundNumber,
+      roundId: round.roundId,
+      targetType,
+      targetName: target?.name ?? null,
+      targetId: targetType === 'civilization' ? target?.id ?? null : null,
+      targetCountryId: targetType === 'country' ? target?.countryId ?? null : null,
+      status: round.status,
+      score: round.score ?? 0,
+      baseScore: round.baseScore ?? 0,
+      timeBonus: round.timeBonus ?? 0,
+      distance: Number.isFinite(round.distance) ? round.distance : null,
+      distanceToTargetKm: Number.isFinite(round.distanceToTargetKm)
+        ? round.distanceToTargetKm
+        : null,
+      clickedCountryId: round.clickedCountryId ?? null,
+      correctCountryId: round.correctCountryId ?? null,
+      clickedCivilizationId: round.clickedCivilizationId ?? null,
+      correctCivilizationId: round.correctCivilizationId ?? null,
+    };
+  }
+
+  /**
+   * Track round start for analytics.
+   * @param {GameState} state
+   */
+  function trackRoundStarted(state) {
+    if (!state.currentRound) return;
+    analytics.track('round_started', buildRoundAnalyticsProps(state.currentRound, state.gameType));
+  }
+
+  /**
    * Render the current round UI for an existing state.
    * @param {GameState} state
    * @param {{ requireButton?: boolean }} [options]
@@ -162,6 +220,7 @@ export function createGameFlowController(deps) {
             : '';
 
     const onReady = () => {
+      trackRoundStarted(state);
       startTimer();
       mapSystem.enableClicks(() => {}); // InputSystem handles via EventBus
       inputSystem.enableMapInput(handleMapClick);
@@ -289,6 +348,11 @@ export function createGameFlowController(deps) {
 
     // Emit round completed event
     eventBus.emit('game:round:completed', { round: currentRound });
+
+    analytics.track(
+      currentRound.status === 'timeout' ? 'round_timeout' : 'round_completed',
+      buildRoundAnalyticsProps(currentRound, state.gameType)
+    );
 
     if (
       currentRound.click &&
@@ -501,6 +565,7 @@ export function createGameFlowController(deps) {
       ui.hideRoundTransition();
       ui.resetTimer();
       ui.showQuestion(displayName, displaySubtitle, () => {
+        trackRoundStarted(state);
         startTimer();
         mapSystem.enableClicks(() => {}); // Empty callback, InputSystem handles via EventBus
         inputSystem.enableMapInput(handleMapClick);
