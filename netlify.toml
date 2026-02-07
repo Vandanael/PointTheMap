@@ -2,7 +2,7 @@
 # Production-ready security headers and build configuration
 
 [build]
-  command = "node -v && npm -v && npm run build"
+  command = "npm ci && npm run build"
   publish = "dist"
   functions = "netlify/functions"
   [build.environment]
