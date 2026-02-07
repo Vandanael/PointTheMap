@@ -41,6 +41,7 @@ export class APIError extends Error {
     this.name = 'APIError';
     this.status = status;
     this.data = data;
+    this.apiCode = data?.error?.code;
     this.code = status === 429 ? 'RATE_LIMIT' : status >= 500 ? 'SERVER_ERROR' : 'API_ERROR';
     this.timestamp = Date.now();
   }

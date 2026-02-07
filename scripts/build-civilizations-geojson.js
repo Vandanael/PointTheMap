@@ -51,12 +51,13 @@ function buildFeature(id, name, geometry) {
 }
 
 async function main() {
-  const { civilizations } = await import('../civilizations.js');
+  const { civilizations } = await import('../src/data/civilizations.js');
   const { BASEMAP_MAPPING } = await import('./civilizations-basemap-mapping.js');
   const fileCache = new Map();
   const features = [];
   const missing = [];
   const noMatch = [];
+  let fetchFailures = 0;
 
   for (const civ of civilizations) {
     const mapping = BASEMAP_MAPPING[civ.id];
@@ -70,6 +71,7 @@ async function main() {
         fileCache.set(url, await fetchGeoJSON(url));
       } catch (e) {
         console.warn('Fetch failed ' + mapping.filename + ':', e.message);
+        fetchFailures += 1;
         noMatch.push(civ.id);
         continue;
       }
@@ -85,6 +87,13 @@ async function main() {
     const merged = mergeGeometries(matching);
     const feature = buildFeature(civ.id, civ.name, merged);
     if (feature) features.push(feature);
+  }
+
+  if (features.length === 0) {
+    throw new Error(
+      `No features built (fetch failures: ${fetchFailures}). ` +
+        'Check network access before overwriting civilizations.geojson.'
+    );
   }
 
   const collection = { type: 'FeatureCollection', name: 'civilizations', features };

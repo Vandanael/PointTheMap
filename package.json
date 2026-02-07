@@ -23,6 +23,9 @@
     "optimize:geojson": "node scripts/optimize-countries-geojson.js",
     "optimize:civilizations": "node scripts/optimize-civilizations-geojson.js",
     "measure:geojson": "node scripts/measure-geojson-size.js",
+    "build:civilizations": "node scripts/build-civilizations-geojson.js",
+    "check:civilizations": "node scripts/check-civilizations.js",
+    "inspect:basemap": "node scripts/inspect-basemap-names.js",
     "lighthouse": "npx lighthouse https://pointthemap.netlify.app/ --only-categories=performance,accessibility,best-practices,seo"
   },
   "dependencies": {

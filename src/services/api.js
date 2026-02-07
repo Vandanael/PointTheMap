@@ -327,7 +327,13 @@ const fetchApi = async (endpoint, options = {}) => {
   const data = await res.json().catch(() => ({ error: 'Invalid response' }));
 
   if (!res.ok) {
-    const error = new APIError(data.error || `HTTP ${res.status}`, res.status, data);
+    const errorMessage =
+      typeof data?.error === 'string'
+        ? data.error
+        : typeof data?.error?.message === 'string'
+          ? data.error.message
+          : `HTTP ${res.status}`;
+    const error = new APIError(errorMessage, res.status, data);
     throw error;
   }
 
