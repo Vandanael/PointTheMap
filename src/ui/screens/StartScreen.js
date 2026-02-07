@@ -10,6 +10,7 @@ import { eventBus } from '../../core/EventBus.js';
 import { UI_TIMING } from '../../config/visual-constants.js';
 import { handleError, safeAsync } from '../../core/ErrorHandler.js';
 import { shareGameResults } from '../../features/Share.js';
+import { analytics } from '../../services/Analytics.js';
 import { activateFocusTrap, deactivateFocusTrap } from '../../utils/focusTrap.js';
 import {
   StartScreen,
@@ -42,7 +43,7 @@ const loadLeaderboard = async (type) => {
 /**
  * @param {{
  *   getInputSystem: () => { handleStartGame: (gameMode: string) => void } | null;
- *   getMapSystem: () => { isInitialized: () => boolean; init: (mapId: string) => Promise<void>; loadCountriesGeoJSON: () => Promise<boolean>; loadCivilizationsGeoJSON: () => Promise<boolean> } | null;
+ *   getMapSystem: () => { isInitialized: () => boolean; init: (mapId: string) => Promise<boolean>; loadCountriesGeoJSON: () => Promise<boolean>; loadCivilizationsGeoJSON: () => Promise<boolean> } | null;
  *   showLoader: () => void;
  *   hideLoader: () => void;
  *   updateLoader: (percent: number) => void;
@@ -506,6 +507,7 @@ export const createStartScreen = (deps) => {
     bindClick('btn-share-game', async () => {
       const shareText = t('shareGameMessage');
       const success = await shareGameResults(shareText);
+      analytics.track('share_clicked', { source: 'start', success });
       showToast(
         success ? t('shareCopied') : t('shareFailed'),
         success ? 'success' : 'error',

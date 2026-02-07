@@ -132,7 +132,6 @@ export class StateManager {
 
   /**
    * Validate state using registered validators
-   * @private
    */
   #validate(nextState, prevState) {
     for (const [path, validator] of this.#validators.entries()) {
@@ -149,7 +148,6 @@ export class StateManager {
 
   /**
    * Get value at path (supports nested paths like 'a.b.c')
-   * @private
    */
   #getValueAtPath(obj, path) {
     const parts = path.split('.');
@@ -163,7 +161,6 @@ export class StateManager {
 
   /**
    * Add entry to history
-   * @private
    */
   #addToHistory(prevState, nextState, action) {
     this.#history.push({
@@ -181,7 +178,6 @@ export class StateManager {
 
   /**
    * Notify all subscribers
-   * @private
    */
   #notifySubscribers(nextState, prevState, action) {
     this.#subscribers.forEach((callback) => {

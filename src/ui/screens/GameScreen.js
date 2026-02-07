@@ -24,11 +24,21 @@ export const createGameScreen = (deps) => {
   /** @type {null | ((e: Event) => void)} */
   let _questionModalClickHandler = null;
 
+  /**
+   * @param {number} roundNum
+   * @param {number} totalRounds
+   * @param {number} totalScore
+   */
   const showGameUI = (roundNum, totalRounds, totalScore) => {
     render(TimerBar());
     render(GameHeader(roundNum, totalRounds, totalScore));
   };
 
+  /**
+   * @param {number} roundNum
+   * @param {number} totalRounds
+   * @param {number} totalScore
+   */
   const updateGameUI = (roundNum, totalRounds, totalScore) => {
     remove('game-header');
     _domCache.invalidate('game-header');
@@ -53,6 +63,12 @@ export const createGameScreen = (deps) => {
     }
   };
 
+  /**
+   * @param {string} capitalName
+   * @param {string} country
+   * @param {() => void} onClose
+   * @param {{ requireButton?: boolean }} [options]
+   */
   const showQuestion = (capitalName, country, onClose, { requireButton = false } = {}) => {
     let modal = _domCache.get('question-modal');
     if (!modal) {
@@ -116,6 +132,14 @@ export const createGameScreen = (deps) => {
     p.offsetHeight;
   };
 
+  /**
+   * @param {number | null} distance
+   * @param {number} score
+   * @param {boolean} isTimeout
+   * @param {boolean} isLast
+   * @param {number} [baseScore]
+   * @param {number} [timeBonus]
+   */
   const showRoundResult = (distance, score, isTimeout, isLast, baseScore, timeBonus) => {
     const content =
       /** @type {(distance: number | null, score: number, isTimeout: boolean, isLast: boolean, baseScore?: number, timeBonus?: number) => string} */ (

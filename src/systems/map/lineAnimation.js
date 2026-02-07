@@ -3,7 +3,7 @@ import { MAP_ANIMATIONS, RESULT_LINES, getLineColor } from '../../config/visual-
 /**
  * Returns a Promise that resolves once after the next map moveend.
  * Safe when the map is already settled (e.g. fitBounds no-op): moveend still fires in Leaflet.
- * @param {import('leaflet').Map} map - Leaflet map instance
+ * @param {any} map - Leaflet map instance
  * @returns {Promise<void>}
  */
 export function waitForMapSettled(map) {
@@ -60,13 +60,13 @@ export function interpolatePoints(from, to, steps) {
 /**
  * Animate a result line from start to end using requestAnimationFrame.
  * Creates outline + main polylines (dashed), distance label at midpoint; updates each frame.
- * @param {typeof import('leaflet')} L - Leaflet namespace
- * @param {import('leaflet').Map} map - Leaflet map instance
+ * @param {any} L - Leaflet namespace
+ * @param {any} map - Leaflet map instance
  * @param {[number, number]} startLatLng - [lat, lng]
  * @param {[number, number]} endLatLng - [lat, lng]
  * @param {number} distanceKm - Distance for line color and label
  * @param {{ durationMs?: number, steps?: number }} [options] - Override RESULT_LINE defaults
- * @returns {{ cancel: () => void, layerGroup: import('leaflet').LayerGroup, ready: Promise<void> }}
+ * @returns {{ cancel: () => void, layerGroup: any, ready: Promise<void> }}
  */
 export function animateResultLine(L, map, startLatLng, endLatLng, distanceKm, options = {}) {
   if (!L) throw new Error('Leaflet not loaded');

@@ -53,6 +53,22 @@
 
     <!-- Preload main module for faster execution -->
     <link rel="modulepreload" href="/src/main.js" />
+
+    <!-- Privacy-friendly analytics by Plausible -->
+    <script async src="https://plausible.io/js/pa-MWj6kC9TpD2-BKb6Pm-XK.js"></script>
+    <script>
+      ((window.plausible =
+        window.plausible ||
+        function () {
+          (plausible.q = plausible.q || []).push(arguments);
+        }),
+        (plausible.init =
+          plausible.init ||
+          function (i) {
+            plausible.o = i || {};
+          }));
+      plausible.init();
+    </script>
   </head>
   <body class="dark-theme">
     <script>
@@ -89,9 +105,12 @@
               <div class="lobby-main">
                 <div class="lobby-challenge-wrapper">
                   <div class="skeleton-card">
-                    <div class="skeleton-line skeleton-line-lg skeleton-shimmer" style="width: 70%;"></div>
-                    <div class="skeleton-line skeleton-shimmer" style="width: 90%;"></div>
-                    <div class="skeleton-line skeleton-shimmer" style="width: 80%;"></div>
+                    <div
+                      class="skeleton-line skeleton-line-lg skeleton-shimmer"
+                      style="width: 70%"
+                    ></div>
+                    <div class="skeleton-line skeleton-shimmer" style="width: 90%"></div>
+                    <div class="skeleton-line skeleton-shimmer" style="width: 80%"></div>
                   </div>
                 </div>
                 <div class="lobby-categories-wrapper">
@@ -106,7 +125,7 @@
 
               <div class="lobby-actions">
                 <div class="skeleton-mode">
-                  <div class="skeleton-line skeleton-shimmer" style="width: 45%;"></div>
+                  <div class="skeleton-line skeleton-shimmer" style="width: 45%"></div>
                   <div class="skeleton-pill-toggle">
                     <div class="skeleton-pill skeleton-shimmer"></div>
                     <div class="skeleton-pill skeleton-shimmer"></div>
@@ -119,8 +138,8 @@
 
           <div class="lobby-footer">
             <div class="lobby-footer-content">
-              <div class="skeleton-line skeleton-shimmer" style="width: 220px;"></div>
-              <div class="skeleton-line skeleton-shimmer" style="width: 120px;"></div>
+              <div class="skeleton-line skeleton-shimmer" style="width: 220px"></div>
+              <div class="skeleton-line skeleton-shimmer" style="width: 120px"></div>
             </div>
           </div>
         </div>

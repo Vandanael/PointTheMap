@@ -110,19 +110,19 @@ export class MapSystem {
   /**
    * Add player click marker
    * @param {[number, number]} coords - [lat, lng]
-   * @returns {Object} Leaflet marker instance
+   * @returns {Object | null} Leaflet marker instance
    */
   addClickMarker(coords) {
-    return this.#renderer?.addClickMarker(coords);
+    return this.#renderer ? this.#renderer.addClickMarker(coords) : null;
   }
 
   /**
    * Add capital target marker
    * @param {[number, number]} coords - [lat, lng]
-   * @returns {Object} Leaflet marker instance
+   * @returns {Object | null} Leaflet marker instance
    */
   addCapitalMarker(coords) {
-    return this.#renderer?.addCapitalMarker(coords);
+    return this.#renderer ? this.#renderer.addCapitalMarker(coords) : null;
   }
 
   /**
@@ -130,10 +130,10 @@ export class MapSystem {
    * @param {[number, number]} from - Start coordinates [lat, lng]
    * @param {[number, number]} to - End coordinates [lat, lng]
    * @param {number} distanceKm - Distance in kilometers
-   * @returns {Object} Leaflet layer group
+   * @returns {Object | null} Leaflet layer group
    */
   drawLine(from, to, distanceKm) {
-    return this.#renderer?.drawLine(from, to, distanceKm);
+    return this.#renderer ? this.#renderer.drawLine(from, to, distanceKm) : null;
   }
 
   /**
@@ -258,7 +258,8 @@ export class MapSystem {
    * @param {string|null} [options.clickedCountryId] - ISO A3 code of clicked country (null if ocean)
    */
   highlightCountries({ correctCountryId, clickedCountryId }) {
-    this.#geoManager?.highlightCountries({ correctCountryId, clickedCountryId });
+    const clickedId = clickedCountryId ?? null;
+    this.#geoManager?.highlightCountries({ correctCountryId, clickedCountryId: clickedId });
   }
 
   /**
@@ -311,7 +312,11 @@ export class MapSystem {
    * @param {string|null} [options.clickedCivilizationId] - Id of clicked civilization (null if ocean)
    */
   highlightCivilizations({ correctCivilizationId, clickedCivilizationId }) {
-    this.#geoManager?.highlightCivilizations({ correctCivilizationId, clickedCivilizationId });
+    const clickedId = clickedCivilizationId ?? null;
+    this.#geoManager?.highlightCivilizations({
+      correctCivilizationId,
+      clickedCivilizationId: clickedId,
+    });
   }
 
   /**

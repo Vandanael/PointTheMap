@@ -169,11 +169,11 @@ export function validateMethod(req, expectedMethod) {
 /**
  * Extract client IP from request
  * @param {Request} req - Request object
- * @param {{ ip?: string }} context - Netlify context
+ * @param {{ ip?: string } | undefined} context - Netlify context
  * @returns {string} Client IP address
  */
 export function getClientIp(req, context) {
-  const ip = context.ip || req.headers.get('x-forwarded-for') || 'unknown';
+  const ip = String(context?.ip ?? req.headers.get('x-forwarded-for') ?? 'unknown');
   return ip.split(',')[0].trim();
 }
 

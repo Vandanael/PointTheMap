@@ -37,7 +37,7 @@ vi.mock('../utils/logger.js', () => ({
 }));
 
 // Import AFTER mocks
-import { UISystem, uiSystem } from './UISystem.js';
+import { UISystem, getUISystem } from './UISystem.js';
 import { eventBus } from '../core/EventBus.js';
 import { formatScore } from '../utils.js';
 import { animateValue } from './AnimationController.js';
@@ -271,12 +271,12 @@ describe('UISystem', () => {
 
   describe('Singleton instance', () => {
     it('should export singleton instance', () => {
-      expect(uiSystem).toBeInstanceOf(UISystem);
+      expect(getUISystem()).toBeInstanceOf(UISystem);
     });
 
     it('should have the same instance', () => {
-      const instance1 = uiSystem;
-      const instance2 = uiSystem;
+      const instance1 = getUISystem();
+      const instance2 = getUISystem();
 
       expect(instance1).toBe(instance2);
     });
@@ -314,9 +314,11 @@ describe('UISystem', () => {
       scoreHandler?.({ oldScore: 250, newScore: 500 });
 
       // Previous animations should be stopped
-      expect(mockControllers[0].stop).toHaveBeenCalled();
-      expect(mockControllers[1].stop).toHaveBeenCalled();
-      expect(mockControllers[2].stop).not.toHaveBeenCalled(); // Current animation
+      const [c0, c1, c2] = mockControllers;
+      if (!c0 || !c1 || !c2) throw new Error('Expected three animation controllers');
+      expect(c0.stop).toHaveBeenCalled();
+      expect(c1.stop).toHaveBeenCalled();
+      expect(c2.stop).not.toHaveBeenCalled(); // Current animation
     });
   });
 

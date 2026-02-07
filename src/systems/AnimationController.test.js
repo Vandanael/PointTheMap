@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { AnimationController, animateValue } from './AnimationController.js';
 
 describe('AnimationController', () => {
+  /** @type {AnimationController} */
   let controller;
 
   beforeEach(() => {
@@ -35,7 +36,7 @@ describe('AnimationController', () => {
       return new Promise((resolve) => {
         requestAnimationFrame(() => {
           expect(callback).toHaveBeenCalled();
-          resolve();
+          resolve(undefined);
         });
       });
     });
@@ -55,7 +56,7 @@ describe('AnimationController', () => {
         setTimeout(() => {
           expect(callCount).toBe(3);
           expect(controller.isRunning).toBe(false);
-          resolve();
+          resolve(undefined);
         }, 100);
       });
     });
@@ -68,7 +69,7 @@ describe('AnimationController', () => {
         setTimeout(() => {
           controller.stop();
           expect(callback.mock.calls.length).toBeGreaterThan(1);
-          resolve();
+          resolve(undefined);
         }, 50);
       });
     });
@@ -137,6 +138,7 @@ describe('AnimationController', () => {
 });
 
 describe('animateValue', () => {
+  /** @type {HTMLElement} */
   let element;
 
   beforeEach(() => {
@@ -155,11 +157,11 @@ describe('animateValue', () => {
 
     return new Promise((resolve) => {
       setTimeout(() => {
-        const value = parseInt(element.textContent);
+        const value = parseInt(element.textContent ?? '0', 10);
         expect(value).toBeGreaterThan(0);
         expect(value).toBeLessThanOrEqual(100);
         controller.stop();
-        resolve();
+        resolve(undefined);
       }, 50);
     });
   });
@@ -171,7 +173,7 @@ describe('animateValue', () => {
       setTimeout(() => {
         expect(element.textContent).toBe('100');
         expect(controller.isRunning).toBe(false);
-        resolve();
+        resolve(undefined);
       }, 100);
     });
   });
@@ -184,7 +186,7 @@ describe('animateValue', () => {
       setTimeout(() => {
         expect(element.textContent).toMatch(/^\$\d+$/);
         controller.stop();
-        resolve();
+        resolve(undefined);
       }, 25);
     });
   });
@@ -200,7 +202,7 @@ describe('animateValue', () => {
     return new Promise((resolve) => {
       setTimeout(() => {
         expect(controller.isRunning).toBe(false);
-        resolve();
+        resolve(undefined);
       }, 75);
     });
   });
@@ -215,7 +217,7 @@ describe('animateValue', () => {
     return new Promise((resolve) => {
       setTimeout(() => {
         expect(controller.isRunning).toBe(false);
-        resolve();
+        resolve(undefined);
       }, 75);
     });
   });
@@ -227,7 +229,7 @@ describe('animateValue', () => {
       setTimeout(() => {
         expect(element.textContent).toBe('100');
         expect(controller.isRunning).toBe(false);
-        resolve();
+        resolve(undefined);
       }, 75);
     });
   });
@@ -239,7 +241,7 @@ describe('animateValue', () => {
       setTimeout(() => {
         expect(element.textContent).toBe('50');
         expect(controller.isRunning).toBe(false);
-        resolve();
+        resolve(undefined);
       }, 75);
     });
   });
@@ -253,10 +255,10 @@ describe('animateValue', () => {
 
     return new Promise((resolve) => {
       setTimeout(() => {
-        const value = parseInt(element.textContent);
+        const value = parseInt(element.textContent ?? '0', 10);
         expect(value).toBeLessThan(1000); // Should not reach target
         expect(controller.isRunning).toBe(false);
-        resolve();
+        resolve(undefined);
       }, 200);
     });
   });

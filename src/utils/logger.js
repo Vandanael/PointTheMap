@@ -16,22 +16,19 @@ const LOG_LEVELS = {
 };
 
 const metaEnv =
-  typeof import.meta !== 'undefined' && import.meta && import.meta.env ? import.meta.env : undefined;
+  typeof import.meta !== 'undefined' && import.meta && import.meta.env
+    ? import.meta.env
+    : undefined;
 const isDev = Boolean(metaEnv && metaEnv.DEV);
 const isVitest = typeof import.meta !== 'undefined' && /** @type {any} */ (import.meta).vitest;
 const globalProcess =
   typeof globalThis !== 'undefined' ? /** @type {any} */ (globalThis).process : undefined;
 const isNodeTest =
   globalProcess?.env && (globalProcess.env.VITEST || globalProcess.env.NODE_ENV === 'test');
-const isGlobalVitest =
-  typeof globalThis !== 'undefined' &&
-  /** @type {any} */ (globalThis.__vitest__ || /** @type {any} */ (globalThis).__VITEST__);
+const globalAny = typeof globalThis !== 'undefined' ? /** @type {any} */ (globalThis) : {};
+const isGlobalVitest = Boolean(globalAny.__vitest__ || globalAny.__VITEST__);
 const isTest = Boolean(
-  isVitest ||
-  isNodeTest ||
-  isGlobalVitest ||
-  metaEnv?.MODE === 'test' ||
-  metaEnv?.TEST
+  isVitest || isNodeTest || isGlobalVitest || metaEnv?.MODE === 'test' || metaEnv?.TEST
 );
 const minLevel = isTest ? LOG_LEVELS.fatal : isDev ? LOG_LEVELS.debug : LOG_LEVELS.warn;
 

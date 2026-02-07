@@ -142,7 +142,14 @@ export default async function startHandler(req, context) {
         })),
       };
     } else {
-      selectedTargets = selectCapitals(mode, capitals, new Date());
+      if (!mode.capitalSelection) {
+        return errorResponse('Capital mode configuration missing', 500);
+      }
+      selectedTargets = selectCapitals(
+        /** @type {{ capitalSelection: any }} */ (mode),
+        capitals,
+        new Date()
+      );
       clientData = {
         capitals: selectedTargets.map((c) => ({
           name: c.name,

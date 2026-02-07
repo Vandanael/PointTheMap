@@ -128,6 +128,15 @@ export default defineConfig({
           // Application chunks (cyclic pairs merged to break circular chunk warnings)
 
           // Core + Services: single chunk to avoid services→core→i18n→services cycle
+          if (id.includes('vite/preload-helper.js')) {
+            return 'core-services';
+          }
+          if (id.includes('/src/i18n.js') || id.includes('\\src\\i18n.js')) {
+            return 'core-services';
+          }
+          if (id.includes('/src/utils.js') || id.includes('\\src\\utils.js')) {
+            return 'core-services';
+          }
           if (id.includes('/src/core/') || id.includes('\\src\\core\\')) {
             return 'core-services';
           }

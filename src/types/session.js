@@ -65,3 +65,5 @@
  * @property {string} [correctCivilizationId]
  * @property {string} [clickedCivilizationId]
  */
+
+export {};

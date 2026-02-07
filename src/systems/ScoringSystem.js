@@ -17,7 +17,7 @@ import { GAME, SCORING_THRESHOLDS, SCORING_FORMULA, SCORING } from '@lib/config'
 import { FEATURES } from '../config/features.js';
 import { MODE_IDS } from '../config/game-modes.js';
 import { eventBus } from '../core/EventBus.js';
-import { t } from '../i18n.js';
+import { getCivilizationName, t } from '../i18n.js';
 
 /**
  * @typedef {Object} ScoreResult
@@ -48,12 +48,9 @@ export class ScoringSystem {
       'game:round:completed',
       (/** @type {{ round: import('../game/Game.js').Round }} */ { round }) => {
         if (round.score !== null) {
-          const targetName =
-            round.capital?.name ||
-            round.country?.name ||
-            round.civilization?.name ||
-            round.stadium?.name ||
-            'Unknown';
+          const targetName = round.civilization
+            ? getCivilizationName(round.civilization.id, round.civilization.name)
+            : round.capital?.name || round.country?.name || round.stadium?.name || 'Unknown';
           eventBus.emit('score:calculated', {
             round: round.roundNumber,
             distance: round.distance,

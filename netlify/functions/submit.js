@@ -25,6 +25,20 @@ import { SubmitSchema } from '../../lib/schemas/submit.js';
 
 const logger = createLogger('submit');
 
+/**
+ * 502 from Netlify usually means: function timeout (default 10s), crash before response, or cold-start failure.
+ * This handler returns 500/503 for all caught errors; if you still see 502, check Netlify function logs and
+ * consider increasing the submit function timeout in the Netlify UI (Pro: up to 26s).
+ */
+
+/**
+ * @param {string} code
+ * @param {string} message
+ * @param {number} [status=400]
+ * @param {unknown} [details]
+ * @param {Record<string, string>} [headers]
+ * @returns {Response}
+ */
 const errorJson = (code, message, status = 400, details = undefined, headers = undefined) =>
   jsonResponse({ ok: false, error: { code, message, details } }, status, headers);
 
@@ -32,12 +46,14 @@ const DB_BREAKER_WINDOW_MS = 60 * 1000;
 const DB_BREAKER_COOLDOWN_MS = 60 * 1000;
 const DB_BREAKER_THRESHOLD = 3;
 
+/** @type {number[]} */
 let dbFailureTimestamps = [];
 let dbBreakerUntil = 0;
 
 const fallbackRateLimits = new Map();
 const FALLBACK_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 
+/** @param {unknown} error */
 const recordDbFailure = (error) => {
   if (!isDatabaseConnectionError(error)) return;
   const now = Date.now();
@@ -50,6 +66,7 @@ const recordDbFailure = (error) => {
 
 const isDbBreakerOpen = () => Date.now() < dbBreakerUntil;
 
+/** @param {string} ip */
 const checkFallbackRateLimit = (ip) => {
   const now = Date.now();
   const entry = fallbackRateLimits.get(ip);
@@ -420,7 +437,6 @@ export default async function submitHandler(req, context) {
           if (
             round.timeElapsed &&
             modeConfig?.enabled &&
-            SCORING.ENABLE_TIME_BONUS &&
             modeConfig.distanceThreshold !== null &&
             modeConfig.distanceThreshold !== undefined &&
             modeConfig.maxBonusPercent !== null &&
@@ -499,7 +515,6 @@ export default async function submitHandler(req, context) {
           if (
             round.timeElapsed &&
             modeConfig?.enabled &&
-            SCORING.ENABLE_TIME_BONUS &&
             modeConfig.distanceThreshold !== null &&
             modeConfig.distanceThreshold !== undefined &&
             modeConfig.maxBonusPercent !== null &&
@@ -626,7 +641,6 @@ export default async function submitHandler(req, context) {
       if (
         round.timeElapsed &&
         timeBonusConfig?.enabled &&
-        SCORING.ENABLE_TIME_BONUS &&
         timeBonusConfig.distanceThreshold !== null &&
         timeBonusConfig.distanceThreshold !== undefined &&
         timeBonusConfig.maxBonusPercent !== null &&
@@ -697,7 +711,8 @@ export default async function submitHandler(req, context) {
 
     let existingPseudo = null;
     if (existingPseudoResult.length > 0) {
-      existingPseudo = existingPseudoResult[0].pseudo;
+      const first = existingPseudoResult[0];
+      if (first) existingPseudo = first.pseudo;
       if (existingPseudo !== trimmedPseudo) {
         return errorJson('pseudo_already_set', 'Pseudo already set for this IP', 409, {
           pseudo: existingPseudo,
@@ -720,10 +735,11 @@ export default async function submitHandler(req, context) {
         LIMIT 1
       `;
 
-      if (doubleCheckResult.length > 0 && doubleCheckResult[0].pseudo !== trimmedPseudo) {
+      const doubleCheckRow = doubleCheckResult[0];
+      if (doubleCheckRow && doubleCheckRow.pseudo !== trimmedPseudo) {
         logger.info('[submit] Pseudo mismatch detected');
         return errorJson('pseudo_already_set', 'Pseudo already set for this IP', 409, {
-          pseudo: doubleCheckResult[0].pseudo,
+          pseudo: doubleCheckRow.pseudo,
         });
       }
 

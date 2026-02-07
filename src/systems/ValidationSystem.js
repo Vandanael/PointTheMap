@@ -325,6 +325,12 @@ export class ValidationSystem {
     // Validate each round
     for (let i = 0; i < rounds.length; i++) {
       const round = rounds[i];
+      if (!round) {
+        return {
+          valid: false,
+          error: `Round ${i + 1} is missing or invalid`,
+        };
+      }
       const roundResult = this.validateRound(round, i);
 
       if (!roundResult.valid) {
@@ -332,8 +338,10 @@ export class ValidationSystem {
       }
 
       // Validate capital matches expected
-      if (expectedCapitals && expectedCapitals[i]) {
-        const expectedName = expectedCapitals[i].name;
+      if (expectedCapitals) {
+        const expected = expectedCapitals[i];
+        if (!expected) continue;
+        const expectedName = expected.name;
         if (round.capital !== expectedName) {
           return {
             valid: false,

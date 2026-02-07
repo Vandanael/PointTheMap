@@ -1,18 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-// Mock storage before importing modules that use i18n
-vi.mock('../services/storage.js', () => ({
-  storage: {
-    get: vi.fn((key) => {
-      if (key === 'lang') return 'en'; // Default to English for tests
-      return null;
-    }),
-    set: vi.fn(),
-    remove: vi.fn(),
-  },
-}));
-
 import { ScoringSystem, getScoringSystem, scoringSystem } from './ScoringSystem.js';
+import { getLang, toggleLang } from '../i18n.js';
 import { eventBus } from '../core/EventBus.js';
 import { GAME } from '@lib/config';
 
@@ -22,6 +11,13 @@ describe('ScoringSystem', () => {
 
   beforeEach(() => {
     system = new ScoringSystem();
+    // Ensure i18n defaults to English for label assertions
+    try {
+      localStorage.setItem('ptm_lang', JSON.stringify('en'));
+    } catch {}
+    if (getLang() !== 'en') {
+      toggleLang();
+    }
   });
 
   afterEach(() => {

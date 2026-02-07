@@ -332,7 +332,9 @@ describe('ValidationSystem', () => {
 
     it('should reject wrong number of rounds', () => {
       const tooFew = validRounds.slice(0, 3);
-      const tooMany = [...validRounds, validRounds[0]];
+      const firstRound = validRounds[0];
+      if (!firstRound) throw new Error('Expected at least one round');
+      const tooMany = [...validRounds, firstRound];
 
       expect(system.validateRounds(tooFew).valid).toBe(false);
       expect(system.validateRounds(tooMany).valid).toBe(false);
@@ -340,7 +342,9 @@ describe('ValidationSystem', () => {
 
     it('should validate each round', () => {
       const invalidRounds = [...validRounds];
-      invalidRounds[2] = { ...invalidRounds[2], capital: /** @type {any} */ (null) };
+      const thirdRound = invalidRounds[2];
+      if (!thirdRound) throw new Error('Expected third round');
+      invalidRounds[2] = { ...thirdRound, capital: /** @type {any} */ (null) };
 
       const result = system.validateRounds(invalidRounds);
       expect(result.valid).toBe(false);

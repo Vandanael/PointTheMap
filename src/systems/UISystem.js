@@ -139,5 +139,14 @@ export class UISystem {
   }
 }
 
-// Export singleton instance
-export const uiSystem = new UISystem();
+/** @type {UISystem | null} */
+let uiSystemInstance = null;
+
+/**
+ * Get singleton UISystem instance (lazy).
+ * @returns {UISystem}
+ */
+export const getUISystem = () => {
+  if (!uiSystemInstance) uiSystemInstance = new UISystem();
+  return uiSystemInstance;
+};

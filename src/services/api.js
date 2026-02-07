@@ -220,7 +220,11 @@ const mockStart = async (gameType = MODE_IDS.CLASSIC) => {
     const { civilizations } = await import('../data/civilizations.js');
     const { selectCivilizations } = await import('@lib/capital-selection/index.js');
     const mode = getGameMode(MODE_IDS.CIVILIZATION);
-    const selected = selectCivilizations(mode, civilizations, new Date());
+    const selected = selectCivilizations(
+      /** @type {{ civilizationSelection: any }} */ (mode),
+      civilizations,
+      new Date()
+    );
     return {
       token: generateId(),
       civilizations: selected.map((c) => ({
@@ -257,10 +261,10 @@ const mockStart = async (gameType = MODE_IDS.CLASSIC) => {
  * Mock implementation of submit API
  * @param {string} token
  * @param {import('../game/Game.js').Round[]} rounds
- * @param {string} pseudo
+ * @param {string} _pseudo
  * @returns {import('../game/Game.js').SubmitResult}
  */
-const mockSubmit = (_token, rounds, _pseudo) => {
+const mockSubmit = (token, rounds, _pseudo) => {
   const totalScore = rounds.reduce((sum, r) => sum + (r.score || 0), 0);
   return {
     score: Math.round(totalScore),
@@ -439,10 +443,17 @@ export const api = {
  * @param {string} token - Session token
  * @param {import('../game/Game.js').Round[]} rounds - Completed rounds
  * @param {string} pseudo - Player pseudo
- * @param {'classic' | 'daily'} [gameType='classic'] - Game type
+ * @param {'classic' | 'daily' | 'country' | 'stadium' | 'civilization' | 'country_daily' | 'stadium_daily' | 'civilization_daily'} [gameType='classic'] - Game type
  * @returns {Promise<import('../game/Game.js').SubmitResult>}
  */
-export const submitWithRetry = async (token, rounds, pseudo, gameType = MODE_IDS.CLASSIC) => {
+export const submitWithRetry = async (
+  token,
+  rounds,
+  pseudo,
+  gameType = /** @type {'classic' | 'daily' | 'country' | 'stadium' | 'civilization' | 'country_daily' | 'stadium_daily' | 'civilization_daily'} */ (
+    MODE_IDS.CLASSIC
+  )
+) => {
   try {
     const result = await api.submit(token, rounds, pseudo, gameType);
     const queue = getRetryQueue();

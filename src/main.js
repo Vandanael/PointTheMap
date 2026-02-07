@@ -1,4 +1,4 @@
-/// <reference types="../vite-env" />
+/// <reference types="vite/client" />
 import { TIMING, MAP } from './config.js';
 import {
   MODE_IDS,
@@ -31,7 +31,7 @@ import { getRemainingTime } from './game/Round.js';
 import { UI, configureUI } from './ui/UI.js';
 import { processRetryQueue, submitWithRetry } from './services/api.js';
 import { timerSystem } from './systems/TimerSystem.js';
-import { uiSystem } from './systems/UISystem.js';
+import { getUISystem } from './systems/UISystem.js';
 import { inputSystem } from './systems/InputSystem.js';
 import { scoringSystem } from './systems/ScoringSystem.js';
 import { validationSystem } from './systems/ValidationSystem.js';
@@ -41,7 +41,7 @@ import { errorHandler } from './core/ErrorHandler.js';
 import { updateStats, getStats } from './features/StatsManager.js';
 import { checkAchievements } from './features/AchievementManager.js';
 import { formatShareText, shareGameResults, getDailyNumber } from './features/Share.js';
-import { getLang, t } from './i18n.js';
+import { getLang, t, getCivilizationName } from './i18n.js';
 
 // Import new modules
 import { initLifecycle } from './app/lifecycle.js';
@@ -56,7 +56,7 @@ const stateManager = new StateManager(createGameState());
 const eventUnsubscribers = [];
 
 // Initialize DevTools in dev mode (dynamic import to exclude from production bundle)
-if (import.meta.env.DEV) {
+if (import.meta.env?.DEV) {
   import('./core/StateDevTools.js').then(({ StateDevTools }) => {
     new StateDevTools(stateManager);
   });
@@ -67,7 +67,8 @@ if (import.meta.env.DEV) {
  */
 const init = async () => {
   try {
-    document.body.dataset.appInit = 'true';
+    if (document.body) document.body.dataset.appInit = 'true';
+    const uiSystem = getUISystem();
     // Initialize lifecycle management (iOS viewport, retry queue, network indicators)
     const lifecycle = initLifecycle({
       ui: UI,
@@ -131,7 +132,7 @@ const init = async () => {
       share: { formatShareText, shareGameResults, getDailyNumber },
       analytics,
       logger,
-      i18n: { t, getLang },
+      i18n: { t, getLang, getCivilizationName },
       config: {
         TIMING,
         MAP,
@@ -149,6 +150,7 @@ const init = async () => {
       ui: UI,
       i18n: { t },
       share: { shareGameResults },
+      analytics,
     });
 
     // Subscribe to timer game logic events
@@ -234,6 +236,42 @@ const init = async () => {
     });
     eventUnsubscribers.push(/** @type {() => void} */ (unsubscribeReplay));
 
+    // Game abandoned: track when user leaves (tab hidden / page unload) while a game is in progress
+    let gameAbandonTracked = false;
+    const unsubStateForAbandon = eventBus.subscribe(
+      'state:changed',
+      (/** @type {{ state: { status: string } }} */ { state }) => {
+        if (state?.status !== GameStatus.PLAYING) gameAbandonTracked = false;
+      }
+    );
+    eventUnsubscribers.push(/** @type {() => void} */ (unsubStateForAbandon));
+
+    const trackGameAbandonedIfNeeded = () => {
+      if (document.visibilityState !== 'hidden') return;
+      const state = stateManager.getState();
+      if (state.status !== GameStatus.PLAYING || gameAbandonTracked) return;
+      gameAbandonTracked = true;
+      const roundIndex =
+        state.currentRound !== null && state.currentRound !== undefined
+          ? state.currentRound + 1
+          : 0;
+      analytics.track('game_abandoned', {
+        gameType: state.gameType,
+        round: roundIndex,
+        totalRounds: state.runtimeConfig?.roundCount ?? 5,
+      });
+    };
+
+    window.addEventListener('visibilitychange', trackGameAbandonedIfNeeded);
+    eventUnsubscribers.push(() =>
+      window.removeEventListener('visibilitychange', trackGameAbandonedIfNeeded)
+    );
+
+    window.addEventListener('pagehide', trackGameAbandonedIfNeeded);
+    eventUnsubscribers.push(() =>
+      window.removeEventListener('pagehide', trackGameAbandonedIfNeeded)
+    );
+
     // Subscribe to achievement unlock event
     eventUnsubscribers.push(
       /** @type {() => void} */ (
@@ -250,7 +288,7 @@ const init = async () => {
     await lifecycle.initializeApp();
 
     // Store cleanup functions for global cleanup
-    window.__appCleanup = () => {
+    /** @type {any} */ (window).__appCleanup = () => {
       eventUnsubscribers.forEach((unsubscribe) => unsubscribe());
       eventUnsubscribers.length = 0;
       lifecycle.cleanup();
@@ -258,7 +296,7 @@ const init = async () => {
       achievementPresenter.cleanup();
     };
   } catch (error) {
-    document.body.dataset.appInitError = 'true';
+    if (document.body) document.body.dataset.appInitError = 'true';
     // @ts-ignore - debug signal for e2e
     window.__appInitError = error instanceof Error ? error.message : String(error);
     errorHandler.handle(error instanceof Error ? error : new Error(String(error)), 'init', {

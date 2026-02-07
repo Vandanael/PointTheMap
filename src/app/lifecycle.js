@@ -13,7 +13,7 @@ import { safeAsync } from '../core/ErrorHandler.js';
  * @typedef {Object} LifecycleDeps
  * @property {typeof import('../ui/UI.js').UI} ui
  * @property {typeof import('../systems/MapSystem.js').mapSystem} mapSystem
- * @property {typeof import('../systems/UISystem.js').uiSystem} uiSystem
+ * @property {import('../systems/UISystem.js').UISystem} uiSystem
  * @property {typeof import('../systems/InputSystem.js').inputSystem} inputSystem
  * @property {typeof import('../systems/ScoringSystem.js').scoringSystem} scoringSystem
  * @property {{ processRetryQueue: () => Promise<{successful: number, failed: number}> }} api
@@ -99,10 +99,10 @@ export function initLifecycle(deps) {
     errorMonitoring.init();
     analytics.init();
 
-    const retryResult = await safeAsync(() => api.processRetryQueue(), 'retry-queue', {
+    const retryResult = (await safeAsync(() => api.processRetryQueue(), 'retry-queue', {
       successful: 0,
       failed: 0,
-    });
+    })) ?? { successful: 0, failed: 0 };
 
     if (retryResult.successful > 0) {
       logger.log(`✅ ${retryResult.successful} score(s) synchronisé(s)`);

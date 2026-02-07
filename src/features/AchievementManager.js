@@ -287,7 +287,9 @@ export const getAchievementProgress = (achievementId, stats, rounds = null, rank
         if (!rounds || rounds.length === 0) {
           return defaultProgress;
         }
-        const fastRounds = rounds.filter((r) => r.timeBonus && r.timeBonus > 500).length;
+        const fastRounds = /** @type {Array<{ timeBonus?: number }>} */ (rounds).filter(
+          (r) => r.timeBonus && r.timeBonus > 500
+        ).length;
         return {
           current: fastRounds,
           target: 5,

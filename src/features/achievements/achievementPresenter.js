@@ -13,6 +13,7 @@ import { activateFocusTrap, deactivateFocusTrap } from '../../utils/focusTrap.js
  * @property {typeof import('../../ui/UI.js').UI} ui
  * @property {{ t: (key: string) => string }} i18n
  * @property {{ shareGameResults: (text: string) => Promise<boolean> }} share
+ * @property {{ track: (event: string, props?: Object) => void }} [analytics]
  */
 
 /**
@@ -21,7 +22,7 @@ import { activateFocusTrap, deactivateFocusTrap } from '../../utils/focusTrap.js
  * @returns {{ enqueue: (achievement: {id: string, achievement: any}) => void, showNext: () => void, cleanup: () => void }}
  */
 export function createAchievementPresenter(deps) {
-  const { ui, i18n, share } = deps;
+  const { ui, i18n, share, analytics } = deps;
 
   /** @type {Array<{id: string, achievement: {id: string, icon: string, labelKey: string, descKey: string}}>} */
   let achievementQueue = [];
@@ -99,6 +100,8 @@ export function createAchievementPresenter(deps) {
       currentAchievementShareHandler = async () => {
         const shareText = `${i18n.t('achievement.unlocked')}\n${i18n.t(achievement.labelKey)}: ${i18n.t(achievement.descKey)}\n\nhttps://pointthemap.app`;
         const success = await share.shareGameResults(shareText);
+        if (analytics)
+          analytics.track('share_clicked', { source: 'achievement', achievementId: id, success });
         if (success) {
           ui.showToast(i18n.t('shareCopied'), 'success', 3000, { compact: true });
         }

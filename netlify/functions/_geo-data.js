@@ -11,7 +11,8 @@ import { GeoJSONSchema } from '../../lib/schemas/geojson.js';
 
 const logger = createLogger('geo-data');
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+// Use a distinct name to avoid "Identifier '__dirname' has already been declared" when esbuild injects __dirname
+const geoDataDir = dirname(fileURLToPath(import.meta.url));
 
 /** @type {Map<string, Object> | null} */
 let countryLookup = null;
@@ -27,7 +28,7 @@ function loadCountries() {
   if (countryLookup) return countryLookup;
 
   try {
-    const filePath = resolve(__dirname, '../../public/data/countries.geojson');
+    const filePath = resolve(geoDataDir, '../../public/data/countries.geojson');
     const parsed = JSON.parse(readFileSync(filePath, 'utf-8'));
     const validated = GeoJSONSchema.safeParse(parsed);
     if (!validated.success) {
@@ -39,7 +40,8 @@ function loadCountries() {
     countryLookup = new Map();
 
     for (const feature of data.features) {
-      const id = feature.properties.ISO_A3 || feature.properties.ADM0_A3;
+      const idRaw = feature.properties.ISO_A3 ?? feature.properties.ADM0_A3;
+      const id = typeof idRaw === 'string' ? idRaw : null;
       if (id) countryLookup.set(id, feature);
     }
 
@@ -61,7 +63,7 @@ function loadCivilizations() {
   if (civilizationLookup) return civilizationLookup;
 
   try {
-    const filePath = resolve(__dirname, '../../public/data/civilizations.geojson');
+    const filePath = resolve(geoDataDir, '../../public/data/civilizations.geojson');
     const parsed = JSON.parse(readFileSync(filePath, 'utf-8'));
     const validated = GeoJSONSchema.safeParse(parsed);
     if (!validated.success) {
@@ -73,7 +75,8 @@ function loadCivilizations() {
     civilizationLookup = new Map();
 
     for (const feature of data.features) {
-      const id = feature.properties.id || feature.properties.name;
+      const idRaw = feature.properties.id ?? feature.properties.name;
+      const id = typeof idRaw === 'string' ? idRaw : null;
       if (id) civilizationLookup.set(id, feature);
     }
 

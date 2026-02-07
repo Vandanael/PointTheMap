@@ -64,7 +64,7 @@ export class IndexedDBQueue {
       };
 
       request.onupgradeneeded = (event) => {
-        const db = event.target.result;
+        const db = /** @type {IDBOpenDBRequest} */ (event.target).result;
 
         // Create object store if it doesn't exist
         if (!db.objectStoreNames.contains(STORE_NAME)) {
@@ -361,7 +361,7 @@ export class IndexedDBQueue {
         };
 
         request.onsuccess = (event) => {
-          const cursor = event.target.result;
+          const cursor = /** @type {IDBRequest} */ (event.target).result;
           if (cursor && results.length < limit) {
             results.push(cursor.value);
             cursor.continue();

@@ -15,6 +15,17 @@ import {
 } from './game-modes.js';
 import { GAME } from '@lib/config';
 
+/**
+ * @template T
+ * @param {T | null | undefined} value
+ * @param {string} message
+ * @returns {T}
+ */
+const assertDefined = (value, message) => {
+  if (value === null || value === undefined) throw new Error(message);
+  return value;
+};
+
 describe('Game Modes Configuration', () => {
   describe('isValidMode', () => {
     it('should return true for classic mode', () => {
@@ -57,7 +68,8 @@ describe('Game Modes Configuration', () => {
       expect(mode).toBeDefined();
       expect(mode.id).toBe('classic');
       expect(mode.name).toBe('Classic Mode');
-      expect(mode.capitalSelection.type).toBe('random');
+      const capitalSelection = assertDefined(mode.capitalSelection, 'Missing capitalSelection');
+      expect(capitalSelection.type).toBe('random');
       expect(mode.scoring.timeBonus.enabled).toBe(false);
     });
 
@@ -66,7 +78,8 @@ describe('Game Modes Configuration', () => {
       expect(mode).toBeDefined();
       expect(mode.id).toBe('daily');
       expect(mode.name).toBe('Daily Challenge');
-      expect(mode.capitalSelection.type).toBe('seeded');
+      const capitalSelection = assertDefined(mode.capitalSelection, 'Missing capitalSelection');
+      expect(capitalSelection.type).toBe('seeded');
       expect(mode.scoring.timeBonus.enabled).toBe(true);
     });
 
@@ -75,7 +88,8 @@ describe('Game Modes Configuration', () => {
       expect(mode).toBeDefined();
       expect(mode.id).toBe('stadium');
       expect(mode.name).toBe('Stadium Mode');
-      expect(mode.stadiumSelection.type).toBe('random');
+      const stadiumSelection = assertDefined(mode.stadiumSelection, 'Missing stadiumSelection');
+      expect(stadiumSelection.type).toBe('random');
       expect(mode.scoring.timeBonus.enabled).toBe(false);
     });
 
@@ -83,7 +97,8 @@ describe('Game Modes Configuration', () => {
       const mode = getGameMode('country_daily');
       expect(mode).toBeDefined();
       expect(mode.id).toBe('country_daily');
-      expect(mode.countrySelection.type).toBe('seeded');
+      const countrySelection = assertDefined(mode.countrySelection, 'Missing countrySelection');
+      expect(countrySelection.type).toBe('seeded');
       expect(mode.scoring.timeBonus.enabled).toBe(true);
     });
 
@@ -145,9 +160,10 @@ describe('Game Modes Configuration', () => {
         graceMs: 500,
         dangerZoneMs: GAME.DANGER_ZONE_MS,
       });
-      expect(config.roundCount).toBe(GAME_MODES.country.timing.roundCount);
-      expect(config.timerMs).toBe(GAME_MODES.country.timing.roundTime);
-      expect(config.graceMs).toBe(GAME_MODES.country.timing.gracePeriod);
+      const country = assertDefined(GAME_MODES.country, 'Missing country mode config');
+      expect(config.roundCount).toBe(country.timing.roundCount);
+      expect(config.timerMs).toBe(country.timing.roundTime);
+      expect(config.graceMs).toBe(country.timing.gracePeriod);
     });
   });
 
@@ -159,10 +175,22 @@ describe('Game Modes Configuration', () => {
       expect(modes.map((m) => m.id)).toContain('country');
       expect(modes.map((m) => m.id)).toContain('stadium');
       expect(modes.map((m) => m.id)).toContain('civilization');
-      const capital = modes.find((m) => m.id === 'capital');
-      const country = modes.find((m) => m.id === 'country');
-      const stadium = modes.find((m) => m.id === 'stadium');
-      const civilization = modes.find((m) => m.id === 'civilization');
+      const capital = assertDefined(
+        modes.find((m) => m.id === 'capital'),
+        'Missing capital mode'
+      );
+      const country = assertDefined(
+        modes.find((m) => m.id === 'country'),
+        'Missing country mode'
+      );
+      const stadium = assertDefined(
+        modes.find((m) => m.id === 'stadium'),
+        'Missing stadium mode'
+      );
+      const civilization = assertDefined(
+        modes.find((m) => m.id === 'civilization'),
+        'Missing civilization mode'
+      );
       expect(capital.variants).toEqual(['classic', 'daily']);
       expect(country.variants).toEqual(['classic', 'daily']);
       expect(stadium.variants).toEqual(['classic', 'daily']);
@@ -251,13 +279,15 @@ describe('Game Modes Configuration', () => {
   });
 
   describe('Classic mode configuration', () => {
-    const classic = GAME_MODES.classic;
+    const classic = assertDefined(GAME_MODES.classic, 'Missing classic mode config');
 
     it('should have correct capital selection config', () => {
-      expect(classic.capitalSelection.type).toBe('random');
-      expect(classic.capitalSelection.count).toBe(5);
-      expect(classic.capitalSelection.balancing.popular).toBe(2);
-      expect(classic.capitalSelection.balancing.obscure).toBe(3);
+      const capitalSelection = assertDefined(classic.capitalSelection, 'Missing capitalSelection');
+      const balancing = assertDefined(capitalSelection.balancing, 'Missing balancing');
+      expect(capitalSelection.type).toBe('random');
+      expect(capitalSelection.count).toBe(5);
+      expect(balancing.popular).toBe(2);
+      expect(balancing.obscure).toBe(3);
     });
 
     it('should have correct scoring config', () => {
@@ -273,14 +303,16 @@ describe('Game Modes Configuration', () => {
   });
 
   describe('Daily mode configuration', () => {
-    const daily = GAME_MODES.daily;
+    const daily = assertDefined(GAME_MODES.daily, 'Missing daily mode config');
 
     it('should have correct capital selection config', () => {
-      expect(daily.capitalSelection.type).toBe('seeded');
-      expect(daily.capitalSelection.count).toBe(5);
-      expect(daily.capitalSelection.balancing.popular).toBe(2);
-      expect(daily.capitalSelection.balancing.obscure).toBe(3);
-      expect(daily.capitalSelection.seed).toBeTypeOf('function');
+      const capitalSelection = assertDefined(daily.capitalSelection, 'Missing capitalSelection');
+      const balancing = assertDefined(capitalSelection.balancing, 'Missing balancing');
+      expect(capitalSelection.type).toBe('seeded');
+      expect(capitalSelection.count).toBe(5);
+      expect(balancing.popular).toBe(2);
+      expect(balancing.obscure).toBe(3);
+      expect(capitalSelection.seed).toBeTypeOf('function');
     });
 
     it('should have correct scoring config with time bonus', () => {
@@ -291,31 +323,38 @@ describe('Game Modes Configuration', () => {
     });
 
     it('should generate consistent seed from date', () => {
+      const capitalSelection = assertDefined(daily.capitalSelection, 'Missing capitalSelection');
       const date = new Date('2024-01-15');
-      const seed = daily.capitalSelection.seed(date);
+      const seed = capitalSelection.seed(date);
       // Seed is (YYYYMMDD * salt) % 999999, not raw YYYYMMDD
       expect(seed).toBe(628005);
       // Same date must produce same seed
-      expect(daily.capitalSelection.seed(new Date('2024-01-15'))).toBe(628005);
+      expect(capitalSelection.seed(new Date('2024-01-15'))).toBe(628005);
     });
 
     it('should generate different seeds for different dates', () => {
+      const capitalSelection = assertDefined(daily.capitalSelection, 'Missing capitalSelection');
       const date1 = new Date('2024-01-15');
       const date2 = new Date('2024-01-16');
-      const seed1 = daily.capitalSelection.seed(date1);
-      const seed2 = daily.capitalSelection.seed(date2);
+      const seed1 = capitalSelection.seed(date1);
+      const seed2 = capitalSelection.seed(date2);
       expect(seed1).not.toBe(seed2);
     });
   });
 
   describe('Civilization mode configuration', () => {
-    const civilization = GAME_MODES.civilization;
+    const civilization = assertDefined(GAME_MODES.civilization, 'Missing civilization mode config');
 
     it('should have civilization selection config', () => {
-      expect(civilization.civilizationSelection.type).toBe('random');
-      expect(civilization.civilizationSelection.count).toBe(5);
-      expect(civilization.civilizationSelection.balancing.popular).toBe(2);
-      expect(civilization.civilizationSelection.balancing.obscure).toBe(3);
+      const selection = assertDefined(
+        civilization.civilizationSelection,
+        'Missing civilizationSelection'
+      );
+      const balancing = assertDefined(selection.balancing, 'Missing balancing');
+      expect(selection.type).toBe('random');
+      expect(selection.count).toBe(5);
+      expect(balancing.popular).toBe(2);
+      expect(balancing.obscure).toBe(3);
     });
 
     it('should return civilization mode via getGameMode', () => {

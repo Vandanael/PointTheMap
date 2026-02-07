@@ -29,7 +29,7 @@ import { MAP_ANIMATIONS } from '../config/visual-constants.js';
  * @property {{ formatShareText: any, shareGameResults: any, getDailyNumber: any }} share
  * @property {{ track: any }} analytics
  * @property {typeof import('../utils/logger.js').logger} logger
- * @property {{ t: any, getLang: any }} i18n
+ * @property {{ t: any, getLang: any, getCivilizationName: (id: string, fallback?: string) => string }} i18n
  * @property {{ TIMING: any, MAP: any, MODE_IDS: any, isDailyVariant: any, isCapitalCategory: any, isStadiumCategory: any, isCountryCategory: any, isCivilizationCategory: any }} config
  */
 
@@ -203,7 +203,10 @@ export function createGameFlowController(deps) {
     // For country/civilization mode: show name only
     // For stadium mode: show stadium name only (no city)
     // For capital mode: show capital name + country
-    const displayName = target.name;
+    const displayName =
+      isCivilizationMode && target.id
+        ? i18n.getCivilizationName(target.id, target.name)
+        : target.name;
     const displaySubtitle =
       isCountryMode || isCivilizationMode
         ? ''
@@ -418,7 +421,10 @@ export function createGameFlowController(deps) {
     ui.updateGameUI(progress.current, progress.total, state.totalScore);
 
     // For country/civilization: show name only; stadium: name only; capital: name + country
-    const displayName = target.name;
+    const displayName =
+      isCivilizationMode && target.id
+        ? i18n.getCivilizationName(target.id, target.name)
+        : target.name;
     const displaySubtitle =
       isCountryMode || isCivilizationMode
         ? ''
@@ -497,6 +503,13 @@ export function createGameFlowController(deps) {
           isNewSessionBest: isNewBest,
         });
 
+        analytics.track('score_submitted', {
+          totalScore: result.score,
+          gameType: state.gameType,
+          rank: result.rank,
+          isTopFifty: result.isTopFifty,
+        });
+
         // Bind share button (after UI.showFinalResults renders the button)
         const shareBtn = document.getElementById('btn-share');
         if (shareBtn) {
@@ -528,6 +541,7 @@ export function createGameFlowController(deps) {
               i18n.getLang()
             );
             const success = await share.shareGameResults(shareText);
+            analytics.track('share_clicked', { source: 'result', success });
             ui.showToast(
               success ? i18n.t('shareCopied') : i18n.t('shareFailed'),
               success ? 'success' : 'error',
@@ -575,6 +589,8 @@ export function createGameFlowController(deps) {
    * Handle replay
    */
   const handleReplay = () => {
+    const state = stateManager.getState();
+    analytics.track('replay_clicked', { gameType: state.gameType });
     stateManager.setState(game.resetGame(), 'game:reset');
     mapSystem.clearMap();
     mapSystem.flyTo(/** @type {[number, number]} */ (MAP.CENTER), MAP.ZOOM, { animate: false });

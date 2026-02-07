@@ -1,7 +1,30 @@
 // Point The Map - Internationalisation (i18n)
 // Support FR / EN
 
-import { storage } from './services/storage.js';
+const LANG_STORAGE_KEY = 'ptm_lang';
+
+/**
+ * Minimal localStorage access to avoid core/services dependency from i18n.
+ * Uses the same key prefix + JSON encoding as StorageManager.
+ */
+const readStoredLang = () => {
+  try {
+    const raw = localStorage.getItem(LANG_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+/** @param {string} lang */
+const writeStoredLang = (lang) => {
+  try {
+    localStorage.setItem(LANG_STORAGE_KEY, JSON.stringify(lang));
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 const translations = {
   fr: {
@@ -16,7 +39,6 @@ const translations = {
     // Game Lobby
     selectCategory: 'Choisissez une catégorie',
     capitals: 'Capitales',
-    countries: 'Pays',
     civilizations: 'Civilisations',
     stadiums: 'Stades',
     selectMode: 'Choisissez un mode',
@@ -73,6 +95,74 @@ const translations = {
     find: 'Trouvez',
     getReady: 'Prêt ?',
     clickOnMap: '📍 Cliquez sur la carte',
+
+    // Civilization names (FR)
+    civilization: {
+      roman_empire: 'Empire romain',
+      ancient_egypt: 'Égypte antique',
+      ancient_greece: 'Grèce antique',
+      maya: 'Mayas',
+      aztec: 'Empire aztèque',
+      ancient_china: 'Chine antique',
+      ming_dynasty: 'Dynastie Ming',
+      tang_dynasty: 'Dynastie Tang',
+      mughal_empire: 'Empire moghol',
+      holy_roman_empire: 'Saint-Empire romain germanique',
+      franks: 'Francs (carolingiens)',
+      viking_age: 'Âge viking',
+      khmer_empire: 'Empire khmer',
+      mali_empire: 'Empire du Mali',
+      ghana_empire: 'Empire du Ghana',
+      abbasid_caliphate: 'Califat abbasside',
+      umayyad_caliphate: 'Califat omeyyade',
+      macedonia: 'Macédoine (Alexandre)',
+      carthage: 'Carthage',
+      assyria: 'Assyrie',
+      maurya_empire: 'Empire maurya',
+      gupta_empire: 'Empire Gupta',
+      ancient_rome: 'Rome antique',
+      ancient_india: 'Inde antique',
+      venetian_republic: 'République de Venise',
+      inca: 'Empire inca',
+      persian_empire: 'Empire perse',
+      ottoman_empire: 'Empire ottoman',
+      mongol_empire: 'Empire mongol',
+      byzantine_empire: 'Empire byzantin',
+      mesopotamia: 'Mésopotamie',
+      indus_valley: "Civilisation de l'Indus",
+      phoenicia: 'Phénicie',
+      ancient_israel: 'Israël antique',
+      ptolemaic_egypt: 'Égypte ptolémaïque',
+      seljuk_empire: 'Empire seldjoukide',
+      safavid_empire: 'Empire safavide',
+      teotihuacan: 'Teotihuacan',
+      nubia: 'Nubie',
+      axum: "Royaume d'Aksoum",
+      songhai_empire: 'Empire songhaï',
+      great_zimbabwe: 'Grand Zimbabwe',
+      benin_empire: 'Empire du Bénin',
+      olmec: 'Olmèques',
+      qin_dynasty: 'Dynastie Qin',
+      hittites: 'Hittites',
+      tiwanaku: 'Tiwanaku',
+      toltec: 'Empire toltèque',
+      srivijaya: 'Srivijaya',
+      tibetan_empire: 'Empire tibétain',
+      chimu: 'Empire Chimú',
+      moche: 'Moche',
+      wari: 'Empire Wari',
+      chavin: 'Chavín',
+      nazca: 'Nazca',
+      silla: 'Silla',
+      goryeo: 'Goryeo',
+      song_dynasty: 'Dynastie Song',
+      yuan_dynasty: 'Dynastie Yuan',
+      timurid_empire: 'Empire timouride',
+      kievan_rus: "Rus' de Kiev",
+      mamluk_sultanate: 'Sultanat mamelouk',
+      fatimid_caliphate: 'Califat fatimide',
+      chola_dynasty: 'Dynastie Chola',
+    },
 
     // Results
     distance: 'Distance',
@@ -224,7 +314,6 @@ const translations = {
     // Game Lobby
     selectCategory: 'Select a category',
     capitals: 'Capitals',
-    countries: 'Countries',
     civilizations: 'Civilizations',
     stadiums: 'Stadiums',
     selectMode: 'Select a mode',
@@ -281,6 +370,74 @@ const translations = {
     find: 'Find',
     getReady: 'Get Ready!',
     clickOnMap: '📍 Click on the map',
+
+    // Civilization names (EN)
+    civilization: {
+      roman_empire: 'Roman Empire',
+      ancient_egypt: 'Ancient Egypt',
+      ancient_greece: 'Ancient Greece',
+      maya: 'Maya',
+      aztec: 'Aztec Empire',
+      ancient_china: 'Ancient China',
+      ming_dynasty: 'Ming Dynasty',
+      tang_dynasty: 'Tang Dynasty',
+      mughal_empire: 'Mughal Empire',
+      holy_roman_empire: 'Holy Roman Empire',
+      franks: 'Franks (Carolingian)',
+      viking_age: 'Viking Age',
+      khmer_empire: 'Khmer Empire',
+      mali_empire: 'Mali Empire',
+      ghana_empire: 'Ghana Empire',
+      abbasid_caliphate: 'Abbasid Caliphate',
+      umayyad_caliphate: 'Umayyad Caliphate',
+      macedonia: 'Macedonia (Alexander)',
+      carthage: 'Carthage',
+      assyria: 'Assyria',
+      maurya_empire: 'Maurya Empire',
+      gupta_empire: 'Gupta Empire',
+      ancient_rome: 'Ancient Rome',
+      ancient_india: 'Ancient India',
+      venetian_republic: 'Venetian Republic',
+      inca: 'Inca Empire',
+      persian_empire: 'Persian Empire',
+      ottoman_empire: 'Ottoman Empire',
+      mongol_empire: 'Mongol Empire',
+      byzantine_empire: 'Byzantine Empire',
+      mesopotamia: 'Mesopotamia',
+      indus_valley: 'Indus Valley',
+      phoenicia: 'Phoenicia',
+      ancient_israel: 'Ancient Israel',
+      ptolemaic_egypt: 'Ptolemaic Egypt',
+      seljuk_empire: 'Seljuk Empire',
+      safavid_empire: 'Safavid Empire',
+      teotihuacan: 'Teotihuacan',
+      nubia: 'Nubia',
+      axum: 'Kingdom of Axum',
+      songhai_empire: 'Songhai Empire',
+      great_zimbabwe: 'Great Zimbabwe',
+      benin_empire: 'Benin Empire',
+      olmec: 'Olmec',
+      qin_dynasty: 'Qin Dynasty',
+      hittites: 'Hittites',
+      tiwanaku: 'Tiwanaku',
+      toltec: 'Toltec Empire',
+      srivijaya: 'Srivijaya',
+      tibetan_empire: 'Tibetan Empire',
+      chimu: 'Chimú Empire',
+      moche: 'Moche',
+      wari: 'Wari Empire',
+      chavin: 'Chavin',
+      nazca: 'Nazca',
+      silla: 'Silla',
+      goryeo: 'Goryeo',
+      song_dynasty: 'Song Dynasty',
+      yuan_dynasty: 'Yuan Dynasty',
+      timurid_empire: 'Timurid Empire',
+      kievan_rus: 'Kievan Rus',
+      mamluk_sultanate: 'Mamluk Sultanate',
+      fatimid_caliphate: 'Fatimid Caliphate',
+      chola_dynasty: 'Chola Dynasty',
+    },
 
     // Results
     distance: 'Distance',
@@ -423,7 +580,7 @@ let currentLang = null;
 
 const initLang = () => {
   if (currentLang === null) {
-    currentLang = storage.get('lang') || 'fr';
+    currentLang = readStoredLang() || 'fr';
     // Set HTML lang attribute on init
     document.documentElement.lang = currentLang;
   }
@@ -463,7 +620,7 @@ export const getLang = () => {
 const setLang = (lang) => {
   if (translations[lang]) {
     currentLang = lang;
-    storage.set('lang', lang);
+    writeStoredLang(lang);
     // Update HTML lang attribute for accessibility/SEO
     document.documentElement.lang = lang;
   }
@@ -474,4 +631,16 @@ export const toggleLang = () => {
   const newLang = currentLang === 'fr' ? 'en' : 'fr';
   setLang(newLang);
   return newLang;
+};
+
+/**
+ * Get localized civilization name (EN/FR). Falls back to fallback if key missing.
+ * @param {string} id - Civilization id (e.g. 'roman_empire')
+ * @param {string} [fallback=''] - Fallback when no translation
+ * @returns {string}
+ */
+export const getCivilizationName = (id, fallback = '') => {
+  const key = 'civilization.' + id;
+  const out = t(key);
+  return out === key ? fallback : out;
 };

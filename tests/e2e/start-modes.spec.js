@@ -12,7 +12,7 @@ test.describe('Start screen', () => {
     test(`can start ${label} mode`, async ({ page }) => {
       const pageErrors = [];
       const consoleErrors = [];
-      page.on('pageerror', (err) => pageErrors.push(err.message));
+      page.on('pageerror', (err) => pageErrors.push(err.stack || err.message));
       page.on('console', (msg) => {
         if (msg.type() === 'error') consoleErrors.push(msg.text());
       });
@@ -61,11 +61,27 @@ test.describe('Start screen', () => {
 
       await expect(page.locator('#question-modal')).toBeVisible();
       await expect(page.locator('#btn-ready')).toBeVisible();
-      await expect(page.locator('#capitalName')).toHaveText(/\\S+/);
+      await expect
+        .poll(async () => {
+          const text = await page.locator('#capitalName').textContent();
+          return text ? text.trim().length : 0;
+        })
+        .toBeGreaterThan(0);
 
       await page.locator('#btn-ready').click();
       await expect(page.locator('#game-header')).toBeVisible();
       await expect(page.locator('#timer-bar')).toBeVisible();
+      await expect(page.locator('#map')).toBeVisible();
+
+      await page.locator('#map').click();
+
+      await expect(page.locator('#round-result')).toBeVisible();
+      await expect
+        .poll(async () => {
+          const text = await page.locator('#pointsDisplay').textContent();
+          return text ? text.replace(/[^\d]/g, '') : '';
+        })
+        .not.toBe('');
     });
   }
 });

@@ -13,6 +13,12 @@ import { GameOverScreen, FinalResults, PseudoLockedDialog, Toast } from '../comp
 const MIN_SUBMIT_INTERVAL = 2000; // 2 seconds between submissions
 
 /**
+ * @typedef {'info' | 'error' | 'success' | 'warning'} ToastType
+ * @typedef {{ compact?: boolean, center?: boolean }} ToastOptions
+ * @typedef {{ rank: number, isTopFifty: boolean }} FinalResultsPayload
+ */
+
+/**
  * @param {{
  *   getInputSystem: () => { handleSubmit: (pseudo: string) => void; handleReplay: () => void } | null;
  *   getValidationSystem: () => { validatePseudo: (pseudo: string) => { valid: boolean } } | null;
@@ -30,6 +36,7 @@ export const createResultScreen = (deps) => {
   // Track toast timers for cleanup
   const _toastTimers = new Map();
 
+  /** @param {number} totalScore */
   const showGameOver = (totalScore) => {
     const lastPseudo = getLastPseudo() || '';
     render(GameOverScreen(totalScore, lastPseudo));
@@ -138,6 +145,12 @@ export const createResultScreen = (deps) => {
     }
   };
 
+  /**
+   * @param {number} totalScore
+   * @param {string} pseudo
+   * @param {FinalResultsPayload} result
+   * @param {boolean} [isNewSessionBest=false]
+   */
   const showFinalResults = (totalScore, pseudo, result, isNewSessionBest = false) => {
     let modal = document.getElementById('result-modal');
     if (!modal) {
@@ -178,6 +191,7 @@ export const createResultScreen = (deps) => {
     _domCache.invalidate('result-modal');
   };
 
+  /** @param {string} message */
   const showError = (message) => {
     const container = app();
     if (!container) return;
@@ -190,6 +204,10 @@ export const createResultScreen = (deps) => {
     setTimeout(() => errorEl.remove(), UI_TIMING.ERROR_DISPLAY);
   };
 
+  /**
+   * @param {string} pseudo
+   * @param {() => void} [onConfirm]
+   */
   const showPseudoLockedDialog = (pseudo, onConfirm) => {
     render(PseudoLockedDialog(pseudo));
     const closePseudoLocked = () => {
@@ -214,6 +232,13 @@ export const createResultScreen = (deps) => {
     }
   };
 
+  /**
+   * @param {string} message
+   * @param {ToastType} [type='info']
+   * @param {number} [duration=5000]
+   * @param {ToastOptions} [options]
+   * @returns {string}
+   */
   const showToast = (message, type = 'info', duration = 5000, options = {}) => {
     const toastId = `toast-${Date.now()}`;
     render(Toast(toastId, message, type, options));
@@ -232,6 +257,7 @@ export const createResultScreen = (deps) => {
     return toastId;
   };
 
+  /** @param {string} toastId */
   const closeToast = (toastId) => {
     const timerId = _toastTimers.get(toastId);
     if (timerId) {

@@ -341,6 +341,10 @@ export class MapRenderer {
 
   /**
    * Show round result
+   * @param {[number, number]} clickCoords
+   * @param {[number, number]} capitalCoords
+   * @param {number} distanceKm
+   * @param {{ skipResultLine?: boolean }} [options]
    * @returns {Promise<void>}
    */
   async showRoundResult(clickCoords, capitalCoords, distanceKm, options = {}) {
@@ -466,6 +470,9 @@ export class MapRenderer {
 
   /**
    * Fly to specific coordinates
+   * @param {[number, number]} coords
+   * @param {number} [zoom=MAP.ZOOM]
+   * @param {object} [options]
    */
   flyTo(coords, zoom = MAP.ZOOM, options = {}) {
     if (!this.#map) return;
@@ -474,6 +481,7 @@ export class MapRenderer {
 
   /**
    * Get current map center
+   * @returns {[number, number] | null}
    */
   getCenter() {
     if (!this.#map) return null;
@@ -483,6 +491,7 @@ export class MapRenderer {
 
   /**
    * Get current zoom level
+   * @returns {number | null}
    */
   getZoom() {
     if (!this.#map) return null;

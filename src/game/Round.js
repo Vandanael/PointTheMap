@@ -19,10 +19,15 @@ function getTotalTimeAllowed(totalTimeAllowed) {
  * @returns {import('./Game.js').Round}
  */
 export const createRound = (target, roundNumber, gameType = 'capital') => ({
-  capital: gameType === 'capital' ? target : null,
-  country: gameType === MODE_IDS.COUNTRY ? target : null,
-  stadium: gameType === MODE_IDS.STADIUM ? target : null,
-  civilization: gameType === MODE_IDS.CIVILIZATION ? target : null,
+  capital: gameType === 'capital' ? /** @type {import('./Game.js').Capital} */ (target) : null,
+  country:
+    gameType === MODE_IDS.COUNTRY ? /** @type {import('./Game.js').Country} */ (target) : null,
+  stadium:
+    gameType === MODE_IDS.STADIUM ? /** @type {import('./Game.js').Stadium} */ (target) : null,
+  civilization:
+    gameType === MODE_IDS.CIVILIZATION
+      ? /** @type {import('./Game.js').Civilization} */ (target)
+      : null,
   roundNumber,
   startTime: Date.now(),
   endTime: null,
@@ -41,7 +46,7 @@ export const createRound = (target, roundNumber, gameType = 'capital') => ({
  * @param {number} [totalTimeAllowed] - From state.runtimeConfig (timerMs + graceMs); fallback GAME for tests
  * @param {Object} [countryData] - Country-specific data for country mode
  * @param {Object} [civilizationData] - Civilization-specific data for civilization mode
- * @param {import('./ports.js').RoundRulesPort} roundRules - Round rules interface for validation and scoring
+ * @param {import('./ports.js').RoundRulesPort} [roundRules] - Round rules interface for validation and scoring
  * @returns {import('./Game.js').Round}
  */
 export const recordClick = (
@@ -53,6 +58,9 @@ export const recordClick = (
   civilizationData = null,
   roundRules
 ) => {
+  if (!roundRules) {
+    throw new Error('Round rules are required');
+  }
   const endTime = Date.now();
   const elapsed = endTime - round.startTime;
   const total = getTotalTimeAllowed(totalTimeAllowed);
@@ -69,7 +77,7 @@ export const recordClick = (
   }
 
   // Normalize coordinates to valid ranges
-  const normalizedCoords = normalizeCoords(clickCoords);
+  const normalizedCoords = /** @type {[number, number]} */ (normalizeCoords(clickCoords));
   const [normalizedLat, normalizedLng] = normalizedCoords;
 
   // Check timeout first (before calculating score)
@@ -85,7 +93,7 @@ export const recordClick = (
   }
 
   // Handle country mode
-  if (round.gameType === MODE_IDS.COUNTRY && countryData) {
+  if (round.gameType === MODE_IDS.COUNTRY && countryData && round.country) {
     const scoreResult = roundRules.calculateCountryClickScore(
       normalizedCoords,
       countryData.targetCountryFeature,
@@ -148,7 +156,7 @@ export const recordClick = (
 
   // Handle stadium mode (point-to-point, same as capital)
   if (round.gameType === MODE_IDS.STADIUM && round.stadium) {
-    const stadiumCoords = [round.stadium.lat, round.stadium.lng];
+    const stadiumCoords = /** @type {[number, number]} */ ([round.stadium.lat, round.stadium.lng]);
     const scoreResult = roundRules.calculateClickScore(
       normalizedCoords,
       stadiumCoords,
@@ -173,7 +181,7 @@ export const recordClick = (
   }
 
   // Handle capital mode (default)
-  const capitalCoords = [round.capital.lat, round.capital.lng];
+  const capitalCoords = /** @type {[number, number]} */ ([round.capital.lat, round.capital.lng]);
   const scoreResult = roundRules.calculateClickScore(
     normalizedCoords,
     capitalCoords,

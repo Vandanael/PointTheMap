@@ -33,13 +33,11 @@ class ErrorMonitoring {
 
   /**
    * Initialize error monitoring provider (Sentry, Rollbar, etc.)
-   * @private
    */
   #initializeProvider() {}
 
   /**
    * Setup global error handlers
-   * @private
    */
   #setupGlobalHandlers() {
     // Catch unhandled errors
@@ -64,7 +62,6 @@ class ErrorMonitoring {
 
   /**
    * Subscribe to application error events
-   * @private
    */
   #subscribeToEvents() {
     eventBus.subscribe('error:occurred', ({ error, context }) => {
@@ -94,7 +91,6 @@ class ErrorMonitoring {
 
   /**
    * Send error to monitoring provider
-   * @private
    * @param {Error|string} error - Error object or message
    * @param {Object} context - Additional context
    */
@@ -105,7 +101,6 @@ class ErrorMonitoring {
 
   /**
    * Serialize error for transmission
-   * @private
    * @param {Error|string} error - Error to serialize
    * @returns {Object} Serialized error
    */
@@ -127,7 +122,6 @@ class ErrorMonitoring {
 
   /**
    * Send data using sendBeacon for reliability
-   * @private
    * @param {string} url - Endpoint URL
    * @param {Object} data - Data to send
    */
@@ -155,7 +149,7 @@ class ErrorMonitoring {
 
   /**
    * Set user context for error tracking
-   * @param {Object} user - User information (no PII)
+   * @param {Object} _user - User information (no PII)
    */
   setUser(_user) {
     if (!this.#enabled) return;

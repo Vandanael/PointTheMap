@@ -12,12 +12,12 @@ import { createResultScreen } from './screens/ResultScreen.js';
 let _inputSystem = null;
 /** @type {{ validatePseudo: (pseudo: string) => { valid: boolean } } | null} */
 let _validationSystem = null;
-/** @type {{ isInitialized: () => boolean; init: (mapId: string) => Promise<void>; loadCountriesGeoJSON: () => Promise<boolean>; loadCivilizationsGeoJSON: () => Promise<boolean> } | null} */
+/** @type {{ isInitialized: () => boolean; init: (mapId: string) => Promise<boolean>; loadCountriesGeoJSON: () => Promise<boolean>; loadCivilizationsGeoJSON: () => Promise<boolean> } | null} */
 let _mapSystem = null;
 
 /**
  * Configure UI dependencies (injected by main).
- * @param {{ inputSystem?: { handleStartGame: (gameMode: string) => void; handleNextRound: () => void; handleSubmit: (pseudo: string) => void; handleReplay: () => void }; validationSystem?: { validatePseudo: (pseudo: string) => { valid: boolean } }; mapSystem?: { isInitialized: () => boolean; init: (mapId: string) => Promise<void>; loadCountriesGeoJSON: () => Promise<boolean>; loadCivilizationsGeoJSON: () => Promise<boolean> } }} deps
+ * @param {{ inputSystem?: { handleStartGame: (gameMode: string) => void; handleNextRound: () => void; handleSubmit: (pseudo: string) => void; handleReplay: () => void }; validationSystem?: { validatePseudo: (pseudo: string) => { valid: boolean } }; mapSystem?: { isInitialized: () => boolean; init: (mapId: string) => Promise<boolean>; loadCountriesGeoJSON: () => Promise<boolean>; loadCivilizationsGeoJSON: () => Promise<boolean> } }} deps
  */
 export const configureUI = (deps = {}) => {
   if (deps.inputSystem) _inputSystem = deps.inputSystem;

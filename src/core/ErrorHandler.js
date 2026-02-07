@@ -68,6 +68,7 @@ export class ValidationError extends Error {
  */
 class ErrorHandler {
   constructor() {
+    /** @type {Record<string, number>} */
     this.errorCounts = {};
     this.setupGlobalHandlers();
   }
@@ -91,9 +92,7 @@ class ErrorHandler {
    * Handle any error
    * @param {Error} error - The error object
    * @param {string} context - Context where error occurred
-   * @param {Object} options - Handler options
-   * @param {boolean} options.showToUser - Whether to show error to user
-   * @param {boolean} options.fatal - Whether error is fatal
+   * @param {{ showToUser?: boolean, fatal?: boolean }} [options] - Handler options
    */
   handle(error, context = 'unknown', options = {}) {
     const { showToUser = true, fatal = false } = options;
@@ -130,15 +129,20 @@ class ErrorHandler {
    * Handle global errors
    * @private
    */
+  /**
+   * @param {unknown} error
+   * @param {string} type
+   */
   handleGlobalError(error, type) {
-    logger.error(`[global-${type}]`, error);
+    const err = toError(error);
+    logger.error(`[global-${type}]`, err);
 
     // Don't show UI for every global error (too noisy)
     // Only track and log
-    this.trackError(error, `global-${type}`);
+    this.trackError(err, `global-${type}`);
 
     eventBus.emit('error:global', {
-      error,
+      error: err,
       type,
       timestamp: Date.now(),
     });
@@ -148,14 +152,24 @@ class ErrorHandler {
    * Track error for monitoring
    * @private
    */
+  /**
+   * @param {Error} error
+   * @param {string} context
+   */
   trackError(error, context) {
-    const key = `${context}:${error.code || error.name || 'unknown'}`;
+    const err = /** @type {Error & { code?: string }} */ (error);
+    const key = `${context}:${err.code || err.name || 'unknown'}`;
     this.errorCounts[key] = (this.errorCounts[key] || 0) + 1;
   }
 
   /**
    * Get user-friendly error message
    * @private
+   */
+  /**
+   * @param {Error} error
+   * @param {string} context
+   * @returns {string}
    */
   getUserFriendlyMessage(error, context) {
     // API errors with specific handling
@@ -203,6 +217,10 @@ class ErrorHandler {
    * Show error to user
    * @private
    */
+  /**
+   * @param {Error} error
+   * @param {string} context
+   */
   showUserError(error, context) {
     const message = this.getUserFriendlyMessage(error, context);
 
@@ -213,6 +231,10 @@ class ErrorHandler {
   /**
    * Handle fatal errors
    * @private
+   */
+  /**
+   * @param {Error} error
+   * @param {string} context
    */
   handleFatalError(error, context) {
     logger.fatal(`[FATAL][${context}]`, error);
@@ -225,7 +247,7 @@ class ErrorHandler {
     });
 
     // In production, might want to reload or show recovery UI
-    if (import.meta.env.PROD) {
+    if (import.meta.env?.PROD) {
       // Give user option to reload
       setTimeout(() => {
         if (confirm('Une erreur critique est survenue. Recharger la page ?')) {
@@ -237,20 +259,22 @@ class ErrorHandler {
 
   /**
    * Wrap an async function with error handling
-   * @param {Function} fn - Async function to wrap
+   * @param {(...args: any[]) => Promise<any>} fn - Async function to wrap
    * @param {string} context - Context name
-   * @param {Object} options - Handler options
+   * @param {{ showToUser?: boolean, fatal?: boolean }} [options] - Handler options
    * @returns {Function} Wrapped function
    */
   wrap(fn, context, options = {}) {
-    return async (...args) => {
+    /** @param {...any} args */
+    const wrapped = async (...args) => {
       try {
         return await fn(...args);
       } catch (error) {
-        this.handle(error, context, options);
+        this.handle(toError(error), context, options);
         throw error; // Re-throw after handling
       }
     };
+    return wrapped;
   }
 
   /**
@@ -316,6 +340,14 @@ export const handleError = (error, context = 'unknown', options = {}) => {
   return errorHandler.handle(toError(error), context, options);
 };
 
+/**
+ * Safe async wrapper with optional fallback.
+ * @template T
+ * @param {() => Promise<T>} fn
+ * @param {string} context
+ * @param {T | null} [fallback]
+ * @returns {Promise<T | null | undefined>}
+ */
 export const safeAsync = async (fn, context, fallback = null) => {
   try {
     return await fn();

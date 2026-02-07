@@ -115,9 +115,10 @@ vi.mock('./systems/ScoringSystem.js', () => ({
   scoringSystem: { init: vi.fn(), destroy: vi.fn() },
 }));
 
-vi.mock('./systems/UISystem.js', () => ({
-  uiSystem: { init: vi.fn(), destroy: vi.fn() },
-}));
+vi.mock('./systems/UISystem.js', () => {
+  const uiSystem = { init: vi.fn(), destroy: vi.fn() };
+  return { getUISystem: vi.fn(() => uiSystem) };
+});
 
 vi.mock('./ui/UI.js', () => ({
   configureUI: vi.fn(),
@@ -185,7 +186,11 @@ vi.mock('./features/Share.js', () => ({
   getDailyNumber: vi.fn(),
 }));
 
-vi.mock('./i18n.js', () => ({ getLang: vi.fn(() => 'en'), t: vi.fn((k) => k) }));
+vi.mock('./i18n.js', () => ({
+  getLang: vi.fn(() => 'en'),
+  t: vi.fn((k) => k),
+  getCivilizationName: vi.fn((name) => name),
+}));
 vi.mock('./ui/components.js', () => ({ AchievementUnlockModal: vi.fn(() => '') }));
 
 import { eventBus } from './core/EventBus.js';

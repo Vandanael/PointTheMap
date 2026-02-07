@@ -389,8 +389,10 @@ describe('MapSystem', () => {
       expect(mockMarker).toHaveBeenCalled();
       expect(addToCalls.length).toBe(1);
       // Verify that addTo was called with a layerGroup instance (has clearLayers method)
-      expect(addToCalls[0].layer).toHaveProperty('clearLayers');
-      expect(typeof addToCalls[0].layer.clearLayers).toBe('function');
+      const firstCall = addToCalls[0];
+      if (!firstCall) throw new Error('Expected addTo to be called');
+      expect(firstCall.layer).toHaveProperty('clearLayers');
+      expect(typeof firstCall.layer.clearLayers).toBe('function');
     });
   });
 

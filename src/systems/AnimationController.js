@@ -8,6 +8,7 @@
  */
 
 export class AnimationController {
+  /** @type {number | null} */
   #frameId = null;
   #isRunning = false;
 
@@ -29,6 +30,7 @@ export class AnimationController {
 
     this.#isRunning = true;
 
+    /** @param {number} currentTime */
     const animate = (currentTime) => {
       if (!this.#isRunning) return;
 
@@ -79,7 +81,7 @@ export function animateValue(
   startValue,
   endValue,
   duration,
-  formatter = (v) => String(v)
+  formatter = /** @type {(value: number) => string} */ ((v) => String(v))
 ) {
   const controller = new AnimationController();
   const startTime = performance.now();

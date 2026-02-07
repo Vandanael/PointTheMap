@@ -13,10 +13,13 @@ import { logger } from '../utils/logger.js';
 import { escapeHtml } from '../utils.js';
 
 export class StateDevTools {
+  /** @type {import('./StateManager.js').StateManager} */
   #stateManager;
+  /** @type {HTMLDivElement | null} */
   #panel = null;
   #isOpen = false;
 
+  /** @param {import('./StateManager.js').StateManager} stateManager */
   constructor(stateManager) {
     this.#stateManager = stateManager;
     this.#init();
@@ -35,7 +38,7 @@ export class StateDevTools {
     });
 
     // Listen for keyboard shortcut (Ctrl+Shift+S)
-    document.addEventListener('keydown', (e) => {
+    document.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
       if (e.ctrlKey && e.shiftKey && e.key === 'S') {
         this.toggle();
       }
@@ -43,12 +46,13 @@ export class StateDevTools {
   }
 
   #createPanel() {
-    this.#panel = document.createElement('div');
-    this.#panel.id = 'state-devtools';
-    this.#panel.className = 'state-devtools';
-    this.#panel.style.display = 'none';
+    const panel = document.createElement('div');
+    panel.id = 'state-devtools';
+    panel.className = 'state-devtools';
+    panel.style.display = 'none';
+    this.#panel = panel;
 
-    this.#panel.innerHTML = `
+    panel.innerHTML = `
       <div class="state-devtools-header">
         <h3>State History</h3>
         <div class="state-devtools-actions">
@@ -62,7 +66,7 @@ export class StateDevTools {
     `;
 
     // Use event delegation for dynamic buttons
-    this.#panel.addEventListener('click', (e) => {
+    panel.addEventListener('click', (/** @type {MouseEvent} */ e) => {
       const target = /** @type {HTMLElement} */ (e.target);
       if (target.classList.contains('state-devtools-restore')) {
         const index = parseInt(target.dataset.index || '0');
@@ -79,7 +83,7 @@ export class StateDevTools {
       }
     });
 
-    document.body.appendChild(this.#panel);
+    document.body.appendChild(panel);
 
     // Bind events
     document.getElementById('state-devtools-clear')?.addEventListener('click', () => {
@@ -106,7 +110,7 @@ export class StateDevTools {
     }
 
     list.innerHTML = history
-      .map((entry, index) => {
+      .map((/** @type {any} */ entry, /** @type {number} */ index) => {
         const time = new Date(entry.timestamp).toLocaleTimeString();
         return `
           <div class="state-devtools-entry" data-index="${index}">

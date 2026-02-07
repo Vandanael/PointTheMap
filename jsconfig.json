@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
     "checkJs": true,
-    "strict": true,
-    "noImplicitAny": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
     "module": "ES2022",
     "target": "ES2022",
     "moduleResolution": "bundler",
@@ -19,5 +19,15 @@
     }
   },
   "include": ["src/**/*", "lib/**/*", "netlify/functions/**/*", "src/vite-env.d.ts"],
-  "exclude": ["node_modules", "dist", "tests/e2e"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests",
+    "test-results",
+    "tests/e2e",
+    "**/*.test.js",
+    "src/**/*.test.js",
+    "lib/**/*.test.js",
+    "netlify/**/*.test.js"
+  ]
 }

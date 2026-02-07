@@ -50,9 +50,8 @@ export function activateFocusTrap(container, options = {}) {
   _onEscape = options.onEscape ?? null;
 
   const focusable = getFocusableElements(container);
-  if (focusable.length > 0) {
-    focusable[0].focus();
-  }
+  const firstFocusable = focusable[0];
+  if (firstFocusable) firstFocusable.focus();
 
   _keydownHandler = (e) => {
     if (!_container) return;
@@ -68,6 +67,7 @@ export function activateFocusTrap(container, options = {}) {
 
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
+    if (!first || !last) return;
 
     if (e.shiftKey) {
       if (document.activeElement === first) {

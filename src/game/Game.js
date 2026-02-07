@@ -106,6 +106,7 @@ import { getStats } from '../features/StatsManager.js';
  * @property {RuntimeGameConfig | null} runtimeConfig - Mode-derived config for this session (set at start)
  */
 
+/** @type {{ IDLE: GameStatusType, LOADING: GameStatusType, PLAYING: GameStatusType, ROUND_RESULT: GameStatusType, GAME_OVER: GameStatusType }} */
 export const GameStatus = {
   IDLE: 'idle',
   LOADING: 'loading',
@@ -135,7 +136,9 @@ export const createGameState = () => ({
   result: null,
   error: null,
   sessionBestScore: 0,
-  gameType: MODE_IDS.CLASSIC,
+  gameType: /** @type {'classic' | 'daily' | 'country' | 'stadium' | 'civilization'} */ (
+    MODE_IDS.CLASSIC
+  ),
   runtimeConfig: null,
 });
 
@@ -145,10 +148,11 @@ export const createGameState = () => ({
  * @param {string} roundGameType
  */
 const buildLegacyTargetFields = (targets, roundGameType) => ({
-  capitals: roundGameType === 'capital' ? targets : [],
-  countries: roundGameType === MODE_IDS.COUNTRY ? targets : [],
-  stadiums: roundGameType === MODE_IDS.STADIUM ? targets : [],
-  civilizations: roundGameType === MODE_IDS.CIVILIZATION ? targets : [],
+  capitals: roundGameType === 'capital' ? /** @type {Capital[]} */ (targets) : [],
+  countries: roundGameType === MODE_IDS.COUNTRY ? /** @type {Country[]} */ (targets) : [],
+  stadiums: roundGameType === MODE_IDS.STADIUM ? /** @type {Stadium[]} */ (targets) : [],
+  civilizations:
+    roundGameType === MODE_IDS.CIVILIZATION ? /** @type {Civilization[]} */ (targets) : [],
 });
 
 /**
@@ -157,9 +161,16 @@ const buildLegacyTargetFields = (targets, roundGameType) => ({
  * @param {'classic' | 'daily' | 'country' | 'stadium' | 'civilization'} [gameType='classic'] - Type of game
  * @returns {Promise<GameState>}
  */
-export const startGame = async (state, gameType = MODE_IDS.CLASSIC) => {
+export const startGame = async (
+  state,
+  gameType = /** @type {'classic' | 'daily' | 'country' | 'stadium' | 'civilization'} */ (
+    MODE_IDS.CLASSIC
+  )
+) => {
   const session = await api.start(gameType);
-  const targets = getTargetsFromSession(session, gameType);
+  const targets = /** @type {Array<Capital | Country | Stadium | Civilization>} */ (
+    getTargetsFromSession(session, gameType)
+  );
 
   if (!targets || targets.length === 0) {
     return {
@@ -172,18 +183,22 @@ export const startGame = async (state, gameType = MODE_IDS.CLASSIC) => {
   const stats = getStats();
   const previousBestScore = getSessionBestScore(stats, gameType);
   const runtimeConfig = getRuntimeGameConfig(gameType);
-  const roundGameType = getRoundGameType(gameType);
+  const roundGameType = /** @type {'capital' | 'country' | 'stadium' | 'civilization'} */ (
+    getRoundGameType(gameType)
+  );
 
   return {
     ...createGameState(),
     status: GameStatus.PLAYING,
     token: session.token,
     // Domain model: store targets semantically (not mode-specific field names)
-    targets: targets,
+    targets,
     // Legacy fields: maintained for backward compatibility with existing code
     ...buildLegacyTargetFields(targets, roundGameType),
     currentRound: createRound(targets[0], 0, roundGameType),
-    gameType,
+    gameType: /** @type {'classic' | 'daily' | 'country' | 'stadium' | 'civilization'} */ (
+      gameType
+    ),
     sessionBestScore: previousBestScore,
     runtimeConfig,
   };
@@ -283,8 +298,12 @@ export const handleTimeout = (state) => {
 export const nextRound = (state) => {
   const nextIndex = state.currentRoundIndex + 1;
   const roundCount = state.runtimeConfig?.roundCount ?? GAME.ROUNDS;
-  const targets = getTargetsForMode(state);
-  const roundGameType = getRoundGameType(state.gameType);
+  const targets = /** @type {Array<Capital | Country | Stadium | Civilization>} */ (
+    getTargetsForMode(state)
+  );
+  const roundGameType = /** @type {'capital' | 'country' | 'stadium' | 'civilization'} */ (
+    getRoundGameType(state.gameType)
+  );
 
   if (nextIndex >= roundCount || nextIndex >= targets.length) {
     return {

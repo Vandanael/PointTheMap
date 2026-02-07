@@ -3,6 +3,7 @@ import { InputSystem, getInputSystem, inputSystem } from './InputSystem.js';
 import { eventBus } from '../core/EventBus.js';
 
 describe('InputSystem', () => {
+  /** @type {InputSystem} */
   let system;
 
   beforeEach(() => {
@@ -10,17 +11,15 @@ describe('InputSystem', () => {
 
     // Mock document if needed
     if (typeof document === 'undefined') {
-      global.document = {
+      global.document = /** @type {any} */ ({
         addEventListener: vi.fn(),
         activeElement: null,
-      };
+      });
     }
   });
 
   afterEach(() => {
-    if (system) {
-      system.destroy();
-    }
+    system.destroy();
   });
 
   describe('Initialization', () => {

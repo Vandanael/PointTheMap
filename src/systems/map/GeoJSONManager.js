@@ -15,6 +15,7 @@ import { logger } from '../../utils/logger.js';
 
 /** @typedef {{ geometry: any, properties: any }} GeoFeature */
 /** @typedef {{ features: GeoFeature[] }} GeoFeatureCollection */
+/** @typedef {{ coordinates: [number, number], type?: 'Point' }} GeoJSONPoint */
 
 export class GeoJSONManager {
   /** @type {typeof import('leaflet')} */
@@ -101,8 +102,10 @@ export class GeoJSONManager {
           return [wrapped.lat, wrapped.lng];
         })()
       : normalizeCoords(latlng);
-    /** @type {{ type: "Point", coordinates: [number, number] }} */
-    const point = { type: 'Point', coordinates: [lng, lat] };
+    const point = /** @type {GeoJSONPoint} */ ({
+      type: 'Point',
+      coordinates: [Number(lng), Number(lat)],
+    });
 
     for (const feature of this.#countriesGeoJSON.features) {
       if (pointInPolygon(point, feature.geometry)) {
@@ -265,7 +268,10 @@ export class GeoJSONManager {
           return [wrapped.lat, wrapped.lng];
         })()
       : normalizeCoords(latlng);
-    const point = { type: 'Point', coordinates: [lng, lat] };
+    const point = /** @type {GeoJSONPoint} */ ({
+      type: 'Point',
+      coordinates: [Number(lng), Number(lat)],
+    });
 
     for (const feature of this.#civilizationsGeoJSON.features) {
       if (pointInPolygon(point, feature.geometry)) {

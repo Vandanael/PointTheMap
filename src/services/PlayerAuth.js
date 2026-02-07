@@ -178,5 +178,5 @@ export const playerAuth = new PlayerAuth();
 
 // For testing/debugging
 if (typeof window !== 'undefined') {
-  window.playerAuth = playerAuth;
+  /** @type {any} */ (window).playerAuth = playerAuth;
 }

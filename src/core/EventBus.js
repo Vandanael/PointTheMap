@@ -15,7 +15,9 @@ import { logger } from '../utils/logger.js';
 
 class EventBus {
   constructor() {
+    /** @type {Map<string, Set<Function>>} */
     this._listeners = new Map();
+    /** @type {WeakMap<Function, Function>} */
     this._onceListeners = new WeakMap();
   }
 
@@ -33,10 +35,12 @@ class EventBus {
       throw new Error('Handler must be a function');
     }
 
-    if (!this._listeners.has(event)) {
-      this._listeners.set(event, new Set());
+    let listeners = this._listeners.get(event);
+    if (!listeners) {
+      listeners = new Set();
+      this._listeners.set(event, listeners);
     }
-    this._listeners.get(event).add(handler);
+    listeners.add(handler);
 
     // Return unsubscribe function
     return () => this.unsubscribe(event, handler);
@@ -53,6 +57,7 @@ class EventBus {
       throw new Error('Handler must be a function');
     }
 
+    /** @param {any} data */
     const wrappedHandler = (data) => {
       this.unsubscribe(event, wrappedHandler);
       handler(data);
@@ -99,6 +104,7 @@ class EventBus {
       throw new Error('Event name must be a non-empty string');
     }
 
+    /** @type {Set<Function>} */
     const handlers = new Set();
 
     // Collect exact matches

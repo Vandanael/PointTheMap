@@ -1,8 +1,8 @@
 /**
  * Analytics Service
  *
- * Privacy-first analytics with user consent
- * Ready to connect to: Google Analytics, Plausible, or custom analytics
+ * Privacy-first analytics with user consent.
+ * Sends custom events to Plausible (loaded in index.html) when consent is given and in production.
  */
 
 import { storageManager } from '../storage/StorageManager.js';
@@ -24,19 +24,12 @@ class Analytics {
     this.#enabled = this.#consentGiven && import.meta.env.PROD;
 
     if (this.#enabled) {
-      this.#initializeProvider();
       this.#flushQueue();
       logger.info('Analytics: Initialized with consent');
     } else {
       logger.info('Analytics: Not initialized (consent not given or dev mode)');
     }
   }
-
-  /**
-   * Initialize analytics provider (Google Analytics, Plausible, etc.)
-   * @private
-   */
-  #initializeProvider() {}
 
   /**
    * Track an event
@@ -70,19 +63,19 @@ class Analytics {
   }
 
   /**
-   * Send event to analytics provider
-   * @private
-   * @param {string} event - Event name
+   * Send event to Plausible (custom events show in Plausible dashboard)
+   * @param {string} event - Event name (e.g. 'game_started', 'game_completed')
    * @param {Object} properties - Event properties
    */
   #sendToProvider(event, properties) {
-    // For now, just log
+    if (typeof window !== 'undefined' && typeof window.plausible === 'function') {
+      window.plausible(event, { props: properties });
+    }
     logger.debug(`[Analytics] Event tracked: ${event}`, properties);
   }
 
   /**
    * Send data using sendBeacon for reliability
-   * @private
    * @param {string} url - Endpoint URL
    * @param {Object} data - Data to send
    */
@@ -95,7 +88,6 @@ class Analytics {
 
   /**
    * Flush queued events (called after user gives consent)
-   * @private
    */
   #flushQueue() {
     if (this.#queue.length === 0) return;
@@ -119,7 +111,6 @@ class Analytics {
     this.#enabled = consent && import.meta.env.PROD;
 
     if (consent) {
-      this.#initializeProvider();
       this.#flushQueue();
       logger.info('Analytics: Consent given, tracking enabled');
     } else {
