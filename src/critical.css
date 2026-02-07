@@ -50,13 +50,95 @@ body {
   margin: 0;
   padding: 0;
   font-family:
-    'Inter',
     -apple-system,
     BlinkMacSystemFont,
     'Segoe UI',
+    Roboto,
+    'Helvetica Neue',
+    Arial,
+    'Noto Sans',
     sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
+}
+
+/* Minimal utility styles used by the start screen to avoid CLS before full CSS loads */
+.fixed {
+  position: fixed;
+}
+
+.absolute {
+  position: absolute;
+}
+
+.inset-0 {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.flex-1 {
+  flex: 1 1 0%;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.top-4 {
+  top: 1rem;
+}
+
+.right-4 {
+  right: 1rem;
+}
+
+.gap-2 {
+  gap: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .md\:px-6 {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  .md\:top-6 {
+    top: 1.5rem;
+  }
+  .md\:right-6 {
+    right: 1.5rem;
+  }
+}
+
+/* Start screen overlay background so first paint matches final */
+.start-modal-overlay {
+  background: rgba(2, 6, 23, 0.6);
+}
+
+body.light-theme .start-modal-overlay {
+  background: rgba(245, 243, 240, 0.6);
 }
 
 /* Critical lobby layout (avoid CLS before full CSS loads) */
