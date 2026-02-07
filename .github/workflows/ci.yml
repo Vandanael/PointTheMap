@@ -24,5 +24,7 @@ jobs:
       - run: npm run test:run
       - run: npm run build
       - run: npm run check:budget
-      - run: npx playwright install --with-deps
-      - run: npm run e2e:preview
+      - if: github.ref == 'refs/heads/main'
+        run: npx playwright install --with-deps
+      - if: github.ref == 'refs/heads/main'
+        run: npm run e2e:preview
