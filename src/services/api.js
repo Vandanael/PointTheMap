@@ -38,14 +38,21 @@ import { loadStadiums, loadSelectBalancedStadiums } from '../data/stadiums-loade
 import { APIError, GameError } from '../core/ErrorHandler.js';
 import { createApiClient } from './apiClient.js';
 import { StartSessionSchema } from '@lib/schemas/session.js';
+import { SubmitSchema } from '@lib/schemas/submit.js';
 import { getRetryQueue, removeFromRetryQueue, addToRetryQueue, saveRetryQueue } from './storage.js';
 import { playerAuth } from './PlayerAuth.js';
 
 const API_BASE = '/.netlify/functions';
+
+// Client-side leaderboard cache (30s TTL, matching server Cache-Control)
+const LEADERBOARD_CACHE_TTL_MS = 30_000;
+/** @type {Map<string, { data: Array<{ rank: number, pseudo: string, score: number, time: number }>, timestamp: number }>} */
+const leaderboardCache = new Map();
 const USE_MOCK =
-  !import.meta.env.PROD &&
-  ((import.meta.env.DEV && !import.meta.env.VITE_USE_API) ||
-    import.meta.env.VITE_USE_MOCK === 'true');
+  import.meta.env.VITE_USE_MOCK === 'true' ||
+  (!import.meta.env.PROD &&
+    ((import.meta.env.DEV && !import.meta.env.VITE_USE_API) ||
+      import.meta.env.VITE_USE_MOCK === 'true'));
 
 // Store current CSRF token
 let currentCsrfToken = null;
@@ -337,25 +344,34 @@ const mockSubmit = (token, rounds, _pseudo) => {
  */
 const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
   rounds.map((r) => {
-    const safeClick = r.click ?? null;
+    const clickLat = r?.click?.lat;
+    const clickLng = r?.click?.lng;
+    const safeClick =
+      Number.isFinite(clickLat) && Number.isFinite(clickLng)
+        ? { lat: clickLat, lng: clickLng }
+        : null;
     const safeDistance =
-      typeof r.distanceToTargetKm === 'number' && Number.isFinite(r.distanceToTargetKm)
-        ? r.distanceToTargetKm
+      typeof r?.distanceToTargetKm === 'number' && Number.isFinite(r.distanceToTargetKm)
+        ? Math.max(0, r.distanceToTargetKm)
+        : undefined;
+    const timeElapsed =
+      typeof r?.endTime === 'number' && typeof r?.startTime === 'number'
+        ? Math.max(0, Math.round(r.endTime - r.startTime))
         : undefined;
     const base = {
       click: safeClick,
-      status: r.status,
-      score: r.score || 0,
-      timeElapsed: r.endTime && r.startTime ? r.endTime - r.startTime : undefined,
+      status: typeof r?.status === 'string' ? r.status : 'unknown',
+      score: Math.max(0, Math.round(Number(r?.score) || 0)),
+      timeElapsed,
     };
 
     if (gameType === MODE_IDS.COUNTRY || r.gameType === MODE_IDS.COUNTRY) {
       return {
         ...base,
-        country: r.country?.name,
-        countryId: r.country?.countryId,
-        correctCountryId: r.correctCountryId,
-        clickedCountryId: r.clickedCountryId,
+        country: r?.country?.name,
+        countryId: r?.country?.countryId,
+        correctCountryId: r?.correctCountryId,
+        clickedCountryId: r?.clickedCountryId,
         distanceToTargetKm: safeDistance,
       };
     }
@@ -363,27 +379,30 @@ const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
     if (gameType === MODE_IDS.STADIUM || r.gameType === MODE_IDS.STADIUM) {
       return {
         ...base,
-        stadium: r.stadium?.name,
-        city: r.stadium?.city,
+        stadium: r?.stadium?.name,
+        city: r?.stadium?.city,
       };
     }
 
     if (gameType === MODE_IDS.CIVILIZATION || r.gameType === MODE_IDS.CIVILIZATION) {
       return {
         ...base,
-        civilization: r.civilization?.name,
-        civilizationId: r.civilization?.id,
-        correctCivilizationId: r.correctCivilizationId,
-        clickedCivilizationId: r.clickedCivilizationId,
+        civilization: r?.civilization?.name,
+        civilizationId: r?.civilization?.id,
+        correctCivilizationId: r?.correctCivilizationId,
+        clickedCivilizationId: r?.clickedCivilizationId,
         distanceToTargetKm: safeDistance,
       };
     }
 
     return {
       ...base,
-      capital: r.capital?.name,
+      capital: r?.capital?.name,
     };
   });
+
+// Expose for tests only (no runtime usage).
+export const __testOnlyFormatRoundsForSubmit = formatRoundsForSubmit;
 
 export const api = {
   start: async (gameType = MODE_IDS.CLASSIC) => {
@@ -419,14 +438,17 @@ export const api = {
     if (USE_MOCK) {
       return mockSubmit(token, rounds, pseudo);
     }
+    const payload = {
+      token,
+      rounds: formatRoundsForSubmit(rounds, gameType),
+      pseudo,
+      gameType,
+      payloadVersion: 1,
+    };
+    SubmitSchema.safeParse(payload);
     return fetchApi('submit', {
       method: 'POST',
-      body: JSON.stringify({
-        token,
-        rounds: formatRoundsForSubmit(rounds, gameType),
-        pseudo,
-        gameType,
-      }),
+      body: JSON.stringify(payload),
     });
   },
 
@@ -434,8 +456,14 @@ export const api = {
     if (USE_MOCK) {
       return [];
     }
+    const cached = leaderboardCache.get(type);
+    if (cached && Date.now() - cached.timestamp < LEADERBOARD_CACHE_TTL_MS) {
+      return cached.data;
+    }
     const data = await fetchApi(`leaderboard?type=${type}`);
-    return normalizeLeaderboard(data);
+    const normalized = normalizeLeaderboard(data);
+    leaderboardCache.set(type, { data: normalized, timestamp: Date.now() });
+    return normalized;
   },
 };
 

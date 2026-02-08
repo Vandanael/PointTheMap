@@ -28,6 +28,7 @@
     "pree2e": "npm run clean",
     "e2e:dev": "E2E_MODE=dev playwright test",
     "e2e:preview": "E2E_MODE=preview playwright test",
+    "e2e:smoke": "E2E_MODE=dev playwright test --grep @smoke",
     "generate:start-screen": "node scripts/generate-start-screen-images.js",
     "optimize:geojson": "node scripts/optimize-countries-geojson.js",
     "optimize:civilizations": "node scripts/optimize-civilizations-geojson.js",

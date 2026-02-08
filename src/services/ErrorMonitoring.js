@@ -9,6 +9,7 @@ import { logger } from '../utils/logger.js';
 import { eventBus } from '../core/EventBus.js';
 
 const MAX_QUEUE_SIZE = 20;
+const MAX_DEDUPE_KEYS = 200;
 const FLUSH_DELAY_MS = 5000;
 const ERROR_REPORT_URL = '/api/error-report';
 
@@ -22,6 +23,8 @@ class ErrorMonitoring {
   #flushTimeout = null;
   /** @type {Set<string>} */
   #seen = new Set();
+  /** @type {string[]} */
+  #seenOrder = [];
 
   /**
    * Initialize error monitoring
@@ -112,6 +115,11 @@ class ErrorMonitoring {
 
     if (this.#seen.has(dedupeKey)) return;
     this.#seen.add(dedupeKey);
+    this.#seenOrder.push(dedupeKey);
+    if (this.#seenOrder.length > MAX_DEDUPE_KEYS) {
+      const oldest = this.#seenOrder.shift();
+      if (oldest) this.#seen.delete(oldest);
+    }
 
     this.#queue.push({
       message: serialized.message,

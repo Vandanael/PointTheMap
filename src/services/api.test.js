@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { api, submitWithRetry, processRetryQueue, validateStartSessionPayload } from './api.js';
+import {
+  api,
+  submitWithRetry,
+  processRetryQueue,
+  validateStartSessionPayload,
+  __testOnlyFormatRoundsForSubmit,
+} from './api.js';
+import { SubmitSchema } from '@lib/schemas/submit.js';
+import { MODE_IDS } from '../config/game-modes.js';
 
 // Mock dependencies
 vi.mock('../config/index.js', () => ({
@@ -203,6 +211,37 @@ describe('api.js', () => {
       const result = await api.submit('test-token', highScoreRounds, 'TestUser');
 
       expect(result.isTopFifty).toBe(true);
+    });
+
+    it('builds a valid submit payload for capital rounds', async () => {
+      const payload = {
+        token: 'token-123',
+        pseudo: 'USER',
+        rounds: __testOnlyFormatRoundsForSubmit(mockRounds, MODE_IDS.CLASSIC),
+        gameType: MODE_IDS.CLASSIC,
+        payloadVersion: 1,
+      };
+      const parsed = SubmitSchema.safeParse(payload);
+      expect(parsed.success).toBe(true);
+    });
+
+    it('builds a valid submit payload for country rounds', async () => {
+      const countryRounds = mockRounds.map((round) => ({
+        ...round,
+        country: { name: 'France', countryId: 'FRA' },
+        correctCountryId: 'FRA',
+        clickedCountryId: 'FRA',
+        distanceToTargetKm: 0,
+      }));
+      const payload = {
+        token: 'token-123',
+        pseudo: 'USER',
+        rounds: __testOnlyFormatRoundsForSubmit(countryRounds, MODE_IDS.COUNTRY),
+        gameType: MODE_IDS.COUNTRY,
+        payloadVersion: 1,
+      };
+      const parsed = SubmitSchema.safeParse(payload);
+      expect(parsed.success).toBe(true);
     });
   });
 

@@ -326,6 +326,16 @@ describe('ScoringSystem', () => {
       const bonus = system.calculateTimeBonus(5000, 4000, 200, 200);
       expect(bonus).toBe(0);
     });
+
+    it('should award max bonus for daily mode when fast and accurate', () => {
+      const bonus = system.calculateTimeBonus(5000, 5000, 5000, 10, 'daily');
+      expect(bonus).toBe(1000);
+    });
+
+    it('should return 0 for daily mode when outside distance threshold', () => {
+      const bonus = system.calculateTimeBonus(5000, 5000, 5000, 250, 'daily');
+      expect(bonus).toBe(0);
+    });
   });
 
   describe('getScorePercentage', () => {

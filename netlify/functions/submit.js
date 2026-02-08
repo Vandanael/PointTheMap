@@ -18,8 +18,8 @@ import {
   calculateCountryScore,
 } from '../../lib/geo-utils/index.js';
 import { getCountryFeature, getCivilizationFeature } from './_geo-data.js';
-import { GAME, SCORING, API } from '../../lib/config/index.js';
-import { GAME_MODES } from '../../lib/config/game-modes.js';
+import { GAME, API } from '../../lib/config/index.js';
+import { GAME_MODES, getTimeBonusConfig } from '../../lib/config/game-modes.js';
 import { toDomainModel } from '../../src/lib/session/sessionModel.js';
 import { SubmitSchema } from '../../lib/schemas/submit.js';
 
@@ -285,14 +285,16 @@ export default async function submitHandler(req, context) {
     if (!parsed.success) {
       return errorJson('invalid_payload', 'Invalid payload', 400, parsed.error.flatten());
     }
-    const { token, rounds, pseudo, gameType = 'classic' } = parsed.data;
+    const { token, rounds, pseudo, gameType = 'classic', payloadVersion } = parsed.data;
     const csrfToken = req.headers.get('x-csrf-token');
 
     logger.info(
       '[submit] Request details - Token:',
       token?.substring(0, 8),
       'CSRF from header:',
-      csrfToken?.substring(0, 8)
+      csrfToken?.substring(0, 8),
+      'payloadVersion:',
+      payloadVersion ?? null
     );
 
     // Validate pseudo: 3-5 uppercase letters
@@ -308,7 +310,7 @@ export default async function submitHandler(req, context) {
     let sessionResult;
     try {
       sessionResult = await sql`
-        SELECT token, capitals, start_time, used, game_type, expires_at, csrf_token, player_id
+        SELECT token, targets, start_time, used, game_type, expires_at, csrf_token, player_id
         FROM sessions
         WHERE token = ${token}
           AND expires_at > NOW()
@@ -329,10 +331,9 @@ export default async function submitHandler(req, context) {
 
     const sessionRow = /** @type {any} */ (sessionResult[0]);
     // Map DB row to persistence model, then normalize to domain model
-    // Legacy DB column "capitals" actually contains generic targets (capitals, countries, stadiums, civilizations)
     const persistenceSession = {
       token: sessionRow.token,
-      capitals: sessionRow.capitals, // Legacy DB field name
+      targets: sessionRow.targets,
       startTime: parseInt(sessionRow.start_time, 10),
       used: sessionRow.used,
       gameType: sessionRow.game_type,
@@ -447,7 +448,7 @@ export default async function submitHandler(req, context) {
 
           // Apply time bonus if enabled for this mode
           const modeKey = session.gameType ?? 'classic';
-          const modeConfig = GAME_MODES[modeKey]?.scoring?.timeBonus;
+          const modeConfig = getTimeBonusConfig(modeKey);
           if (
             round.timeElapsed &&
             modeConfig?.enabled &&
@@ -525,7 +526,7 @@ export default async function submitHandler(req, context) {
 
           // Apply time bonus if enabled for this mode
           const modeKey = session.gameType ?? 'classic';
-          const modeConfig = GAME_MODES[modeKey]?.scoring?.timeBonus;
+          const modeConfig = getTimeBonusConfig(modeKey);
           if (
             round.timeElapsed &&
             modeConfig?.enabled &&
@@ -648,10 +649,7 @@ export default async function submitHandler(req, context) {
       // Calculate time bonus (if applicable for this game mode)
       let timeBonus = 0;
       const modeKey = session.gameType ?? 'classic';
-      const timeBonusConfig =
-        SCORING.TIME_BONUS_BY_MODE[
-          /** @type {keyof typeof SCORING.TIME_BONUS_BY_MODE} */ (modeKey)
-        ];
+      const timeBonusConfig = getTimeBonusConfig(modeKey);
       if (
         round.timeElapsed &&
         timeBonusConfig?.enabled &&

@@ -3,23 +3,15 @@
  *
  * Provides a clear boundary between persistence model and domain model.
  *
- * LEGACY PERSISTENCE CONCERN:
- * The database column is named "capitals" for historical reasons, but it actually
- * stores generic session targets (capitals, countries, stadiums, civilizations).
- *
- * This module normalizes the persistence shape into a proper domain model:
- * - Persistence: { capitals: [...] }  ← Legacy DB column name
- * - Domain: { targets: [...] }        ← Semantic domain model
- *
- * Future DB Migration:
- * When ready to rename the DB column from "capitals" to "targets", only this
- * module and the DB schema need to change. All domain code is already prepared.
+ * Persistence model uses the "targets" column to store generic session targets
+ * (capitals, countries, stadiums, civilizations). This module keeps the
+ * persistence and domain models aligned and explicit.
  */
 
 /**
  * @typedef {Object} SessionPersistenceModel
  * @property {string} token
- * @property {unknown[]} capitals - Legacy field name; contains ANY target type
+ * @property {unknown[]} targets - Generic target list (capitals, countries, stadiums, civilizations)
  * @property {number} startTime
  * @property {boolean} used
  * @property {string} gameType
@@ -40,17 +32,17 @@
 
 /**
  * Normalize persistence model to domain model.
- * Converts legacy "capitals" field to semantic "targets" field.
+ * Converts persistence "targets" field to semantic "targets" field.
  *
  * @param {SessionPersistenceModel} persistenceSession - Session from DB/persistence layer
  * @returns {SessionDomainModel} - Normalized domain session
  */
 export function toDomainModel(persistenceSession) {
-  const { capitals, ...rest } = persistenceSession;
+  const { targets, ...rest } = persistenceSession;
 
   return {
     ...rest,
-    targets: capitals, // Map legacy field to domain field
+    targets,
   };
 }
 
@@ -66,19 +58,19 @@ export function toPersistenceModel(domainSession) {
 
   return {
     ...rest,
-    capitals: targets, // Map domain field back to legacy DB field
+    targets,
   };
 }
 
 /**
- * Check if an object is in persistence model format (has "capitals" field).
+ * Check if an object is in persistence model format (has "targets" field).
  * Useful for validation and debugging.
  *
  * @param {unknown} obj
  * @returns {boolean}
  */
 export function isPersistenceModel(obj) {
-  return typeof obj === 'object' && obj !== null && 'capitals' in obj;
+  return typeof obj === 'object' && obj !== null && 'targets' in obj;
 }
 
 /**

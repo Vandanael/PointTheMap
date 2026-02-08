@@ -164,7 +164,7 @@ export default async function startHandler(req, context) {
     const expiresAt = new Date(startTime + API.SESSION_EXPIRY_MS);
 
     await sql`
-      INSERT INTO sessions (token, capitals, start_time, used, game_type, expires_at, csrf_token, player_id)
+      INSERT INTO sessions (token, targets, start_time, used, game_type, expires_at, csrf_token, player_id)
       VALUES (${token}, ${JSON.stringify(selectedTargets)}::jsonb, ${startTime}, false, ${gameType}, ${expiresAt}, ${csrfToken}, ${player_id})
     `;
 

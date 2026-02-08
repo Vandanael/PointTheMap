@@ -22,6 +22,10 @@ describe('gameFlowController', () => {
         flyToFeatureBounds: vi.fn(() => true),
         enableClicks: vi.fn(),
         disableClicks: vi.fn(),
+        isInitialized: vi.fn(() => true),
+        init: vi.fn(() => Promise.resolve(true)),
+        loadCountriesGeoJSON: vi.fn(() => Promise.resolve(true)),
+        loadCivilizationsGeoJSON: vi.fn(() => Promise.resolve(true)),
         isInView: vi.fn(() => false),
         getCountryFeatureById: vi.fn(() => ({})),
         getCivilizationFeatureById: vi.fn(() => ({})),
@@ -348,6 +352,62 @@ describe('gameFlowController', () => {
       controller.cleanup();
       // Just verify it doesn't throw
       expect(true).toBe(true);
+    });
+  });
+
+  describe('resumeFromState', () => {
+    it('restores ROUND_RESULT state and shows round result modal', async () => {
+      const savedState = {
+        status: 'round_result',
+        gameType: 'country',
+        totalScore: 1200,
+        currentRoundIndex: 1,
+        rounds: [],
+        currentRound: {
+          country: { name: 'Germany', countryId: 'DEU' },
+          correctCountryId: 'DEU',
+          clickedCountryId: 'FRA',
+          click: { lat: 48.85, lng: 2.35 },
+          distance: 800,
+          score: 2200,
+          status: 'completed',
+        },
+      };
+
+      mockDeps.game.getProgress.mockReturnValue({ current: 2, total: 5 });
+      mockDeps.game.isLastRound.mockReturnValue(false);
+
+      const result = await controller.resumeFromState(savedState);
+
+      expect(result).toBe(true);
+      expect(mockDeps.mapSystem.loadCountriesGeoJSON).toHaveBeenCalled();
+      expect(mockDeps.stateManager.setState).toHaveBeenCalledWith(savedState, 'game:resume');
+      expect(mockDeps.ui.showGameUI).toHaveBeenCalledWith(2, 5, 1200);
+      expect(mockDeps.ui.showRoundResult).toHaveBeenCalledWith(
+        800,
+        2200,
+        false,
+        false,
+        undefined,
+        undefined
+      );
+    });
+
+    it('restores GAME_OVER state and shows game over screen', async () => {
+      const savedState = {
+        status: 'game_over',
+        gameType: 'classic',
+        totalScore: 9000,
+        currentRoundIndex: 4,
+        rounds: [],
+        currentRound: null,
+      };
+
+      const result = await controller.resumeFromState(savedState);
+
+      expect(result).toBe(true);
+      expect(mockDeps.stateManager.setState).toHaveBeenCalledWith(savedState, 'game:resume');
+      expect(mockDeps.ui.showGameOver).toHaveBeenCalledWith(9000);
     });
   });
 });

@@ -42,7 +42,7 @@ CREATE INDEX IF NOT EXISTS idx_scores_player_id ON scores(player_id);
 -- Table des sessions
 CREATE TABLE IF NOT EXISTS sessions (
   token VARCHAR(36) PRIMARY KEY,
-  capitals JSONB NOT NULL,
+  targets JSONB NOT NULL,
   start_time BIGINT NOT NULL,
   used BOOLEAN DEFAULT FALSE,
   game_type VARCHAR(20) DEFAULT 'classic',

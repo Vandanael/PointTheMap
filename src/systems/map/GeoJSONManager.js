@@ -8,7 +8,12 @@
  */
 
 import { pointInPolygon } from '@lib/geo-utils/index.js';
-import { getCountriesGeoJSON, getCivilizationsGeoJSON } from '../../data/geoDataLoader.js';
+import {
+  getCountriesGeoJSON,
+  getCountriesGeoJSONLow,
+  getCivilizationsGeoJSON,
+  getCivilizationsGeoJSONLow,
+} from '../../data/geoDataLoader.js';
 import { normalizeCoords } from '@lib/game-math/index.js';
 import { eventBus } from '../../core/EventBus.js';
 import { logger } from '../../utils/logger.js';
@@ -22,16 +27,16 @@ export class GeoJSONManager {
   #L;
   /** @type {() => any} */
   #getMap;
-  /** @type {any} */
-  #countriesLayer = null;
   /** @type {GeoFeatureCollection | null} */
   #countriesGeoJSON = null;
+  /** @type {GeoFeatureCollection | null} */
+  #countriesGeoJSONLow = null;
   /** @type {any[]} */
   #countryHighlights = [];
-  /** @type {any} */
-  #civilizationsLayer = null;
   /** @type {GeoFeatureCollection | null} */
   #civilizationsGeoJSON = null;
+  /** @type {GeoFeatureCollection | null} */
+  #civilizationsGeoJSONLow = null;
   /** @type {any[]} */
   #civilizationHighlights = [];
 
@@ -48,8 +53,8 @@ export class GeoJSONManager {
    * @returns {Promise<boolean>}
    */
   async loadCountriesGeoJSON() {
-    if (this.#countriesLayer) {
-      logger.warn('Countries layer already loaded');
+    if (this.#countriesGeoJSON) {
+      logger.warn('Countries GeoJSON already loaded');
       return true;
     }
 
@@ -60,29 +65,15 @@ export class GeoJSONManager {
     }
 
     try {
-      if (!map.getPane('countriesOverlay')) {
-        const countriesPane = map.createPane('countriesOverlay');
-        countriesPane.style.zIndex = 430;
-        countriesPane.style.pointerEvents = 'none';
-      }
       if (!map.getPane('countriesHighlight')) {
         const highlightPane = map.createPane('countriesHighlight');
         highlightPane.style.zIndex = 460;
         highlightPane.style.pointerEvents = 'none';
       }
+      // Load low-res first for faster highlight rendering (optional)
+      this.#countriesGeoJSONLow = await getCountriesGeoJSONLow();
+      // Always load full-res for accurate point-in-polygon
       this.#countriesGeoJSON = await getCountriesGeoJSON();
-      this.#countriesLayer = this.#L
-        .geoJSON(this.#countriesGeoJSON, {
-          style: () => ({
-            fillColor: 'transparent',
-            fillOpacity: 0,
-            color: 'transparent',
-            weight: 0,
-            interactive: false,
-            pane: 'countriesOverlay',
-          }),
-        })
-        .addTo(map);
 
       logger.info('Countries GeoJSON loaded successfully');
       eventBus.emit('map:countries-loaded', undefined);
@@ -143,12 +134,27 @@ export class GeoJSONManager {
   }
 
   /**
+   * Get country feature for highlighting (prefer low-res).
+   * @param {string} countryId
+   * @returns {Object|null}
+   */
+  getCountryFeatureByIdForHighlight(countryId) {
+    const source = this.#countriesGeoJSONLow ?? this.#countriesGeoJSON;
+    if (!source) return null;
+    return (
+      source.features.find(
+        (f) => f.properties.ISO_A3 === countryId || f.properties.ADM0_A3 === countryId
+      ) ?? null
+    );
+  }
+
+  /**
    * Highlight countries for Country mode result
    * @param {{ correctCountryId: string, clickedCountryId?: string | null }} options
    */
   highlightCountries({ correctCountryId, clickedCountryId }) {
-    if (!this.#countriesLayer) {
-      logger.warn('Countries layer not loaded');
+    if (!this.#countriesGeoJSON && !this.#countriesGeoJSONLow) {
+      logger.warn('Countries GeoJSON not loaded');
       return;
     }
 
@@ -157,7 +163,7 @@ export class GeoJSONManager {
 
     this.clearCountryHighlights();
 
-    const correctFeature = this.getCountryFeatureById(correctCountryId);
+    const correctFeature = this.getCountryFeatureByIdForHighlight(correctCountryId);
     if (!correctFeature) {
       logger.warn(`Correct country not found: ${correctCountryId}`);
       return;
@@ -179,7 +185,7 @@ export class GeoJSONManager {
     this.#countryHighlights.push(correctHighlight);
 
     if (clickedCountryId && !isSameCountry) {
-      const clickedFeature = this.getCountryFeatureById(clickedCountryId);
+      const clickedFeature = this.getCountryFeatureByIdForHighlight(clickedCountryId);
       if (clickedFeature) {
         const clickedStyle = {
           fillColor: '#f97316',
@@ -218,8 +224,8 @@ export class GeoJSONManager {
    * @returns {Promise<boolean>}
    */
   async loadCivilizationsGeoJSON() {
-    if (this.#civilizationsLayer) {
-      logger.warn('Civilizations layer already loaded');
+    if (this.#civilizationsGeoJSON) {
+      logger.warn('Civilizations GeoJSON already loaded');
       return true;
     }
 
@@ -230,30 +236,14 @@ export class GeoJSONManager {
     }
 
     try {
+      this.#civilizationsGeoJSONLow = await getCivilizationsGeoJSONLow();
       this.#civilizationsGeoJSON = await getCivilizationsGeoJSON();
 
-      if (!map.getPane('civilizationsOverlay')) {
-        const civPane = map.createPane('civilizationsOverlay');
-        civPane.style.zIndex = 450;
-        civPane.style.pointerEvents = 'none';
-      }
       if (!map.getPane('civilizationsHighlight')) {
         const highlightPane = map.createPane('civilizationsHighlight');
         highlightPane.style.zIndex = 650;
         highlightPane.style.pointerEvents = 'none';
       }
-      this.#civilizationsLayer = this.#L
-        .geoJSON(this.#civilizationsGeoJSON, {
-          style: () => ({
-            fillColor: 'transparent',
-            fillOpacity: 0,
-            color: 'transparent',
-            weight: 0,
-            interactive: false,
-            pane: 'civilizationsOverlay',
-          }),
-        })
-        .addTo(map);
 
       logger.info('Civilizations GeoJSON loaded successfully');
       eventBus.emit('map:civilizations-loaded', undefined);
@@ -312,12 +302,23 @@ export class GeoJSONManager {
   }
 
   /**
+   * Get civilization feature for highlighting (prefer low-res).
+   * @param {string} civilizationId
+   * @returns {Object|null}
+   */
+  getCivilizationFeatureByIdForHighlight(civilizationId) {
+    const source = this.#civilizationsGeoJSONLow ?? this.#civilizationsGeoJSON;
+    if (!source) return null;
+    return source.features.find((f) => f.properties.id === civilizationId) ?? null;
+  }
+
+  /**
    * Highlight civilizations for Civilization mode result
    * @param {{ correctCivilizationId: string, clickedCivilizationId?: string | null }} options
    */
   highlightCivilizations({ correctCivilizationId, clickedCivilizationId }) {
-    if (!this.#civilizationsLayer) {
-      logger.warn('Civilizations layer not loaded');
+    if (!this.#civilizationsGeoJSON && !this.#civilizationsGeoJSONLow) {
+      logger.warn('Civilizations GeoJSON not loaded');
       return;
     }
 
@@ -326,7 +327,7 @@ export class GeoJSONManager {
 
     this.clearCivilizationHighlights();
 
-    const correctFeature = this.getCivilizationFeatureById(correctCivilizationId);
+    const correctFeature = this.getCivilizationFeatureByIdForHighlight(correctCivilizationId);
     if (!correctFeature) {
       logger.warn(`Correct civilization not found: ${correctCivilizationId}`);
       return;
@@ -379,16 +380,12 @@ export class GeoJSONManager {
     this.clearCountryHighlights();
     this.clearCivilizationHighlights();
 
-    if (map && this.#countriesLayer) {
-      map.removeLayer(this.#countriesLayer);
-      this.#countriesLayer = null;
-    }
+    // No base layer to remove (we create only highlight layers).
     this.#countriesGeoJSON = null;
+    this.#countriesGeoJSONLow = null;
 
-    if (map && this.#civilizationsLayer) {
-      map.removeLayer(this.#civilizationsLayer);
-      this.#civilizationsLayer = null;
-    }
+    // No base layer to remove (we create only highlight layers).
     this.#civilizationsGeoJSON = null;
+    this.#civilizationsGeoJSONLow = null;
   }
 }

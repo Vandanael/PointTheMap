@@ -375,10 +375,11 @@ export function createGameFlowController(deps) {
           clickedCountryId: currentRound.clickedCountryId,
         });
         const correctFeature = mapSystem.getCountryFeatureById(correctCountryId);
-        // Ensure the correct answer is visible.
+        // Fit both the correct country and the player's click in view.
         if (
           !mapSystem.flyToFeatureBounds(correctFeature, {
             animation: { duration: 2.2, easeLinearity: 0.2 },
+            includePoint: clickCoords,
           })
         ) {
           mapSystem.flyTo(clickCoords, undefined, MAP_ANIMATIONS.SHOW_RESULT);
@@ -393,10 +394,11 @@ export function createGameFlowController(deps) {
           clickedCivilizationId: currentRound.clickedCivilizationId,
         });
         const correctFeature = mapSystem.getCivilizationFeatureById(correctCivilizationId);
-        // Ensure the correct answer is visible.
+        // Fit both the correct civilization and the player's click in view.
         if (
           !mapSystem.flyToFeatureBounds(correctFeature, {
             animation: { duration: 2.2, easeLinearity: 0.2 },
+            includePoint: clickCoords,
           })
         ) {
           mapSystem.flyTo(clickCoords, undefined, MAP_ANIMATIONS.SHOW_RESULT);
@@ -747,7 +749,7 @@ export function createGameFlowController(deps) {
    * @returns {Promise<boolean>}
    */
   const resumeFromState = async (savedState) => {
-    if (!savedState || savedState.status !== GameStatus.PLAYING) return false;
+    if (!savedState) return false;
 
     if (!mapSystem.isInitialized()) {
       await mapSystem.init('map');
@@ -759,29 +761,85 @@ export function createGameFlowController(deps) {
       await mapSystem.loadCivilizationsGeoJSON();
     }
 
-    // Reset round timing to avoid immediate timeout on resume
-    const refreshedState = {
-      ...savedState,
-      currentRound: savedState.currentRound
-        ? {
-            ...savedState.currentRound,
-            startTime: Date.now(),
-            endTime: null,
-            status: GameStatus.PLAYING,
-          }
-        : null,
-    };
+    if (savedState.status === GameStatus.PLAYING) {
+      // Reset round timing to avoid immediate timeout on resume
+      const refreshedState = {
+        ...savedState,
+        currentRound: savedState.currentRound
+          ? {
+              ...savedState.currentRound,
+              startTime: Date.now(),
+              endTime: null,
+              status: GameStatus.PLAYING,
+            }
+          : null,
+      };
 
-    ui.hideStart();
-    mapSystem.clearMap();
-    const startCenter = /** @type {[number, number]} */ (
-      isStadiumCategory(refreshedState.gameType) ? MAP.EUROPE_CENTER : MAP.CENTER
-    );
-    const startZoom = isStadiumCategory(refreshedState.gameType) ? MAP.EUROPE_ZOOM : MAP.ZOOM;
-    mapSystem.flyTo(startCenter, startZoom, { animate: false });
+      ui.hideStart();
+      mapSystem.clearMap();
+      const startCenter = /** @type {[number, number]} */ (
+        isStadiumCategory(refreshedState.gameType) ? MAP.EUROPE_CENTER : MAP.CENTER
+      );
+      const startZoom = isStadiumCategory(refreshedState.gameType) ? MAP.EUROPE_ZOOM : MAP.ZOOM;
+      mapSystem.flyTo(startCenter, startZoom, { animate: false });
 
-    stateManager.setState(/** @type {GameState} */ (refreshedState), 'game:resume');
-    return renderRoundUI(/** @type {GameState} */ (refreshedState), { requireButton: true });
+      stateManager.setState(/** @type {GameState} */ (refreshedState), 'game:resume');
+      return renderRoundUI(/** @type {GameState} */ (refreshedState), { requireButton: true });
+    }
+
+    if (savedState.status === GameStatus.ROUND_RESULT) {
+      if (!savedState.currentRound) return false;
+      ui.hideStart();
+      ui.hideQuestion();
+      ui.hideRoundResult();
+      mapSystem.clearMap();
+
+      const startCenter = /** @type {[number, number]} */ (
+        isStadiumCategory(savedState.gameType) ? MAP.EUROPE_CENTER : MAP.CENTER
+      );
+      const startZoom = isStadiumCategory(savedState.gameType) ? MAP.EUROPE_ZOOM : MAP.ZOOM;
+      mapSystem.flyTo(startCenter, startZoom, { animate: false });
+
+      stateManager.setState(/** @type {GameState} */ (savedState), 'game:resume');
+
+      const progress = game.getProgress(savedState);
+      ui.showGameUI(progress.current, progress.total, savedState.totalScore);
+
+      const currentRound = savedState.currentRound;
+      const isCountryMode = isCountryCategory(savedState.gameType);
+      const isCivilizationMode = isCivilizationCategory(savedState.gameType);
+
+      const displayDistance =
+        isCountryMode || isCivilizationMode
+          ? Number.isFinite(currentRound.distance)
+            ? currentRound.distance
+            : Number.isFinite(currentRound.distanceToTargetKm)
+              ? currentRound.distanceToTargetKm
+              : null
+          : currentRound.distance;
+
+      ui.showRoundResult(
+        currentRound.status === 'timeout' ? null : displayDistance,
+        currentRound.score ?? 0,
+        currentRound.status === 'timeout',
+        game.isLastRound(savedState),
+        currentRound.baseScore,
+        currentRound.timeBonus
+      );
+      return true;
+    }
+
+    if (savedState.status === GameStatus.GAME_OVER) {
+      ui.hideStart();
+      ui.hideQuestion();
+      ui.hideRoundResult();
+      mapSystem.clearMap();
+      stateManager.setState(/** @type {GameState} */ (savedState), 'game:resume');
+      ui.showGameOver(savedState.totalScore);
+      return true;
+    }
+
+    return false;
   };
 
   /**

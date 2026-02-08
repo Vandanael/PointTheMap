@@ -32,7 +32,8 @@ const translations = {
     // Start screen
     challenge: '5s Challenge',
     capitalsInfo: '5 capitales · 5 secondes par ville',
-    clickToWin: 'Clique sur la carte, gagne des points',
+    clickToWin: 'Vitesse et précision déterminent votre score.',
+    speedBonusHint: '',
     comingSoon: 'Bientôt disponible',
     start: 'COMMENCER',
     madeBy: 'Par',
@@ -316,7 +317,8 @@ const translations = {
     // Start screen
     challenge: '5s Challenge',
     capitalsInfo: '5 capitals · 5 seconds per city',
-    clickToWin: 'Click on the map, earn points',
+    clickToWin: 'Speed and precision determine your score.',
+    speedBonusHint: '',
     comingSoon: 'Coming soon',
     start: 'START',
     madeBy: 'Made by',

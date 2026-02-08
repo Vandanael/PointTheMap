@@ -424,7 +424,7 @@ body.light-theme .marker-player {
 }
 
 .marker-pop {
-  animation: marker-pop 240ms ease-out;
+  animation: marker-pop 320ms ease-out;
 }
 
 .marker-shockwave {
@@ -477,7 +477,7 @@ body.light-theme .marker-player {
   border: 1px solid var(--border-color);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   pointer-events: none;
-  animation: result-pop 300ms ease-out;
+  animation: result-pop 400ms ease-out;
 }
 
 body.light-theme .result-line-distance {
@@ -628,7 +628,7 @@ body.light-theme .result-line-distance {
 }
 
 .score-burst {
-  animation: score-burst 420ms ease-out;
+  animation: score-burst 550ms ease-out;
 }
 
 .result-stamp {
@@ -866,6 +866,16 @@ button:focus:not(:focus-visible),
   outline: none;
 }
 
+/* Header icon buttons (leaderboard, lang, theme): no gold focus ring */
+#btn-leaderboard:focus,
+#btn-leaderboard:focus-visible,
+#btn-lang:focus,
+#btn-lang:focus-visible,
+#btn-theme:focus,
+#btn-theme:focus-visible {
+  outline: none;
+}
+
 /* Disabled category buttons */
 .category-btn:disabled,
 .category-btn.category-disabled {
@@ -973,12 +983,18 @@ body.app-resetting .game-header > div {
   min-height: 320px;
 }
 
+.leaderboard-tab-loading {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .leaderboard-panel {
   overflow-y: auto;
   overflow-x: hidden;
   contain: layout paint;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  transition: opacity 0.15s ease;
 }
 
 .leaderboard-panel::-webkit-scrollbar {
@@ -1068,7 +1084,7 @@ body.app-resetting .game-header > div {
 }
 
 .round-pulse {
-  animation: round-pulse 280ms ease-out;
+  animation: round-pulse 380ms ease-out;
 }
 
 /* Round transition overlay */
@@ -1668,6 +1684,87 @@ body.light-theme .challenge-info {
   #leaderboard-modal .flex-wrap button {
     font-size: 0.75rem;
     padding: 0.375rem 0.5rem;
+  }
+}
+
+/* ===================================
+   RESPONSIVE: Modern small phones (390-420px)
+   Pixel 5 (393×851), iPhone 13 (390×844)
+   =================================== */
+@media (max-width: 420px) {
+  /* Game header: tighter padding */
+  .game-header > div {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+
+  #game-header .text-lg {
+    font-size: 1rem;
+  }
+
+  /* Question modal: smaller capital name + padding */
+  #question-modal .text-5xl {
+    font-size: 2.25rem;
+  }
+
+  #question-modal .modal-content {
+    padding: 1.25rem;
+  }
+
+  /* Round result modal: tighter layout */
+  #result-modal .modal-card {
+    padding: 1.25rem;
+  }
+
+  #result-modal .text-5xl {
+    font-size: 2.25rem;
+  }
+
+  /* Game over modal */
+  #game-over-modal .modal-card {
+    padding: 1.25rem;
+  }
+
+  #game-over-modal .text-5xl {
+    font-size: 2.25rem;
+  }
+
+  /* Start screen: category buttons */
+  .category-btn {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .category-btn span {
+    font-size: 0.8rem;
+  }
+
+  /* Pill toggle */
+  .pill-toggle {
+    min-width: 200px;
+  }
+
+  /* Play button */
+  .play-btn {
+    padding: 0.75rem 1.5rem;
+  }
+
+  /* Leaderboard modal */
+  #leaderboard-modal .modal-card {
+    padding: 1rem;
+  }
+
+  .leaderboard-category-row button {
+    font-size: 0.7rem;
+    padding: 0.375rem 0.25rem;
+  }
+
+  .leaderboard-panel {
+    max-height: 320px;
+  }
+
+  .leaderboard-title {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
   }
 }
 

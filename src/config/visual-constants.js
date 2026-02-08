@@ -74,13 +74,13 @@ export const MAP_VIEW = {
 
 // UI timings
 export const UI_TIMING = {
-  QUESTION_AUTO_CLOSE: 2400, // Auto-close question modal after 2.4s
+  QUESTION_AUTO_CLOSE: 3200, // Auto-close question modal after 3.2s
   ERROR_DISPLAY: 4000, // Error message display duration
   CHALLENGE_CARD_FADE: 200, // Challenge card fade transition duration
   INPUT_ERROR_SHAKE: 500, // Duration to keep shake animation class
   TOAST_SLIDE_OUT: 300, // Toast slide-out animation duration
   DEBOUNCE_SUBMIT: 1000, // Debounce delay for submit button
-  ROUND_TRANSITION_MS: 150, // Delay between round result and next question
+  ROUND_TRANSITION_MS: 400, // Delay between round result and next question
 };
 
 /**

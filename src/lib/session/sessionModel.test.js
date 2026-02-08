@@ -11,7 +11,7 @@ describe('Session Domain Model', () => {
     it('should convert persistence model to domain model', () => {
       const persistenceSession = {
         token: 'test-token-123',
-        capitals: [
+        targets: [
           { name: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522 },
           { name: 'London', country: 'UK', lat: 51.5074, lng: -0.1278 },
         ],
@@ -35,16 +35,16 @@ describe('Session Domain Model', () => {
         csrfToken: 'csrf-123',
       });
 
-      // Verify "capitals" field is removed
+      // Verify legacy field is removed
       expect(domainSession).not.toHaveProperty('capitals');
-      // Verify "targets" field exists
+      // Verify targets field exists
       expect(domainSession).toHaveProperty('targets');
     });
 
     it('should handle country targets', () => {
       const persistenceSession = {
         token: 'country-token',
-        capitals: [
+        targets: [
           { name: 'France', countryId: 'FRA', popular: true },
           { name: 'Germany', countryId: 'DEU', popular: true },
         ],
@@ -64,7 +64,7 @@ describe('Session Domain Model', () => {
     it('should handle stadium targets', () => {
       const persistenceSession = {
         token: 'stadium-token',
-        capitals: [
+        targets: [
           { name: 'Stade de France', city: 'Paris', country: 'France', lat: 48.9244, lng: 2.36 },
           { name: 'Wembley', city: 'London', country: 'UK', lat: 51.556, lng: -0.2795 },
         ],
@@ -84,7 +84,7 @@ describe('Session Domain Model', () => {
     it('should handle civilization targets', () => {
       const persistenceSession = {
         token: 'civ-token',
-        capitals: [
+        targets: [
           { id: 'roman_empire', name: 'Roman Empire', popular: true },
           { id: 'ottoman_empire', name: 'Ottoman Empire', popular: true },
         ],
@@ -104,7 +104,7 @@ describe('Session Domain Model', () => {
     it('should preserve optional fields', () => {
       const persistenceSession = {
         token: 'test-token',
-        capitals: [],
+        targets: [],
         startTime: 1234567890,
         used: false,
         gameType: 'classic',
@@ -121,7 +121,7 @@ describe('Session Domain Model', () => {
     it('should handle empty targets array', () => {
       const persistenceSession = {
         token: 'empty-token',
-        capitals: [],
+        targets: [],
         startTime: 1234567890,
         used: false,
         gameType: 'classic',
@@ -151,7 +151,7 @@ describe('Session Domain Model', () => {
 
       expect(persistenceSession).toEqual({
         token: 'test-token-123',
-        capitals: [
+        targets: [
           { name: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522 },
           { name: 'London', country: 'UK', lat: 51.5074, lng: -0.1278 },
         ],
@@ -161,16 +161,16 @@ describe('Session Domain Model', () => {
         csrfToken: 'csrf-123',
       });
 
-      // Verify "targets" field is removed
-      expect(persistenceSession).not.toHaveProperty('targets');
-      // Verify "capitals" field exists
-      expect(persistenceSession).toHaveProperty('capitals');
+      // Verify legacy field is removed
+      expect(persistenceSession).not.toHaveProperty('capitals');
+      // Verify targets field exists
+      expect(persistenceSession).toHaveProperty('targets');
     });
 
     it('should be reversible with toDomainModel', () => {
       const original = {
         token: 'test-token',
-        capitals: [{ name: 'Paris', country: 'France', lat: 48, lng: 2 }],
+        targets: [{ name: 'Paris', country: 'France', lat: 48, lng: 2 }],
         startTime: 1234567890,
         used: false,
         gameType: 'classic',
@@ -188,7 +188,7 @@ describe('Session Domain Model', () => {
     it('should return true for persistence model', () => {
       const session = {
         token: 'test',
-        capitals: [],
+        targets: [],
         startTime: 123,
         used: false,
         gameType: 'classic',
@@ -197,7 +197,7 @@ describe('Session Domain Model', () => {
       expect(isPersistenceModel(session)).toBe(true);
     });
 
-    it('should return false for domain model', () => {
+    it('should return true for domain model (same shape)', () => {
       const session = {
         token: 'test',
         targets: [],
@@ -206,7 +206,7 @@ describe('Session Domain Model', () => {
         gameType: 'classic',
       };
 
-      expect(isPersistenceModel(session)).toBe(false);
+      expect(isPersistenceModel(session)).toBe(true);
     });
 
     it('should return false for non-objects', () => {
@@ -230,16 +230,16 @@ describe('Session Domain Model', () => {
       expect(isDomainModel(session)).toBe(true);
     });
 
-    it('should return false for persistence model', () => {
+    it('should return true for persistence model (same shape)', () => {
       const session = {
         token: 'test',
-        capitals: [],
+        targets: [],
         startTime: 123,
         used: false,
         gameType: 'classic',
       };
 
-      expect(isDomainModel(session)).toBe(false);
+      expect(isDomainModel(session)).toBe(true);
     });
 
     it('should return false for non-objects', () => {
@@ -265,7 +265,7 @@ describe('Session Domain Model', () => {
 
       const persistence = {
         token: 'test',
-        capitals: originalTargets,
+        targets: originalTargets,
         startTime: 123,
         used: false,
         gameType: 'classic',
@@ -281,18 +281,18 @@ describe('Session Domain Model', () => {
     it('should not mutate original objects', () => {
       const persistence = {
         token: 'test',
-        capitals: [{ name: 'Paris' }],
+        targets: [{ name: 'Paris' }],
         startTime: 123,
         used: false,
         gameType: 'classic',
       };
 
-      const originalCapitals = persistence.capitals;
+      const originalCapitals = persistence.targets;
       const domain = toDomainModel(persistence);
 
       // Verify original object is not mutated
-      expect(persistence.capitals).toBe(originalCapitals);
-      expect(persistence).toHaveProperty('capitals');
+      expect(persistence.targets).toBe(originalCapitals);
+      expect(persistence).toHaveProperty('targets');
     });
   });
 });

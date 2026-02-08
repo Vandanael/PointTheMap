@@ -207,6 +207,22 @@ function inlineSmallEntry({ maxSize = 10 * 1024, enabled = true } = {}) {
   };
 }
 
+/** Remove data: modulepreload links for strict CSP builds. */
+function stripDataModulePreload({ enabled = false } = {}) {
+  if (!enabled) return null;
+  return {
+    name: 'strip-data-modulepreload',
+    apply: 'build',
+    enforce: 'post',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html) {
+        return html.replace(/<link[^>]+rel=\"modulepreload\"[^>]+href=\"data:[^\"]+\"[^>]*>\\n?/g, '');
+      },
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const isProd = mode === 'production';
   return {
@@ -323,7 +339,9 @@ export default defineConfig(({ mode }) => {
         enabled: true,
         strictCsp: process.env.STRICT_CSP === '1',
       }),
-      inlineSmallEntry({ enabled: process.env.STRICT_CSP !== '1' }),
+      // Inline entry only when explicitly enabled (avoid CSP issues).
+      inlineSmallEntry({ enabled: process.env.INLINE_ENTRY === '1' }),
+      stripDataModulePreload({ enabled: process.env.STRICT_CSP === '1' }),
       plausibleAnalyticsLocal({ strictCsp: process.env.STRICT_CSP === '1' }),
     ].filter(Boolean),
     resolve: {

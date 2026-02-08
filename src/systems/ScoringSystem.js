@@ -13,9 +13,9 @@ import {
   distanceToPolygonBorder,
   calculateCountryScore as calculateCountryScoreLib,
 } from '@lib/geo-utils/index.js';
-import { GAME, SCORING_THRESHOLDS, SCORING_FORMULA, SCORING } from '@lib/config';
+import { GAME, SCORING_THRESHOLDS, SCORING_FORMULA } from '@lib/config';
 import { FEATURES } from '../config/features.js';
-import { MODE_IDS } from '../config/game-modes.js';
+import { MODE_IDS, getTimeBonusConfig } from '../config/game-modes.js';
 import { eventBus } from '../core/EventBus.js';
 import { getCivilizationName, t } from '../i18n.js';
 
@@ -91,9 +91,8 @@ export class ScoringSystem {
     distanceKm,
     gameMode = MODE_IDS.CLASSIC
   ) {
-    // Get mode-specific config
-    const config =
-      SCORING.TIME_BONUS_BY_MODE[/** @type {keyof typeof SCORING.TIME_BONUS_BY_MODE} */ (gameMode)];
+    // Get mode-specific config (single source of truth: GAME_MODES)
+    const config = getTimeBonusConfig(gameMode);
 
     // Check global and mode-specific flags
     if (!FEATURES.TIME_BONUS || !config || !config.enabled) {

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes"
+      content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover"
     />
 
     <!-- Main CSS (in production: inlined critical + async full CSS via build plugin) -->
@@ -50,9 +50,6 @@
       content="5 capitales · 5 secondes par ville. Cliquez sur la carte, gagnez des points !"
     />
     <meta name="twitter:image" content="/og-image.png" />
-
-    <!-- Preload main module for faster execution -->
-    <link rel="modulepreload" href="/src/main.js" />
 
     <!-- Prefetch GeoJSON data at low priority during idle time -->
     <link rel="prefetch" href="/data/countries.geojson" as="fetch" crossorigin />

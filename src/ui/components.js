@@ -592,8 +592,8 @@ export const LeaderboardModal = (scores, currentType = MODE_IDS.CLASSIC, loading
       id="${id}"
       class="flex-1 py-2 px-3 rounded-xl font-black text-base transition-all ${
         value === variant ? 'bg-yellow-400 text-black' : 'btn-secondary'
-      }"
-      ${loading ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
+      } ${loading ? 'leaderboard-tab-loading' : ''}"
+      ${loading ? 'disabled' : ''}
     >
       ${label}
     </button>
@@ -609,8 +609,8 @@ export const LeaderboardModal = (scores, currentType = MODE_IDS.CLASSIC, loading
       id="${id}"
       class="flex-1 py-2 px-2 rounded-xl font-bold text-sm transition-all ${
         value === category ? 'bg-yellow-400 text-black' : 'btn-secondary'
-      }"
-      ${loading ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
+      } ${loading ? 'leaderboard-tab-loading' : ''}"
+      ${loading ? 'disabled' : ''}
     >
       ${label}
     </button>

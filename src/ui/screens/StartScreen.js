@@ -109,39 +109,168 @@ export const createStartScreen = (deps) => {
     eventBus.emit(EVENTS.LANGUAGE_CHANGED, { language: newLang });
   };
 
+  /**
+   * Update tab button active states in-place (no DOM recreation).
+   * @param {"classic"|"daily"} variant
+   * @param {"capitals"|"countries"|"stadiums"|"civilizations"} category
+   */
+  const updateLeaderboardTabs = (variant, category) => {
+    // Variant buttons
+    const variantBtns = /** @type {const} */ (['classic', 'daily']);
+    variantBtns.forEach((v) => {
+      const btn = /** @type {HTMLButtonElement | null} */ (
+        document.getElementById(`btn-leaderboard-${v}`)
+      );
+      if (!btn) return;
+      if (v === variant) {
+        btn.className = btn.className
+          .replace('btn-secondary', '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (!btn.classList.contains('bg-yellow-400')) {
+          btn.classList.add('bg-yellow-400', 'text-black');
+        }
+      } else {
+        btn.classList.remove('bg-yellow-400', 'text-black');
+        if (!btn.classList.contains('btn-secondary')) {
+          btn.classList.add('btn-secondary');
+        }
+      }
+    });
+
+    // Category buttons
+    const categoryBtns = /** @type {const} */ (['capitals', 'countries', 'stadiums', 'civilizations']);
+    categoryBtns.forEach((c) => {
+      const btn = /** @type {HTMLButtonElement | null} */ (
+        document.getElementById(`btn-leaderboard-cat-${c}`)
+      );
+      if (!btn) return;
+      if (c === category) {
+        btn.className = btn.className
+          .replace('btn-secondary', '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (!btn.classList.contains('bg-yellow-400')) {
+          btn.classList.add('bg-yellow-400', 'text-black');
+        }
+      } else {
+        btn.classList.remove('bg-yellow-400', 'text-black');
+        if (!btn.classList.contains('btn-secondary')) {
+          btn.classList.add('btn-secondary');
+        }
+      }
+    });
+  };
+
+  /** Monotonic counter to discard stale leaderboard fetches (race condition guard). */
+  let _leaderboardRequestId = 0;
+
+  /**
+   * Update leaderboard content panel with fade transition.
+   * @param {string} type
+   */
+  const updateLeaderboardContent = async (type) => {
+    const contentEl = _domCache.get('leaderboard-content');
+    if (!contentEl) return;
+
+    const requestId = ++_leaderboardRequestId;
+
+    // Fade out
+    contentEl.style.opacity = '0';
+
+    try {
+      const scores = await loadLeaderboard(type);
+      if (requestId !== _leaderboardRequestId) return; // stale response
+      if (!document.getElementById('leaderboard-modal')) return;
+
+      if (scores.length === 0) {
+        contentEl.innerHTML = `
+          <div class="leaderboard-center-state text-center py-8">
+            <p class="text-tertiary mb-4">${t('error.leaderboardRetry')}</p>
+            <button id="btn-retry-leaderboard" class="text-yellow-400 hover:text-yellow-300 font-bold">
+              ${t('error.retry')}
+            </button>
+          </div>
+        `;
+        bindClick('btn-retry-leaderboard', () => {
+          if (onRetryLeaderboard) {
+            onRetryLeaderboard(type);
+          } else {
+            updateLeaderboardContent(type);
+          }
+        });
+      } else {
+        const nextMarkup = Leaderboard(scores, null, false);
+        const template = document.createElement('template');
+        template.innerHTML = nextMarkup.trim();
+        const nextNode = template.content.firstElementChild;
+        if (nextNode instanceof HTMLElement) {
+          contentEl.className = nextNode.className;
+          const nextRole = nextNode.getAttribute('role');
+          const nextAriaLabel = nextNode.getAttribute('aria-label');
+          if (nextRole) contentEl.setAttribute('role', nextRole);
+          if (nextAriaLabel) contentEl.setAttribute('aria-label', nextAriaLabel);
+          contentEl.innerHTML = nextNode.innerHTML;
+        }
+      }
+    } catch (/** @type {unknown} */ error) {
+      if (requestId !== _leaderboardRequestId) return; // stale response
+      handleError(error, 'leaderboard:load', { showToUser: false });
+      logger.error(`Failed to load ${type} leaderboard:`, error);
+      contentEl.innerHTML = `
+        <div class="leaderboard-center-state text-center py-8">
+          <p class="text-tertiary mb-4">${t('error.leaderboardRetry')}</p>
+          <button id="btn-retry-leaderboard" class="text-yellow-400 hover:text-yellow-300 font-bold">
+            ${t('error.retry')}
+          </button>
+        </div>
+      `;
+      bindClick('btn-retry-leaderboard', () => {
+        if (onRetryLeaderboard) {
+          onRetryLeaderboard(type);
+        } else {
+          updateLeaderboardContent(type);
+        }
+      });
+    }
+
+    // Fade in
+    contentEl.style.opacity = '1';
+
+    // Re-enable all tab buttons
+    const btns = [
+      'btn-leaderboard-classic',
+      'btn-leaderboard-daily',
+      'btn-leaderboard-cat-capitals',
+      'btn-leaderboard-cat-countries',
+      'btn-leaderboard-cat-stadiums',
+      'btn-leaderboard-cat-civilizations',
+    ];
+    btns.forEach((id) => {
+      const btn = /** @type {HTMLButtonElement | null} */ (_domCache.get(id));
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('leaderboard-tab-loading');
+      }
+    });
+  };
+
   const setupLeaderboardTabs = () => {
     /**
+     * Switch tab in-place (no modal recreation).
      * @param {"classic"|"daily"} variant
      * @param {"capitals"|"countries"|"stadiums"|"civilizations"} category
      */
-    const switchTo = async (variant, category) => {
+    const switchTo = (variant, category) => {
       _leaderboardVariant = variant;
       _leaderboardCategory = category;
       const type = leaderboardTypeFromSelection(variant, category);
-      try {
-        await showLeaderboardModal([], type, true);
-      } catch (/** @type {unknown} */ error) {
-        handleError(error, 'leaderboard:load', { showToUser: false });
-        logger.error(`Failed to load ${type} leaderboard:`, error);
-        const content = _domCache.get('leaderboard-content');
-        if (content) {
-          content.innerHTML = `
-            <div class="leaderboard-center-state text-center py-8">
-              <p class="text-tertiary mb-4">${t('error.leaderboardRetry')}</p>
-              <button id="btn-retry-leaderboard" class="text-yellow-400 hover:text-yellow-300 font-bold">
-                ${t('error.retry')}
-              </button>
-            </div>
-          `;
-          bindClick('btn-retry-leaderboard', () => {
-            if (onRetryLeaderboard) {
-              onRetryLeaderboard(type);
-            } else {
-              switchTo(variant, category);
-            }
-          });
-        }
-      }
+
+      // Update button states in-place
+      updateLeaderboardTabs(variant, category);
+
+      // Update content with fade transition
+      updateLeaderboardContent(type);
     };
 
     // Variant buttons
@@ -158,7 +287,8 @@ export const createStartScreen = (deps) => {
   };
 
   /**
-   * Show leaderboard modal with lazy loading
+   * Show leaderboard modal with lazy loading.
+   * The modal is created once; tab switches reuse it in-place.
    * @param {Array<any>} initialScores
    * @param {string} type
    * @param {boolean} lazyLoad
@@ -174,94 +304,32 @@ export const createStartScreen = (deps) => {
 
     remove('leaderboard-modal');
 
+    const closeLeaderboard = () => {
+      deactivateFocusTrap();
+      remove('leaderboard-modal');
+    };
+
+    render(
+      LeaderboardModal(
+        lazyLoad ? [] : initialScores,
+        /** @type {"classic" | "daily"} */ (type),
+        lazyLoad
+      )
+    );
+    bindClick('btn-close-leaderboard', closeLeaderboard);
+    setupLeaderboardTabs();
+
+    const leaderboardModal = document.getElementById('leaderboard-modal');
+    if (leaderboardModal) {
+      requestAnimationFrame(() =>
+        activateFocusTrap(/** @type {HTMLElement} */ (leaderboardModal), {
+          onEscape: closeLeaderboard,
+        })
+      );
+    }
+
     if (lazyLoad) {
-      render(LeaderboardModal([], /** @type {"classic" | "daily"} */ (type), true));
-      const closeLeaderboard = () => {
-        deactivateFocusTrap();
-        remove('leaderboard-modal');
-      };
-      bindClick('btn-close-leaderboard', closeLeaderboard);
-      setupLeaderboardTabs();
-      const leaderboardModalSkeleton = document.getElementById('leaderboard-modal');
-      if (leaderboardModalSkeleton) {
-        requestAnimationFrame(() =>
-          activateFocusTrap(/** @type {HTMLElement} */ (leaderboardModalSkeleton), {
-            onEscape: closeLeaderboard,
-          })
-        );
-      }
-
-      const scores = await loadLeaderboard(type);
-
-      if (!document.getElementById('leaderboard-modal')) return;
-
-      const contentEl = _domCache.get('leaderboard-content');
-      if (contentEl) {
-        if (scores.length === 0) {
-          contentEl.innerHTML = `
-            <div class="leaderboard-center-state text-center py-8">
-              <p class="text-tertiary mb-4">${t('error.leaderboardRetry')}</p>
-              <button id="btn-retry-leaderboard" class="text-yellow-400 hover:text-yellow-300 font-bold">
-                ${t('error.retry')}
-              </button>
-            </div>
-          `;
-          bindClick('btn-retry-leaderboard', () => {
-            if (onRetryLeaderboard) {
-              onRetryLeaderboard(type);
-            } else {
-              showLeaderboardModal([], type, true);
-            }
-          });
-        } else {
-          // Keep the same container node to avoid layout shifts and focus/context churn.
-          const nextMarkup = Leaderboard(scores, null, false);
-          const template = document.createElement('template');
-          template.innerHTML = nextMarkup.trim();
-          const nextNode = template.content.firstElementChild;
-          if (nextNode instanceof HTMLElement) {
-            contentEl.className = nextNode.className;
-            const nextRole = nextNode.getAttribute('role');
-            const nextAriaLabel = nextNode.getAttribute('aria-label');
-            if (nextRole) contentEl.setAttribute('role', nextRole);
-            if (nextAriaLabel) contentEl.setAttribute('aria-label', nextAriaLabel);
-            contentEl.innerHTML = nextNode.innerHTML;
-          }
-        }
-      }
-
-      const btns = [
-        'btn-leaderboard-classic',
-        'btn-leaderboard-daily',
-        'btn-leaderboard-cat-capitals',
-        'btn-leaderboard-cat-countries',
-        'btn-leaderboard-cat-stadiums',
-        'btn-leaderboard-cat-civilizations',
-      ];
-      btns.forEach((id) => {
-        const btn = /** @type {HTMLButtonElement | null} */ (_domCache.get(id));
-        if (btn) {
-          btn.disabled = false;
-          btn.style.opacity = '';
-          btn.style.cursor = '';
-        }
-      });
-    } else {
-      const closeLeaderboard = () => {
-        deactivateFocusTrap();
-        remove('leaderboard-modal');
-      };
-      render(LeaderboardModal(initialScores, /** @type {"classic" | "daily"} */ (type), false));
-      bindClick('btn-close-leaderboard', closeLeaderboard);
-      setupLeaderboardTabs();
-      const leaderboardModal = document.getElementById('leaderboard-modal');
-      if (leaderboardModal) {
-        requestAnimationFrame(() =>
-          activateFocusTrap(/** @type {HTMLElement} */ (leaderboardModal), {
-            onEscape: closeLeaderboard,
-          })
-        );
-      }
+      await updateLeaderboardContent(type);
     }
   };
 
@@ -462,6 +530,50 @@ export const createStartScreen = (deps) => {
     });
 
     let _startingGame = false;
+    let _loaderInterval = null;
+    let _loaderProgress = 0;
+    const setLoaderProgress = (percent) => {
+      _loaderProgress = Math.max(_loaderProgress, percent);
+      updateLoader(_loaderProgress);
+    };
+    const startLoaderProgress = () => {
+      if (_loaderInterval) return;
+      _loaderProgress = Math.max(_loaderProgress, 10);
+      updateLoader(_loaderProgress);
+      _loaderInterval = setInterval(() => {
+        if (_loaderProgress >= 90) return;
+        const bump = 1 + Math.floor(Math.random() * 3);
+        _loaderProgress = Math.min(90, _loaderProgress + bump);
+        updateLoader(_loaderProgress);
+      }, 300);
+    };
+    const stopLoaderProgress = () => {
+      if (_loaderInterval) {
+        clearInterval(_loaderInterval);
+        _loaderInterval = null;
+      }
+      _loaderProgress = 0;
+    };
+    const waitForGameUI = (timeoutMs = 2000) =>
+      new Promise((resolve) => {
+        const start = Date.now();
+        const tick = () => {
+          if (
+            document.getElementById('question-modal') ||
+            document.getElementById('game-header') ||
+            document.getElementById('round-result')
+          ) {
+            resolve(true);
+            return;
+          }
+          if (Date.now() - start >= timeoutMs) {
+            resolve(false);
+            return;
+          }
+          requestAnimationFrame(tick);
+        };
+        tick();
+      });
     bindClick('btn-start-game', async () => {
       if (_startingGame) return;
       _startingGame = true;
@@ -510,19 +622,21 @@ export const createStartScreen = (deps) => {
       hideStart();
       if (needsAsyncWork) {
         showLoader();
-        updateLoader(needsInit && needsGeoJSON ? 20 : needsInit ? 40 : 50);
+        startLoaderProgress();
+        setLoaderProgress(needsInit && needsGeoJSON ? 20 : needsInit ? 40 : 50);
       }
 
       try {
         if (needsInit) {
           await mapSystem.init('map');
-          updateLoader(needsGeoJSON ? 50 : 100);
+          setLoaderProgress(needsGeoJSON ? 60 : 80);
         }
 
         if (selectedCategory === 'countries') {
           const loaded = await mapSystem.loadCountriesGeoJSON();
-          updateLoader(100);
+          setLoaderProgress(90);
           if (!loaded) {
+            stopLoaderProgress();
             hideLoader();
             showStart();
             showMapErrorModal(t('error.countriesLoadFailed'));
@@ -536,8 +650,9 @@ export const createStartScreen = (deps) => {
           }
         } else if (selectedCategory === 'civilizations') {
           const loaded = await mapSystem.loadCivilizationsGeoJSON();
-          updateLoader(100);
+          setLoaderProgress(90);
           if (!loaded) {
+            stopLoaderProgress();
             hideLoader();
             showStart();
             showMapErrorModal(t('error.civilizationsLoadFailed'));
@@ -551,13 +666,13 @@ export const createStartScreen = (deps) => {
           }
         }
 
-        if (needsAsyncWork) {
-          hideLoader();
-        }
       } catch (error) {
         handleError(error, 'map:init', { showToUser: false });
         logger.error('Error initializing game:', error);
-        if (needsAsyncWork) hideLoader();
+        if (needsAsyncWork) {
+          stopLoaderProgress();
+          hideLoader();
+        }
         const errorMsg =
           selectedCategory === 'countries'
             ? t('error.countriesLoadFailed')
@@ -587,6 +702,14 @@ export const createStartScreen = (deps) => {
         return;
       }
       inputSystem.handleStartGame(gameMode);
+      if (needsAsyncWork) {
+        await waitForGameUI();
+        setLoaderProgress(100);
+        stopLoaderProgress();
+        // Let the 100% state render for one frame before hiding.
+        await new Promise((resolve) => requestAnimationFrame(() => resolve(true)));
+        hideLoader();
+      }
     });
 
     bindClick('btn-theme', toggleTheme);

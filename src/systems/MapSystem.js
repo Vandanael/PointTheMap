@@ -299,7 +299,7 @@ export class MapSystem {
   /**
    * Fly to the bounds of a GeoJSON feature.
    * @param {Object} feature - GeoJSON feature with geometry
-   * @param {{ padding?: [number, number], maxZoom?: number, animation?: { duration?: number, easeLinearity?: number } }} [options]
+   * @param {{ padding?: [number, number], maxZoom?: number, animation?: { duration?: number, easeLinearity?: number }, includePoint?: [number, number] }} [options]
    * @returns {boolean} True if bounds were applied
    */
   flyToFeatureBounds(feature, options = {}) {
@@ -310,6 +310,10 @@ export class MapSystem {
     const layer = L.geoJSON(feature);
     const bounds = layer.getBounds();
     if (!bounds || !bounds.isValid || !bounds.isValid()) return false;
+
+    if (options.includePoint) {
+      bounds.extend(options.includePoint);
+    }
 
     map.flyToBounds(bounds, {
       ...MAP_ANIMATIONS.SHOW_RESULT,

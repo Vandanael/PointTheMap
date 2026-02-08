@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   getGameMode,
   getRuntimeGameConfig,
+  getTimeBonusConfig,
   isValidMode,
   getAllModes,
   getModeIds,
@@ -107,6 +108,24 @@ describe('Game Modes Configuration', () => {
     });
   });
 
+  describe('time bonus config invariants', () => {
+    it('should define a valid timeBonus config for every game mode', () => {
+      Object.entries(GAME_MODES).forEach(([modeId, mode]) => {
+        expect(mode, `Missing mode for ${modeId}`).toBeDefined();
+        expect(mode.scoring, `Missing scoring for ${modeId}`).toBeDefined();
+        const timeBonus = mode.scoring.timeBonus;
+        expect(timeBonus, `Missing timeBonus for ${modeId}`).toBeDefined();
+        expect(typeof timeBonus.enabled).toBe('boolean');
+        expect(Number.isFinite(timeBonus.maxBonus)).toBe(true);
+
+        if (timeBonus.enabled) {
+          expect(Number.isFinite(timeBonus.maxBonusPercent)).toBe(true);
+          expect(Number.isFinite(timeBonus.distanceThreshold)).toBe(true);
+        }
+      });
+    });
+  });
+
   describe('getRuntimeGameConfig', () => {
     it('should return runtime config for classic mode', () => {
       const config = getRuntimeGameConfig('classic');
@@ -164,6 +183,19 @@ describe('Game Modes Configuration', () => {
       expect(config.roundCount).toBe(country.timing.roundCount);
       expect(config.timerMs).toBe(country.timing.roundTime);
       expect(config.graceMs).toBe(country.timing.gracePeriod);
+    });
+  });
+
+  describe('getTimeBonusConfig', () => {
+    it('should return time bonus config for valid mode', () => {
+      const config = getTimeBonusConfig('daily');
+      expect(config).toBeDefined();
+      expect(config.enabled).toBe(true);
+      expect(Number.isFinite(config.maxBonus)).toBe(true);
+    });
+
+    it('should return null for invalid mode', () => {
+      expect(getTimeBonusConfig('invalid')).toBe(null);
     });
   });
 
