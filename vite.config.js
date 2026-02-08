@@ -343,8 +343,8 @@ export default defineConfig(({ mode }) => {
         enabled: true,
         strictCsp,
       }),
-      // Inline entry only when explicitly enabled (avoid CSP issues).
-      inlineSmallEntry({ enabled: process.env.INLINE_ENTRY === '1' }),
+      // Inline entry only when explicitly enabled and CSP is not strict.
+      inlineSmallEntry({ enabled: process.env.INLINE_ENTRY === '1' && !strictCsp }),
       stripDataModulePreload({ enabled: strictCsp }),
       plausibleAnalyticsLocal({ strictCsp }),
     ].filter(Boolean),

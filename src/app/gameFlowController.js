@@ -737,7 +737,10 @@ export function createGameFlowController(deps) {
         return;
       } catch (error) {
         const err = /** @type {any} */ (error);
-        const is409Lock = err.status === 409 && err.data?.error === PSEUDO_LOCK_ERROR;
+        const errorCode =
+          err?.data?.error?.code ||
+          (typeof err?.data?.error === 'string' ? err.data.error : err?.data?.error);
+        const is409Lock = err.status === 409 && errorCode === PSEUDO_LOCK_ERROR;
         const canRetry409 = attempt < MAX_SUBMIT_ATTEMPTS - 1;
 
         if (is409Lock && canRetry409) {
@@ -755,7 +758,12 @@ export function createGameFlowController(deps) {
 
     restoreSubmitButton();
     if (lastError) {
-      if (lastError.status === 409 && lastError.data?.error === PSEUDO_LOCK_ERROR) {
+      const errorCode =
+        lastError?.data?.error?.code ||
+        (typeof lastError?.data?.error === 'string'
+          ? lastError.data.error
+          : lastError?.data?.error);
+      if (lastError.status === 409 && errorCode === PSEUDO_LOCK_ERROR) {
         ui.showPseudoLockedDialog(lastError.data.pseudo, () => {});
       } else {
         const apiError = new APIError(
