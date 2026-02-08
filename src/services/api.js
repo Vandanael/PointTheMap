@@ -48,11 +48,15 @@ const API_BASE = '/.netlify/functions';
 const LEADERBOARD_CACHE_TTL_MS = 30_000;
 /** @type {Map<string, { data: Array<{ rank: number, pseudo: string, score: number, time: number }>, timestamp: number }>} */
 const leaderboardCache = new Map();
+const IS_PROD_BUILD = import.meta.env.PROD;
 const USE_MOCK =
-  import.meta.env.VITE_USE_MOCK === 'true' ||
-  (!import.meta.env.PROD &&
-    ((import.meta.env.DEV && !import.meta.env.VITE_USE_API) ||
-      import.meta.env.VITE_USE_MOCK === 'true'));
+  !IS_PROD_BUILD &&
+  (import.meta.env.VITE_USE_MOCK === 'true' ||
+    (import.meta.env.DEV && !import.meta.env.VITE_USE_API));
+
+if (IS_PROD_BUILD && import.meta.env.VITE_USE_MOCK === 'true') {
+  logger.warn('[API] VITE_USE_MOCK is ignored in production builds');
+}
 
 // Store current CSRF token
 let currentCsrfToken = null;

@@ -8,7 +8,8 @@ test('classic flow: start, play, see result', async ({ page }) => {
 
   await page.goto('/');
   await page.waitForFunction(
-    () => document.body.dataset.appReady === 'true' || document.body.dataset.appInitError === 'true',
+    () =>
+      document.body.dataset.appReady === 'true' || document.body.dataset.appInitError === 'true',
     { timeout: 30000 }
   );
 
@@ -28,4 +29,3 @@ test('classic flow: start, play, see result', async ({ page }) => {
   // Minimal assertion: no JS errors during core flow
   expect(consoleErrors).toEqual([]);
 });
-

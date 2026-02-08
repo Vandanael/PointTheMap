@@ -3,7 +3,8 @@ import { test, expect } from '@playwright/test';
 test('country mode loads and accepts a click', async ({ page }) => {
   await page.goto('/');
   await page.waitForFunction(
-    () => document.body.dataset.appReady === 'true' || document.body.dataset.appInitError === 'true',
+    () =>
+      document.body.dataset.appReady === 'true' || document.body.dataset.appInitError === 'true',
     { timeout: 30000 }
   );
 

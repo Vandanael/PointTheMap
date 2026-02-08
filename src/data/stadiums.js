@@ -1,16 +1,16 @@
 /**
  * PointTheMap - World Stadiums Database
  * ======================================
- * ~45 stades mondiaux emblématiques
+ * ~45 iconic stadiums worldwide
  *
  * Structure:
- * - name: Nom du stade
- * - city: Ville où se trouve le stade
- * - country: Nom du pays
- * - lat: Latitude (format décimal)
- * - lng: Longitude (format décimal)
- * - popular: true = stade très connu mondialement
- *            false = stade moins connu
+ * - name: Stadium name
+ * - city: City where the stadium is located
+ * - country: Country name
+ * - lat: Latitude (decimal)
+ * - lng: Longitude (decimal)
+ * - popular: true = globally famous stadium
+ *            false = less-known stadium
  *
  * @typedef {{ name: string, city: string, country: string, lat: number, lng: number, popular: boolean }} StadiumEntry
  */
@@ -971,10 +971,10 @@ export const stadiums = [
 ];
 
 /**
- * Sélectionne 5 stades pour une session : 2 populaires + 3 non-populaires, puis mélange
+ * Selects 5 stadiums for a session: 2 popular + 3 less-known, then shuffles.
  *
- * @param {StadiumEntry[]} allStadiums - Liste complète des stades
- * @returns {StadiumEntry[]} - 5 stades mélangés pour la session
+ * @param {StadiumEntry[]} allStadiums - Full list of stadiums
+ * @returns {StadiumEntry[]} - 5 shuffled stadiums for the session
  */
 export function selectBalancedStadiums(allStadiums) {
   const isDev =

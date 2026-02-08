@@ -31,12 +31,16 @@ export class GeoJSONManager {
   #countriesGeoJSON = null;
   /** @type {GeoFeatureCollection | null} */
   #countriesGeoJSONLow = null;
+  /** @type {Promise<boolean> | null} */
+  #countriesFullLoadPromise = null;
   /** @type {any[]} */
   #countryHighlights = [];
   /** @type {GeoFeatureCollection | null} */
   #civilizationsGeoJSON = null;
   /** @type {GeoFeatureCollection | null} */
   #civilizationsGeoJSONLow = null;
+  /** @type {Promise<boolean> | null} */
+  #civilizationsFullLoadPromise = null;
   /** @type {any[]} */
   #civilizationHighlights = [];
 
@@ -72,10 +76,8 @@ export class GeoJSONManager {
       }
       // Load low-res first for faster highlight rendering (optional)
       this.#countriesGeoJSONLow = await getCountriesGeoJSONLow();
-      // Always load full-res for accurate point-in-polygon
-      this.#countriesGeoJSON = await getCountriesGeoJSON();
 
-      logger.info('Countries GeoJSON loaded successfully');
+      logger.info('Countries GeoJSON (low-res) loaded successfully');
       eventBus.emit('map:countries-loaded', undefined);
       return true;
     } catch (error) {
@@ -87,14 +89,45 @@ export class GeoJSONManager {
   }
 
   /**
+   * Ensure full-res countries GeoJSON is loaded (deferred until first interaction).
+   * @returns {Promise<boolean>}
+   */
+  async ensureCountriesGeoJSONFull() {
+    if (this.#countriesGeoJSON) return true;
+    if (this.#countriesFullLoadPromise) return this.#countriesFullLoadPromise;
+
+    this.#countriesFullLoadPromise = (async () => {
+      try {
+        this.#countriesGeoJSON = await getCountriesGeoJSON();
+        logger.info('Countries GeoJSON (full-res) loaded successfully');
+        eventBus.emit('map:countries-full-loaded', undefined);
+        return true;
+      } catch (error) {
+        const err = /** @type {Error} */ (error);
+        logger.error('Failed to load full-res countries GeoJSON:', err);
+        eventBus.emit('map:countries-error', { error: err.message });
+        return false;
+      } finally {
+        this.#countriesFullLoadPromise = null;
+      }
+    })();
+
+    return this.#countriesFullLoadPromise;
+  }
+
+  /**
    * Detect which country contains the given coordinates
    * @param {[number, number]} latlng
    * @returns {string|null}
    */
   getCountryAtLatLng(latlng) {
-    if (!this.#countriesGeoJSON) {
+    const source = this.#countriesGeoJSON ?? this.#countriesGeoJSONLow;
+    if (!source) {
       logger.warn('Countries GeoJSON not loaded');
       return null;
+    }
+    if (!this.#countriesGeoJSON) {
+      logger.warn('Countries GeoJSON full-res not loaded; using low-res fallback');
     }
 
     const map = this.#getMap();
@@ -109,7 +142,7 @@ export class GeoJSONManager {
       coordinates: [Number(lng), Number(lat)],
     });
 
-    for (const feature of this.#countriesGeoJSON.features) {
+    for (const feature of source.features) {
       if (pointInPolygon(point, feature.geometry)) {
         return feature.properties.ISO_A3 || feature.properties.ADM0_A3;
       }
@@ -139,7 +172,7 @@ export class GeoJSONManager {
    * @returns {Object|null}
    */
   getCountryFeatureByIdForHighlight(countryId) {
-    const source = this.#countriesGeoJSONLow ?? this.#countriesGeoJSON;
+    const source = this.#countriesGeoJSON ?? this.#countriesGeoJSONLow;
     if (!source) return null;
     return (
       source.features.find(
@@ -237,7 +270,6 @@ export class GeoJSONManager {
 
     try {
       this.#civilizationsGeoJSONLow = await getCivilizationsGeoJSONLow();
-      this.#civilizationsGeoJSON = await getCivilizationsGeoJSON();
 
       if (!map.getPane('civilizationsHighlight')) {
         const highlightPane = map.createPane('civilizationsHighlight');
@@ -245,7 +277,7 @@ export class GeoJSONManager {
         highlightPane.style.pointerEvents = 'none';
       }
 
-      logger.info('Civilizations GeoJSON loaded successfully');
+      logger.info('Civilizations GeoJSON (low-res) loaded successfully');
       eventBus.emit('map:civilizations-loaded', undefined);
       return true;
     } catch (error) {
@@ -257,14 +289,45 @@ export class GeoJSONManager {
   }
 
   /**
+   * Ensure full-res civilizations GeoJSON is loaded (deferred until first interaction).
+   * @returns {Promise<boolean>}
+   */
+  async ensureCivilizationsGeoJSONFull() {
+    if (this.#civilizationsGeoJSON) return true;
+    if (this.#civilizationsFullLoadPromise) return this.#civilizationsFullLoadPromise;
+
+    this.#civilizationsFullLoadPromise = (async () => {
+      try {
+        this.#civilizationsGeoJSON = await getCivilizationsGeoJSON();
+        logger.info('Civilizations GeoJSON (full-res) loaded successfully');
+        eventBus.emit('map:civilizations-full-loaded', undefined);
+        return true;
+      } catch (error) {
+        const err = /** @type {Error} */ (error);
+        logger.error('Failed to load full-res civilizations GeoJSON:', err);
+        eventBus.emit('map:civilizations-error', { error: err.message });
+        return false;
+      } finally {
+        this.#civilizationsFullLoadPromise = null;
+      }
+    })();
+
+    return this.#civilizationsFullLoadPromise;
+  }
+
+  /**
    * Detect which civilization zone contains the given coordinates
    * @param {[number, number]} latlng
    * @returns {string|null}
    */
   getCivilizationAtLatLng(latlng) {
-    if (!this.#civilizationsGeoJSON) {
+    const source = this.#civilizationsGeoJSON ?? this.#civilizationsGeoJSONLow;
+    if (!source) {
       logger.warn('Civilizations GeoJSON not loaded');
       return null;
+    }
+    if (!this.#civilizationsGeoJSON) {
+      logger.warn('Civilizations GeoJSON full-res not loaded; using low-res fallback');
     }
 
     const map = this.#getMap();
@@ -279,7 +342,7 @@ export class GeoJSONManager {
       coordinates: [Number(lng), Number(lat)],
     });
 
-    for (const feature of this.#civilizationsGeoJSON.features) {
+    for (const feature of source.features) {
       if (pointInPolygon(point, feature.geometry)) {
         return feature.properties.id ?? feature.properties.name;
       }
@@ -307,7 +370,7 @@ export class GeoJSONManager {
    * @returns {Object|null}
    */
   getCivilizationFeatureByIdForHighlight(civilizationId) {
-    const source = this.#civilizationsGeoJSONLow ?? this.#civilizationsGeoJSON;
+    const source = this.#civilizationsGeoJSON ?? this.#civilizationsGeoJSONLow;
     if (!source) return null;
     return source.features.find((f) => f.properties.id === civilizationId) ?? null;
   }
@@ -375,8 +438,6 @@ export class GeoJSONManager {
    * Destroy geo layers and clear cached data
    */
   destroy() {
-    const map = this.#getMap();
-
     this.clearCountryHighlights();
     this.clearCivilizationHighlights();
 

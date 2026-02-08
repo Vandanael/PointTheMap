@@ -39,6 +39,19 @@ const memoryCache = new Map();
 const inFlight = new Map();
 
 /**
+ * Cache hit stats for quick verification on repeat visits.
+ */
+const cacheStats = {
+  requests: 0,
+  hits: {
+    memory: 0,
+    indexedDb: 0,
+    cacheStorage: 0,
+    network: 0,
+  },
+};
+
+/**
  * Check if we should avoid background refresh (tests).
  * @returns {boolean}
  */
@@ -123,8 +136,13 @@ async function saveToIndexedDb(key, data) {
  * @returns {boolean}
  */
 function isSlowNetwork() {
-  if (typeof navigator === 'undefined' || !navigator.connection) return false;
-  const conn = navigator.connection;
+  if (typeof navigator === 'undefined') return false;
+  const nav =
+    /** @type {Navigator & { connection?: { effectiveType?: string, saveData?: boolean } }} */ (
+      navigator
+    );
+  if (!nav.connection) return false;
+  const conn = nav.connection;
   const effectiveType = conn.effectiveType || '';
   return conn.saveData === true || effectiveType === 'slow-2g' || effectiveType === '2g';
 }
@@ -231,8 +249,10 @@ async function saveToCacheStorage(url, response) {
  * @returns {Promise<any>} Parsed GeoJSON data
  */
 async function loadGeoJSON(key, url) {
+  cacheStats.requests += 1;
   // Layer 1: Check in-memory cache (instant)
   if (memoryCache.has(key)) {
+    cacheStats.hits.memory += 1;
     logger.info(`GeoDataLoader: Cache hit (memory) for ${key}`);
     return memoryCache.get(key);
   }
@@ -245,6 +265,8 @@ async function loadGeoJSON(key, url) {
     // Layer 1.5: Check IndexedDB (parsed cache)
     const idbData = await loadFromIndexedDb(key);
     if (idbData) {
+      cacheStats.hits.indexedDb += 1;
+      logger.info(`GeoDataLoader: Cache hit (IndexedDB) for ${key}`);
       memoryCache.set(key, idbData);
       if (shouldBackgroundRefresh()) {
         void scheduleIdle(() => refreshGeoJSON(key, url));
@@ -255,6 +277,7 @@ async function loadGeoJSON(key, url) {
     // Layer 2: Check CacheStorage (fast)
     const cachedData = await loadFromCacheStorage(url);
     if (cachedData) {
+      cacheStats.hits.cacheStorage += 1;
       memoryCache.set(key, cachedData);
       void saveToIndexedDb(key, cachedData);
       if (shouldBackgroundRefresh()) {
@@ -265,6 +288,7 @@ async function loadGeoJSON(key, url) {
 
     // Layer 3: Fetch from network (slow)
     logger.info(`GeoDataLoader: Fetching from network: ${url}`);
+    cacheStats.hits.network += 1;
     const response = await fetch(url);
 
     if (!response.ok) {
@@ -359,7 +383,9 @@ export async function getCivilizationsGeoJSONLow() {
  */
 export function preloadCountriesGeoJSON() {
   if (!shouldPrefetchGeoJSON()) return Promise.resolve(null);
-  return scheduleIdle(() => loadGeoJSON('countries-low', CACHE_URLS_LOW.countries).catch(() => null));
+  return scheduleIdle(() =>
+    loadGeoJSON('countries-low', CACHE_URLS_LOW.countries).catch(() => null)
+  );
 }
 
 /**
@@ -406,11 +432,23 @@ export async function clearGeoCache() {
 
 /**
  * Get cache stats (for debugging)
- * @returns {{ memorySize: number, hasCacheStorage: boolean }}
+ * @returns {{ memorySize: number, hasCacheStorage: boolean, requests: number, hits: { memory: number, indexedDb: number, cacheStorage: number, network: number }, hitRate: number }}
  */
 export function getCacheStats() {
+  const totalHits =
+    cacheStats.hits.memory +
+    cacheStats.hits.indexedDb +
+    cacheStats.hits.cacheStorage +
+    cacheStats.hits.network;
+  const cacheHits =
+    cacheStats.hits.memory + cacheStats.hits.indexedDb + cacheStats.hits.cacheStorage;
+  const hitRate = totalHits > 0 ? cacheHits / totalHits : 0;
+
   return {
     memorySize: memoryCache.size,
     hasCacheStorage: isCacheStorageAvailable(),
+    requests: cacheStats.requests,
+    hits: { ...cacheStats.hits },
+    hitRate,
   };
 }

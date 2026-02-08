@@ -1,7 +1,7 @@
--- Schema pour PointTheMap
--- Tables pour les scores, sessions et rate limits
+-- Schema for PointTheMap
+-- Tables for scores, sessions, and rate limits
 
--- Table des joueurs anonymes
+-- Anonymous players table
 CREATE TABLE IF NOT EXISTS players (
   player_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS players (
 
 CREATE INDEX IF NOT EXISTS idx_players_last_seen ON players(last_seen);
 
--- Table des scores (leaderboard)
+-- Scores table (leaderboard)
 CREATE TABLE IF NOT EXISTS scores (
   id SERIAL PRIMARY KEY,
   pseudo VARCHAR(5) NOT NULL,
@@ -26,20 +26,20 @@ CREATE TABLE IF NOT EXISTS scores (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Index pour améliorer les performances des requêtes
+-- Indexes to improve query performance
 CREATE INDEX IF NOT EXISTS idx_scores_score ON scores(score DESC);
 CREATE INDEX IF NOT EXISTS idx_scores_timestamp ON scores(timestamp);
 CREATE INDEX IF NOT EXISTS idx_scores_game_type ON scores(game_type);
 CREATE INDEX IF NOT EXISTS idx_scores_pseudo ON scores(pseudo);
 
--- Index composite pour le calcul de rank (optimisation critique)
+-- Composite index for rank calculation (critical optimization)
 CREATE INDEX IF NOT EXISTS idx_scores_rank ON scores(game_type, score DESC, time ASC);
 
--- Index pour la vérification IP (pseudo lock)
+-- Index for IP checks (pseudo lock)
 CREATE INDEX IF NOT EXISTS idx_scores_ip ON scores(ip);
 CREATE INDEX IF NOT EXISTS idx_scores_player_id ON scores(player_id);
 
--- Table des sessions
+-- Sessions table
 CREATE TABLE IF NOT EXISTS sessions (
   token VARCHAR(36) PRIMARY KEY,
   targets JSONB NOT NULL,
@@ -52,12 +52,12 @@ CREATE TABLE IF NOT EXISTS sessions (
   expires_at TIMESTAMP NOT NULL
 );
 
--- Index pour les sessions
+-- Indexes for sessions
 CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
 CREATE INDEX IF NOT EXISTS idx_sessions_csrf_token ON sessions(csrf_token);
 CREATE INDEX IF NOT EXISTS idx_sessions_player_id ON sessions(player_id);
 
--- Table pour rate limiting
+-- Rate limiting table
 CREATE TABLE IF NOT EXISTS rate_limits (
   key VARCHAR(100) PRIMARY KEY,
   count INTEGER DEFAULT 1,
@@ -65,5 +65,5 @@ CREATE TABLE IF NOT EXISTS rate_limits (
   expires_at TIMESTAMP NOT NULL
 );
 
--- Index pour nettoyer les anciennes entrées
+-- Index to clean up old entries
 CREATE INDEX IF NOT EXISTS idx_rate_limits_expires_at ON rate_limits(expires_at);

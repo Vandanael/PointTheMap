@@ -37,4 +37,18 @@ describe('submit function', () => {
     expect(res.status).toBe(400);
     expect(res.body?.error?.code).toBe('invalid_payload');
   });
+
+  it('rejects unsupported payload versions', async () => {
+    const utils = await import('../../netlify/functions/_utils.js');
+    utils.parseJsonBody.mockResolvedValueOnce({
+      token: 'token-123',
+      pseudo: 'ABC',
+      rounds: [],
+      payloadVersion: 2,
+    });
+    const { default: handler } = await import('../../netlify/functions/submit.js');
+    const res = await handler(makeReq('POST'), {});
+    expect(res.status).toBe(400);
+    expect(res.body?.error?.code).toBe('unsupported_payload_version');
+  });
 });

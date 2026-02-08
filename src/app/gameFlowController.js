@@ -6,7 +6,7 @@
  * stadium, civilization) and coordinates systems/UI/state updates.
  */
 
-import { safeAsync, handleError, APIError } from '../core/ErrorHandler.js';
+import { safeAsync, handleError, APIError, ValidationError } from '../core/ErrorHandler.js';
 import { createMapQueryAdapter, createRoundRulesAdapter } from '../game/ports.js';
 import { MAP_ANIMATIONS, UI_TIMING } from '../config/visual-constants.js';
 
@@ -69,11 +69,6 @@ export function createGameFlowController(deps) {
     i18n,
     config,
   } = deps;
-
-  const showToast = ui?.showToast
-    ? ui.showToast.bind(ui)
-    : () => /** @type {string | null} */ (null);
-  const closeToast = ui?.closeToast ? ui.closeToast.bind(ui) : () => {};
 
   const {
     TIMING,
@@ -159,8 +154,12 @@ export function createGameFlowController(deps) {
       roundId: round.roundId,
       targetType,
       targetName: target?.name ?? null,
-      targetId: targetType === 'civilization' ? target?.id ?? null : null,
-      targetCountryId: targetType === 'country' ? target?.countryId ?? null : null,
+      targetId:
+        targetType === 'civilization' && target && 'id' in target ? (target.id ?? null) : null,
+      targetCountryId:
+        targetType === 'country' && target && 'countryId' in target
+          ? (target.countryId ?? null)
+          : null,
       status: round.status,
       score: round.score ?? 0,
       baseScore: round.baseScore ?? 0,
@@ -221,6 +220,7 @@ export function createGameFlowController(deps) {
 
     const onReady = () => {
       trackRoundStarted(state);
+      mapSystem.prefetchFullGeoJSONForMode(state.gameType);
       startTimer();
       mapSystem.enableClicks(() => {}); // InputSystem handles via EventBus
       inputSystem.enableMapInput(handleMapClick);
@@ -308,7 +308,7 @@ export function createGameFlowController(deps) {
    * Handle map click
    * @param {[number, number]} coords - [lat, lng] coordinates
    */
-  const handleMapClick = (coords) => {
+  const handleMapClick = async (coords) => {
     /** @type {GameState} */
     const state = stateManager.getState();
     if (state.status !== GameStatus.PLAYING) return;
@@ -316,6 +316,17 @@ export function createGameFlowController(deps) {
     stopTimer();
     mapSystem.disableClicks();
     inputSystem.disableMapInput();
+    const fullReady = await mapSystem.ensureFullGeoJSONForMode(state.gameType);
+    if (!fullReady) {
+      handleError(new Error('GeoJSON not ready for scoring'), 'map:geojson', {
+        showToUser: true,
+        fatal: false,
+      });
+      startTimer();
+      mapSystem.enableClicks(() => {});
+      inputSystem.enableMapInput(handleMapClick);
+      return;
+    }
     stateManager.setState(game.playRound(state, coords, mapQuery, roundRules), 'round:click');
     onRoundEnd();
   };
@@ -518,7 +529,7 @@ export function createGameFlowController(deps) {
       return;
     }
     ui.hideRoundResult();
-    mapSystem.clearMap(); // Nettoie tous les markers (y compris les capitales)
+    mapSystem.clearMap(); // Clears all markers (including capitals)
 
     if (game.isLastRound(state)) {
       ui.showGameOver(state.totalScore);
@@ -602,6 +613,45 @@ export function createGameFlowController(deps) {
     /** @type {any} */
     let lastError = null;
     let currentPseudo = pseudo;
+
+    const validationSystem = deps.validationSystem;
+    if (validationSystem) {
+      /** @type {GameState} */
+      const state = stateManager.getState();
+      const validationRounds = state.rounds.map((round) => ({
+        capital:
+          round.capital?.name ||
+          round.country?.name ||
+          round.stadium?.name ||
+          round.civilization?.name ||
+          '',
+        status: round.status,
+        click: round.click ?? null,
+      }));
+      const validation = validationSystem.validateSession(
+        {
+          token: state.token,
+          rounds: validationRounds,
+          pseudo: currentPseudo,
+        },
+        state.runtimeConfig?.roundCount
+      );
+
+      if (!validation.valid) {
+        restoreSubmitButton();
+        handleError(
+          new ValidationError(validation.error || i18n.t('error.submitError'), 'submit'),
+          'score:submit',
+          {
+            showToUser: true,
+            fatal: false,
+          }
+        );
+        return;
+      }
+    } else {
+      logger.warn('[submit] validationSystem not configured; skipping client-side validation');
+    }
 
     for (let attempt = 0; attempt < MAX_SUBMIT_ATTEMPTS; attempt++) {
       setButtonSaving();

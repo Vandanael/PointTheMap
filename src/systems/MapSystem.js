@@ -235,6 +235,34 @@ export class MapSystem {
   }
 
   /**
+   * Prefetch full-res GeoJSON for a mode after first interaction.
+   * @param {string} gameType
+   */
+  prefetchFullGeoJSONForMode(gameType) {
+    if (gameType === 'country' || gameType === 'country_daily') {
+      void this.#geoManager?.ensureCountriesGeoJSONFull();
+    }
+    if (gameType === 'civilization' || gameType === 'civilization_daily') {
+      void this.#geoManager?.ensureCivilizationsGeoJSONFull();
+    }
+  }
+
+  /**
+   * Ensure full-res GeoJSON is loaded for a mode before scoring.
+   * @param {string} gameType
+   * @returns {Promise<boolean>}
+   */
+  async ensureFullGeoJSONForMode(gameType) {
+    if (gameType === 'country' || gameType === 'country_daily') {
+      return (await this.#geoManager?.ensureCountriesGeoJSONFull()) ?? false;
+    }
+    if (gameType === 'civilization' || gameType === 'civilization_daily') {
+      return (await this.#geoManager?.ensureCivilizationsGeoJSONFull()) ?? false;
+    }
+    return true;
+  }
+
+  /**
    * Detect which country contains the given coordinates
    * @param {[number, number]} latlng - [lat, lng] coordinates
    * @returns {string|null} Country ID (ISO A3) or null if not in any country

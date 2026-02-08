@@ -29,7 +29,10 @@ describe('leaderboard function', () => {
 
   it('returns ranked scores for daily type', async () => {
     const { default: handler } = await import('../../netlify/functions/leaderboard.js');
-    const res = await handler(makeReq('GET', 'http://localhost/.netlify/functions/leaderboard?type=daily'), {});
+    const res = await handler(
+      makeReq('GET', 'http://localhost/.netlify/functions/leaderboard?type=daily'),
+      {}
+    );
     expect(res.status).toBe(200);
     expect(res.body).toEqual([
       { rank: 1, pseudo: 'AAA', score: 100, time: 10 },

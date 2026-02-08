@@ -1,8 +1,8 @@
--- Migration: Ajouter la colonne game_type à la table sessions
+-- Migration: Add game_type column to sessions table
 -- Date: 2024-01-19
--- Description: Ajoute la colonne game_type pour supporter les modes classic et daily
+-- Description: Adds game_type to support classic and daily modes
 
--- Ajouter la colonne game_type si elle n'existe pas déjà
+-- Add game_type column if it doesn't already exist
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -14,7 +14,7 @@ BEGIN
         ALTER TABLE sessions 
         ADD COLUMN game_type VARCHAR(20) DEFAULT 'classic';
         
-        -- Mettre à jour les sessions existantes avec la valeur par défaut
+        -- Update existing sessions with the default value
         UPDATE sessions 
         SET game_type = 'classic' 
         WHERE game_type IS NULL;

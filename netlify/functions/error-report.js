@@ -33,6 +33,17 @@ const checkRateLimit = (ip) => {
 };
 
 /**
+ * @param {unknown} error
+ * @returns {boolean}
+ */
+const isMissingErrorLogsTable = (error) => {
+  const err = /** @type {{ code?: string, message?: string }} */ (error || {});
+  if (err.code === '42P01') return true;
+  if (typeof err.message !== 'string') return false;
+  return /relation "error_logs" does not exist/i.test(err.message);
+};
+
+/**
  * @param {Request} req
  * @param {any} context
  * @returns {Promise<Response>}
@@ -84,6 +95,10 @@ export default async function errorReportHandler(req, context) {
       `;
     }
   } catch (dbError) {
+    if (isMissingErrorLogsTable(dbError)) {
+      logger.warn('error_logs table missing; dropping error report payload');
+      return new Response(null, { status: 204 });
+    }
     logger.error('Failed to insert error logs:', /** @type {Error} */ (dbError).message);
     return jsonResponse({ error: 'Failed to store errors' }, 500);
   }

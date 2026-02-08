@@ -10,12 +10,15 @@ const makeSavedState = () => ({
 });
 
 test('resume prompt restores game over state', async ({ page }) => {
-  await page.addInitScript((payload) => {
-    localStorage.setItem('ptm_in_progress_game', JSON.stringify(payload));
-  }, {
-    state: makeSavedState(),
-    savedAt: Date.now(),
-  });
+  await page.addInitScript(
+    (payload) => {
+      localStorage.setItem('ptm_in_progress_game', JSON.stringify(payload));
+    },
+    {
+      state: makeSavedState(),
+      savedAt: Date.now(),
+    }
+  );
 
   await page.goto('/');
 
@@ -27,12 +30,15 @@ test('resume prompt restores game over state', async ({ page }) => {
 });
 
 test('resume prompt discard clears saved state', async ({ page }) => {
-  await page.addInitScript((payload) => {
-    localStorage.setItem('ptm_in_progress_game', JSON.stringify(payload));
-  }, {
-    state: makeSavedState(),
-    savedAt: Date.now(),
-  });
+  await page.addInitScript(
+    (payload) => {
+      localStorage.setItem('ptm_in_progress_game', JSON.stringify(payload));
+    },
+    {
+      state: makeSavedState(),
+      savedAt: Date.now(),
+    }
+  );
 
   await page.goto('/');
 

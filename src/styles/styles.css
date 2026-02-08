@@ -1,5 +1,5 @@
 @import 'tailwindcss';
-/* Variables de thème Dark/Light */
+/* Dark/Light theme variables */
 :root {
   --bg-primary: #020617;
   --bg-secondary: #0f172a;
@@ -30,19 +30,19 @@
   --z-overlay: 3000;
   --z-toast: 4000;
 
-  /* iOS Safari viewport height fix - sera mise à jour dynamiquement via JS sur iOS */
+  /* iOS Safari viewport height fix - updated dynamically via JS on iOS */
   --app-height: 100vh;
 }
 
 body.light-theme {
-  /* Light mode classique - tons chauds et doux, reprend la structure du dark mode */
-  --bg-primary: #f5f3f0; /* Beige/gris chaud - fond principal doux */
-  --bg-secondary: #ebe8e3; /* Beige/gris moyen - cartes et éléments secondaires */
-  --bg-tertiary: #ddd9d2; /* Beige/gris foncé - éléments tertiaires */
-  --text-primary: #1a1816; /* Presque noir mais légèrement adouci */
+  /* Classic light mode - warm, soft tones based on dark mode structure */
+  --bg-primary: #f5f3f0; /* Warm beige/gray - soft main background */
+  --bg-secondary: #ebe8e3; /* Mid beige/gray - cards and secondary elements */
+  --bg-tertiary: #ddd9d2; /* Darker beige/gray - tertiary elements */
+  --text-primary: #1a1816; /* Nearly black, slightly softened */
   --text-secondary: #2f2d29; /* Darker for better contrast */
   --text-tertiary: #5b5853; /* Darker for better contrast (was #6b6863) */
-  --border-color: #c9c5be; /* Bordure visible mais douce */
+  --border-color: #c9c5be; /* Visible but soft border */
   --scrollbar-thumb: rgba(107, 114, 128, 0.6);
   --scrollbar-track: rgba(107, 114, 128, 0.18);
 
@@ -77,11 +77,11 @@ body {
 }
 
 #map {
-  /* iOS: Utilise --app-height au lieu de 100vh pour éviter les problèmes avec la barre d'adresse Safari */
+  /* iOS: Use --app-height instead of 100vh to avoid Safari address bar issues */
   height: var(--app-height);
   width: 100vw;
   cursor: crosshair;
-  touch-action: manipulation; /* iOS: Améliore la réactivité des taps et désactive le double-tap zoom */
+  touch-action: manipulation; /* iOS: Improves tap responsiveness and disables double-tap zoom */
   position: fixed;
   top: 0;
   left: 0;
@@ -131,7 +131,7 @@ body.light-theme.map-locked:not(.start-screen-visible)::before {
   background: rgba(250, 204, 21, 0.9);
 }
 
-/* iOS: Désactiver le callout de sélection lors des appuis longs sur la carte */
+/* iOS: Disable selection callout on long press */
 #map,
 #map * {
   -webkit-touch-callout: none;
@@ -753,7 +753,6 @@ body.light-theme .result-line-distance {
   transform: scale(0.95);
 }
 
-
 /* Modal styles */
 .modal-bg {
   background: var(--bg-primary);
@@ -774,7 +773,7 @@ body.light-theme .result-line-distance {
   hyphens: auto;
 }
 
-/* Classes utilitaires pour les couleurs */
+/* Utility color classes */
 .text-primary {
   color: var(--text-primary);
 }
@@ -963,7 +962,7 @@ body.app-resetting .game-header > div {
   align-items: flex-start;
 }
 
-/* Safe area padding pour iPhone notch */
+/* Safe area padding for iPhone notch */
 .game-header > div {
   padding-top: max(0.5rem, env(safe-area-inset-top));
   padding-left: max(1.5rem, env(safe-area-inset-left));

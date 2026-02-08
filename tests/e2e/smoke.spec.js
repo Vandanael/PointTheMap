@@ -15,8 +15,7 @@ test('smoke: can start classic round @smoke', async ({ page }) => {
   try {
     await page.waitForFunction(
       () =>
-        document.body.dataset.appReady === 'true' ||
-        document.body.dataset.appInitError === 'true',
+        document.body.dataset.appReady === 'true' || document.body.dataset.appInitError === 'true',
       { timeout: 30000 }
     );
   } catch (err) {

@@ -123,10 +123,7 @@ export const createStartScreen = (deps) => {
       );
       if (!btn) return;
       if (v === variant) {
-        btn.className = btn.className
-          .replace('btn-secondary', '')
-          .replace(/\s+/g, ' ')
-          .trim();
+        btn.className = btn.className.replace('btn-secondary', '').replace(/\s+/g, ' ').trim();
         if (!btn.classList.contains('bg-yellow-400')) {
           btn.classList.add('bg-yellow-400', 'text-black');
         }
@@ -139,17 +136,19 @@ export const createStartScreen = (deps) => {
     });
 
     // Category buttons
-    const categoryBtns = /** @type {const} */ (['capitals', 'countries', 'stadiums', 'civilizations']);
+    const categoryBtns = /** @type {const} */ ([
+      'capitals',
+      'countries',
+      'stadiums',
+      'civilizations',
+    ]);
     categoryBtns.forEach((c) => {
       const btn = /** @type {HTMLButtonElement | null} */ (
         document.getElementById(`btn-leaderboard-cat-${c}`)
       );
       if (!btn) return;
       if (c === category) {
-        btn.className = btn.className
-          .replace('btn-secondary', '')
-          .replace(/\s+/g, ' ')
-          .trim();
+        btn.className = btn.className.replace('btn-secondary', '').replace(/\s+/g, ' ').trim();
         if (!btn.classList.contains('bg-yellow-400')) {
           btn.classList.add('bg-yellow-400', 'text-black');
         }
@@ -554,15 +553,11 @@ export const createStartScreen = (deps) => {
       }
       _loaderProgress = 0;
     };
-    const waitForGameUI = (timeoutMs = 2000) =>
+    const waitForQuestionModal = (timeoutMs = 4000) =>
       new Promise((resolve) => {
         const start = Date.now();
         const tick = () => {
-          if (
-            document.getElementById('question-modal') ||
-            document.getElementById('game-header') ||
-            document.getElementById('round-result')
-          ) {
+          if (document.getElementById('question-modal')) {
             resolve(true);
             return;
           }
@@ -665,7 +660,6 @@ export const createStartScreen = (deps) => {
             return;
           }
         }
-
       } catch (error) {
         handleError(error, 'map:init', { showToUser: false });
         logger.error('Error initializing game:', error);
@@ -703,7 +697,20 @@ export const createStartScreen = (deps) => {
       }
       inputSystem.handleStartGame(gameMode);
       if (needsAsyncWork) {
-        await waitForGameUI();
+        const ready = await waitForQuestionModal();
+        if (!ready) {
+          logger.warn('UI: question modal did not appear in time');
+          stopLoaderProgress();
+          hideLoader();
+          showStart();
+          if (startBtn) {
+            startBtn.disabled = false;
+            startBtn.removeAttribute('aria-disabled');
+            startBtn.classList.remove('btn-loading');
+          }
+          _startingGame = false;
+          return;
+        }
         setLoaderProgress(100);
         stopLoaderProgress();
         // Let the 100% state render for one frame before hiding.

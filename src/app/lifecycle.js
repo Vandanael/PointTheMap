@@ -56,7 +56,7 @@ export function initLifecycle(deps) {
   let onlineHandler = null;
 
   /**
-   * iOS: Fix viewport height dynamique pour gérer la barre d'adresse Safari
+   * iOS: Fix dynamic viewport height to account for Safari's address bar.
    */
   const setupIOSViewport = () => {
     if (!isIOS()) return;
@@ -65,10 +65,10 @@ export function initLifecycle(deps) {
       document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
     };
 
-    // Définir la hauteur initiale
+    // Set initial height
     setHeight();
 
-    // Mettre à jour lors du redimensionnement - debounced pour éviter trop d'appels
+    // Update on resize (debounced to avoid excessive calls)
     const debouncedSetHeight = debounce(setHeight, 150);
     // Type assertion: debounce returns Function, but we know it's compatible with EventListener
     iosResizeHandler = /** @type {() => void} */ (debouncedSetHeight);
@@ -77,8 +77,8 @@ export function initLifecycle(deps) {
     iosOrientationHandler = setHeight;
     window.addEventListener('orientationchange', iosOrientationHandler);
 
-    // iOS: Mettre à jour également lors du scroll (barre d'adresse Safari)
-    // Utilise RAF throttling qui est déjà optimal
+    // iOS: Also update on scroll (Safari address bar).
+    // Uses RAF throttling, which is already optimal.
     let ticking = false;
     iosScrollHandler = () => {
       if (!ticking) {

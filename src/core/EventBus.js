@@ -116,9 +116,7 @@ class EventBus {
     // Collect wildcard matches (e.g., "timer:*" matches "timer:started")
     for (const [listenerEvent, listeners] of this._listeners.entries()) {
       if (listenerEvent.includes('*')) {
-        const pattern = listenerEvent
-          .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-          .replace(/\\\*/g, '.*');
+        const pattern = listenerEvent.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\*/g, '.*');
         const regex = new RegExp(`^${pattern}$`);
         if (regex.test(event)) {
           listeners.forEach((h) => handlers.add(h));

@@ -168,6 +168,7 @@ vi.mock('./core/ErrorHandler.js', () => {
   return {
     errorHandler,
     APIError: class APIError extends Error {},
+    ValidationError: class ValidationError extends Error {},
     safeAsync: vi.fn((fn) => fn()),
     handleError: vi.fn((error, context, options) => errorHandler.handle(error, context, options)),
   };
@@ -202,7 +203,48 @@ import { errorHandler } from './core/ErrorHandler.js';
 const submitState = {
   ...playingState,
   token: 'test-token',
-  rounds: [{ roundNumber: 1, score: 1000, distance: 50 }],
+  rounds: [
+    {
+      roundNumber: 1,
+      score: 1000,
+      distance: 50,
+      capital: { name: 'Paris' },
+      status: 'completed',
+      click: { lat: 48.8, lng: 2.3 },
+    },
+    {
+      roundNumber: 2,
+      score: 900,
+      distance: 80,
+      capital: { name: 'London' },
+      status: 'completed',
+      click: { lat: 51.5, lng: -0.1 },
+    },
+    {
+      roundNumber: 3,
+      score: 800,
+      distance: 120,
+      capital: { name: 'Berlin' },
+      status: 'completed',
+      click: { lat: 52.5, lng: 13.4 },
+    },
+    {
+      roundNumber: 4,
+      score: 700,
+      distance: 200,
+      capital: { name: 'Rome' },
+      status: 'completed',
+      click: { lat: 41.9, lng: 12.5 },
+    },
+    {
+      roundNumber: 5,
+      score: 600,
+      distance: 300,
+      capital: { name: 'Madrid' },
+      status: 'completed',
+      click: { lat: 40.4, lng: -3.7 },
+    },
+  ],
   gameType: 'classic',
 };
 

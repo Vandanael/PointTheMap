@@ -1,18 +1,18 @@
 /**
  * PointTheMap - Comprehensive World Capitals Database
  * =====================================================
- * 197 capitales mondiales (États membres ONU + observateurs)
+ * 197 world capitals (UN member states + observers)
  *
  * Structure:
- * - name: Nom de la capitale
- * - country: Nom du pays
- * - countryId: Code ISO 3166-1 alpha-3 du pays
- * - lat: Latitude (format décimal, précision 4 décimales)
- * - lng: Longitude (format décimal, précision 4 décimales)
- * - popular: true = capitale majeure connue mondialement (50 villes)
- *            false = capitale moins connue (147 villes)
+ * - name: Capital name
+ * - country: Country name
+ * - countryId: ISO 3166-1 alpha-3 country code
+ * - lat: Latitude (decimal, 4 decimal places)
+ * - lng: Longitude (decimal, 4 decimal places)
+ * - popular: true = major, globally known capital (50 cities)
+ *            false = less-known capital (147 cities)
  *
- * Coordonnées GPS: Centre-ville administratif ou monument emblématique
+ * GPS coordinates: Administrative city center or landmark
  * Source: OpenStreetMap, GeoNames
  *
  * @typedef {{ name: string, country: string, countryId: string, lat: number, lng: number, popular: boolean }} CapitalEntry
@@ -1437,10 +1437,10 @@ export const capitals = [
 ];
 
 /**
- * Sélectionne 5 capitales pour une session : 2 populaires + 3 non-populaires, puis mélange
+ * Selects 5 capitals for a session: 2 popular + 3 less-known, then shuffles.
  *
- * @param {CapitalEntry[]} allCapitals - Liste complète des capitales
- * @returns {CapitalEntry[]} - 5 capitales mélangées pour la session
+ * @param {CapitalEntry[]} allCapitals - Full list of capitals
+ * @returns {CapitalEntry[]} - 5 shuffled capitals for the session
  */
 export function selectBalancedCapitals(allCapitals) {
   const isDev =
@@ -1454,11 +1454,11 @@ export function selectBalancedCapitals(allCapitals) {
       logger.warn(message);
     }
   };
-  // Séparer les capitales par popularité
+  // Split capitals by popularity
   const popularCities = allCapitals.filter((city) => city.popular === true);
   const obscureCities = allCapitals.filter((city) => city.popular === false);
 
-  // Validation de la base de données
+  // Validate source data
   if (popularCities.length < 2) {
     logInsufficient(`❌ Insufficient popular cities (need 2, have ${popularCities.length})`);
     return shuffleArray(allCapitals.slice(0, 5)); // Fallback
@@ -1468,42 +1468,42 @@ export function selectBalancedCapitals(allCapitals) {
     return shuffleArray(allCapitals.slice(0, 5)); // Fallback
   }
 
-  // Sélection aléatoire : 2 populaires + 3 difficiles
+  // Random selection: 2 popular + 3 less-known
   const selectedPopular = getRandomItems(popularCities, 2);
   const selectedObscure = getRandomItems(obscureCities, 3);
 
-  // Combiner et mélanger pour imprévisibilité
+  // Combine and shuffle for unpredictability
   const sessionCapitals = [...selectedPopular, ...selectedObscure];
 
   return shuffleArray(sessionCapitals);
 }
 
 /**
- * Sélectionne N éléments aléatoires d'un array sans doublons
+ * Selects N random items from an array without duplicates.
  *
- * @param {any[]} array - Array source
- * @param {number} n - Nombre d'éléments à sélectionner
- * @returns {any[]} - N éléments aléatoires
+ * @param {any[]} array - Source array
+ * @param {number} n - Number of items to select
+ * @returns {any[]} - N random items
  */
 function getRandomItems(array, n) {
   const result = [];
-  const tempArray = [...array]; // Clone pour ne pas modifier l'original
+  const tempArray = [...array]; // Clone to avoid mutating original
 
   for (let i = 0; i < n && tempArray.length > 0; i++) {
     const randomIndex = Math.floor(Math.random() * tempArray.length);
     result.push(tempArray[randomIndex]);
-    tempArray.splice(randomIndex, 1); // Retirer pour éviter doublons
+    tempArray.splice(randomIndex, 1); // Remove to avoid duplicates
   }
 
   return result;
 }
 
 /**
- * Algorithme de mélange Fisher-Yates (optimal O(n))
- * Garantit une distribution uniforme
+ * Fisher-Yates shuffle (optimal O(n)).
+ * Ensures uniform distribution.
  *
- * @param {any[]} array - Array à mélanger
- * @returns {any[]} - Array mélangé
+ * @param {any[]} array - Array to shuffle
+ * @returns {any[]} - Shuffled array
  */
 function shuffleArray(array) {
   const shuffled = [...array];

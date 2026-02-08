@@ -19,7 +19,7 @@ import {
 } from '../../lib/geo-utils/index.js';
 import { getCountryFeature, getCivilizationFeature } from './_geo-data.js';
 import { GAME, API } from '../../lib/config/index.js';
-import { GAME_MODES, getTimeBonusConfig } from '../../lib/config/game-modes.js';
+import { getTimeBonusConfig } from '../../lib/config/game-modes.js';
 import { toDomainModel } from '../../src/lib/session/sessionModel.js';
 import { SubmitSchema } from '../../lib/schemas/submit.js';
 
@@ -45,6 +45,7 @@ const errorJson = (code, message, status = 400, details = undefined, headers = u
 const DB_BREAKER_WINDOW_MS = 60 * 1000;
 const DB_BREAKER_COOLDOWN_MS = 60 * 1000;
 const DB_BREAKER_THRESHOLD = 3;
+const SUPPORTED_PAYLOAD_VERSIONS = new Set([1]);
 
 /** @type {number[]} */
 let dbFailureTimestamps = [];
@@ -286,6 +287,14 @@ export default async function submitHandler(req, context) {
       return errorJson('invalid_payload', 'Invalid payload', 400, parsed.error.flatten());
     }
     const { token, rounds, pseudo, gameType = 'classic', payloadVersion } = parsed.data;
+    const effectivePayloadVersion = payloadVersion ?? 1;
+    if (!SUPPORTED_PAYLOAD_VERSIONS.has(effectivePayloadVersion)) {
+      return errorJson(
+        'unsupported_payload_version',
+        `Unsupported payload version (${effectivePayloadVersion})`,
+        400
+      );
+    }
     const csrfToken = req.headers.get('x-csrf-token');
 
     logger.info(
@@ -726,7 +735,7 @@ export default async function submitHandler(req, context) {
       const first = existingPseudoResult[0];
       if (first) existingPseudo = first.pseudo;
       if (existingPseudo !== trimmedPseudo) {
-        return errorJson('pseudo_already_set', 'Pseudo already set for this IP', 409, {
+        return errorJson('pseudo_already_set_for_this_ip', 'Pseudo already set for this IP', 409, {
           pseudo: existingPseudo,
         });
       }
@@ -750,7 +759,7 @@ export default async function submitHandler(req, context) {
       const doubleCheckRow = doubleCheckResult[0];
       if (doubleCheckRow && doubleCheckRow.pseudo !== trimmedPseudo) {
         logger.info('[submit] Pseudo mismatch detected');
-        return errorJson('pseudo_already_set', 'Pseudo already set for this IP', 409, {
+        return errorJson('pseudo_already_set_for_this_ip', 'Pseudo already set for this IP', 409, {
           pseudo: doubleCheckRow.pseudo,
         });
       }

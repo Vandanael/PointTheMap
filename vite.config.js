@@ -217,7 +217,10 @@ function stripDataModulePreload({ enabled = false } = {}) {
     transformIndexHtml: {
       order: 'post',
       handler(html) {
-        return html.replace(/<link[^>]+rel=\"modulepreload\"[^>]+href=\"data:[^\"]+\"[^>]*>\\n?/g, '');
+        return html.replace(
+          /<link[^>]+rel=\"modulepreload\"[^>]+href=\"data:[^\"]+\"[^>]*>\\n?/g,
+          ''
+        );
       },
     },
   };
@@ -225,6 +228,7 @@ function stripDataModulePreload({ enabled = false } = {}) {
 
 export default defineConfig(({ mode }) => {
   const isProd = mode === 'production';
+  const strictCsp = process.env.STRICT_CSP === '1' || isProd;
   return {
     // Enable bundle visualizer with ANALYZE=1
     publicDir: 'public',
@@ -337,12 +341,12 @@ export default defineConfig(({ mode }) => {
     plugins: [
       criticalCssPreload({
         enabled: true,
-        strictCsp: process.env.STRICT_CSP === '1',
+        strictCsp,
       }),
       // Inline entry only when explicitly enabled (avoid CSP issues).
       inlineSmallEntry({ enabled: process.env.INLINE_ENTRY === '1' }),
-      stripDataModulePreload({ enabled: process.env.STRICT_CSP === '1' }),
-      plausibleAnalyticsLocal({ strictCsp: process.env.STRICT_CSP === '1' }),
+      stripDataModulePreload({ enabled: strictCsp }),
+      plausibleAnalyticsLocal({ strictCsp }),
     ].filter(Boolean),
     resolve: {
       alias: {
