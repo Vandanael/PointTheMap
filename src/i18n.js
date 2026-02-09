@@ -261,14 +261,14 @@ const translations = {
       modes: {
         title: 'Modes de jeu',
         classic: 'Jouez quand vous voulez avec des capitales aléatoires',
-        daily: 'Un défi quotidien identique pour tous avec bonus de vitesse',
+        daily: 'Un défi quotidien identique pour tous',
         countries: 'Placez des pays entiers au lieu de capitales',
         civilizations: 'Trouvez les zones des civilisations sur la carte',
         stadiums: 'Localisez les stades sur la carte',
       },
       tips: {
         title: 'Astuces',
-        tip1: 'Le bonus de vitesse peut doubler vos points en mode Quotidien',
+        tip1: 'Bonus de vitesse uniquement si vous répondez dans la première moitié du temps',
         tip2: 'Zoomez sur la carte pour plus de précision',
         tip3: 'Les capitales populaires apparaissent plus souvent',
       },
@@ -547,14 +547,14 @@ const translations = {
       modes: {
         title: 'Game Modes',
         classic: 'Play anytime with random capitals',
-        daily: 'Daily challenge identical for everyone with speed bonus',
+        daily: 'Daily challenge identical for everyone',
         countries: 'Place entire countries instead of capitals',
         civilizations: 'Find civilization zones on the map',
         stadiums: 'Locate stadiums on the map',
       },
       tips: {
         title: 'Tips',
-        tip1: 'Speed bonus can double your points in Daily mode',
+        tip1: 'Speed bonus only if you answer in the first half of the timer',
         tip2: 'Zoom on the map for better accuracy',
         tip3: 'Popular capitals appear more often',
       },

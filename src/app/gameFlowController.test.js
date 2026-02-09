@@ -15,6 +15,7 @@ describe('gameFlowController', () => {
       },
       eventBus: {
         emit: vi.fn(),
+        subscribe: vi.fn(() => () => {}),
       },
       mapSystem: {
         clearMap: vi.fn(),
@@ -36,6 +37,7 @@ describe('gameFlowController', () => {
         addCapitalMarker: vi.fn(),
         setOnResultContinue: vi.fn(),
         clearOnResultContinue: vi.fn(),
+        waitForTilesReady: vi.fn(() => Promise.resolve(true)),
       },
       timerSystem: {
         start: vi.fn(),

@@ -87,6 +87,14 @@ body {
   left: 0;
 }
 
+body:not(.light-theme) #map {
+  filter: brightness(1.18) contrast(1.08) saturate(0.95);
+}
+
+body.light-theme #map {
+  filter: brightness(1.02) contrast(1.18) saturate(1.08);
+}
+
 /* Map lock visual feedback: darken map + lock badge while clicks are disabled */
 #map::after {
   content: '';
@@ -720,9 +728,10 @@ body.light-theme .result-line-distance {
   transform: scale(0.95);
 }
 
-/* Start screen: top-right icons row – keep aligned right and respect safe area */
+/* Start screen: top-right icons row – align to content width */
 .lobby-header-icons {
   padding-top: max(0.5rem, env(safe-area-inset-top));
+  right: clamp(1rem, calc((100vw - 850px) / 2 + 1rem), 3rem);
   padding-right: max(0.5rem, env(safe-area-inset-right));
 }
 
@@ -1301,7 +1310,7 @@ body.light-theme .round-transition {
 /* Container - fixed top offset so title stays at same position before and after
    load (skeleton vs full start screen), preventing layout shift. */
 .lobby-container {
-  padding-top: 1.5rem;
+  padding-top: clamp(3.3rem, 10.5vh, 5.8rem);
   padding-bottom: 1.5rem;
   align-items: center;
   justify-content: center;
@@ -1309,7 +1318,7 @@ body.light-theme .round-transition {
 
 @media (min-width: 1024px) {
   .lobby-container {
-    padding-top: 2rem;
+    padding-top: clamp(3.4rem, 12vh, 6rem);
     padding-bottom: 2rem;
     align-items: center;
     justify-content: center;
@@ -1461,10 +1470,22 @@ body.light-theme .challenge-info {
   align-items: start; /* don't stretch buttons so they stay same height */
 }
 
-/* Increase gap on mobile for better touch targets */
+/* Tighten gap on small screens */
 @media (max-width: 640px) {
   .category-grid {
-    gap: 1rem;
+    gap: 0.7rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .category-grid {
+    gap: 0.55rem;
+  }
+  .category-btn {
+    padding: 0.65rem 0.45rem;
+  }
+  .category-btn span {
+    font-size: 0.78rem;
   }
 }
 
@@ -1661,6 +1682,15 @@ body.light-theme .challenge-info {
   justify-content: space-between;
   gap: 0.75rem;
   flex-wrap: nowrap;
+}
+
+.lobby-version-top {
+  text-align: center;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 0.2rem;
 }
 
 @media (min-width: 768px) {

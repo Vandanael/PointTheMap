@@ -101,17 +101,29 @@ function ensureLocalPlausibleScript() {
 }
 
 function plausibleAnalyticsLocal({ strictCsp = false } = {}) {
-  const inlineInit = `((window.plausible =
-        window.plausible ||
-        function () {
-          (plausible.q = plausible.q || []).push(arguments);
-        }),
-        (plausible.init =
-          plausible.init ||
-          function (i) {
-            plausible.o = i || {};
-          }));
-      plausible.init();`;
+  const inlineInit = `(function () {
+        try {
+          var gpc = navigator && navigator.globalPrivacyControl === true;
+          var dnt = (navigator && navigator.doNotTrack === '1') || (window && window.doNotTrack === '1');
+          if (gpc || dnt) {
+            window.plausible = function () {};
+            window.plausible.q = [];
+            window.plausible.init = function () {};
+            return;
+          }
+        } catch (e) {}
+        (window.plausible =
+          window.plausible ||
+          function () {
+            (plausible.q = plausible.q || []).push(arguments);
+          }),
+          (plausible.init =
+            plausible.init ||
+            function (i) {
+              plausible.o = i || {};
+            });
+        plausible.init();
+      })();`;
 
   let enabled = true;
 
@@ -226,8 +238,29 @@ function stripDataModulePreload({ enabled = false } = {}) {
   };
 }
 
+/** Remove any inline script blocks or inline event handlers for strict CSP builds. */
+function stripInlineScripts({ enabled = false } = {}) {
+  if (!enabled) return null;
+  return {
+    name: 'strip-inline-scripts',
+    apply: 'build',
+    enforce: 'post',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html) {
+        let out = html;
+        // Remove inline script blocks (keep external scripts)
+        out = out.replace(/<script(?![^>]*\\ssrc=)[^>]*>[\\s\\S]*?<\\/script>/gi, '');
+        // Remove inline event handlers like onload="..."
+        out = out.replace(/\\son[a-z]+=\"[^\"]*\"/gi, '');
+        return out;
+      },
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
-  const isProd = mode === 'production';
+  const isProd = mode !== 'development';
   const strictCsp = process.env.STRICT_CSP === '1' || isProd;
   return {
     // Enable bundle visualizer with ANALYZE=1
@@ -347,6 +380,7 @@ export default defineConfig(({ mode }) => {
       inlineSmallEntry({ enabled: process.env.INLINE_ENTRY === '1' && !strictCsp }),
       stripDataModulePreload({ enabled: strictCsp }),
       plausibleAnalyticsLocal({ strictCsp }),
+      stripInlineScripts({ enabled: strictCsp }),
     ].filter(Boolean),
     resolve: {
       alias: {

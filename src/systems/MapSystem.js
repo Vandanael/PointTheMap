@@ -31,6 +31,7 @@ import { logger } from '../utils/logger.js';
 import { MapRenderer } from './map/MapRenderer.js';
 import { GeoJSONManager } from './map/GeoJSONManager.js';
 import { MAP_ANIMATIONS } from '../config/visual-constants.js';
+import { MAP } from '../config/index.js';
 
 export class MapSystem {
   #initialized = false;
@@ -40,8 +41,36 @@ export class MapSystem {
   #renderer = null;
   /** @type {GeoJSONManager | null} */
   #geoManager = null;
+  #tilesReady = false;
+  /** @type {Array<() => void>} */
+  #eventUnsubscribers = [];
+  #tileListenersSetup = false;
 
   constructor() {}
+
+  /**
+   * Setup tile readiness listeners (deferred to avoid init-time cycles).
+   */
+  #setupTileListeners() {
+    if (this.#tileListenersSetup) return;
+    this.#tileListenersSetup = true;
+    // Track tile readiness across theme changes and retries
+    this.#eventUnsubscribers.push(
+      eventBus.subscribe('map:tiles-loading', () => {
+        this.#tilesReady = false;
+      })
+    );
+    this.#eventUnsubscribers.push(
+      eventBus.subscribe('map:tiles-loaded', () => {
+        this.#tilesReady = true;
+      })
+    );
+    this.#eventUnsubscribers.push(
+      eventBus.subscribe('map:tiles-error', () => {
+        this.#tilesReady = false;
+      })
+    );
+  }
 
   /**
    * Initialize the map
@@ -55,6 +84,7 @@ export class MapSystem {
     }
 
     try {
+      this.#setupTileListeners();
       await loadLeaflet();
       this.#containerId = containerId;
       this.#renderer = new MapRenderer({ L: /** @type {typeof import('leaflet')} */ (L) });
@@ -72,6 +102,34 @@ export class MapSystem {
       eventBus.emit('map:error', { error: err.message });
       throw error;
     }
+  }
+
+  /**
+   * Wait for map tiles to be ready before starting gameplay.
+   * @param {{ timeoutMs?: number }} [options]
+   * @returns {Promise<boolean>} True if tiles loaded, false on timeout/error
+   */
+  waitForTilesReady(options = {}) {
+    if (this.#tilesReady) return Promise.resolve(true);
+    const timeoutMs = options.timeoutMs ?? MAP.TILE_LOAD_TIMEOUT_MS;
+    return new Promise((resolve) => {
+      let settled = false;
+      let timeoutId = null;
+
+      const finish = (value) => {
+        if (settled) return;
+        settled = true;
+        if (timeoutId) clearTimeout(timeoutId);
+        unsubLoaded();
+        unsubError();
+        resolve(value);
+      };
+
+      const unsubLoaded = eventBus.subscribe('map:tiles-loaded', () => finish(true));
+      const unsubError = eventBus.subscribe('map:tiles-error', () => finish(false));
+
+      timeoutId = setTimeout(() => finish(false), timeoutMs);
+    });
   }
 
   /**
@@ -388,7 +446,11 @@ export class MapSystem {
    * Clean up all resources
    */
   destroy() {
-    if (!this.#initialized) return;
+    if (!this.#initialized) {
+      this.#eventUnsubscribers.forEach((unsub) => unsub());
+      this.#eventUnsubscribers = [];
+      return;
+    }
 
     this.#geoManager?.destroy();
     this.#geoManager = null;
@@ -397,6 +459,9 @@ export class MapSystem {
     this.#renderer = null;
 
     this.#initialized = false;
+
+    this.#eventUnsubscribers.forEach((unsub) => unsub());
+    this.#eventUnsubscribers = [];
 
     eventBus.emit('map:destroyed', undefined);
   }

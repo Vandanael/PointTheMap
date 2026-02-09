@@ -18,7 +18,7 @@ const playingState = {
     score: null,
     status: 'playing',
   },
-  runtimeConfig: { roundCount: 5, timerMs: 5000, graceMs: 500, dangerZoneMs: 1500 },
+  runtimeConfig: { roundCount: 5, timerMs: 5000, graceMs: 1000, dangerZoneMs: 2000 },
   rounds: [],
   totalScore: 0,
 };
@@ -140,7 +140,7 @@ vi.mock('./ui/UI.js', () => ({
 }));
 
 vi.mock('./config/index.js', () => ({
-  GAME: { ROUNDS: 5, TIMER_MS: 5000, GRACE_PERIOD_MS: 500, DANGER_ZONE_MS: 1500 },
+  GAME: { ROUNDS: 5, TIMER_MS: 5000, GRACE_PERIOD_MS: 1000, DANGER_ZONE_MS: 2000 },
   TIMING: { RESULT_READ_TIME_MS: 2500 },
   MAP: { CENTER: [30, 10], ZOOM: 3 },
 }));

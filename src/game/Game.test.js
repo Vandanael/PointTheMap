@@ -535,7 +535,7 @@ describe('Game.js', () => {
         gameType: 'country',
         countries: [country],
         currentRound,
-        runtimeConfig: { roundCount: 5, timerMs: 5000, graceMs: 500, dangerZoneMs: 1500 },
+        runtimeConfig: { roundCount: 5, timerMs: 5000, graceMs: 1000, dangerZoneMs: 2000 },
         rounds: [],
       };
 
@@ -568,7 +568,7 @@ describe('Game.js', () => {
         gameType: 'civilization',
         civilizations: [civ],
         currentRound,
-        runtimeConfig: { roundCount: 5, timerMs: 5000, graceMs: 500, dangerZoneMs: 1500 },
+        runtimeConfig: { roundCount: 5, timerMs: 5000, graceMs: 1000, dangerZoneMs: 2000 },
         rounds: [],
       };
       const fakeMapQuery = {
@@ -598,7 +598,7 @@ describe('Game.js', () => {
         currentRound,
         clickCoords,
         'civilization',
-        5500,
+        6000,
         null,
         expect.objectContaining({
           isInsideTargetCivilization: true,
@@ -1084,7 +1084,7 @@ describe('Game.js', () => {
         gameType: 'country',
         countries: [country],
         currentRound,
-        runtimeConfig: { roundCount: 5, timerMs: 5000, graceMs: 500, dangerZoneMs: 1500 },
+        runtimeConfig: { roundCount: 5, timerMs: 5000, graceMs: 1000, dangerZoneMs: 2000 },
         rounds: [],
       };
 
@@ -1220,7 +1220,7 @@ describe('Game.js', () => {
         gameType: 'civilization',
         civilizations: [civ],
         currentRound,
-        runtimeConfig: { roundCount: 5, timerMs: 5000, graceMs: 500, dangerZoneMs: 1500 },
+        runtimeConfig: { roundCount: 5, timerMs: 5000, graceMs: 1000, dangerZoneMs: 2000 },
         rounds: [],
       };
 

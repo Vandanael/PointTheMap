@@ -83,14 +83,17 @@ describe('InputSystem', () => {
     });
 
     it('should call callback on map click', () => {
+      vi.useFakeTimers();
       const callback = vi.fn();
 
       system.enableMapInput(callback);
 
+      vi.advanceTimersByTime(300);
       // Simulate map click
       eventBus.emit('map:click', { lat: 48.8566, lng: 2.3522 });
 
       expect(callback).toHaveBeenCalledWith([48.8566, 2.3522]);
+      vi.useRealTimers();
     });
 
     it('should not call callback when map input disabled', () => {

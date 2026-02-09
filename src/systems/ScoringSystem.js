@@ -75,12 +75,12 @@ export class ScoringSystem {
   }
 
   /**
-   * Calculate time bonus based on speed and accuracy
+   * Calculate time bonus based on speed only
    *
    * @param {number} baseScore - Base score before bonus
    * @param {number} totalTimeMs - Total time allowed
    * @param {number} timeRemainingMs - Time remaining
-   * @param {number} distanceKm - Distance in kilometers
+   * @param {number} distanceKm - Distance in kilometers (unused for speed-only bonus)
    * @param {string} [gameMode='classic'] - Game mode ('classic' or 'daily')
    * @returns {number} Time bonus (0-maxBonus)
    */
@@ -99,8 +99,8 @@ export class ScoringSystem {
       return 0;
     }
 
-    // Only reward time bonus for good accuracy
-    if (distanceKm >= config.distanceThreshold) {
+    // Only reward time bonus when answered in the first half of the timer
+    if (timeRemainingMs < totalTimeMs / 2) {
       return 0;
     }
 

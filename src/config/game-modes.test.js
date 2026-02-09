@@ -71,7 +71,7 @@ describe('Game Modes Configuration', () => {
       expect(mode.name).toBe('Classic Mode');
       const capitalSelection = assertDefined(mode.capitalSelection, 'Missing capitalSelection');
       expect(capitalSelection.type).toBe('random');
-      expect(mode.scoring.timeBonus.enabled).toBe(false);
+      expect(mode.scoring.timeBonus.enabled).toBe(true);
     });
 
     it('should return daily mode configuration', () => {
@@ -91,7 +91,7 @@ describe('Game Modes Configuration', () => {
       expect(mode.name).toBe('Stadium Mode');
       const stadiumSelection = assertDefined(mode.stadiumSelection, 'Missing stadiumSelection');
       expect(stadiumSelection.type).toBe('random');
-      expect(mode.scoring.timeBonus.enabled).toBe(false);
+      expect(mode.scoring.timeBonus.enabled).toBe(true);
     });
 
     it('should return country_daily mode configuration', () => {
@@ -131,23 +131,23 @@ describe('Game Modes Configuration', () => {
       const config = getRuntimeGameConfig('classic');
       expect(config.roundCount).toBe(5);
       expect(config.timerMs).toBe(5000);
-      expect(config.graceMs).toBe(500);
-      expect(config.dangerZoneMs).toBe(1500);
+      expect(config.graceMs).toBe(1000);
+      expect(config.dangerZoneMs).toBe(2000);
     });
 
     it('should return runtime config for daily mode', () => {
       const config = getRuntimeGameConfig('daily');
       expect(config.roundCount).toBe(5);
       expect(config.timerMs).toBe(5000);
-      expect(config.graceMs).toBe(500);
-      expect(config.dangerZoneMs).toBe(1500);
+      expect(config.graceMs).toBe(1000);
+      expect(config.dangerZoneMs).toBe(2000);
     });
 
     it('should return runtime config for stadium mode', () => {
       const config = getRuntimeGameConfig('stadium');
       expect(config.roundCount).toBe(5);
       expect(config.timerMs).toBe(5000);
-      expect(config.graceMs).toBe(500);
+      expect(config.graceMs).toBe(1000);
       expect(config.dangerZoneMs).toBe(GAME.DANGER_ZONE_MS);
     });
 
@@ -155,7 +155,7 @@ describe('Game Modes Configuration', () => {
       const config = getRuntimeGameConfig('stadium_daily');
       expect(config.roundCount).toBe(5);
       expect(config.timerMs).toBe(5000);
-      expect(config.graceMs).toBe(500);
+      expect(config.graceMs).toBe(1000);
       expect(config.dangerZoneMs).toBe(GAME.DANGER_ZONE_MS);
     });
 
@@ -167,7 +167,7 @@ describe('Game Modes Configuration', () => {
       const config = getRuntimeGameConfig('civilization');
       expect(config.roundCount).toBe(5);
       expect(config.timerMs).toBe(5000);
-      expect(config.graceMs).toBe(500);
+      expect(config.graceMs).toBe(1000);
       expect(config.dangerZoneMs).toBe(GAME.DANGER_ZONE_MS);
     });
 
@@ -176,7 +176,7 @@ describe('Game Modes Configuration', () => {
       expect(config).toEqual({
         roundCount: 5,
         timerMs: 5000,
-        graceMs: 500,
+        graceMs: 1000,
         dangerZoneMs: GAME.DANGER_ZONE_MS,
       });
       const country = assertDefined(GAME_MODES.country, 'Missing country mode config');
@@ -324,12 +324,12 @@ describe('Game Modes Configuration', () => {
 
     it('should have correct scoring config', () => {
       expect(classic.scoring.maxPerRound).toBe(5000);
-      expect(classic.scoring.timeBonus.enabled).toBe(false);
+      expect(classic.scoring.timeBonus.enabled).toBe(true);
     });
 
     it('should have correct timing config', () => {
       expect(classic.timing.roundTime).toBe(5000);
-      expect(classic.timing.gracePeriod).toBe(500);
+      expect(classic.timing.gracePeriod).toBe(1000);
       expect(classic.timing.roundCount).toBe(5);
     });
   });

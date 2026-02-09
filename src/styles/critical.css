@@ -137,7 +137,7 @@ body.light-theme .start-modal-overlay {
 
 /* Critical lobby layout (avoid CLS before full CSS loads) */
 .lobby-container {
-  padding-top: 12vh;
+  padding-top: clamp(3.3rem, 10.5vh, 5.8rem);
   padding-bottom: 1rem;
   align-items: flex-start;
   justify-content: flex-start;
@@ -145,7 +145,7 @@ body.light-theme .start-modal-overlay {
 
 @media (min-width: 1024px) {
   .lobby-container {
-    padding-top: 16vh;
+    padding-top: clamp(3.4rem, 12vh, 6rem);
     align-items: flex-start;
     justify-content: flex-start;
   }
@@ -246,6 +246,24 @@ body.light-theme .start-modal-overlay {
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
   align-items: start;
+}
+
+@media (max-width: 640px) {
+  .category-grid {
+    gap: 0.7rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .category-grid {
+    gap: 0.55rem;
+  }
+  .category-btn {
+    padding: 0.65rem 0.45rem;
+  }
+  .category-btn span {
+    font-size: 0.78rem;
+  }
 }
 
 .category-btn {
@@ -385,10 +403,25 @@ body.light-theme .start-modal-overlay {
   flex-wrap: nowrap;
 }
 
+.lobby-version-top {
+  text-align: center;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 0.2rem;
+}
+
 @media (min-width: 768px) {
   .lobby-footer-content {
     padding: 0 1.5rem;
   }
+}
+
+.lobby-header-icons {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+  right: clamp(1rem, calc((100vw - 850px) / 2 + 1rem), 3rem);
+  padding-right: max(0.5rem, env(safe-area-inset-right));
 }
 
 #map {
@@ -402,11 +435,11 @@ body.light-theme .start-modal-overlay {
 }
 
 body:not(.light-theme) #map {
-  filter: brightness(1.1) contrast(1.15) saturate(1.05);
+  filter: brightness(1.18) contrast(1.08) saturate(0.95);
 }
 
 body.light-theme #map {
-  filter: brightness(0.95) contrast(1.25) saturate(1.1);
+  filter: brightness(1.02) contrast(1.18) saturate(1.08);
 }
 
 #map,

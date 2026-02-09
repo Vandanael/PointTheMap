@@ -108,6 +108,56 @@ export function createGameFlowController(deps) {
   };
 
   /**
+   * Start round gameplay after tiles are ready (guards against blank maps/timeouts).
+   * @param {number | null} roundId
+   */
+  const startRoundWhenReady = async (roundId) => {
+    let started = false;
+    const startRoundNow = () => {
+      if (started) return;
+      const currentState = stateManager.getState();
+      if (
+        currentState.status !== GameStatus.PLAYING ||
+        currentState.currentRound?.roundId !== roundId
+      ) {
+        return;
+      }
+      started = true;
+      stateManager.setState(
+        {
+          ...currentState,
+          currentRound: { ...currentState.currentRound, startTime: Date.now() },
+        },
+        'round:timer-sync'
+      );
+      const latest = stateManager.getState();
+      trackRoundStarted(latest);
+      mapSystem.prefetchFullGeoJSONForMode(latest.gameType);
+      startTimer();
+      // Enable map input after timer starts (InputSystem guards early clicks).
+      setTimeout(() => {
+        mapSystem.enableClicks(() => {}); // InputSystem handles via EventBus
+        inputSystem.enableMapInput(handleMapClick);
+      }, 0);
+    };
+
+    const ready = await mapSystem.waitForTilesReady({
+      timeoutMs: MAP.TILE_LOAD_TIMEOUT_MS ?? 8000,
+    });
+
+    if (!ready) {
+      ui.showToast(i18n.t('error.mapLoadFailed'), 'error', 3500);
+      const unsub = eventBus.subscribe('map:tiles-loaded', () => {
+        unsub();
+        startRoundNow();
+      });
+      return;
+    }
+
+    startRoundNow();
+  };
+
+  /**
    * Show localized "target not found" error for the given game type.
    * @param {string} gameType
    */
@@ -219,11 +269,9 @@ export function createGameFlowController(deps) {
             : '';
 
     const onReady = () => {
-      trackRoundStarted(state);
-      mapSystem.prefetchFullGeoJSONForMode(state.gameType);
-      startTimer();
-      mapSystem.enableClicks(() => {}); // InputSystem handles via EventBus
-      inputSystem.enableMapInput(handleMapClick);
+      const currentState = stateManager.getState();
+      const roundId = currentState.currentRound?.roundId ?? null;
+      void startRoundWhenReady(roundId);
     };
 
     ui.showQuestion(displayName, displaySubtitle, onReady, {
@@ -578,10 +626,9 @@ export function createGameFlowController(deps) {
       ui.hideRoundTransition();
       ui.resetTimer();
       ui.showQuestion(displayName, displaySubtitle, () => {
-        trackRoundStarted(state);
-        startTimer();
-        mapSystem.enableClicks(() => {}); // Empty callback, InputSystem handles via EventBus
-        inputSystem.enableMapInput(handleMapClick);
+        const currentState = stateManager.getState();
+        const roundId = currentState.currentRound?.roundId ?? null;
+        void startRoundWhenReady(roundId);
       });
     }, UI_TIMING.ROUND_TRANSITION_MS);
   };

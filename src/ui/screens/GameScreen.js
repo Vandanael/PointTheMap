@@ -160,7 +160,10 @@ export const createGameScreen = (deps) => {
     }
 
     if (requireButton) {
-      bindClick('btn-ready', close);
+      bindClick('btn-ready', (event) => {
+        event.stopPropagation();
+        close();
+      });
     } else {
       const modal = _domCache.get('question-modal');
       if (modal && _questionModalClickHandler) {

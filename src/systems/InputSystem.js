@@ -12,6 +12,8 @@ import { MODE_IDS } from '../config/game-modes.js';
 import { eventBus } from '../core/EventBus.js';
 import { EVENTS } from '../core/eventTypes.js';
 
+const MAP_CLICK_ARM_DELAY_MS = 300;
+
 export class InputSystem {
   #initialized = false;
   #mapClickEnabled = false;
@@ -21,6 +23,7 @@ export class InputSystem {
   #mapClickUnsubscribe = null;
   /** @type {((e: KeyboardEvent) => void) | null} */
   #keyboardHandler = null;
+  #mapClickEnabledAt = 0;
 
   constructor() {}
 
@@ -77,14 +80,15 @@ export class InputSystem {
 
     this.#mapClickEnabled = true;
     this.#mapClickCallback = callback;
+    this.#mapClickEnabledAt = Date.now();
 
     // Subscribe to map:click events
     this.#mapClickUnsubscribe = eventBus.subscribe(
       EVENTS.MAP_CLICK,
       (/** @type {{ lat: any, lng: any }} */ { lat, lng }) => {
-        if (this.#mapClickEnabled && this.#mapClickCallback) {
-          this.#mapClickCallback([lat, lng]);
-        }
+        if (!this.#mapClickEnabled || !this.#mapClickCallback) return;
+        if (Date.now() - this.#mapClickEnabledAt < MAP_CLICK_ARM_DELAY_MS) return;
+        this.#mapClickCallback([lat, lng]);
       }
     );
 

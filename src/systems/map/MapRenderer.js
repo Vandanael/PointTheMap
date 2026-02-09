@@ -51,6 +51,10 @@ export class MapRenderer {
   /** @type {null | ((e: Event) => void)} */
   #resultContinueHandler = null;
   #initialized = false;
+  #tileErrorCount = 0;
+  #usingFallbackTiles = false;
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  #tileLoadTimeout = null;
 
   /**
    * @param {{ L: typeof import('leaflet') }} deps
@@ -102,7 +106,6 @@ export class MapRenderer {
       attributionControl: false,
       keepBuffer: 4,
       zoomAnimation: true,
-      preferCanvas: true, // Canvas renderer for crisper dashed lines
       fadeAnimation: true,
       markerZoomAnimation: true,
     });
@@ -119,14 +122,6 @@ export class MapRenderer {
     // Dedicated layer group for capital markers
     this.#capitalsLayer = this.#L.layerGroup().addTo(this.#map);
 
-    // Disable canvas antialiasing for crisper dashed lines
-    if (this.#map._renderer && this.#map._renderer._ctx) {
-      const ctx = this.#map._renderer._ctx;
-      ctx.imageSmoothingEnabled = false;
-      ctx.webkitImageSmoothingEnabled = false;
-      ctx.mozImageSmoothingEnabled = false;
-      ctx.msImageSmoothingEnabled = false;
-    }
   }
 
   /**
@@ -175,21 +170,40 @@ export class MapRenderer {
 
   /**
    * Update map tiles based on theme
+   * @param {{ forceFallback?: boolean }} [options]
    */
-  #updateMapTiles() {
+  #updateMapTiles(options = {}) {
     if (!this.#map) return;
+
+    if (this.#tileLoadTimeout) {
+      clearTimeout(this.#tileLoadTimeout);
+      this.#tileLoadTimeout = null;
+    }
 
     if (this.#tileLayer) {
       this.#map.removeLayer(this.#tileLayer);
     }
 
-    const theme = getTheme();
-    const tileUrl = theme === 'light' ? MAP.TILE_URL_LIGHT : MAP.TILE_URL_DARK;
+    const useFallback = options.forceFallback || this.#usingFallbackTiles;
+
+    let tileUrl;
+    let attribution;
+    if (useFallback) {
+      tileUrl = MAP.TILE_URL_FALLBACK;
+      attribution = MAP.TILE_FALLBACK_ATTRIBUTION;
+      this.#usingFallbackTiles = true;
+    } else {
+      const theme = getTheme();
+      tileUrl = theme === 'light' ? MAP.TILE_URL_LIGHT : MAP.TILE_URL_DARK;
+      attribution = MAP.ATTRIBUTION;
+    }
+
+    this.#tileErrorCount = 0;
 
     this.#tileLayer = this.#L
       .tileLayer(tileUrl, {
         maxZoom: MAP.MAX_ZOOM,
-        attribution: MAP.ATTRIBUTION,
+        attribution,
         keepBuffer: 4,
         updateWhenZooming: true,
         updateWhenIdle: true,
@@ -198,15 +212,43 @@ export class MapRenderer {
       })
       .addTo(this.#map);
 
+    // Start tile load timeout immediately (some browsers may not emit "loading")
+    if (!this.#usingFallbackTiles) {
+      if (this.#tileLoadTimeout) clearTimeout(this.#tileLoadTimeout);
+      this.#tileLoadTimeout = setTimeout(() => {
+        this.#switchToFallbackTiles();
+      }, MAP.TILE_LOAD_TIMEOUT_MS);
+    }
+
     this.#tileLayer.on('loading', () => {
       eventBus.emit('map:tiles-loading', {});
     });
     this.#tileLayer.on('load', () => {
+      if (this.#tileLoadTimeout) {
+        clearTimeout(this.#tileLoadTimeout);
+        this.#tileLoadTimeout = null;
+      }
       eventBus.emit('map:tiles-loaded', {});
     });
     this.#tileLayer.on('tileerror', (event) => {
       eventBus.emit('map:tiles-error', { error: event?.error });
+      if (!this.#usingFallbackTiles) {
+        this.#tileErrorCount++;
+        if (this.#tileErrorCount >= MAP.TILE_ERROR_THRESHOLD) {
+          this.#switchToFallbackTiles();
+        }
+      }
     });
+  }
+
+  /**
+   * Switch to OSM fallback tiles when primary provider fails.
+   */
+  #switchToFallbackTiles() {
+    if (this.#usingFallbackTiles) return;
+    logger.warn('Primary tile provider failed — switching to OSM fallback');
+    this.#usingFallbackTiles = true;
+    this.#updateMapTiles({ forceFallback: true });
   }
 
   /**

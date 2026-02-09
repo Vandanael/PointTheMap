@@ -236,7 +236,7 @@ export const RoundResult = (distance, score, isTimeout, isLast, baseScore, timeB
 
 export const StartScreen = () => `
   <div id="start-modal" class="start-modal-overlay fixed inset-0 flex flex-col" style="z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="challengeText">
-    <!-- Toggle buttons: top-right (no position override so they stay aligned right) -->
+    <!-- Toggle buttons: top-right (aligned to content width) -->
     <div class="lobby-header-icons absolute top-4 right-4 md:top-6 md:right-6 flex gap-2" style="z-index: 10;">
       <button id="btn-leaderboard" class="toggle-btn" title="Leaderboard" aria-label="Show leaderboard">
         <span>🏆</span>
@@ -353,6 +353,8 @@ export const StartScreen = () => `
         </div>
       </div>
     </div>
+
+    <div class="lobby-version-top">v0.10</div>
 
     <!-- Footer collé en bas -->
     <div class="lobby-footer" style="position: relative; z-index: 1;">

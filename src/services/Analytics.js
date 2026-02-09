@@ -9,16 +9,20 @@ import { logger } from '../utils/logger.js';
 
 class Analytics {
   #enabled = false;
+  #privacyDisabled = false;
 
   /**
    * Initialize analytics system
    * Enabled in production
    */
   init() {
-    this.#enabled = import.meta.env.PROD;
+    this.#privacyDisabled = this.#isPrivacyOptOutEnabled();
+    this.#enabled = import.meta.env.PROD && !this.#privacyDisabled;
 
     if (this.#enabled) {
       logger.info('Analytics: Initialized');
+    } else if (this.#privacyDisabled) {
+      logger.info('Analytics: Disabled (privacy signal detected)');
     } else {
       logger.info('Analytics: Not initialized (dev mode)');
     }
@@ -50,6 +54,7 @@ class Analytics {
    * @param {Object} properties - Event properties
    */
   #sendToProvider(event, properties) {
+    if (this.#privacyDisabled) return;
     if (typeof window !== 'undefined' && typeof window.plausible === 'function') {
       window.plausible(event, { props: properties });
     }
@@ -65,6 +70,23 @@ class Analytics {
     if (navigator.sendBeacon) {
       const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
       navigator.sendBeacon(url, blob);
+    }
+  }
+
+  /**
+   * Respect global privacy signals (GPC / DNT).
+   * @returns {boolean}
+   */
+  #isPrivacyOptOutEnabled() {
+    try {
+      if (typeof navigator === 'undefined') return false;
+      const gpc = navigator.globalPrivacyControl === true;
+      const dnt =
+        navigator.doNotTrack === '1' ||
+        (typeof window !== 'undefined' && window.doNotTrack === '1');
+      return gpc || dnt;
+    } catch {
+      return false;
     }
   }
 
