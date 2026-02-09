@@ -80,10 +80,10 @@ class Analytics {
   #isPrivacyOptOutEnabled() {
     try {
       if (typeof navigator === 'undefined') return false;
-      const gpc = navigator.globalPrivacyControl === true;
+      const gpc = /** @type {any} */ (navigator).globalPrivacyControl === true;
       const dnt =
         navigator.doNotTrack === '1' ||
-        (typeof window !== 'undefined' && window.doNotTrack === '1');
+        (typeof window !== 'undefined' && /** @type {any} */ (window).doNotTrack === '1');
       return gpc || dnt;
     } catch {
       return false;

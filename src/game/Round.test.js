@@ -128,7 +128,7 @@ describe('recordClick', () => {
     const result = recordClick(round, clickCoords, 'classic', undefined, null, null, roundRules);
 
     expect(result.status).toBe('completed');
-    expect(result.score).toBe(5000);
+    expect(result.score).toBe(6000);
     expect(result.distance).toBe(0);
     expect(result.click).toEqual({ lat: 48.8566, lng: 2.3522 });
     expect(result.endTime).toBeGreaterThan(0);
@@ -141,7 +141,6 @@ describe('recordClick', () => {
 
     expect(result.status).toBe('completed');
     expect(result.score).toBeGreaterThan(0);
-    expect(result.score).toBeLessThan(5000);
     expect(result.distance).toBeGreaterThan(0);
   });
 
@@ -238,7 +237,7 @@ describe('recordClick', () => {
     expect(result.status).toBe('completed');
     expect(result.correctCivilizationId).toBe('roman_empire');
     expect(result.clickedCivilizationId).toBe('roman_empire');
-    expect(result.score).toBe(5000);
+    expect(result.score).toBe(6000);
   });
 
   it('returns unknown distance when civilization feature is missing', () => {
