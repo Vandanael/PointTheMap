@@ -249,10 +249,34 @@ function stripInlineScripts({ enabled = false } = {}) {
       order: 'post',
       handler(html) {
         let out = html;
-        // Remove inline script blocks (keep external scripts)
-        out = out.replace(/<script(?![^>]*\\ssrc=)[^>]*>[\\s\\S]*?<\\/script>/gi, '');
+
+        // Remove inline script blocks (keep external scripts with src)
+        let cursor = 0;
+        const lower = () => out.toLowerCase();
+        while (true) {
+          const start = lower().indexOf('<script', cursor);
+          if (start === -1) break;
+          const openEnd = out.indexOf('>', start);
+          if (openEnd === -1) break;
+          const close = lower().indexOf('</script>', openEnd);
+          if (close === -1) break;
+          const openTag = out.slice(start, openEnd + 1);
+          const hasSrc =
+            openTag.includes(' src=') ||
+            openTag.includes('\\tsrc=') ||
+            openTag.includes('\\nsrc=') ||
+            openTag.includes(' src =') ||
+            openTag.includes('src=');
+          if (!hasSrc) {
+            out = out.slice(0, start) + out.slice(close + 9);
+            cursor = start;
+            continue;
+          }
+          cursor = close + 9;
+        }
+
         // Remove inline event handlers like onload="..."
-        out = out.replace(/\\son[a-z]+=\"[^\"]*\"/gi, '');
+        out = out.replace(new RegExp('\\son[a-z]+=\"[^\"]*\"', 'gi'), '');
         return out;
       },
     },
