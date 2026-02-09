@@ -121,7 +121,6 @@ export class MapRenderer {
 
     // Dedicated layer group for capital markers
     this.#capitalsLayer = this.#L.layerGroup().addTo(this.#map);
-
   }
 
   /**
