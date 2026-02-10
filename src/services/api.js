@@ -417,6 +417,21 @@ export const submitWithRetry = async (
     }
     return result;
   } catch (error) {
+    // Log detailed error information for debugging
+    if (error instanceof APIError) {
+      logger.error('[api:submit] API error:', {
+        status: error.status,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        gameType,
+        roundsCount: rounds.length,
+        pseudo,
+      });
+    } else {
+      logger.error('[api:submit] Unexpected error:', error);
+    }
+
     if (error instanceof APIError && (error.status === 409 || error.status === 400)) {
       throw error;
     }

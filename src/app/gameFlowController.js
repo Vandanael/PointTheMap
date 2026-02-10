@@ -580,9 +580,14 @@ export function createGameFlowController(deps) {
           const sanitizedRound = {
             click: round.click,
             status: round.status,
-            score: round.score !== null ? Math.max(0, Math.floor(round.score)) : 0,
+            score:
+              round.score !== null && typeof round.score === 'number'
+                ? Math.max(0, Math.floor(round.score))
+                : 0,
             timeElapsed:
-              round.endTime && round.startTime ? round.endTime - round.startTime : undefined,
+              round.endTime && round.startTime
+                ? Math.floor(round.endTime - round.startTime)
+                : undefined,
             correctCountryId: round.correctCountryId,
             clickedCountryId: round.clickedCountryId,
             distanceToTargetKm: round.distanceToTargetKm,
@@ -619,6 +624,22 @@ export function createGameFlowController(deps) {
             sanitizedRound.civilizationId = round.civilization.id;
           }
           return sanitizedRound;
+        });
+
+        // Debug logging for payload validation
+        deps.logger.log('[submit] Prepared payload for submission:', {
+          token: state.token?.substring(0, 8) + '...',
+          pseudo: currentPseudo,
+          gameType: state.gameType,
+          roundsCount: sanitizedRounds.length,
+          firstRoundSample: sanitizedRounds[0] && {
+            score: sanitizedRounds[0].score,
+            timeElapsed: sanitizedRounds[0].timeElapsed,
+            country: sanitizedRounds[0].country,
+            civilization: sanitizedRounds[0].civilization,
+            click: sanitizedRounds[0].click,
+            status: sanitizedRounds[0].status,
+          },
         });
 
         /** @type {import('../game/Game.js').SubmitResult} */

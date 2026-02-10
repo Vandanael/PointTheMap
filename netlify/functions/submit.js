@@ -124,6 +124,18 @@ export default async function submitHandler(req, context) {
     const body = await parseJsonBody(req);
     const parsed = SubmitSchema.safeParse(body);
     if (!parsed.success) {
+      logger.error('[submit] Payload validation failed:', parsed.error.flatten());
+      logger.info('[submit] Invalid payload details:', {
+        fieldErrors: parsed.error.flatten().fieldErrors,
+        formErrors: parsed.error.flatten().formErrors,
+        payloadPreview: {
+          token: body?.token?.substring(0, 8) + '...',
+          pseudo: body?.pseudo,
+          gameType: body?.gameType,
+          roundsCount: body?.rounds?.length,
+          firstRound: body?.rounds?.[0],
+        },
+      });
       return errorJson('invalid_payload', 'Invalid payload', 400, parsed.error.flatten());
     }
     const { token, rounds, pseudo, gameType = 'classic', payloadVersion } = parsed.data;
