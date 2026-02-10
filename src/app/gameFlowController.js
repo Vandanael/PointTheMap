@@ -596,7 +596,9 @@ export function createGameFlowController(deps) {
           };
 
           // Use original target names from session to ensure exact match with server expectations
-          const target = state.targets[index];
+          // Note: state.targets might not be available in test environments
+          const target =
+            state.targets && state.targets.length > index ? state.targets[index] : null;
 
           if (round.capital?.name) {
             sanitizedRound.capital = round.capital.name;
@@ -618,17 +620,27 @@ export function createGameFlowController(deps) {
           }
 
           // For civilization mode, use the exact target name from the session
-          if (target && typeof target === 'object' && 'name' in target) {
+          // Only override if we have valid target data (targets might not be available in test environments)
+          if (target && typeof target === 'object' && 'name' in target && target.name) {
             // This ensures we send the exact same name that the server expects for validation
-            if (deps.config.isCivilizationCategory(state.gameType)) {
-              sanitizedRound.civilization = target.name;
-            } else if (deps.config.isCountryCategory(state.gameType)) {
-              sanitizedRound.country = target.name;
-            } else if (deps.config.isStadiumCategory(state.gameType)) {
-              sanitizedRound.stadium = target.name;
-            } else {
-              // Capital mode
-              sanitizedRound.capital = target.name;
+            const shouldOverrideTargetName =
+              (deps.config.isCivilizationCategory(state.gameType) &&
+                !sanitizedRound.civilization) ||
+              (deps.config.isCountryCategory(state.gameType) && !sanitizedRound.country) ||
+              (deps.config.isStadiumCategory(state.gameType) && !sanitizedRound.stadium) ||
+              (deps.config.isCapitalCategory(state.gameType) && !sanitizedRound.capital);
+
+            if (shouldOverrideTargetName) {
+              if (deps.config.isCivilizationCategory(state.gameType)) {
+                sanitizedRound.civilization = target.name;
+              } else if (deps.config.isCountryCategory(state.gameType)) {
+                sanitizedRound.country = target.name;
+              } else if (deps.config.isStadiumCategory(state.gameType)) {
+                sanitizedRound.stadium = target.name;
+              } else {
+                // Capital mode
+                sanitizedRound.capital = target.name;
+              }
             }
           }
 
