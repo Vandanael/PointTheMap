@@ -199,57 +199,84 @@ import { UI } from './ui/UI.js';
 import { submitWithRetry } from './services/api.js';
 import { errorHandler } from './core/ErrorHandler.js';
 
-/** State with token/rounds/gameType for submit flow */
-const submitState = {
-  ...playingState,
-  token: 'test-token',
-  rounds: [
-    {
-      roundNumber: 1,
-      score: 1000,
-      distance: 50,
-      capital: { name: 'Paris' },
-      status: 'completed',
-      click: { lat: 48.8, lng: 2.3 },
-    },
-    {
-      roundNumber: 2,
-      score: 900,
-      distance: 80,
-      capital: { name: 'London' },
-      status: 'completed',
-      click: { lat: 51.5, lng: -0.1 },
-    },
-    {
-      roundNumber: 3,
-      score: 800,
-      distance: 120,
-      capital: { name: 'Berlin' },
-      status: 'completed',
-      click: { lat: 52.5, lng: 13.4 },
-    },
-    {
-      roundNumber: 4,
-      score: 700,
-      distance: 200,
-      capital: { name: 'Rome' },
-      status: 'completed',
-      click: { lat: 41.9, lng: 12.5 },
-    },
-    {
-      roundNumber: 5,
-      score: 600,
-      distance: 300,
-      capital: { name: 'Madrid' },
-      status: 'completed',
-      click: { lat: 40.4, lng: -3.7 },
-    },
-  ],
-  gameType: 'classic',
-};
-
 describe('main.js wiring', () => {
+  const MOCK_DATE = 1700000000000; // November 15, 2023 10:13:20 AM GMT
+  const MOCK_START_TIME = MOCK_DATE - 5000; // 5 seconds before
+  const MOCK_END_TIME = MOCK_DATE - 2000; // 2 seconds before
+  const MOCK_TIME_ELAPSED = MOCK_END_TIME - MOCK_START_TIME; // 3000
+
+  /** State with token/rounds/gameType for submit flow */
+  const submitState = {
+    ...playingState,
+    token: 'test-token',
+    rounds: [
+      {
+        capital: { name: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522 },
+        roundNumber: 1,
+        roundId: 1,
+        startTime: MOCK_START_TIME,
+        endTime: MOCK_END_TIME,
+        click: { lat: 48.8, lng: 2.3 },
+        distance: 50,
+        score: 1000,
+        status: 'completed',
+        gameType: 'classic',
+      },
+      {
+        capital: { name: 'London', country: 'UK', lat: 51.5074, lng: -0.1278 },
+        roundNumber: 2,
+        roundId: 2,
+        startTime: MOCK_START_TIME,
+        endTime: MOCK_END_TIME,
+        click: { lat: 51.5, lng: -0.1 },
+        distance: 80,
+        score: 900,
+        status: 'completed',
+        gameType: 'classic',
+      },
+      {
+        capital: { name: 'Berlin', country: 'Germany', lat: 52.52, lng: 13.405 },
+        roundNumber: 3,
+        roundId: 3,
+        startTime: MOCK_START_TIME,
+        endTime: MOCK_END_TIME,
+        click: { lat: 52.5, lng: 13.4 },
+        distance: 120,
+        score: 800,
+        status: 'completed',
+        gameType: 'classic',
+      },
+      {
+        capital: { name: 'Rome', country: 'Italy', lat: 41.9028, lng: 12.4964 },
+        roundNumber: 4,
+        roundId: 4,
+        startTime: MOCK_START_TIME,
+        endTime: MOCK_END_TIME,
+        click: { lat: 41.9, lng: 12.5 },
+        distance: 200,
+        score: 700,
+        status: 'completed',
+        gameType: 'classic',
+      },
+      {
+        capital: { name: 'Madrid', country: 'Spain', lat: 40.4168, lng: -3.7038 },
+        roundNumber: 5,
+        roundId: 5,
+        startTime: MOCK_START_TIME,
+        endTime: MOCK_END_TIME,
+        click: { lat: 40.4, lng: -3.7 },
+        distance: 300,
+        score: 600,
+        status: 'completed',
+        gameType: 'classic',
+      },
+    ],
+    gameType: 'classic',
+  };
+
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(MOCK_DATE);
     vi.clearAllMocks();
     mockState = playingState;
     mockStateManagerInstance.getState.mockImplementation(() => mockState);
@@ -260,6 +287,7 @@ describe('main.js wiring', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     eventBus.clear?.();
   });
 
@@ -334,14 +362,138 @@ describe('main.js wiring', () => {
       expect(submitWithRetry).toHaveBeenNthCalledWith(
         1,
         'test-token',
-        submitState.rounds,
+        [
+          // Expected sanitized rounds
+          {
+            click: { lat: 48.8, lng: 2.3 },
+            status: 'completed',
+            score: 1000,
+            timeElapsed: MOCK_TIME_ELAPSED,
+            capital: 'Paris',
+            correctCountryId: undefined,
+            clickedCountryId: undefined,
+            distanceToTargetKm: undefined,
+            correctCivilizationId: undefined,
+            clickedCivilizationId: undefined,
+          },
+          {
+            click: { lat: 51.5, lng: -0.1 },
+            status: 'completed',
+            score: 900,
+            timeElapsed: MOCK_TIME_ELAPSED,
+            capital: 'London',
+            correctCountryId: undefined,
+            clickedCountryId: undefined,
+            distanceToTargetKm: undefined,
+            correctCivilizationId: undefined,
+            clickedCivilizationId: undefined,
+          },
+          {
+            click: { lat: 52.5, lng: 13.4 },
+            status: 'completed',
+            score: 800,
+            timeElapsed: MOCK_TIME_ELAPSED,
+            capital: 'Berlin',
+            correctCountryId: undefined,
+            clickedCountryId: undefined,
+            distanceToTargetKm: undefined,
+            correctCivilizationId: undefined,
+            clickedCivilizationId: undefined,
+          },
+          {
+            click: { lat: 41.9, lng: 12.5 },
+            status: 'completed',
+            score: 700,
+            timeElapsed: MOCK_TIME_ELAPSED,
+            capital: 'Rome',
+            correctCountryId: undefined,
+            clickedCountryId: undefined,
+            distanceToTargetKm: undefined,
+            correctCivilizationId: undefined,
+            clickedCivilizationId: undefined,
+          },
+          {
+            click: { lat: 40.4, lng: -3.7 },
+            status: 'completed',
+            score: 600,
+            timeElapsed: MOCK_TIME_ELAPSED,
+            capital: 'Madrid',
+            correctCountryId: undefined,
+            clickedCountryId: undefined,
+            distanceToTargetKm: undefined,
+            correctCivilizationId: undefined,
+            clickedCivilizationId: undefined,
+          },
+        ],
         'USER',
         'classic'
       );
       expect(submitWithRetry).toHaveBeenNthCalledWith(
         2,
         'test-token',
-        submitState.rounds,
+        [
+          // Expected sanitized rounds
+          {
+            click: { lat: 48.8, lng: 2.3 },
+            status: 'completed',
+            score: 1000,
+            timeElapsed: MOCK_TIME_ELAPSED,
+            capital: 'Paris',
+            correctCountryId: undefined,
+            clickedCountryId: undefined,
+            distanceToTargetKm: undefined,
+            correctCivilizationId: undefined,
+            clickedCivilizationId: undefined,
+          },
+          {
+            click: { lat: 51.5, lng: -0.1 },
+            status: 'completed',
+            score: 900,
+            timeElapsed: MOCK_TIME_ELAPSED,
+            capital: 'London',
+            correctCountryId: undefined,
+            clickedCountryId: undefined,
+            distanceToTargetKm: undefined,
+            correctCivilizationId: undefined,
+            clickedCivilizationId: undefined,
+          },
+          {
+            click: { lat: 52.5, lng: 13.4 },
+            status: 'completed',
+            score: 800,
+            timeElapsed: MOCK_TIME_ELAPSED,
+            capital: 'Berlin',
+            correctCountryId: undefined,
+            clickedCountryId: undefined,
+            distanceToTargetKm: undefined,
+            correctCivilizationId: undefined,
+            clickedCivilizationId: undefined,
+          },
+          {
+            click: { lat: 41.9, lng: 12.5 },
+            status: 'completed',
+            score: 700,
+            timeElapsed: MOCK_TIME_ELAPSED,
+            capital: 'Rome',
+            correctCountryId: undefined,
+            clickedCountryId: undefined,
+            distanceToTargetKm: undefined,
+            correctCivilizationId: undefined,
+            clickedCivilizationId: undefined,
+          },
+          {
+            click: { lat: 40.4, lng: -3.7 },
+            status: 'completed',
+            score: 600,
+            timeElapsed: MOCK_TIME_ELAPSED,
+            capital: 'Madrid',
+            correctCountryId: undefined,
+            clickedCountryId: undefined,
+            distanceToTargetKm: undefined,
+            correctCivilizationId: undefined,
+            clickedCivilizationId: undefined,
+          },
+        ],
         lockedPseudo,
         'classic'
       );

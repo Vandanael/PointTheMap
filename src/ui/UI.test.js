@@ -301,14 +301,14 @@ describe('UI - Leaderboard Timeout', () => {
     expect(mockGetLeaderboard).toHaveBeenCalledWith('classic');
   });
 
-  it('loadLeaderboard() should reject with TIMEOUT after 5 seconds', async () => {
+  it('loadLeaderboard() should reject with TIMEOUT after 10 seconds', async () => {
     // Mock API to never resolve
     mockGetLeaderboard.mockImplementation(() => new Promise(() => {}));
 
     const loadPromise = loadLeaderboard('classic');
 
-    // Fast-forward past timeout
-    vi.advanceTimersByTime(5000);
+    // Fast-forward past timeout (10 seconds)
+    vi.advanceTimersByTime(10000);
 
     const result = await loadPromise;
 

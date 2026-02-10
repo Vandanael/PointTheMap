@@ -26,7 +26,7 @@ import {
 } from '../components.js';
 import { getStats } from '../../features/StatsManager.js';
 
-const LEADERBOARD_TIMEOUT_MS = 5000; // 5 seconds timeout
+const LEADERBOARD_TIMEOUT_MS = 10000; // 10 seconds timeout
 
 /** @param {string} type */
 const loadLeaderboard = async (type) => {

@@ -576,10 +576,49 @@ export function createGameFlowController(deps) {
       try {
         /** @type {GameState} */
         const state = stateManager.getState();
+        const sanitizedRounds = state.rounds.map((round) => {
+          const sanitizedRound = {
+            click: round.click,
+            status: round.status,
+            score: round.score !== null ? Math.max(0, Math.floor(round.score)) : 0,
+            timeElapsed:
+              round.endTime && round.startTime ? round.endTime - round.startTime : undefined,
+            correctCountryId: round.correctCountryId,
+            clickedCountryId: round.clickedCountryId,
+            distanceToTargetKm: round.distanceToTargetKm,
+            correctCivilizationId: round.correctCivilizationId,
+            clickedCivilizationId: round.clickedCivilizationId,
+          };
+
+          if (round.capital?.name) {
+            sanitizedRound.capital = round.capital.name;
+          }
+          if (round.country?.name) {
+            sanitizedRound.country = round.country.name;
+          }
+          if (round.country?.countryId) {
+            sanitizedRound.countryId = round.country.countryId;
+          }
+          if (round.stadium?.name) {
+            sanitizedRound.stadium = round.stadium.name;
+          }
+          if (round.stadium?.city) {
+            sanitizedRound.city = round.stadium.city;
+          }
+          if (round.civilization?.name) {
+            sanitizedRound.civilization = round.civilization.name;
+          }
+          if (round.civilization?.id) {
+            // Use 'id' for civilizationId as per schema
+            sanitizedRound.civilizationId = round.civilization.id;
+          }
+          return sanitizedRound;
+        });
+
         /** @type {import('../game/Game.js').SubmitResult} */
         const result = await api.submitWithRetry(
           state.token,
-          state.rounds,
+          sanitizedRounds, // Use the transformed rounds
           currentPseudo,
           state.gameType
         );

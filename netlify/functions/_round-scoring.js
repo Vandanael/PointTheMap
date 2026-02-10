@@ -84,6 +84,7 @@ export function scoreRound(round, i, session) {
       serverScore = calculateCountryScore(distance);
 
       serverScore += applyTimeBonus(serverScore, distance, round.timeElapsed, modeKey);
+      serverScore = Math.round(serverScore); // Round serverScore here for consistency
 
       if (round.score && Math.abs(round.score - serverScore) > 100) {
         logger.warn(
@@ -141,6 +142,7 @@ export function scoreRound(round, i, session) {
       serverScore = calculateCountryScore(distance);
 
       serverScore += applyTimeBonus(serverScore, distance, round.timeElapsed, modeKey);
+      serverScore = Math.round(serverScore); // Round serverScore here for consistency
 
       if (round.score && Math.abs(round.score - serverScore) > 100) {
         logger.warn(
