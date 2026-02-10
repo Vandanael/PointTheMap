@@ -275,8 +275,9 @@ function stripInlineScripts({ enabled = false } = {}) {
           cursor = close + 9;
         }
 
-        // Remove inline event handlers like onload="..."
-        out = out.replace(new RegExp('\\son[a-z]+=\"[^\"]*\"', 'gi'), '');
+        // Remove inline event handlers like onload="...", onload='...', onload=...
+        // This is intentionally broad to cover all attribute quoting styles.
+        out = out.replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
         return out;
       },
     },
@@ -345,6 +346,10 @@ export default defineConfig(({ mode }) => {
               return 'core-services';
             }
             if (id.includes('/src/services/') || id.includes('\\src\\services\\')) {
+              return 'core-services';
+            }
+            // Config is shared by both core-services and ui-systems; place it here to break the cycle.
+            if (id.includes('/src/config/') || id.includes('\\src\\config\\')) {
               return 'core-services';
             }
 

@@ -10,20 +10,23 @@ import {
   isDatabaseConnectionError,
   createLogger,
 } from './_utils.js';
-// Import shared game logic from lib (same functions used by client)
-import { haversine, calculateScore } from '../../lib/game-math/index.js';
-import {
-  pointInPolygon,
-  distanceToPolygonBorder,
-  calculateCountryScore,
-} from '../../lib/geo-utils/index.js';
-import { getCountryFeature, getCivilizationFeature } from './_geo-data.js';
-import { GAME, API } from '../../lib/config/index.js';
-import { getTimeBonusConfig } from '../../lib/config/game-modes.js';
+import { API } from '../../lib/config/index.js';
 import { toDomainModel } from '../../src/lib/session/sessionModel.js';
 import { SubmitSchema } from '../../lib/schemas/submit.js';
+import { recordDbFailure, isDbBreakerOpen, getDbBreakerUntil } from './_circuit-breaker.js';
+import { createFallbackRateLimiter, checkDbRateLimit } from './_rate-limit.js';
+import { checkPlausibility, validateRounds } from './_round-validation.js';
+import { scoreRound } from './_round-scoring.js';
 
 const logger = createLogger('submit');
+const E2E_BYPASS_ENABLED = process.env.E2E_BYPASS_ENABLED === '1';
+const E2E_BYPASS_TOKEN = process.env.E2E_BYPASS_TOKEN;
+
+const isE2EBypass = (req) => {
+  if (!E2E_BYPASS_ENABLED || !E2E_BYPASS_TOKEN) return false;
+  const token = req.headers.get('x-e2e-bypass');
+  return token === E2E_BYPASS_TOKEN;
+};
 
 /**
  * 502 from Netlify usually means: function timeout (default 10s), crash before response, or cold-start failure.
@@ -42,188 +45,12 @@ const logger = createLogger('submit');
 const errorJson = (code, message, status = 400, details = undefined, headers = undefined) =>
   jsonResponse({ ok: false, error: { code, message, details } }, status, headers);
 
-const DB_BREAKER_WINDOW_MS = 60 * 1000;
-const DB_BREAKER_COOLDOWN_MS = 60 * 1000;
-const DB_BREAKER_THRESHOLD = 3;
 const SUPPORTED_PAYLOAD_VERSIONS = new Set([1]);
 
-/** @type {number[]} */
-let dbFailureTimestamps = [];
-let dbBreakerUntil = 0;
-
-const fallbackRateLimits = new Map();
-const FALLBACK_RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
-
-/** @param {unknown} error */
-const recordDbFailure = (error) => {
-  if (!isDatabaseConnectionError(error)) return;
-  const now = Date.now();
-  dbFailureTimestamps = dbFailureTimestamps.filter((ts) => now - ts <= DB_BREAKER_WINDOW_MS);
-  dbFailureTimestamps.push(now);
-  if (dbFailureTimestamps.length >= DB_BREAKER_THRESHOLD) {
-    dbBreakerUntil = now + DB_BREAKER_COOLDOWN_MS;
-  }
-};
-
-const isDbBreakerOpen = () => Date.now() < dbBreakerUntil;
-
-/** @param {string} ip */
-const checkFallbackRateLimit = (ip) => {
-  const now = Date.now();
-  const entry = fallbackRateLimits.get(ip);
-  if (!entry || now > entry.expiresAt) {
-    const expiresAt = now + FALLBACK_RATE_LIMIT_WINDOW_MS;
-    fallbackRateLimits.set(ip, { count: 1, expiresAt });
-    return { allowed: true, remaining: API.RATE_LIMIT_PER_HOUR - 1 };
-  }
-  if (entry.count >= API.RATE_LIMIT_PER_HOUR) {
-    return { allowed: false, remaining: 0 };
-  }
-  entry.count += 1;
-  return { allowed: true, remaining: API.RATE_LIMIT_PER_HOUR - entry.count };
-};
-
-/**
- * @param {number} gameDuration
- * @returns {{valid: boolean, reason?: string}}
- */
-const checkPlausibility = (gameDuration) => {
-  if (gameDuration < API.MIN_PLAUSIBLE_DURATION_MS || gameDuration > API.MAX_GAME_DURATION_MS) {
-    return { valid: false, reason: 'Session duration implausible' };
-  }
-  return { valid: true };
-};
-
-/**
- * @param {string} ip
- * @param {any} context
- * @returns {Promise<{allowed: boolean, remaining: number}>}
- */
-const checkRateLimit = async (ip, context) => {
-  try {
-    const sql = context.sql;
-    const hourKey = `${ip}-${Math.floor(Date.now() / 3600000)}`;
-    const expiresAt = new Date(Date.now() + 3600000);
-
-    await sql`DELETE FROM rate_limits WHERE expires_at < NOW()`;
-
-    const existing = await sql`
-      SELECT count FROM rate_limits WHERE key = ${hourKey}
-    `;
-
-    if (existing.length > 0) {
-      const count = existing[0].count;
-      if (count >= API.RATE_LIMIT_PER_HOUR) {
-        return { allowed: false, remaining: 0 };
-      }
-      await sql`
-        UPDATE rate_limits
-        SET count = count + 1
-        WHERE key = ${hourKey}
-      `;
-      return { allowed: true, remaining: API.RATE_LIMIT_PER_HOUR - count - 1 };
-    } else {
-      await sql`
-        INSERT INTO rate_limits (key, count, expires_at)
-        VALUES (${hourKey}, 1, ${expiresAt})
-      `;
-      return { allowed: true, remaining: API.RATE_LIMIT_PER_HOUR - 1 };
-    }
-  } catch (e) {
-    recordDbFailure(e);
-    if (process.env.NODE_ENV === 'development') {
-      const error = /** @type {Error & {code?: string}} */ (e);
-      logger.error('Rate limit error:', error.message, error.code);
-    }
-    // Fallback to in-memory limiter when DB is unavailable
-    return checkFallbackRateLimit(ip);
-  }
-};
-
-/**
- * Validate submitted rounds against session targets.
- * @param {any[]} rounds - Submitted rounds
- * @param {any[]} sessionTargets - Session targets (capitals, countries, stadiums, or civilizations)
- * @param {string} gameType - Game mode identifier
- * @returns {{valid: boolean, error?: string}}
- */
-const validateRounds = (rounds, sessionTargets, gameType) => {
-  if (!Array.isArray(rounds) || rounds.length !== GAME.ROUNDS) {
-    return { valid: false, error: 'Invalid rounds count' };
-  }
-
-  const isCountryMode = gameType === 'country' || gameType === 'country_daily';
-  const isCivilizationMode = gameType === 'civilization' || gameType === 'civilization_daily';
-  const isStadiumMode = gameType === 'stadium' || gameType === 'stadium_daily';
-
-  for (let i = 0; i < GAME.ROUNDS; i++) {
-    const round = rounds[i];
-    const expected = sessionTargets[i];
-
-    const targetField = isCountryMode
-      ? round.country
-      : isCivilizationMode
-        ? round.civilization
-        : isStadiumMode
-          ? round.stadium
-          : round.capital;
-
-    if (!round || !targetField) {
-      return { valid: false, error: `Missing round ${i + 1}` };
-    }
-
-    const expectedName =
-      typeof expected === 'object' && expected !== null && 'name' in expected
-        ? expected.name
-        : expected;
-    if (targetField !== expectedName) {
-      return {
-        valid: false,
-        error: `${isCountryMode ? 'Country' : isCivilizationMode ? 'Civilization' : isStadiumMode ? 'Stadium' : 'Capital'} mismatch at round ${i + 1}`,
-      };
-    }
-
-    // Per-round time validation - detect suspiciously fast submissions
-    if (round.timeElapsed !== undefined && round.timeElapsed !== null) {
-      if (typeof round.timeElapsed !== 'number' || !Number.isFinite(round.timeElapsed)) {
-        return { valid: false, error: `Invalid time at round ${i + 1}` };
-      }
-      if (round.timeElapsed < API.MIN_ROUND_TIME_MS) {
-        return {
-          valid: false,
-          error: `Round ${i + 1} completed too fast (${round.timeElapsed}ms)`,
-        };
-      }
-      if (round.timeElapsed > GAME.TIMER_MS + GAME.GRACE_PERIOD_MS + 1000) {
-        return {
-          valid: false,
-          error: `Round ${i + 1} time exceeds maximum (${round.timeElapsed}ms)`,
-        };
-      }
-    }
-
-    if (round.click) {
-      const { lat, lng } = round.click;
-
-      // Type and finiteness validation
-      if (typeof lat !== 'number' || typeof lng !== 'number') {
-        return { valid: false, error: `Invalid click coordinates at round ${i + 1}` };
-      }
-
-      // Check for NaN, Infinity, -Infinity
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-        return { valid: false, error: `Invalid coordinate values at round ${i + 1}` };
-      }
-
-      // Geographic bounds validation
-      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-        return { valid: false, error: `Click out of bounds at round ${i + 1}` };
-      }
-    }
-  }
-
-  return { valid: true };
-};
+const fallbackLimiter = createFallbackRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  maxRequests: API.RATE_LIMIT_PER_HOUR,
+});
 
 /**
  * @param {Request} req
@@ -236,8 +63,10 @@ export default async function submitHandler(req, context) {
       return errorJson('method_not_allowed', 'Method not allowed', 405);
     }
 
+    const bypass = isE2EBypass(req);
+
     if (isDbBreakerOpen()) {
-      const retryAfterSeconds = Math.ceil((dbBreakerUntil - Date.now()) / 1000);
+      const retryAfterSeconds = Math.ceil((getDbBreakerUntil() - Date.now()) / 1000);
       return errorJson(
         'service_unavailable',
         'Service temporarily unavailable. Please retry.',
@@ -266,20 +95,31 @@ export default async function submitHandler(req, context) {
 
     const ip = getClientIp(req, context);
 
-    // Wrap rate limit check in try-catch
-    let rateLimit;
-    try {
-      rateLimit = await checkRateLimit(ip, context);
-    } catch (rateLimitError) {
-      // If rate limiting fails, log but allow request to proceed
-      logger.error('Rate limit check failed:', rateLimitError);
-      rateLimit = checkFallbackRateLimit(ip);
-    }
+    if (!bypass) {
+      // Wrap rate limit check in try-catch
+      let rateLimit;
+      try {
+        rateLimit = await checkDbRateLimit({
+          ip,
+          sql,
+          keyPrefix: '',
+          maxRequests: API.RATE_LIMIT_PER_HOUR,
+          fallback: fallbackLimiter,
+          logger,
+        });
+      } catch (rateLimitError) {
+        // If rate limiting fails, log but allow request to proceed
+        logger.error('Rate limit check failed:', rateLimitError);
+        rateLimit = fallbackLimiter.check(ip);
+      }
 
-    if (!rateLimit.allowed) {
-      return errorJson('rate_limited', 'Rate limit exceeded. Try again later.', 429);
+      if (!rateLimit.allowed) {
+        return errorJson('rate_limited', 'Rate limit exceeded. Try again later.', 429);
+      }
+      logger.info('[submit] rate limit ok, remaining:', rateLimit.remaining);
+    } else {
+      logger.info('[submit] e2e bypass enabled: skipping rate limit');
     }
-    logger.info('[submit] rate limit ok, remaining:', rateLimit.remaining);
 
     const body = await parseJsonBody(req);
     const parsed = SubmitSchema.safeParse(body);
@@ -382,7 +222,7 @@ export default async function submitHandler(req, context) {
       return errorJson('session_expired', 'Session expired', 401);
     }
 
-    if (gameDuration < API.MIN_GAME_DURATION_MS) {
+    if (!bypass && gameDuration < API.MIN_GAME_DURATION_MS) {
       return errorJson('suspicious_fast', 'Suspicious activity: too fast', 400);
     }
 
@@ -405,301 +245,18 @@ export default async function submitHandler(req, context) {
       return errorJson('invalid_rounds', validation.error || 'Invalid rounds', 400);
     }
 
-    const plausibility = checkPlausibility(gameDuration);
-    if (!plausibility.valid) {
-      return errorJson(
-        'implausible_duration',
-        plausibility.reason || 'Session duration implausible',
-        400
-      );
+    if (!bypass) {
+      const plausibility = checkPlausibility(gameDuration);
+      if (!plausibility.valid) {
+        return errorJson(
+          'implausible_duration',
+          plausibility.reason || 'Session duration implausible',
+          400
+        );
+      }
     }
 
-    /**
-     * @param {any} round
-     * @param {number} i
-     * @returns {any}
-     */
-    const validateRound = (round, i) => {
-      const isCountryMode = session.gameType === 'country' || session.gameType === 'country_daily';
-      const isCivilizationMode =
-        session.gameType === 'civilization' || session.gameType === 'civilization_daily';
-      const serverTarget = /** @type {any} */ (session.targets[i]); // Generic session targets (semantically correct)
-
-      // Country mode: server-side GeoJSON validation
-      if (isCountryMode) {
-        if (!round.click) {
-          return {
-            country: round.country,
-            countryId: round.countryId,
-            click: null,
-            distance: null,
-            score: 0,
-            status: 'timeout',
-          };
-        }
-
-        const targetCountryId = serverTarget?.countryId ?? '';
-        const targetFeature = targetCountryId
-          ? /** @type {any} */ (getCountryFeature(targetCountryId))
-          : undefined;
-        let serverScore;
-        let distance;
-
-        if (targetFeature) {
-          const isInside = pointInPolygon(
-            { coordinates: [round.click.lng, round.click.lat] },
-            targetFeature.geometry
-          );
-          distance = isInside
-            ? 0
-            : distanceToPolygonBorder([round.click.lat, round.click.lng], targetFeature.geometry);
-          serverScore = calculateCountryScore(distance);
-
-          // Apply time bonus if enabled for this mode
-          const modeKey = session.gameType ?? 'classic';
-          const modeConfig = getTimeBonusConfig(modeKey);
-          if (
-            round.timeElapsed &&
-            modeConfig?.enabled &&
-            modeConfig.distanceThreshold !== null &&
-            modeConfig.distanceThreshold !== undefined &&
-            modeConfig.maxBonusPercent !== null &&
-            modeConfig.maxBonusPercent !== undefined &&
-            modeConfig.maxBonus !== null &&
-            modeConfig.maxBonus !== undefined
-          ) {
-            const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
-            const timeRemaining = totalTimeAllowed - round.timeElapsed;
-            if (distance < modeConfig.distanceThreshold && timeRemaining > 0) {
-              const timeRatio = timeRemaining / totalTimeAllowed;
-              const bonusPercent = timeRatio * modeConfig.maxBonusPercent;
-              serverScore += Math.min(Math.round(serverScore * bonusPercent), modeConfig.maxBonus);
-            }
-          }
-
-          if (round.score && Math.abs(round.score - serverScore) > 100) {
-            logger.warn(
-              `[submit] Country score mismatch: client=${round.score}, server=${serverScore}`
-            );
-          }
-        } else {
-          // If server cannot validate, do NOT trust client score.
-          logger.error('[submit] Missing country GeoJSON feature:', targetCountryId);
-          distance = null;
-          serverScore = 0;
-        }
-
-        const safeDistance =
-          typeof distance === 'number' && Number.isFinite(distance) ? Math.round(distance) : null;
-        return {
-          country: round.country,
-          countryId: round.countryId,
-          correctCountryId: serverTarget.countryId,
-          clickedCountryId: round.clickedCountryId,
-          click: round.click,
-          distance: safeDistance,
-          score: serverScore,
-          status: targetFeature ? 'completed' : 'invalid',
-        };
-      }
-
-      // Civilization mode: server-side GeoJSON validation
-      if (isCivilizationMode) {
-        if (!round.click) {
-          return {
-            civilization: round.civilization,
-            civilizationId: round.civilizationId,
-            click: null,
-            distance: null,
-            score: 0,
-            status: 'timeout',
-          };
-        }
-
-        const targetCivilizationId = serverTarget?.id ?? '';
-        const targetFeature = targetCivilizationId
-          ? /** @type {any} */ (getCivilizationFeature(targetCivilizationId))
-          : undefined;
-        let serverScore;
-        let distance;
-
-        if (targetFeature) {
-          const isInside = pointInPolygon(
-            { coordinates: [round.click.lng, round.click.lat] },
-            targetFeature.geometry
-          );
-          distance = isInside
-            ? 0
-            : distanceToPolygonBorder([round.click.lat, round.click.lng], targetFeature.geometry);
-          serverScore = calculateCountryScore(distance);
-
-          // Apply time bonus if enabled for this mode
-          const modeKey = session.gameType ?? 'classic';
-          const modeConfig = getTimeBonusConfig(modeKey);
-          if (
-            round.timeElapsed &&
-            modeConfig?.enabled &&
-            modeConfig.distanceThreshold !== null &&
-            modeConfig.distanceThreshold !== undefined &&
-            modeConfig.maxBonusPercent !== null &&
-            modeConfig.maxBonusPercent !== undefined &&
-            modeConfig.maxBonus !== null &&
-            modeConfig.maxBonus !== undefined
-          ) {
-            const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
-            const timeRemaining = totalTimeAllowed - round.timeElapsed;
-            if (distance < modeConfig.distanceThreshold && timeRemaining > 0) {
-              const timeRatio = timeRemaining / totalTimeAllowed;
-              const bonusPercent = timeRatio * modeConfig.maxBonusPercent;
-              serverScore += Math.min(Math.round(serverScore * bonusPercent), modeConfig.maxBonus);
-            }
-          }
-
-          if (round.score && Math.abs(round.score - serverScore) > 100) {
-            logger.warn(
-              `[submit] Civilization score mismatch: client=${round.score}, server=${serverScore}`
-            );
-          }
-        } else {
-          // If server cannot validate, do NOT trust client score.
-          logger.error('[submit] Missing civilization GeoJSON feature:', targetCivilizationId);
-          distance = null;
-          serverScore = 0;
-        }
-
-        const safeDistance =
-          typeof distance === 'number' && Number.isFinite(distance) ? Math.round(distance) : null;
-        return {
-          civilization: round.civilization,
-          civilizationId: round.civilizationId,
-          correctCivilizationId: serverTarget.id,
-          clickedCivilizationId: round.clickedCivilizationId,
-          click: round.click,
-          distance: safeDistance,
-          score: serverScore,
-          status: targetFeature ? 'completed' : 'invalid',
-        };
-      }
-
-      // Stadium mode: server-side validation (has lat/lng like capitals)
-      if (session.gameType === 'stadium' || session.gameType === 'stadium_daily') {
-        const stadiumCoords = /** @type {[number, number]} */ ([
-          serverTarget.lat ?? 0,
-          serverTarget.lng ?? 0,
-        ]);
-
-        if (!round.click) {
-          return {
-            stadium: round.stadium,
-            click: null,
-            distance: null,
-            score: 0,
-            status: 'timeout',
-          };
-        }
-
-        const clickCoords = /** @type {[number, number]} */ ([round.click.lat, round.click.lng]);
-        const distance = haversine(clickCoords, stadiumCoords);
-
-        if (distance > API.MAX_DISTANCE_KM) {
-          return {
-            stadium: round.stadium,
-            click: round.click,
-            distance: API.MAX_DISTANCE_KM,
-            score: 0,
-            status: 'invalid',
-          };
-        }
-
-        const score = calculateScore(distance);
-        if (round.score && Math.abs(round.score - score) > 1) {
-          logger.warn(
-            `[submit] Stadium score mismatch: client=${round.score}, server=${Math.round(score)}`
-          );
-        }
-
-        return {
-          stadium: round.stadium,
-          click: round.click,
-          distance: Math.round(distance),
-          score: Math.round(score),
-          status: 'completed',
-        };
-      }
-
-      // Capital mode: validate server-side
-      const capitalCoords = /** @type {[number, number]} */ ([serverTarget.lat, serverTarget.lng]);
-
-      if (!round.click) {
-        return {
-          capital: round.capital,
-          click: null,
-          distance: null,
-          score: 0,
-          status: 'timeout',
-        };
-      }
-
-      const clickCoords = /** @type {[number, number]} */ ([round.click.lat, round.click.lng]);
-      const distance = haversine(clickCoords, capitalCoords);
-
-      if (distance > API.MAX_DISTANCE_KM) {
-        return {
-          capital: round.capital,
-          click: round.click,
-          distance: API.MAX_DISTANCE_KM,
-          score: 0,
-          status: 'invalid',
-        };
-      }
-
-      const baseScore = calculateScore(distance);
-
-      // Calculate time bonus (if applicable for this game mode)
-      let timeBonus = 0;
-      const modeKey = session.gameType ?? 'classic';
-      const timeBonusConfig = getTimeBonusConfig(modeKey);
-      if (
-        round.timeElapsed &&
-        timeBonusConfig?.enabled &&
-        timeBonusConfig.distanceThreshold !== null &&
-        timeBonusConfig.distanceThreshold !== undefined &&
-        timeBonusConfig.maxBonusPercent !== null &&
-        timeBonusConfig.maxBonusPercent !== undefined &&
-        timeBonusConfig.maxBonus !== null &&
-        timeBonusConfig.maxBonus !== undefined
-      ) {
-        const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
-        const timeRemaining = totalTimeAllowed - round.timeElapsed;
-        const config = timeBonusConfig;
-
-        if (config.enabled && distance < config.distanceThreshold && timeRemaining > 0) {
-          const timeRatio = timeRemaining / totalTimeAllowed;
-          const bonusPercent = timeRatio * config.maxBonusPercent;
-          timeBonus = Math.min(Math.round(baseScore * bonusPercent), config.maxBonus);
-        }
-      }
-
-      const totalScore = baseScore + timeBonus;
-
-      // Validate client score matches server calculation (±1 point tolerance for rounding)
-      if (round.score && Math.abs(round.score - totalScore) > 1) {
-        logger.warn(
-          `[submit] Score mismatch: client=${round.score}, server=${totalScore} (base=${Math.round(baseScore)}, bonus=${timeBonus})`
-        );
-        // Use server score for anti-cheat
-      }
-
-      return {
-        capital: round.capital,
-        click: round.click,
-        distance: Math.round(distance),
-        score: Math.round(totalScore),
-        status: 'completed',
-      };
-    };
-
-    const validatedRounds = rounds.map(validateRound);
+    const validatedRounds = rounds.map((round, i) => scoreRound(round, i, session));
 
     const totalScore = validatedRounds.reduce(
       (/** @type {number} */ sum, /** @type {any} */ r) => sum + r.score,

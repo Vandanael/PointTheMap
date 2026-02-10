@@ -3,34 +3,18 @@
 
 import { getDatabase } from './db.js';
 import { jsonResponse, parseJsonBody, getClientIp, createLogger } from './_utils.js';
+import { createFallbackRateLimiter, checkDbRateLimit } from './_rate-limit.js';
 
 const logger = createLogger('error-report');
 
 const MAX_ERRORS_PER_BATCH = 10;
 const MAX_STACK_LENGTH = 4096;
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const RATE_LIMIT_MAX = 20;
 
-/** @type {Map<string, { count: number, expiresAt: number }>} */
-const rateLimits = new Map();
-
-/**
- * @param {string} ip
- * @returns {boolean}
- */
-const checkRateLimit = (ip) => {
-  const now = Date.now();
-  const entry = rateLimits.get(ip);
-  if (!entry || now > entry.expiresAt) {
-    rateLimits.set(ip, { count: 1, expiresAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) {
-    return false;
-  }
-  entry.count += 1;
-  return true;
-};
+const fallbackLimiter = createFallbackRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  maxRequests: RATE_LIMIT_MAX,
+});
 
 /**
  * @param {unknown} error
@@ -53,8 +37,24 @@ export default async function errorReportHandler(req, context) {
     return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
+  let sql;
+  try {
+    sql = getDatabase(context);
+  } catch (dbError) {
+    logger.error('Database connection failed:', /** @type {Error} */ (dbError).message);
+    return jsonResponse({ error: 'Service unavailable' }, 503);
+  }
+
   const ip = getClientIp(req, context);
-  if (!checkRateLimit(ip)) {
+  const rateLimit = await checkDbRateLimit({
+    ip,
+    sql,
+    keyPrefix: 'error-report-',
+    maxRequests: RATE_LIMIT_MAX,
+    fallback: fallbackLimiter,
+    logger,
+  });
+  if (!rateLimit.allowed) {
     return jsonResponse({ error: 'Rate limit exceeded' }, 429);
   }
 
@@ -67,14 +67,6 @@ export default async function errorReportHandler(req, context) {
 
   if (errors.length > MAX_ERRORS_PER_BATCH) {
     return jsonResponse({ error: `Max ${MAX_ERRORS_PER_BATCH} errors per batch` }, 400);
-  }
-
-  let sql;
-  try {
-    sql = getDatabase(context);
-  } catch (dbError) {
-    logger.error('Database connection failed:', /** @type {Error} */ (dbError).message);
-    return jsonResponse({ error: 'Service unavailable' }, 503);
   }
 
   const userAgent = req.headers.get('user-agent') || '';

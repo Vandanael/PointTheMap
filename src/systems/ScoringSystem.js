@@ -13,6 +13,7 @@ import {
   distanceToPolygonBorder,
   calculateCountryScore as calculateCountryScoreLib,
 } from '@lib/geo-utils/index.js';
+import { calculateTimeBonus as calculateTimeBonusLib } from '@lib/scoring/index.js';
 import { GAME, SCORING_THRESHOLDS, SCORING_FORMULA } from '@lib/config';
 import { FEATURES } from '../config/features.js';
 import { MODE_IDS, getTimeBonusConfig } from '../config/game-modes.js';
@@ -91,25 +92,13 @@ export class ScoringSystem {
     distanceKm,
     gameMode = MODE_IDS.CLASSIC
   ) {
-    // Get mode-specific config (single source of truth: GAME_MODES)
-    const config = getTimeBonusConfig(gameMode);
-
-    // Check global and mode-specific flags
-    if (!FEATURES.TIME_BONUS || !config || !config.enabled) {
-      return 0;
-    }
-
-    // Only reward time bonus when answered in the first half of the timer
-    if (timeRemainingMs < totalTimeMs / 2) {
-      return 0;
-    }
-
-    // Calculate bonus as percentage of base score
-    const timeRatio = Math.max(0, Math.min(1, timeRemainingMs / totalTimeMs));
-    const bonusPercent = timeRatio * config.maxBonusPercent;
-    const bonus = Math.round(baseScore * bonusPercent);
-
-    return Math.min(bonus, config.maxBonus);
+    return calculateTimeBonusLib({
+      baseScore,
+      timeRemainingMs,
+      totalTimeMs,
+      timeBonusConfig: getTimeBonusConfig(gameMode),
+      featureEnabled: FEATURES.TIME_BONUS,
+    });
   }
 
   /**

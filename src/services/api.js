@@ -37,7 +37,7 @@ import { loadCapitals, loadSelectBalancedCapitals } from '../data/capitals-loade
 import { loadStadiums, loadSelectBalancedStadiums } from '../data/stadiums-loader.js';
 import { APIError, GameError } from '../core/ErrorHandler.js';
 import { createApiClient } from './apiClient.js';
-import { StartSessionSchema } from '@lib/schemas/session.js';
+import { StartSessionWithModeSchema } from '@lib/schemas/session.js';
 import { SubmitSchema } from '@lib/schemas/submit.js';
 import { getRetryQueue, removeFromRetryQueue, addToRetryQueue, saveRetryQueue } from './storage.js';
 import { playerAuth } from './PlayerAuth.js';
@@ -78,43 +78,6 @@ const fetchApi = createApiClient({
  * @returns {value is Record<string, any>}
  */
 const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-
-/**
- * @param {any} target
- * @returns {boolean}
- */
-const isValidCapital = (target) =>
-  isObject(target) &&
-  typeof target.name === 'string' &&
-  typeof target.country === 'string' &&
-  Number.isFinite(target.lat) &&
-  Number.isFinite(target.lng);
-
-/**
- * @param {any} target
- * @returns {boolean}
- */
-const isValidCountry = (target) =>
-  isObject(target) && typeof target.name === 'string' && typeof target.countryId === 'string';
-
-/**
- * @param {any} target
- * @returns {boolean}
- */
-const isValidStadium = (target) =>
-  isObject(target) &&
-  typeof target.name === 'string' &&
-  typeof target.city === 'string' &&
-  typeof target.country === 'string' &&
-  Number.isFinite(target.lat) &&
-  Number.isFinite(target.lng);
-
-/**
- * @param {any} target
- * @returns {boolean}
- */
-const isValidCivilization = (target) =>
-  isObject(target) && typeof target.id === 'string' && typeof target.name === 'string';
 
 /**
  * @param {any} entry
@@ -169,52 +132,10 @@ const normalizeLeaderboard = (data) => {
  * @returns {{ valid: boolean, error?: string }}
  */
 export const validateStartSessionPayload = (payload, gameType) => {
-  const parsed = StartSessionSchema.safeParse(payload);
+  const parsed = StartSessionWithModeSchema.safeParse({ ...payload, gameType });
   if (!parsed.success) {
-    return { valid: false, error: 'Invalid payload schema' };
-  }
-  const safePayload = parsed.data;
-
-  const isCountryMode = gameType === MODE_IDS.COUNTRY || gameType === MODE_IDS.COUNTRY_DAILY;
-  const isCivilizationMode =
-    gameType === MODE_IDS.CIVILIZATION || gameType === MODE_IDS.CIVILIZATION_DAILY;
-  const isStadiumMode = gameType === MODE_IDS.STADIUM || gameType === MODE_IDS.STADIUM_DAILY;
-
-  if (isCountryMode) {
-    if (!Array.isArray(safePayload.countries) || safePayload.countries.length === 0) {
-      return { valid: false, error: 'Missing countries' };
-    }
-    if (!safePayload.countries.every(isValidCountry)) {
-      return { valid: false, error: 'Invalid country payload' };
-    }
-    return { valid: true };
-  }
-
-  if (isCivilizationMode) {
-    if (!Array.isArray(safePayload.civilizations) || safePayload.civilizations.length === 0) {
-      return { valid: false, error: 'Missing civilizations' };
-    }
-    if (!safePayload.civilizations.every(isValidCivilization)) {
-      return { valid: false, error: 'Invalid civilization payload' };
-    }
-    return { valid: true };
-  }
-
-  if (isStadiumMode) {
-    if (!Array.isArray(safePayload.stadiums) || safePayload.stadiums.length === 0) {
-      return { valid: false, error: 'Missing stadiums' };
-    }
-    if (!safePayload.stadiums.every(isValidStadium)) {
-      return { valid: false, error: 'Invalid stadium payload' };
-    }
-    return { valid: true };
-  }
-
-  if (!Array.isArray(safePayload.capitals) || safePayload.capitals.length === 0) {
-    return { valid: false, error: 'Missing capitals' };
-  }
-  if (!safePayload.capitals.every(isValidCapital)) {
-    return { valid: false, error: 'Invalid capital payload' };
+    const firstMessage = parsed.error.issues[0]?.message;
+    return { valid: false, error: firstMessage || 'Invalid payload schema' };
   }
   return { valid: true };
 };

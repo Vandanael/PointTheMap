@@ -62,25 +62,72 @@ global.fetch = vi.fn();
 
 describe('api.js', () => {
   describe('validateStartSessionPayload', () => {
+    const base = { token: 'abc', startTime: Date.now(), csrfToken: 'csrf' };
+
     it('accepts valid classic payload', () => {
       const payload = {
-        token: 'abc',
-        startTime: Date.now(),
-        csrfToken: 'csrf',
+        ...base,
         capitals: [{ name: 'Paris', country: 'France', lat: 1, lng: 2 }],
       };
       expect(validateStartSessionPayload(payload, 'classic').valid).toBe(true);
     });
 
-    it('rejects missing targets for country mode', () => {
+    it('rejects classic mode without capitals', () => {
+      const result = validateStartSessionPayload(base, 'classic');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Missing capitals');
+    });
+
+    it('rejects country mode without countries', () => {
       const payload = {
-        token: 'abc',
-        startTime: Date.now(),
-        csrfToken: 'csrf',
+        ...base,
         capitals: [{ name: 'Paris', country: 'France', lat: 1, lng: 2 }],
       };
       const result = validateStartSessionPayload(payload, 'country');
       expect(result.valid).toBe(false);
+      expect(result.error).toBe('Missing countries');
+    });
+
+    it('accepts country mode with countries', () => {
+      const payload = {
+        ...base,
+        countries: [{ name: 'France', countryId: 'FRA' }],
+      };
+      expect(validateStartSessionPayload(payload, 'country').valid).toBe(true);
+    });
+
+    it('rejects stadium mode without stadiums', () => {
+      const result = validateStartSessionPayload(base, 'stadium');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Missing stadiums');
+    });
+
+    it('accepts stadium mode with stadiums', () => {
+      const payload = {
+        ...base,
+        stadiums: [{ name: 'Wembley', city: 'London', country: 'UK', lat: 51.5, lng: -0.3 }],
+      };
+      expect(validateStartSessionPayload(payload, 'stadium').valid).toBe(true);
+    });
+
+    it('rejects civilization mode without civilizations', () => {
+      const result = validateStartSessionPayload(base, 'civilization');
+      expect(result.valid).toBe(false);
+      expect(result.error).toBe('Missing civilizations');
+    });
+
+    it('accepts civilization mode with civilizations', () => {
+      const payload = {
+        ...base,
+        civilizations: [{ id: 'rome', name: 'Roman Empire' }],
+      };
+      expect(validateStartSessionPayload(payload, 'civilization').valid).toBe(true);
+    });
+
+    it('validates daily variants the same as base modes', () => {
+      expect(validateStartSessionPayload(base, 'country_daily').valid).toBe(false);
+      expect(validateStartSessionPayload(base, 'stadium_daily').valid).toBe(false);
+      expect(validateStartSessionPayload(base, 'civilization_daily').valid).toBe(false);
     });
 
     it('rejects invalid payload shape', () => {

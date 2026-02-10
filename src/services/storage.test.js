@@ -247,7 +247,7 @@ describe('storage.js', () => {
       const result = getRetryQueue();
 
       expect(mockLogger.error).toHaveBeenCalledWith(
-        'Erreur parsing retry queue:',
+        'Error parsing retry queue:',
         expect.any(Error)
       );
       expect(mockStorageManager.remove).toHaveBeenCalledWith('retry_queue');
@@ -329,7 +329,7 @@ describe('storage.js', () => {
       const result = saveRetryQueue(mockQueue);
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        'Impossible de sauvegarder la retry queue (iOS Private Mode?)',
+        'Cannot save retry queue (iOS Private Mode?)',
         expect.any(Error)
       );
       expect(result).toBe(false);
@@ -403,7 +403,7 @@ describe('storage.js', () => {
       const result = addToRetryQueue('test-token', [], 'TestUser');
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        '⚠️ Retry queue non sauvegardée (mode privé iOS?)'
+        'Retry queue not saved (iOS Private Mode?)'
       );
       expect(result).toBe(false);
     });

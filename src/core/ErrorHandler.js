@@ -252,7 +252,7 @@ class ErrorHandler {
     if (import.meta.env?.PROD) {
       // Give user option to reload
       setTimeout(() => {
-        if (confirm('Une erreur critique est survenue. Recharger la page ?')) {
+        if (confirm(t('error.fatalReload'))) {
           window.location.reload();
         }
       }, 100);

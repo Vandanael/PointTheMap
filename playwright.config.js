@@ -7,6 +7,7 @@ const baseURL = process.env.E2E_BASE_URL || `http://127.0.0.1:${port}`;
 const webServerCommand = isPreview
   ? 'VITE_USE_MOCK=true npm run build && VITE_USE_MOCK=true npm run preview -- --host 127.0.0.1 --port 4173'
   : 'npm run dev -- --host 127.0.0.1 --port 5173';
+const shouldUseWebServer = !(isPreview && process.env.E2E_BASE_URL);
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -23,12 +24,14 @@ export default defineConfig({
     video: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
-  webServer: {
-    command: webServerCommand,
-    url: baseURL,
-    reuseExistingServer: !isPreview,
-    timeout: 120_000,
-  },
+  webServer: shouldUseWebServer
+    ? {
+        command: webServerCommand,
+        url: baseURL,
+        reuseExistingServer: !isPreview,
+        timeout: 120_000,
+      }
+    : undefined,
   projects: [
     {
       name: 'chromium',

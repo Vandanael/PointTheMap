@@ -310,6 +310,7 @@ const translations = {
       noTargetsCountries: 'Aucun pays disponible',
       noTargetsStadiums: 'Aucun stade disponible',
       noTargetsCivilizations: 'Aucune civilisation disponible',
+      fatalReload: 'Une erreur critique est survenue. Recharger la page ?',
     },
   },
 
@@ -593,6 +594,7 @@ const translations = {
       noTargetsCountries: 'No countries available',
       noTargetsStadiums: 'No stadiums available',
       noTargetsCivilizations: 'No civilizations available',
+      fatalReload: 'A critical error occurred. Reload the page?',
     },
   },
 };

@@ -29,4 +29,7 @@ jobs:
       - if: github.ref == 'refs/heads/main'
         run: npm run e2e:smoke
       - if: github.event_name == 'pull_request'
+        env:
+          E2E_BASE_URL: https://preview-e2e--pointthemap.netlify.app
+          E2E_BYPASS_TOKEN: ${{ secrets.E2E_BYPASS_TOKEN }}
         run: npm run e2e:preview
