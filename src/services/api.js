@@ -30,7 +30,13 @@
  * @property {number} attempts
  */
 
-import { MODE_IDS, getGameMode } from '@lib/config/game-modes.js';
+import {
+  MODE_IDS,
+  getGameMode,
+  isCountryCategory,
+  isStadiumCategory,
+  isCivilizationCategory,
+} from '@lib/config/game-modes.js';
 import { generateId } from '../utils/id.js';
 import { logger } from '../utils/logger.js';
 import { loadCapitals, loadSelectBalancedCapitals } from '../data/capitals-loader.js';
@@ -296,7 +302,7 @@ const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
       timeElapsed,
     };
 
-    if (gameType === MODE_IDS.COUNTRY || r.gameType === MODE_IDS.COUNTRY) {
+    if (isCountryCategory(gameType) || isCountryCategory(r.gameType)) {
       // Handle both object format (r.country.name) and string format (r.country)
       const countryName = typeof r?.country === 'string' ? r.country : r?.country?.name;
       // @ts-ignore - countryId can be added during sanitization
@@ -311,7 +317,7 @@ const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
       };
     }
 
-    if (gameType === MODE_IDS.STADIUM || r.gameType === MODE_IDS.STADIUM) {
+    if (isStadiumCategory(gameType) || isStadiumCategory(r.gameType)) {
       // Handle both object format (r.stadium.name) and string format (r.stadium)
       const stadiumName = typeof r?.stadium === 'string' ? r.stadium : r?.stadium?.name;
       // @ts-ignore - city can be added during sanitization
@@ -323,7 +329,7 @@ const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
       };
     }
 
-    if (gameType === MODE_IDS.CIVILIZATION || r.gameType === MODE_IDS.CIVILIZATION) {
+    if (isCivilizationCategory(gameType) || isCivilizationCategory(r.gameType)) {
       // Handle both object format (r.civilization.name) and string format (r.civilization)
       const civName = typeof r?.civilization === 'string' ? r.civilization : r?.civilization?.name;
       // @ts-ignore - civilizationId can be added during sanitization

@@ -290,6 +290,60 @@ describe('api.js', () => {
       const parsed = SubmitSchema.safeParse(payload);
       expect(parsed.success).toBe(true);
     });
+
+    it('builds a valid submit payload for country_daily rounds', async () => {
+      const countryRounds = mockRounds.map((round) => ({
+        ...round,
+        country: { name: 'France', countryId: 'FRA' },
+        correctCountryId: 'FRA',
+        clickedCountryId: 'FRA',
+        distanceToTargetKm: 0,
+      }));
+      const payload = {
+        token: 'token-123',
+        pseudo: 'USER',
+        rounds: __testOnlyFormatRoundsForSubmit(countryRounds, MODE_IDS.COUNTRY_DAILY),
+        gameType: MODE_IDS.COUNTRY_DAILY,
+        payloadVersion: 1,
+      };
+      const parsed = SubmitSchema.safeParse(payload);
+      expect(parsed.success).toBe(true);
+    });
+
+    it('builds a valid submit payload for stadium_daily rounds', async () => {
+      const stadiumRounds = mockRounds.map((round) => ({
+        ...round,
+        stadium: { name: 'Wembley', city: 'London', country: 'UK', lat: 51.5, lng: -0.3 },
+      }));
+      const payload = {
+        token: 'token-123',
+        pseudo: 'USER',
+        rounds: __testOnlyFormatRoundsForSubmit(stadiumRounds, MODE_IDS.STADIUM_DAILY),
+        gameType: MODE_IDS.STADIUM_DAILY,
+        payloadVersion: 1,
+      };
+      const parsed = SubmitSchema.safeParse(payload);
+      expect(parsed.success).toBe(true);
+    });
+
+    it('builds a valid submit payload for civilization_daily rounds', async () => {
+      const civRounds = mockRounds.map((round) => ({
+        ...round,
+        civilization: { id: 'rome', name: 'Roman Empire' },
+        correctCivilizationId: 'rome',
+        clickedCivilizationId: 'rome',
+        distanceToTargetKm: 0,
+      }));
+      const payload = {
+        token: 'token-123',
+        pseudo: 'USER',
+        rounds: __testOnlyFormatRoundsForSubmit(civRounds, MODE_IDS.CIVILIZATION_DAILY),
+        gameType: MODE_IDS.CIVILIZATION_DAILY,
+        payloadVersion: 1,
+      };
+      const parsed = SubmitSchema.safeParse(payload);
+      expect(parsed.success).toBe(true);
+    });
   });
 
   describe('api.getLeaderboard', () => {
