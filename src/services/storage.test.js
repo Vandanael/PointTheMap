@@ -402,9 +402,7 @@ describe('storage.js', () => {
 
       const result = addToRetryQueue('test-token', [], 'TestUser');
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        'Retry queue not saved (iOS Private Mode?)'
-      );
+      expect(mockLogger.warn).toHaveBeenCalledWith('Retry queue not saved (iOS Private Mode?)');
       expect(result).toBe(false);
     });
 

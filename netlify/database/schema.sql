@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS scores (
   rounds JSONB NOT NULL,
   timestamp BIGINT NOT NULL,
   game_type VARCHAR(20) NOT NULL DEFAULT 'classic',
+  session_token VARCHAR(36),
   ip VARCHAR(45),
   player_id UUID REFERENCES players(player_id),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -31,6 +32,7 @@ CREATE INDEX IF NOT EXISTS idx_scores_score ON scores(score DESC);
 CREATE INDEX IF NOT EXISTS idx_scores_timestamp ON scores(timestamp);
 CREATE INDEX IF NOT EXISTS idx_scores_game_type ON scores(game_type);
 CREATE INDEX IF NOT EXISTS idx_scores_pseudo ON scores(pseudo);
+CREATE INDEX IF NOT EXISTS idx_scores_session_token ON scores(session_token);
 
 -- Composite index for rank calculation (critical optimization)
 CREATE INDEX IF NOT EXISTS idx_scores_rank ON scores(game_type, score DESC, time ASC);

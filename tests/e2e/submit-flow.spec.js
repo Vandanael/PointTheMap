@@ -123,9 +123,7 @@ test.skip('submit flow (mocked): play full game and submit score', async ({ page
   await page.locator('#btn-submit').click();
 
   if (!isPreviewRun) {
-    await expect
-      .poll(async () => submitCalls, { timeout: 15000 })
-      .toBeGreaterThan(0);
+    await expect.poll(async () => submitCalls, { timeout: 15000 }).toBeGreaterThan(0);
   }
 
   await expect(page.locator('#newRecordLabel')).toBeVisible();

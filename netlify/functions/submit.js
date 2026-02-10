@@ -327,8 +327,8 @@ export default async function submitHandler(req, context) {
 
       // Insert score
       await sql`
-        INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, ip, player_id)
-        VALUES (${trimmedPseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}::jsonb, ${now}, ${gameType}, ${clientIp}, ${session.playerId})
+        INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, session_token, ip, player_id)
+        VALUES (${trimmedPseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}::jsonb, ${now}, ${gameType}, ${token}, ${clientIp}, ${session.playerId})
       `;
       logger.info('[submit] Score inserted');
 
