@@ -293,6 +293,7 @@ const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
     if (gameType === MODE_IDS.COUNTRY || r.gameType === MODE_IDS.COUNTRY) {
       // Handle both object format (r.country.name) and string format (r.country)
       const countryName = typeof r?.country === 'string' ? r.country : r?.country?.name;
+      // @ts-ignore - countryId can be added during sanitization
       const countryIdValue = typeof r?.countryId === 'string' ? r.countryId : r?.country?.countryId;
       return {
         ...base,
@@ -307,6 +308,7 @@ const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
     if (gameType === MODE_IDS.STADIUM || r.gameType === MODE_IDS.STADIUM) {
       // Handle both object format (r.stadium.name) and string format (r.stadium)
       const stadiumName = typeof r?.stadium === 'string' ? r.stadium : r?.stadium?.name;
+      // @ts-ignore - city can be added during sanitization
       const cityName = typeof r?.city === 'string' ? r.city : r?.stadium?.city;
       return {
         ...base,
@@ -318,6 +320,7 @@ const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
     if (gameType === MODE_IDS.CIVILIZATION || r.gameType === MODE_IDS.CIVILIZATION) {
       // Handle both object format (r.civilization.name) and string format (r.civilization)
       const civName = typeof r?.civilization === 'string' ? r.civilization : r?.civilization?.name;
+      // @ts-ignore - civilizationId can be added during sanitization
       const civId = typeof r?.civilizationId === 'string' ? r.civilizationId : r?.civilization?.id;
       return {
         ...base,
