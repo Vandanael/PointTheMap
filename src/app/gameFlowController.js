@@ -606,24 +606,59 @@ export function createGameFlowController(deps) {
 
           // Set mode-specific fields from round data, with fallback to session target
           if (deps.config.isCapitalCategory(state.gameType)) {
-            sanitizedRound.capital = round.capital?.name || targetName || '';
+            const capitalName = round.capital?.name || targetName;
+            if (!capitalName) {
+              deps.logger.error('[submit] Missing capital name for round', index, {
+                round,
+                target,
+              });
+            }
+            sanitizedRound.capital = capitalName || 'Unknown';
           } else if (deps.config.isCountryCategory(state.gameType)) {
-            sanitizedRound.country =
-              round.country?.name || round.country?.countryId || targetName || '';
+            const countryName = round.country?.name || round.country?.countryId || targetName;
+            if (!countryName) {
+              deps.logger.error('[submit] Missing country name for round', index, {
+                round,
+                target,
+              });
+            }
+            sanitizedRound.country = countryName || 'Unknown';
             if (round.country?.countryId) {
               sanitizedRound.countryId = round.country.countryId;
             }
           } else if (deps.config.isStadiumCategory(state.gameType)) {
-            sanitizedRound.stadium = round.stadium?.name || targetName || '';
+            const stadiumName = round.stadium?.name || targetName;
+            if (!stadiumName) {
+              deps.logger.error('[submit] Missing stadium name for round', index, {
+                round,
+                target,
+              });
+            }
+            sanitizedRound.stadium = stadiumName || 'Unknown';
             if (round.stadium?.city) {
               sanitizedRound.city = round.stadium.city;
             }
           } else if (deps.config.isCivilizationCategory(state.gameType)) {
-            sanitizedRound.civilization = round.civilization?.name || targetName || '';
+            const civilizationName = round.civilization?.name || targetName;
+            if (!civilizationName) {
+              deps.logger.error('[submit] Missing civilization name for round', index, {
+                round,
+                target,
+              });
+            }
+            sanitizedRound.civilization = civilizationName || 'Unknown';
             if (round.civilization?.id) {
               sanitizedRound.civilizationId = round.civilization.id;
             }
           }
+
+          // Final safety check: convert any null string/number fields to undefined for Zod validation
+          // Zod .optional() accepts undefined but NOT null (except 'click' which is explicitly nullable)
+          Object.keys(sanitizedRound).forEach((key) => {
+            if (key !== 'click' && sanitizedRound[key] === null) {
+              sanitizedRound[key] = undefined;
+            }
+          });
 
           return sanitizedRound;
         });
