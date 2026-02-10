@@ -585,9 +585,7 @@ export function createGameFlowController(deps) {
                 ? Math.max(0, Math.floor(round.score))
                 : 0,
             timeElapsed:
-              round.endTime && round.startTime
-                ? Math.floor(round.endTime - round.startTime)
-                : undefined,
+              round.endTime && round.startTime ? Math.floor(round.endTime - round.startTime) : 0, // ← Changed from undefined to 0 (prevents field from being stripped)
             correctCountryId: round.correctCountryId ?? undefined,
             clickedCountryId: round.clickedCountryId ?? undefined,
             distanceToTargetKm: round.distanceToTargetKm ?? undefined,
