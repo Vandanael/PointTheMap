@@ -595,6 +595,9 @@ export function createGameFlowController(deps) {
           }
           if (round.country?.name) {
             sanitizedRound.country = round.country.name;
+          } else if (round.country?.countryId) {
+            // Fallback: use countryId as name if name is missing (shouldn't happen in normal flow)
+            sanitizedRound.country = round.country.countryId;
           }
           if (round.country?.countryId) {
             sanitizedRound.countryId = round.country.countryId;
@@ -607,6 +610,9 @@ export function createGameFlowController(deps) {
           }
           if (round.civilization?.name) {
             sanitizedRound.civilization = round.civilization.name;
+          } else if (round.civilization?.id) {
+            // Fallback: get civilization name from ID if name is missing
+            sanitizedRound.civilization = deps.i18n.getCivilizationName(round.civilization.id, '');
           }
           if (round.civilization?.id) {
             // Use 'id' for civilizationId as per schema
