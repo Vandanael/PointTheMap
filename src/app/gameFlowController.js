@@ -576,7 +576,7 @@ export function createGameFlowController(deps) {
       try {
         /** @type {GameState} */
         const state = stateManager.getState();
-        const sanitizedRounds = state.rounds.map((round) => {
+        const sanitizedRounds = state.rounds.map((round, index) => {
           const sanitizedRound = {
             click: round.click,
             status: round.status,
@@ -594,6 +594,9 @@ export function createGameFlowController(deps) {
             correctCivilizationId: round.correctCivilizationId,
             clickedCivilizationId: round.clickedCivilizationId,
           };
+
+          // Use original target names from session to ensure exact match with server expectations
+          const target = state.targets[index];
 
           if (round.capital?.name) {
             sanitizedRound.capital = round.capital.name;
@@ -613,15 +616,29 @@ export function createGameFlowController(deps) {
           if (round.stadium?.city) {
             sanitizedRound.city = round.stadium.city;
           }
-          if (round.civilization?.name) {
-            sanitizedRound.civilization = round.civilization.name;
-          } else if (round.civilization?.id) {
-            // Fallback: get civilization name from ID if name is missing
-            sanitizedRound.civilization = deps.i18n.getCivilizationName(round.civilization.id, '');
+
+          // For civilization mode, use the exact target name from the session
+          if (target && typeof target === 'object' && 'name' in target) {
+            // This ensures we send the exact same name that the server expects for validation
+            if (deps.config.isCivilizationCategory(state.gameType)) {
+              sanitizedRound.civilization = target.name;
+            } else if (deps.config.isCountryCategory(state.gameType)) {
+              sanitizedRound.country = target.name;
+            } else if (deps.config.isStadiumCategory(state.gameType)) {
+              sanitizedRound.stadium = target.name;
+            } else {
+              // Capital mode
+              sanitizedRound.capital = target.name;
+            }
           }
+
+          // Add IDs if available
           if (round.civilization?.id) {
             // Use 'id' for civilizationId as per schema
             sanitizedRound.civilizationId = round.civilization.id;
+          }
+          if (round.country?.countryId) {
+            sanitizedRound.countryId = round.country.countryId;
           }
           return sanitizedRound;
         });
