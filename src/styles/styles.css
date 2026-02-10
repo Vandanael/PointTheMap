@@ -87,12 +87,20 @@ body {
   left: 0;
 }
 
-body:not(.light-theme) #map {
-  filter: brightness(1.18) contrast(1.08) saturate(0.95);
+/* Disable map filter on start screen to avoid affecting background image */
+body.start-screen-visible #map {
+  filter: none !important;
 }
 
-body.light-theme #map {
-  filter: brightness(1.02) contrast(1.18) saturate(1.08);
+/* OPTION 3: Enhanced map contrast during gameplay - Maximum brightness */
+body:not(.light-theme):not(.start-screen-visible) #map {
+  filter: brightness(1.35) contrast(1.2) saturate(1.05);
+  /* Brighter, more saturated map on pure black background */
+}
+
+body.light-theme:not(.start-screen-visible) #map {
+  filter: brightness(1.08) contrast(1.25) saturate(1.15);
+  /* Vivid map on pure white background */
 }
 
 /* Map lock visual feedback: darken map + lock badge while clicks are disabled */
@@ -101,7 +109,7 @@ body.light-theme #map {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: rgba(2, 6, 23, 0.14);
+  background: transparent; /* No darkening - consistent colors */
   opacity: 0;
   transition: opacity 120ms ease-out;
 }
@@ -1109,14 +1117,14 @@ body.app-resetting .game-header > div {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(2, 6, 23, 0.35);
-  backdrop-filter: blur(2px);
+  background: transparent; /* No overlay - consistent colors */
+  backdrop-filter: none;
   z-index: calc(var(--z-modal) - 1);
   pointer-events: none;
 }
 
 body.light-theme .round-transition {
-  background: rgba(245, 243, 240, 0.6);
+  background: transparent; /* No overlay - consistent colors */
 }
 
 .round-transition-card {
@@ -1855,4 +1863,90 @@ body.light-theme .challenge-info {
 
 .hidden {
   display: none !important;
+}
+
+/* ===================================
+   CONTRAST ENHANCEMENTS - OPTION 2
+   Depth Through Shadows & Borders
+   =================================== */
+
+/* Keep existing colors but add stronger borders */
+:root {
+  --border-color: #2d3b4e; /* More visible dark borders (was #1e293b) */
+
+  /* New shadow variables */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.7);
+}
+
+body.light-theme {
+  --border-color: #b5b1a8; /* Darker light mode borders (was #c9c5be) */
+
+  /* Light mode shadows */
+  --shadow-sm: 0 2px 4px rgba(26, 24, 22, 0.08);
+  --shadow-md: 0 4px 12px rgba(26, 24, 22, 0.12);
+  --shadow-lg: 0 8px 24px rgba(26, 24, 22, 0.16);
+  --shadow-xl: 0 12px 32px rgba(26, 24, 22, 0.2);
+}
+
+/* Apply shadows to modal elements */
+.modal-card {
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-color);
+}
+
+.modal-bg {
+  background: transparent; /* No overlay - consistent map colors throughout */
+}
+
+body.light-theme .modal-bg {
+  background: transparent; /* No overlay - consistent map colors throughout */
+}
+
+/* Add borders to cards and sections */
+.modal-section {
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Enhance button depth */
+.btn-primary {
+  box-shadow: 0 2px 8px rgba(250, 204, 21, 0.4);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(250, 204, 21, 0.5);
+}
+
+.btn-secondary {
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Add subtle inset shadows for input-like elements */
+.category-btn {
+  border: 1px solid var(--border-color);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhance card separation */
+.skeleton-card,
+.leaderboard-entry,
+.stats-grid {
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Make start modal overlay more visible */
+.start-modal-overlay {
+  background: rgba(2, 6, 23, 0.75); /* More opaque */
+}
+
+body.light-theme .start-modal-overlay {
+  background: rgba(245, 243, 240, 0.85);
 }
