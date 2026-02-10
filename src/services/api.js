@@ -291,10 +291,13 @@ const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
     };
 
     if (gameType === MODE_IDS.COUNTRY || r.gameType === MODE_IDS.COUNTRY) {
+      // Handle both object format (r.country.name) and string format (r.country)
+      const countryName = typeof r?.country === 'string' ? r.country : r?.country?.name;
+      const countryIdValue = typeof r?.countryId === 'string' ? r.countryId : r?.country?.countryId;
       return {
         ...base,
-        country: r?.country?.name,
-        countryId: r?.country?.countryId,
+        country: countryName,
+        countryId: countryIdValue,
         correctCountryId: r?.correctCountryId,
         clickedCountryId: r?.clickedCountryId,
         distanceToTargetKm: safeDistance,
@@ -302,27 +305,35 @@ const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
     }
 
     if (gameType === MODE_IDS.STADIUM || r.gameType === MODE_IDS.STADIUM) {
+      // Handle both object format (r.stadium.name) and string format (r.stadium)
+      const stadiumName = typeof r?.stadium === 'string' ? r.stadium : r?.stadium?.name;
+      const cityName = typeof r?.city === 'string' ? r.city : r?.stadium?.city;
       return {
         ...base,
-        stadium: r?.stadium?.name,
-        city: r?.stadium?.city,
+        stadium: stadiumName,
+        city: cityName,
       };
     }
 
     if (gameType === MODE_IDS.CIVILIZATION || r.gameType === MODE_IDS.CIVILIZATION) {
+      // Handle both object format (r.civilization.name) and string format (r.civilization)
+      const civName = typeof r?.civilization === 'string' ? r.civilization : r?.civilization?.name;
+      const civId = typeof r?.civilizationId === 'string' ? r.civilizationId : r?.civilization?.id;
       return {
         ...base,
-        civilization: r?.civilization?.name,
-        civilizationId: r?.civilization?.id,
+        civilization: civName,
+        civilizationId: civId,
         correctCivilizationId: r?.correctCivilizationId,
         clickedCivilizationId: r?.clickedCivilizationId,
         distanceToTargetKm: safeDistance,
       };
     }
 
+    // Handle both object format (r.capital.name) and string format (r.capital)
+    const capitalName = typeof r?.capital === 'string' ? r.capital : r?.capital?.name;
     return {
       ...base,
-      capital: r?.capital?.name,
+      capital: capitalName,
     };
   });
 
