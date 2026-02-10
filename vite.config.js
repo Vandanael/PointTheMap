@@ -336,14 +336,33 @@ export default defineConfig(({ mode }) => {
 
             // Application chunks (cyclic pairs merged to break circular chunk warnings)
 
-            // Core + Services: single chunk to avoid services→core→i18n→services cycle
+            // UI + Systems + Achievement Presenter: single chunk to avoid ui↔systems cycles
+            // IMPORTANT: Check this BEFORE general features/ to avoid being caught by the broader rule
+            // achievementPresenter imports from ui/components, so it must be in ui-systems
+            if (
+              id.includes('/src/features/achievements/') ||
+              id.includes('\\src\\features\\achievements\\')
+            ) {
+              return 'ui-systems';
+            }
+            if (id.includes('/src/systems/') || id.includes('\\src\\systems\\')) {
+              return 'ui-systems';
+            }
+            if (id.includes('/src/ui/') || id.includes('\\src\\ui\\')) {
+              return 'ui-systems';
+            }
+
+            // Core + Services + Features + Data + Storage + Utils + Lib: single chunk to avoid cross-dependencies
+            // Features (stats, share) are data/state management, not UI (except achievements/ which is above)
+            // Storage, data, and utils are foundational and used everywhere
+            // Lib contains shared config, schemas, and utilities used by all chunks
             if (id.includes('vite/preload-helper.js')) {
               return 'core-services';
             }
             if (id.includes('/src/i18n.js') || id.includes('\\src\\i18n.js')) {
               return 'core-services';
             }
-            if (id.includes('/src/utils.js') || id.includes('\\src\\utils.js')) {
+            if (id.includes('/src/utils') || id.includes('\\src\\utils')) {
               return 'core-services';
             }
             if (id.includes('/src/core/') || id.includes('\\src\\core\\')) {
@@ -352,8 +371,20 @@ export default defineConfig(({ mode }) => {
             if (id.includes('/src/services/') || id.includes('\\src\\services\\')) {
               return 'core-services';
             }
-            // Config is shared by both core-services and ui-systems; place it here to break the cycle.
+            if (id.includes('/src/features/') || id.includes('\\src\\features\\')) {
+              return 'core-services';
+            }
+            if (id.includes('/src/storage/') || id.includes('\\src\\storage\\')) {
+              return 'core-services';
+            }
+            if (id.includes('/src/data/') || id.includes('\\src\\data\\')) {
+              return 'core-services';
+            }
+            // Config and lib are shared by all chunks; place them here to avoid circular dependencies
             if (id.includes('/src/config/') || id.includes('\\src\\config\\')) {
+              return 'core-services';
+            }
+            if (id.includes('/lib/') || id.includes('\\lib\\')) {
               return 'core-services';
             }
 
@@ -361,17 +392,7 @@ export default defineConfig(({ mode }) => {
             if (id.includes('/src/game/') || id.includes('\\src\\game\\')) {
               return 'game';
             }
-
-            // UI + Systems (+ Features): single chunk to avoid ui↔systems and features↔ui cycles
-            if (id.includes('/src/systems/') || id.includes('\\src\\systems\\')) {
-              return 'ui-systems';
-            }
-            if (id.includes('/src/ui/') || id.includes('\\src\\ui\\')) {
-              return 'ui-systems';
-            }
-            if (id.includes('/src/features/') || id.includes('\\src\\features\\')) {
-              return 'ui-systems';
-            }
+            // Note: src/app/ is not explicitly chunked - it stays in the entry chunk to avoid circular dependencies
           },
           // Optimize asset file names for better caching
           assetFileNames: (assetInfo) => {

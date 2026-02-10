@@ -600,58 +600,31 @@ export function createGameFlowController(deps) {
           const target =
             state.targets && state.targets.length > index ? state.targets[index] : null;
 
-          if (round.capital?.name) {
-            sanitizedRound.capital = round.capital.name;
-          }
-          if (round.country?.name) {
-            sanitizedRound.country = round.country.name;
-          } else if (round.country?.countryId) {
-            // Fallback: use countryId as name if name is missing (shouldn't happen in normal flow)
-            sanitizedRound.country = round.country.countryId;
-          }
-          if (round.country?.countryId) {
-            sanitizedRound.countryId = round.country.countryId;
-          }
-          if (round.stadium?.name) {
-            sanitizedRound.stadium = round.stadium.name;
-          }
-          if (round.stadium?.city) {
-            sanitizedRound.city = round.stadium.city;
-          }
+          // Extract target name - prefer explicit target from session for validation accuracy
+          const targetName =
+            target && typeof target === 'object' && 'name' in target ? target.name : null;
 
-          // For civilization mode, use the exact target name from the session
-          // Only override if we have valid target data (targets might not be available in test environments)
-          if (target && typeof target === 'object' && 'name' in target && target.name) {
-            // This ensures we send the exact same name that the server expects for validation
-            const shouldOverrideTargetName =
-              (deps.config.isCivilizationCategory(state.gameType) &&
-                !sanitizedRound.civilization) ||
-              (deps.config.isCountryCategory(state.gameType) && !sanitizedRound.country) ||
-              (deps.config.isStadiumCategory(state.gameType) && !sanitizedRound.stadium) ||
-              (deps.config.isCapitalCategory(state.gameType) && !sanitizedRound.capital);
-
-            if (shouldOverrideTargetName) {
-              if (deps.config.isCivilizationCategory(state.gameType)) {
-                sanitizedRound.civilization = target.name;
-              } else if (deps.config.isCountryCategory(state.gameType)) {
-                sanitizedRound.country = target.name;
-              } else if (deps.config.isStadiumCategory(state.gameType)) {
-                sanitizedRound.stadium = target.name;
-              } else {
-                // Capital mode
-                sanitizedRound.capital = target.name;
-              }
+          // Set mode-specific fields from round data, with fallback to session target
+          if (deps.config.isCapitalCategory(state.gameType)) {
+            sanitizedRound.capital = round.capital?.name || targetName || '';
+          } else if (deps.config.isCountryCategory(state.gameType)) {
+            sanitizedRound.country =
+              round.country?.name || round.country?.countryId || targetName || '';
+            if (round.country?.countryId) {
+              sanitizedRound.countryId = round.country.countryId;
+            }
+          } else if (deps.config.isStadiumCategory(state.gameType)) {
+            sanitizedRound.stadium = round.stadium?.name || targetName || '';
+            if (round.stadium?.city) {
+              sanitizedRound.city = round.stadium.city;
+            }
+          } else if (deps.config.isCivilizationCategory(state.gameType)) {
+            sanitizedRound.civilization = round.civilization?.name || targetName || '';
+            if (round.civilization?.id) {
+              sanitizedRound.civilizationId = round.civilization.id;
             }
           }
 
-          // Add IDs if available
-          if (round.civilization?.id) {
-            // Use 'id' for civilizationId as per schema
-            sanitizedRound.civilizationId = round.civilization.id;
-          }
-          if (round.country?.countryId) {
-            sanitizedRound.countryId = round.country.countryId;
-          }
           return sanitizedRound;
         });
 
