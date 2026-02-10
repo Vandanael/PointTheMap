@@ -77,12 +77,13 @@ export class ScoringSystem {
   }
 
   /**
-   * Calculate time bonus based on speed only
+   * Calculate time bonus based on speed and distance threshold
+   * Matches server-side logic in _round-scoring.js
    *
    * @param {number} baseScore - Base score before bonus
    * @param {number} totalTimeMs - Total time allowed
    * @param {number} timeRemainingMs - Time remaining
-   * @param {number} distanceKm - Distance in kilometers (unused for speed-only bonus)
+   * @param {number} distanceKm - Distance in kilometers (checked against distanceThreshold)
    * @param {string} [gameMode='classic'] - Game mode ('classic' or 'daily')
    * @returns {number} Time bonus (0-maxBonus)
    */
@@ -93,11 +94,23 @@ export class ScoringSystem {
     distanceKm,
     gameMode = MODE_IDS.CLASSIC
   ) {
+    const modeConfig = getTimeBonusConfig(gameMode);
+
+    // Check distance threshold - only apply time bonus if close enough
+    // (matches server-side logic in _round-scoring.js:26-32)
+    if (
+      modeConfig?.distanceThreshold !== null &&
+      modeConfig?.distanceThreshold !== undefined &&
+      distanceKm >= modeConfig.distanceThreshold
+    ) {
+      return 0;
+    }
+
     return calculateTimeBonusLib({
       baseScore,
       timeRemainingMs,
       totalTimeMs,
-      timeBonusConfig: getTimeBonusConfig(gameMode),
+      timeBonusConfig: modeConfig,
       featureEnabled: FEATURES.TIME_BONUS,
     });
   }
