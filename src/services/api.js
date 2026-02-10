@@ -281,12 +281,14 @@ const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
         : undefined;
     // Use timeElapsed from sanitized round if available, otherwise calculate from endTime/startTime
     // @ts-ignore - timeElapsed can be added during sanitization
-    const timeElapsed = typeof r?.timeElapsed === 'number'
-      ? // @ts-ignore - timeElapsed can be added during sanitization
-        Math.max(0, Math.round(r.timeElapsed))
-      : typeof r?.endTime === 'number' && typeof r?.startTime === 'number'
-        ? Math.max(0, Math.round(r.endTime - r.startTime))
-        : undefined;
+    const timeElapsed =
+      // @ts-ignore - timeElapsed can be added during sanitization
+      typeof r?.timeElapsed === 'number'
+        ? // @ts-ignore - timeElapsed can be added during sanitization
+          Math.max(0, Math.round(r.timeElapsed))
+        : typeof r?.endTime === 'number' && typeof r?.startTime === 'number'
+          ? Math.max(0, Math.round(r.endTime - r.startTime))
+          : undefined;
     const base = {
       click: safeClick,
       status: typeof r?.status === 'string' ? r.status : 'unknown',
