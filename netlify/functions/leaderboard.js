@@ -94,9 +94,9 @@ export default async function leaderboardHandler(req, context) {
 
     const topScores = scores.map((s, i) => ({
       rank: i + 1,
-      pseudo: s.pseudo,
-      score: s.score,
-      time: s.time,
+      pseudo: s.pseudo ?? 'UNKNOWN',
+      score: s.score ?? 0,
+      time: s.time ?? 0,
     }));
 
     return successResponse(topScores, {

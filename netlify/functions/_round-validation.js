@@ -20,6 +20,12 @@ export const checkPlausibility = (gameDuration) => {
  */
 export const validateRounds = (rounds, sessionTargets, gameType) => {
   if (!Array.isArray(rounds) || rounds.length !== GAME.ROUNDS) {
+    console.error('[validateRounds] Invalid rounds array:', {
+      isArray: Array.isArray(rounds),
+      length: rounds?.length,
+      expected: GAME.ROUNDS,
+      gameType,
+    });
     return { valid: false, error: 'Invalid rounds count' };
   }
 
@@ -27,19 +33,57 @@ export const validateRounds = (rounds, sessionTargets, gameType) => {
   const isCivilizationMode = gameType === 'civilization' || gameType === 'civilization_daily';
   const isStadiumMode = gameType === 'stadium' || gameType === 'stadium_daily';
 
+  console.log('[validateRounds] Starting validation:', {
+    gameType,
+    isCountryMode,
+    isCivilizationMode,
+    isStadiumMode,
+    roundsCount: rounds.length,
+    firstRound: rounds[0]
+      ? {
+          keys: Object.keys(rounds[0]),
+          capital: rounds[0].capital,
+          country: rounds[0].country,
+          civilization: rounds[0].civilization,
+          stadium: rounds[0].stadium,
+        }
+      : null,
+  });
+
   for (let i = 0; i < GAME.ROUNDS; i++) {
     const round = rounds[i];
     const expected = sessionTargets[i];
 
     const targetField = isCountryMode
-      ? round.country
+      ? round?.country
       : isCivilizationMode
-        ? round.civilization
+        ? round?.civilization
         : isStadiumMode
-          ? round.stadium
-          : round.capital;
+          ? round?.stadium
+          : round?.capital;
 
     if (!round || !targetField) {
+      // Enhanced logging for debugging
+      console.error('[validateRounds] Missing round or targetField:', {
+        roundIndex: i,
+        gameType,
+        isCountryMode,
+        isCivilizationMode,
+        isStadiumMode,
+        hasRound: !!round,
+        roundKeys: round ? Object.keys(round) : [],
+        'round.capital': round?.capital,
+        'round.country': round?.country,
+        'round.stadium': round?.stadium,
+        'round.civilization': round?.civilization,
+        targetField,
+        targetFieldType: typeof targetField,
+        targetFieldValue: JSON.stringify(targetField),
+        isFalsy: !targetField,
+        isEmptyString: targetField === '',
+        isNull: targetField === null,
+        isUndefined: targetField === undefined,
+      });
       return { valid: false, error: `Missing round ${i + 1}` };
     }
 

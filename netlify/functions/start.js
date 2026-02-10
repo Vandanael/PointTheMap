@@ -78,7 +78,11 @@ export default async function startHandler(req, context) {
       const playerToken = authHeader.substring(7);
       try {
         const decoded = jwt.verify(playerToken, JWT_SECRET);
-        if (typeof decoded !== 'string' && decoded.player_id) {
+        if (
+          typeof decoded !== 'string' &&
+          decoded.player_id !== null &&
+          decoded.player_id !== undefined
+        ) {
           player_id = decoded.player_id;
           await sql`
             UPDATE players
