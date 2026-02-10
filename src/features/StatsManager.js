@@ -4,10 +4,11 @@
  * Manages personal statistics tracking (local-only, no backend sync)
  */
 
-import { MODE_IDS } from '../config/game-modes.js';
+import { MODE_IDS } from '@lib/config/game-modes.js';
 import { storageManager } from '../storage/StorageManager.js';
 import { logger } from '../utils/logger.js';
 import { eventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/eventTypes.js';
 
 /**
  * Default stats object
@@ -216,7 +217,7 @@ export const updateStats = (rounds, gameType) => {
     storageManager.set('stats', stats);
 
     // Emit event
-    eventBus.emit('stats:updated', { stats });
+    eventBus.emit(EVENTS.STATS_UPDATED, { stats });
 
     logger.info(`Stats: Updated after ${gameType} game (${stats.playCount} total plays)`);
 
@@ -235,7 +236,7 @@ export const resetStats = () => {
   try {
     storageManager.set('stats', { ...DEFAULT_STATS });
     logger.info('Stats: Reset to defaults');
-    eventBus.emit('stats:reset', {});
+    eventBus.emit(EVENTS.STATS_RESET, {});
     return true;
   } catch (error) {
     logger.error('Stats: Failed to reset', error);

@@ -1,5 +1,5 @@
-import { SCORING_THRESHOLDS } from '../config/index.js';
-import { MODE_IDS } from '../config/game-modes.js';
+import { SCORING_THRESHOLDS } from '@lib/config/index.js';
+import { MODE_IDS } from '@lib/config/game-modes.js';
 import { escapeHtml } from '../utils/dom.js';
 import { formatScore } from '../utils/format.js';
 import { t, getLang } from '../i18n.js';

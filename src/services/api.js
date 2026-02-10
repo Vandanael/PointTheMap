@@ -30,7 +30,7 @@
  * @property {number} attempts
  */
 
-import { MODE_IDS, getGameMode } from '../config/game-modes.js';
+import { MODE_IDS, getGameMode } from '@lib/config/game-modes.js';
 import { generateId } from '../utils/id.js';
 import { logger } from '../utils/logger.js';
 import { loadCapitals, loadSelectBalancedCapitals } from '../data/capitals-loader.js';

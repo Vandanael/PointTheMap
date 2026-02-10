@@ -7,6 +7,7 @@
 
 import { logger } from '../utils/logger.js';
 import { eventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/eventTypes.js';
 
 const MAX_QUEUE_SIZE = 20;
 const MAX_DEDUPE_KEYS = 200;
@@ -78,7 +79,7 @@ class ErrorMonitoring {
    * Subscribe to application error events
    */
   #subscribeToEvents() {
-    eventBus.subscribe('error:occurred', ({ error, context }) => {
+    eventBus.subscribe(EVENTS.ERROR_OCCURRED, ({ error, context }) => {
       this.captureError(error, context);
     });
   }

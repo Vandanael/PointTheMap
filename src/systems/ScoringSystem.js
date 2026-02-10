@@ -15,9 +15,10 @@ import {
 } from '@lib/geo-utils/index.js';
 import { calculateTimeBonus as calculateTimeBonusLib } from '@lib/scoring/index.js';
 import { GAME, SCORING_THRESHOLDS, SCORING_FORMULA } from '@lib/config';
-import { FEATURES } from '../config/features.js';
-import { MODE_IDS, getTimeBonusConfig } from '../config/game-modes.js';
+import { FEATURES } from '@lib/config/features.js';
+import { MODE_IDS, getTimeBonusConfig } from '@lib/config/game-modes.js';
 import { eventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/eventTypes.js';
 import { getCivilizationName, t } from '../i18n.js';
 
 /**
@@ -46,13 +47,13 @@ export class ScoringSystem {
 
     // Subscribe to round completed event to emit score calculated
     const unsubRoundComplete = eventBus.subscribe(
-      'game:round:completed',
+      EVENTS.GAME_ROUND_COMPLETED,
       (/** @type {{ round: import('../game/Game.js').Round }} */ { round }) => {
         if (round.score !== null) {
           const targetName = round.civilization
             ? getCivilizationName(round.civilization.id, round.civilization.name)
             : round.capital?.name || round.country?.name || round.stadium?.name || 'Unknown';
-          eventBus.emit('score:calculated', {
+          eventBus.emit(EVENTS.SCORE_CALCULATED, {
             round: round.roundNumber,
             distance: round.distance,
             score: round.score,

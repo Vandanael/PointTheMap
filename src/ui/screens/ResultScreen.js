@@ -4,7 +4,7 @@ import { getLastPseudo } from '../../services/storage.js';
 import { t } from '../../i18n.js';
 import { logger } from '../../utils/logger.js';
 import { domCache as _domCache, render, remove, bindClick, app } from '../dom.js';
-import { UI_TIMING } from '../../config/visual-constants.js';
+import { UI_TIMING } from '@lib/config/visual-constants.js';
 import { debounce } from '../../utils/performance.js';
 import { activateFocusTrap, deactivateFocusTrap } from '../../utils/focusTrap.js';
 import {

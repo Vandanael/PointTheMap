@@ -7,7 +7,8 @@
 import { storageManager } from '../storage/StorageManager.js';
 import { logger } from '../utils/logger.js';
 import { eventBus } from '../core/EventBus.js';
-import { SCORING_THRESHOLDS } from '../config/index.js';
+import { EVENTS } from '../core/eventTypes.js';
+import { SCORING_THRESHOLDS } from '@lib/config/index.js';
 
 /**
  * Achievement definitions
@@ -188,7 +189,7 @@ export const checkAchievements = (rounds, stats, rank) => {
 
       // Emit events for each unlock
       newUnlocks.forEach(({ id, achievement }) => {
-        eventBus.emit('achievement:unlocked', { id, achievement });
+        eventBus.emit(EVENTS.ACHIEVEMENT_UNLOCKED, { id, achievement });
       });
 
       logger.info(`Achievements: ${newUnlocks.length} new unlock(s)`);

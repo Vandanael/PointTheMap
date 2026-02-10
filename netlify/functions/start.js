@@ -11,8 +11,9 @@ import {
   selectCivilizations,
   selectStadiums,
 } from '../../lib/capital-selection/index.js';
-import { getGameMode, isValidMode } from '../../lib/config/game-modes.js';
+import { getGameMode } from '../../lib/config/game-modes.js';
 import { API } from '../../lib/config/index.js';
+import { StartBodySchema } from '../../lib/schemas/start.js';
 import { getDatabase } from './db.js';
 import {
   errorResponse,
@@ -60,13 +61,12 @@ export default async function startHandler(req, context) {
     }
     context.sql = sql;
 
-    /** @type {{ gameType?: string }} */
     const body = await parseJsonBody(req);
-    const gameType = body.gameType || 'classic';
-
-    if (!isValidMode(gameType)) {
-      return errorResponse(`Invalid game mode: ${gameType}`, 400);
+    const parsed = StartBodySchema.safeParse(body);
+    if (!parsed.success) {
+      return errorResponse('Invalid game mode', 400);
     }
+    const { gameType } = parsed.data;
 
     const token = randomUUID();
     const csrfToken = randomUUID();

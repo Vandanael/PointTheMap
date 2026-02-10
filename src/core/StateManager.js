@@ -10,6 +10,7 @@
  */
 
 import { eventBus } from './EventBus.js';
+import { EVENTS } from './eventTypes.js';
 import { logger } from '../utils/logger.js';
 
 export class StateManager {
@@ -64,7 +65,7 @@ export class StateManager {
     this.#notifySubscribers(nextState, prevState, action);
 
     // Emit event
-    eventBus.emit('state:changed', { state: nextState, prevState, action });
+    eventBus.emit(EVENTS.STATE_CHANGED, { state: nextState, prevState, action });
 
     return nextState;
   }

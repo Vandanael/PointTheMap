@@ -1,5 +1,5 @@
-import { GAME } from '../config/index.js';
-import { MODE_IDS } from '../config/game-modes.js';
+import { GAME } from '@lib/config/index.js';
+import { MODE_IDS } from '@lib/config/game-modes.js';
 import { normalizeCoords } from '@lib/game-math/index.js';
 import { logger } from '../utils/logger.js';
 

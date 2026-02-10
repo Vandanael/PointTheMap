@@ -16,6 +16,7 @@ import {
 } from '../../data/geoDataLoader.js';
 import { normalizeCoords } from '@lib/game-math/index.js';
 import { eventBus } from '../../core/EventBus.js';
+import { EVENTS } from '../../core/eventTypes.js';
 import { logger } from '../../utils/logger.js';
 
 /** @typedef {{ geometry: any, properties: any }} GeoFeature */
@@ -78,12 +79,12 @@ export class GeoJSONManager {
       this.#countriesGeoJSONLow = await getCountriesGeoJSONLow();
 
       logger.info('Countries GeoJSON (low-res) loaded successfully');
-      eventBus.emit('map:countries-loaded', undefined);
+      eventBus.emit(EVENTS.MAP_COUNTRIES_LOADED, undefined);
       return true;
     } catch (error) {
       const err = /** @type {Error} */ (error);
       logger.error('Failed to load countries GeoJSON:', err);
-      eventBus.emit('map:countries-error', { error: err.message });
+      eventBus.emit(EVENTS.MAP_COUNTRIES_ERROR, { error: err.message });
       return false;
     }
   }
@@ -100,12 +101,12 @@ export class GeoJSONManager {
       try {
         this.#countriesGeoJSON = await getCountriesGeoJSON();
         logger.info('Countries GeoJSON (full-res) loaded successfully');
-        eventBus.emit('map:countries-full-loaded', undefined);
+        eventBus.emit(EVENTS.MAP_COUNTRIES_FULL_LOADED, undefined);
         return true;
       } catch (error) {
         const err = /** @type {Error} */ (error);
         logger.error('Failed to load full-res countries GeoJSON:', err);
-        eventBus.emit('map:countries-error', { error: err.message });
+        eventBus.emit(EVENTS.MAP_COUNTRIES_ERROR, { error: err.message });
         return false;
       } finally {
         this.#countriesFullLoadPromise = null;
@@ -235,7 +236,7 @@ export class GeoJSONManager {
       }
     }
 
-    eventBus.emit('map:countries-highlighted', { correctCountryId, clickedCountryId });
+    eventBus.emit(EVENTS.MAP_COUNTRIES_HIGHLIGHTED, { correctCountryId, clickedCountryId });
   }
 
   /**
@@ -249,7 +250,7 @@ export class GeoJSONManager {
       }
     });
     this.#countryHighlights = [];
-    eventBus.emit('map:country-highlights-cleared', undefined);
+    eventBus.emit(EVENTS.MAP_COUNTRY_HIGHLIGHTS_CLEARED, undefined);
   }
 
   /**
@@ -278,12 +279,12 @@ export class GeoJSONManager {
       }
 
       logger.info('Civilizations GeoJSON (low-res) loaded successfully');
-      eventBus.emit('map:civilizations-loaded', undefined);
+      eventBus.emit(EVENTS.MAP_CIVILIZATIONS_LOADED, undefined);
       return true;
     } catch (error) {
       const err = /** @type {Error} */ (error);
       logger.error('Failed to load civilizations GeoJSON:', err);
-      eventBus.emit('map:civilizations-error', { error: err.message });
+      eventBus.emit(EVENTS.MAP_CIVILIZATIONS_ERROR, { error: err.message });
       return false;
     }
   }
@@ -300,12 +301,12 @@ export class GeoJSONManager {
       try {
         this.#civilizationsGeoJSON = await getCivilizationsGeoJSON();
         logger.info('Civilizations GeoJSON (full-res) loaded successfully');
-        eventBus.emit('map:civilizations-full-loaded', undefined);
+        eventBus.emit(EVENTS.MAP_CIVILIZATIONS_FULL_LOADED, undefined);
         return true;
       } catch (error) {
         const err = /** @type {Error} */ (error);
         logger.error('Failed to load full-res civilizations GeoJSON:', err);
-        eventBus.emit('map:civilizations-error', { error: err.message });
+        eventBus.emit(EVENTS.MAP_CIVILIZATIONS_ERROR, { error: err.message });
         return false;
       } finally {
         this.#civilizationsFullLoadPromise = null;
@@ -414,7 +415,7 @@ export class GeoJSONManager {
 
     // In Civilization mode, only show the correct answer highlight.
 
-    eventBus.emit('map:civilizations-highlighted', {
+    eventBus.emit(EVENTS.MAP_CIVILIZATIONS_HIGHLIGHTED, {
       correctCivilizationId,
       clickedCivilizationId,
     });
@@ -431,7 +432,7 @@ export class GeoJSONManager {
       }
     });
     this.#civilizationHighlights = [];
-    eventBus.emit('map:civilization-highlights-cleared', undefined);
+    eventBus.emit(EVENTS.MAP_CIVILIZATION_HIGHLIGHTS_CLEARED, undefined);
   }
 
   /**

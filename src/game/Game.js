@@ -1,5 +1,5 @@
 // @ts-check
-import { GAME } from '../config/index.js';
+import { GAME } from '@lib/config/index.js';
 import {
   MODE_IDS,
   getRuntimeGameConfig,
@@ -10,7 +10,7 @@ import {
   getSessionBestScore,
   isCountryCategory,
   isCivilizationCategory,
-} from '../config/game-modes.js';
+} from '@lib/config/game-modes.js';
 import { api } from '../services/api.js';
 import { createRound, recordClick, timeoutRound } from './Round.js';
 import { getStats } from '../features/StatsManager.js';

@@ -1,4 +1,5 @@
-import { MAP_ANIMATIONS, RESULT_LINES, getLineColor } from '../../config/visual-constants.js';
+import { MAP_ANIMATIONS, RESULT_LINES, getLineColor } from '@lib/config/visual-constants.js';
+import { isLowEndDevice } from '../../utils/device.js';
 
 /**
  * Returns a Promise that resolves once after the next map moveend.
@@ -60,8 +61,10 @@ function interpolatePoints(from, to, steps) {
  */
 export function animateResultLine(L, map, startLatLng, endLatLng, distanceKm, options = {}) {
   if (!L) throw new Error('Leaflet not loaded');
+  const lowEnd = isLowEndDevice();
   const durationMs = options.durationMs ?? MAP_ANIMATIONS.RESULT_LINE.durationMs;
-  const steps = options.steps ?? MAP_ANIMATIONS.RESULT_LINE.steps;
+  const defaultSteps = lowEnd ? 30 : MAP_ANIMATIONS.RESULT_LINE.steps;
+  const steps = options.steps ?? defaultSteps;
   const endNorm = normalizeSegmentEnd(startLatLng, endLatLng);
   const points = interpolatePoints(startLatLng, endNorm, steps);
   const lineColor = getLineColor(distanceKm);

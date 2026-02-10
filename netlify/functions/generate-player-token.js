@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
 import { getDatabase } from './db.js';
-import { createLogger } from './_utils.js';
+import { errorResponse, successResponse, createLogger } from './_utils.js';
 
 const logger = createLogger('generate-player-token');
 
@@ -14,18 +14,14 @@ const TOKEN_EXPIRY = '1y'; // Token valide 1 an
  * @param {any} context
  */
 export default async (req, context) => {
-  const headers = {
-    'Content-Type': 'application/json',
-  };
-
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return new Response('', { status: 200, headers });
+    return new Response('', { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
 
   // Only accept POST
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
+    return errorResponse('Method not allowed', 405);
   }
 
   try {
@@ -53,19 +49,13 @@ export default async (req, context) => {
       { expiresIn: TOKEN_EXPIRY }
     );
 
-    return new Response(
-      JSON.stringify({
-        token,
-        player_id,
-        expires_in: TOKEN_EXPIRY,
-      }),
-      { status: 200, headers }
-    );
+    return successResponse({
+      token,
+      player_id,
+      expires_in: TOKEN_EXPIRY,
+    });
   } catch (error) {
     logger.error('Error generating player token:', error);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
-      status: 500,
-      headers,
-    });
+    return errorResponse('Internal server error', 500);
   }
 };

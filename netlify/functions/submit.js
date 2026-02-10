@@ -11,7 +11,7 @@ import {
   createLogger,
 } from './_utils.js';
 import { API } from '../../lib/config/index.js';
-import { toDomainModel } from '../../src/lib/session/sessionModel.js';
+import { toDomainModel } from '../../lib/session/sessionModel.js';
 import { SubmitSchema } from '../../lib/schemas/submit.js';
 import { recordDbFailure, isDbBreakerOpen, getDbBreakerUntil } from './_circuit-breaker.js';
 import { createFallbackRateLimiter, checkDbRateLimit } from './_rate-limit.js';
@@ -302,9 +302,7 @@ export default async function submitHandler(req, context) {
     let isTopFifty = false;
 
     try {
-      logger.info('[submit] Starting database transaction');
-
-      // Double-check pseudo hasn't changed (authoritative check before marking session)
+      // Double-check pseudo hasn't changed (authoritative check before transaction)
       const doubleCheckResult = await sql`
         SELECT pseudo
         FROM scores
@@ -321,31 +319,28 @@ export default async function submitHandler(req, context) {
         });
       }
 
-      // Mark session as used (after pseudo check passes, before score insert)
-      await sql`UPDATE sessions SET used = true WHERE token = ${token}`;
-      logger.info('[submit] Session marked as used');
-
-      // Insert score
-      await sql`
-        INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, session_token, ip, player_id)
-        VALUES (${trimmedPseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}::jsonb, ${now}, ${gameType}, ${token}, ${clientIp}, ${session.playerId})
-      `;
-      logger.info('[submit] Score inserted');
-
-      // Update player stats
-      if (session.playerId) {
-        await sql`
-          UPDATE players
-          SET total_games = total_games + 1,
-              total_score = total_score + ${totalScore}
-          WHERE player_id = ${session.playerId}
-        `;
-        logger.info('[submit] Player stats updated');
-      }
-
-      // Clean up session
-      await sql`DELETE FROM sessions WHERE token = ${token}`;
-      logger.info('[submit] Session deleted');
+      // Atomic transaction: mark session used, insert score, update player, delete session
+      logger.info('[submit] Starting database transaction');
+      const txnQueries = [
+        sql`UPDATE sessions SET used = true WHERE token = ${token}`,
+        sql`
+          INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, session_token, ip, player_id)
+          VALUES (${trimmedPseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}::jsonb, ${now}, ${gameType}, ${token}, ${clientIp}, ${session.playerId})
+        `,
+        ...(session.playerId
+          ? [
+              sql`
+              UPDATE players
+              SET total_games = total_games + 1,
+                  total_score = total_score + ${totalScore}
+              WHERE player_id = ${session.playerId}
+            `,
+            ]
+          : []),
+        sql`DELETE FROM sessions WHERE token = ${token}`,
+      ];
+      await sql.transaction(txnQueries);
+      logger.info('[submit] Transaction committed');
 
       let rankResult;
       try {

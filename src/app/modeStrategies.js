@@ -7,7 +7,7 @@
  * dispatches to these strategies instead of branching on game-type.
  */
 
-import { MAP_ANIMATIONS } from '../config/visual-constants.js';
+import { MAP_ANIMATIONS } from '@lib/config/visual-constants.js';
 
 /**
  * @typedef {Object} ModeStrategy

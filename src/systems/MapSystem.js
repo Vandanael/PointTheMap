@@ -27,11 +27,12 @@ async function loadLeaflet() {
 }
 
 import { eventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/eventTypes.js';
 import { logger } from '../utils/logger.js';
 import { MapRenderer } from './map/MapRenderer.js';
 import { GeoJSONManager } from './map/GeoJSONManager.js';
-import { MAP_ANIMATIONS } from '../config/visual-constants.js';
-import { MAP } from '../config/index.js';
+import { MAP_ANIMATIONS } from '@lib/config/visual-constants.js';
+import { MAP } from '@lib/config/index.js';
 
 export class MapSystem {
   #initialized = false;
@@ -56,17 +57,17 @@ export class MapSystem {
     this.#tileListenersSetup = true;
     // Track tile readiness across theme changes and retries
     this.#eventUnsubscribers.push(
-      eventBus.subscribe('map:tiles-loading', () => {
+      eventBus.subscribe(EVENTS.MAP_TILES_LOADING, () => {
         this.#tilesReady = false;
       })
     );
     this.#eventUnsubscribers.push(
-      eventBus.subscribe('map:tiles-loaded', () => {
+      eventBus.subscribe(EVENTS.MAP_TILES_LOADED, () => {
         this.#tilesReady = true;
       })
     );
     this.#eventUnsubscribers.push(
-      eventBus.subscribe('map:tiles-error', () => {
+      eventBus.subscribe(EVENTS.MAP_TILES_ERROR, () => {
         this.#tilesReady = false;
       })
     );
@@ -95,11 +96,11 @@ export class MapSystem {
       });
       this.#initialized = true;
 
-      eventBus.emit('map:ready', { containerId });
+      eventBus.emit(EVENTS.MAP_READY, { containerId });
       return true;
     } catch (error) {
       const err = /** @type {Error} */ (error);
-      eventBus.emit('map:error', { error: err.message });
+      eventBus.emit(EVENTS.MAP_ERROR, { error: err.message });
       throw error;
     }
   }
@@ -125,8 +126,8 @@ export class MapSystem {
         resolve(value);
       };
 
-      const unsubLoaded = eventBus.subscribe('map:tiles-loaded', () => finish(true));
-      const unsubError = eventBus.subscribe('map:tiles-error', () => finish(false));
+      const unsubLoaded = eventBus.subscribe(EVENTS.MAP_TILES_LOADED, () => finish(true));
+      const unsubError = eventBus.subscribe(EVENTS.MAP_TILES_ERROR, () => finish(false));
 
       timeoutId = setTimeout(() => finish(false), timeoutMs);
     });
@@ -463,7 +464,7 @@ export class MapSystem {
     this.#eventUnsubscribers.forEach((unsub) => unsub());
     this.#eventUnsubscribers = [];
 
-    eventBus.emit('map:destroyed', undefined);
+    eventBus.emit(EVENTS.MAP_DESTROYED, undefined);
   }
 }
 

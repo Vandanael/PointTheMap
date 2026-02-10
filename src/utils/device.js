@@ -1,4 +1,4 @@
-import { MAP } from '../config/index.js';
+import { MAP } from '@lib/config/index.js';
 
 /**
  * Heuristic for low-end devices to reduce caching overhead.

@@ -8,7 +8,7 @@
  * - Better performance than localStorage
  */
 
-import { MODE_IDS } from '../config/game-modes.js';
+import { MODE_IDS } from '@lib/config/game-modes.js';
 import { logger } from '../utils/logger.js';
 
 const DB_NAME = 'ptm_retry_queue';

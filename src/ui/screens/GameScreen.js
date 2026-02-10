@@ -1,7 +1,7 @@
 // Game screen UI module
 
 import { render, remove, domCache as _domCache, bindClick } from '../dom.js';
-import { UI_TIMING } from '../../config/visual-constants.js';
+import { UI_TIMING } from '@lib/config/visual-constants.js';
 import {
   TimerBar,
   GameHeader,

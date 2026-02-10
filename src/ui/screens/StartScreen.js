@@ -1,6 +1,6 @@
 // Start screen UI module
 
-import { MODE_IDS } from '../../config/game-modes.js';
+import { MODE_IDS } from '@lib/config/game-modes.js';
 import { api } from '../../services/api.js';
 import { getTheme, setTheme } from '../../services/storage.js';
 import { toggleLang, t } from '../../i18n.js';
@@ -8,7 +8,7 @@ import { logger } from '../../utils/logger.js';
 import { domCache as _domCache, render, remove, bindClick } from '../dom.js';
 import { eventBus } from '../../core/EventBus.js';
 import { EVENTS } from '../../core/eventTypes.js';
-import { UI_TIMING } from '../../config/visual-constants.js';
+import { UI_TIMING } from '@lib/config/visual-constants.js';
 import { handleError, safeAsync } from '../../core/ErrorHandler.js';
 import { shareGameResults } from '../../features/Share.js';
 import { analytics } from '../../services/Analytics.js';
@@ -372,7 +372,7 @@ export const createStartScreen = (deps) => {
   const showStart = () => {
     document.body.classList.add('start-screen-visible');
     document.body.dataset.appReady = 'true';
-    const unsubscribe = eventBus.subscribe('language:changed', () => {
+    const unsubscribe = eventBus.subscribe(EVENTS.LANGUAGE_CHANGED, () => {
       hideStart();
       showStart();
     });

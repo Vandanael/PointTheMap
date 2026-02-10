@@ -38,28 +38,19 @@ export async function checkDbRateLimit({ ip, sql, keyPrefix, maxRequests, fallba
 
     await sql`DELETE FROM rate_limits WHERE expires_at < NOW()`;
 
-    const existing = await sql`
-      SELECT count FROM rate_limits WHERE key = ${hourKey}
+    // Atomic upsert: INSERT or increment in a single query (no race condition)
+    const result = await sql`
+      INSERT INTO rate_limits (key, count, expires_at)
+      VALUES (${hourKey}, 1, ${expiresAt})
+      ON CONFLICT (key) DO UPDATE SET count = rate_limits.count + 1
+      RETURNING count
     `;
 
-    if (existing.length > 0) {
-      const count = existing[0].count;
-      if (count >= maxRequests) {
-        return { allowed: false, remaining: 0 };
-      }
-      await sql`
-        UPDATE rate_limits
-        SET count = count + 1
-        WHERE key = ${hourKey}
-      `;
-      return { allowed: true, remaining: maxRequests - count - 1 };
-    } else {
-      await sql`
-        INSERT INTO rate_limits (key, count, expires_at)
-        VALUES (${hourKey}, 1, ${expiresAt})
-      `;
-      return { allowed: true, remaining: maxRequests - 1 };
+    const count = result[0]?.count ?? 1;
+    if (count > maxRequests) {
+      return { allowed: false, remaining: 0 };
     }
+    return { allowed: true, remaining: maxRequests - count };
   } catch (e) {
     recordDbFailure(e);
     if (process.env.NODE_ENV === 'development' && logger) {

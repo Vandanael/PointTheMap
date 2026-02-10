@@ -3,6 +3,7 @@
 
 import { logger } from '../utils/logger.js';
 import { eventBus } from './EventBus.js';
+import { EVENTS } from './eventTypes.js';
 import { t } from '../i18n.js';
 
 /**
@@ -106,7 +107,7 @@ class ErrorHandler {
     logger[logLevel](`[${context}]`, error.message, error);
 
     // Emit error event for monitoring
-    eventBus.emit('error:occurred', {
+    eventBus.emit(EVENTS.ERROR_OCCURRED, {
       error,
       context,
       fatal,
@@ -142,7 +143,7 @@ class ErrorHandler {
     // Only track and log
     this.trackError(err, `global-${type}`);
 
-    eventBus.emit('error:global', {
+    eventBus.emit(EVENTS.ERROR_GLOBAL, {
       error: err,
       type,
       timestamp: Date.now(),
@@ -227,7 +228,7 @@ class ErrorHandler {
     const message = this.getUserFriendlyMessage(error, context);
 
     // Emit event for UI to show error
-    eventBus.emit('error:show', { message, error, context });
+    eventBus.emit(EVENTS.ERROR_SHOW, { message, error, context });
   }
 
   /**
@@ -242,7 +243,7 @@ class ErrorHandler {
     logger.fatal(`[FATAL][${context}]`, error);
 
     // Show fatal error UI
-    eventBus.emit('error:fatal', {
+    eventBus.emit(EVENTS.ERROR_FATAL, {
       error,
       context,
       timestamp: Date.now(),

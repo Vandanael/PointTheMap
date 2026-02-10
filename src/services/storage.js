@@ -1,9 +1,10 @@
 // Point The Map - Storage Service
 
-import { MODE_IDS } from '../config/game-modes.js';
+import { MODE_IDS } from '@lib/config/game-modes.js';
 import { storageManager, QuotaExceededError } from '../storage/StorageManager.js';
 import { logger } from '../utils/logger.js';
 import { eventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/eventTypes.js';
 
 // Export storage manager for direct access if needed
 export { storageManager, QuotaExceededError };
@@ -22,7 +23,7 @@ export const storage = {
         logger.error('Storage quota exceeded. Attempting cleanup...');
 
         // Emit event for UI notification
-        eventBus.emit('storage:quota-exceeded', {
+        eventBus.emit(EVENTS.STORAGE_QUOTA_EXCEEDED, {
           message: 'Storage limit reached. Cleaning up old data...',
         });
 
@@ -36,13 +37,13 @@ export const storage = {
 
           if (success) {
             // Emit success event
-            eventBus.emit('storage:quota-recovered', {
+            eventBus.emit(EVENTS.STORAGE_QUOTA_RECOVERED, {
               message: `Cleaned up ${Math.round(freed / 1024)}KB successfully.`,
               freedBytes: freed,
             });
           } else {
             // Emit failure event
-            eventBus.emit('storage:quota-failed', {
+            eventBus.emit(EVENTS.STORAGE_QUOTA_FAILED, {
               message: 'Unable to free enough space. Some data may not be saved.',
             });
           }
@@ -52,7 +53,7 @@ export const storage = {
           logger.error('Failed to save after cleanup', retryError);
 
           // Emit failure event
-          eventBus.emit('storage:quota-failed', {
+          eventBus.emit(EVENTS.STORAGE_QUOTA_FAILED, {
             message: 'Storage full. Unable to save data.',
           });
 

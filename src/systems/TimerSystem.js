@@ -10,6 +10,7 @@
 
 import { GAME } from '@lib/config';
 import { eventBus } from '../core/EventBus.js';
+import { EVENTS } from '../core/eventTypes.js';
 
 /**
  * @typedef {Object} TimerRuntimeConfig
@@ -66,12 +67,12 @@ export class TimerSystem {
       if (!this.#isRunning) return;
 
       // Emit timer started event with duration for UI (transition)
-      eventBus.emit('timer:started', { timerMs, roundId: context.roundId });
+      eventBus.emit(EVENTS.TIMER_STARTED, { timerMs, roundId: context.roundId });
 
       // Danger zone timeout (visual warning)
       const dangerZoneTimeout = setTimeout(() => {
         if (!this.#isRunning) return;
-        eventBus.emit('timer:danger', { roundId: context.roundId });
+        eventBus.emit(EVENTS.TIMER_DANGER, { roundId: context.roundId });
       }, timerMs - dangerZoneMs);
 
       this.#timeouts.push(dangerZoneTimeout);
@@ -79,7 +80,7 @@ export class TimerSystem {
       // Main timeout (game over)
       const mainTimeout = setTimeout(() => {
         if (!this.#isRunning) return;
-        eventBus.emit('timer:timeout', { roundId: context.roundId });
+        eventBus.emit(EVENTS.TIMER_TIMEOUT, { roundId: context.roundId });
         this.stop();
       }, timerMs);
 
@@ -91,7 +92,7 @@ export class TimerSystem {
           clearInterval(tickInterval);
           return;
         }
-        eventBus.emit('timer:tick', { timestamp: Date.now(), roundId: context.roundId });
+        eventBus.emit(EVENTS.TIMER_TICK, { timestamp: Date.now(), roundId: context.roundId });
       }, 50);
 
       this.#intervals.push(tickInterval);

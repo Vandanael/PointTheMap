@@ -8,7 +8,7 @@
  * - Emit input events via EventBus
  */
 
-import { MODE_IDS } from '../config/game-modes.js';
+import { MODE_IDS } from '@lib/config/game-modes.js';
 import { eventBus } from '../core/EventBus.js';
 import { EVENTS } from '../core/eventTypes.js';
 

@@ -1,14 +1,13 @@
 // POST /.netlify/functions/error-report
 // Receives batched client errors and inserts into error_logs table
 
+import { ErrorReportSchema } from '../../lib/schemas/error-report.js';
 import { getDatabase } from './db.js';
 import { jsonResponse, parseJsonBody, getClientIp, createLogger } from './_utils.js';
 import { createFallbackRateLimiter, checkDbRateLimit } from './_rate-limit.js';
 
 const logger = createLogger('error-report');
 
-const MAX_ERRORS_PER_BATCH = 10;
-const MAX_STACK_LENGTH = 4096;
 const RATE_LIMIT_MAX = 20;
 
 const fallbackLimiter = createFallbackRateLimiter({
@@ -59,27 +58,21 @@ export default async function errorReportHandler(req, context) {
   }
 
   const body = await parseJsonBody(req);
-  const errors = body?.errors;
-
-  if (!Array.isArray(errors) || errors.length === 0) {
-    return jsonResponse({ error: 'Missing errors array' }, 400);
+  const parsed = ErrorReportSchema.safeParse(body);
+  if (!parsed.success) {
+    return jsonResponse({ error: 'Invalid error report payload' }, 400);
   }
 
-  if (errors.length > MAX_ERRORS_PER_BATCH) {
-    return jsonResponse({ error: `Max ${MAX_ERRORS_PER_BATCH} errors per batch` }, 400);
-  }
-
+  const { errors } = parsed.data;
   const userAgent = req.headers.get('user-agent') || '';
   const url = req.headers.get('referer') || '';
 
   try {
     for (const err of errors) {
-      if (!err.message || typeof err.message !== 'string') continue;
-
-      const message = err.message.slice(0, 1000);
-      const stack = typeof err.stack === 'string' ? err.stack.slice(0, MAX_STACK_LENGTH) : null;
-      const errorContext = typeof err.context === 'string' ? err.context.slice(0, 100) : null;
-      const errorType = typeof err.type === 'string' ? err.type.slice(0, 50) : null;
+      const message = err.message;
+      const stack = err.stack ?? null;
+      const errorContext = err.context ?? null;
+      const errorType = err.type ?? null;
 
       await sql`
         INSERT INTO error_logs (message, stack, context, error_type, url, user_agent)

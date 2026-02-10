@@ -7,10 +7,11 @@
  * - Manage map UI interactions (clicks, tiles, view)
  */
 
-import { MAP } from '../../config/index.js';
+import { MAP } from '@lib/config/index.js';
 import { getTheme, getMapView, setMapView } from '../../services/storage.js';
-import { isIOS } from '../../utils/device.js';
+import { isIOS, isLowEndDevice } from '../../utils/device.js';
 import { eventBus } from '../../core/EventBus.js';
+import { EVENTS } from '../../core/eventTypes.js';
 import { logger } from '../../utils/logger.js';
 import {
   MARKERS,
@@ -18,7 +19,7 @@ import {
   MAP_ANIMATIONS,
   MAP_VIEW,
   getLineColor,
-} from '../../config/visual-constants.js';
+} from '@lib/config/visual-constants.js';
 import { waitForMapSettled, normalizeSegmentEnd, animateResultLine } from './lineAnimation.js';
 
 export class MapRenderer {
@@ -97,6 +98,7 @@ export class MapRenderer {
     const initialCenter = saved?.center ?? MAP.CENTER;
     const initialZoom = saved?.zoom ?? MAP.ZOOM;
 
+    const lowEnd = isLowEndDevice();
     this.#map = this.#L.map(containerId, {
       center: initialCenter,
       zoom: initialZoom,
@@ -104,10 +106,10 @@ export class MapRenderer {
       maxZoom: MAP.MAX_ZOOM,
       zoomControl: false,
       attributionControl: false,
-      keepBuffer: 4,
-      zoomAnimation: true,
-      fadeAnimation: true,
-      markerZoomAnimation: true,
+      keepBuffer: lowEnd ? 2 : 4,
+      zoomAnimation: !lowEnd,
+      fadeAnimation: !lowEnd,
+      markerZoomAnimation: !lowEnd,
     });
 
     this.#map.setView(initialCenter, initialZoom, { animate: false });
@@ -135,12 +137,12 @@ export class MapRenderer {
    */
   #setupEventListeners() {
     // Subscribe to theme changes
-    const unsubTheme = eventBus.subscribe('theme:changed', () => {
+    const unsubTheme = eventBus.subscribe(EVENTS.THEME_CHANGED, () => {
       this.#updateMapTiles();
     });
     this.#eventUnsubscribers.push(unsubTheme);
 
-    const unsubTilesRetry = eventBus.subscribe('map:tiles-retry', () => {
+    const unsubTilesRetry = eventBus.subscribe(EVENTS.MAP_TILES_RETRY, () => {
       this.#updateMapTiles();
     });
     this.#eventUnsubscribers.push(unsubTilesRetry);
@@ -199,12 +201,13 @@ export class MapRenderer {
 
     this.#tileErrorCount = 0;
 
+    const lowEnd = isLowEndDevice();
     this.#tileLayer = this.#L
       .tileLayer(tileUrl, {
         maxZoom: MAP.MAX_ZOOM,
         attribution,
-        keepBuffer: 4,
-        updateWhenZooming: true,
+        keepBuffer: lowEnd ? 2 : 4,
+        updateWhenZooming: !lowEnd,
         updateWhenIdle: true,
         crossOrigin: false,
         minZoom: MAP.MIN_ZOOM,
@@ -220,17 +223,17 @@ export class MapRenderer {
     }
 
     this.#tileLayer.on('loading', () => {
-      eventBus.emit('map:tiles-loading', {});
+      eventBus.emit(EVENTS.MAP_TILES_LOADING, {});
     });
     this.#tileLayer.on('load', () => {
       if (this.#tileLoadTimeout) {
         clearTimeout(this.#tileLoadTimeout);
         this.#tileLoadTimeout = null;
       }
-      eventBus.emit('map:tiles-loaded', {});
+      eventBus.emit(EVENTS.MAP_TILES_LOADED, {});
     });
     this.#tileLayer.on('tileerror', (event) => {
-      eventBus.emit('map:tiles-error', { error: event?.error });
+      eventBus.emit(EVENTS.MAP_TILES_ERROR, { error: event?.error });
       if (!this.#usingFallbackTiles) {
         this.#tileErrorCount++;
         if (this.#tileErrorCount >= MAP.TILE_ERROR_THRESHOLD) {
@@ -264,7 +267,7 @@ export class MapRenderer {
 
     this.#clickHandler = (e) => {
       const coords = [e.latlng.lat, e.latlng.lng];
-      eventBus.emit('map:click', { lat: e.latlng.lat, lng: e.latlng.lng });
+      eventBus.emit(EVENTS.MAP_CLICK, { lat: e.latlng.lat, lng: e.latlng.lng });
       if (callback) {
         callback(coords);
       }
@@ -438,7 +441,7 @@ export class MapRenderer {
     await waitForMapSettled(this.#map);
 
     if (skipResultLine) {
-      eventBus.emit('map:result-shown', {
+      eventBus.emit(EVENTS.MAP_RESULT_SHOWN, {
         clickCoords,
         capitalCoords,
         distanceKm,
@@ -459,7 +462,7 @@ export class MapRenderer {
 
     await ready;
 
-    eventBus.emit('map:result-shown', {
+    eventBus.emit(EVENTS.MAP_RESULT_SHOWN, {
       clickCoords,
       capitalCoords,
       distanceKm,
@@ -498,7 +501,7 @@ export class MapRenderer {
     this.#markers = [];
     this.#polylines = [];
 
-    eventBus.emit('map:cleared', undefined);
+    eventBus.emit(EVENTS.MAP_CLEARED, undefined);
   }
 
   /**
@@ -516,7 +519,7 @@ export class MapRenderer {
     this.#markers = this.#markers.filter((m) => !this.#capitalMarkers.includes(m));
     this.#capitalMarkers = [];
 
-    eventBus.emit('map:capitals-cleared', undefined);
+    eventBus.emit(EVENTS.MAP_CAPITALS_CLEARED, undefined);
   }
 
   /**
@@ -525,7 +528,7 @@ export class MapRenderer {
   resetView() {
     if (!this.#map) return;
     this.#map.flyTo(MAP.CENTER, MAP.ZOOM, MAP_ANIMATIONS.RESET_VIEW);
-    eventBus.emit('map:view-reset', undefined);
+    eventBus.emit(EVENTS.MAP_VIEW_RESET, undefined);
   }
 
   /**

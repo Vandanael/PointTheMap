@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { TIMING, MAP } from './config/index.js';
+import { TIMING, MAP } from '@lib/config/index.js';
 import {
   MODE_IDS,
   isDailyVariant,
@@ -7,10 +7,11 @@ import {
   isStadiumCategory,
   isCountryCategory,
   isCivilizationCategory,
-} from './config/game-modes.js';
+} from '@lib/config/game-modes.js';
 import { setLastPseudo } from './services/storage.js';
 import { logger } from './utils/logger.js';
 import { eventBus } from './core/EventBus.js';
+import { EVENTS } from './core/eventTypes.js';
 import { StateManager } from './core/StateManager.js';
 import { mapSystem } from './systems/MapSystem.js';
 import {
@@ -162,7 +163,7 @@ export const initApp = async () => {
     eventUnsubscribers.push(
       /** @type {() => void} */ (
         eventBus.subscribe(
-          'timer:timeout',
+          EVENTS.TIMER_TIMEOUT,
           (/** @type {{ roundId?: number | null }} */ payload) => {
             const state = stateManager.getState();
             if (
@@ -190,35 +191,38 @@ export const initApp = async () => {
 
     eventUnsubscribers.push(
       /** @type {() => void} */ (
-        eventBus.subscribe('timer:tick', (/** @type {{ roundId?: number | null }} */ payload) => {
-          const state = stateManager.getState();
-          if (
-            payload?.roundId !== undefined &&
-            payload?.roundId !== null &&
-            state.currentRound?.roundId !== payload.roundId
-          ) {
-            return;
-          }
-          if (state.status !== GameStatus.PLAYING || !state.currentRound) {
-            timerSystem.stop();
-            return;
-          }
-          const totalTimeAllowed = state.runtimeConfig
-            ? state.runtimeConfig.timerMs + state.runtimeConfig.graceMs
-            : undefined;
-          const remaining = getRemainingTime(state.currentRound, totalTimeAllowed);
-          if (remaining <= 0) {
-            // Stop timer to prevent timer:timeout handler from also firing
-            timerSystem.stop();
-            const newState = gameHandleTimeout(state);
-            stateManager.setState(newState, 'timer:tick:timeout');
+        eventBus.subscribe(
+          EVENTS.TIMER_TICK,
+          (/** @type {{ roundId?: number | null }} */ payload) => {
+            const state = stateManager.getState();
+            if (
+              payload?.roundId !== undefined &&
+              payload?.roundId !== null &&
+              state.currentRound?.roundId !== payload.roundId
+            ) {
+              return;
+            }
+            if (state.status !== GameStatus.PLAYING || !state.currentRound) {
+              timerSystem.stop();
+              return;
+            }
+            const totalTimeAllowed = state.runtimeConfig
+              ? state.runtimeConfig.timerMs + state.runtimeConfig.graceMs
+              : undefined;
+            const remaining = getRemainingTime(state.currentRound, totalTimeAllowed);
+            if (remaining <= 0) {
+              // Stop timer to prevent timer:timeout handler from also firing
+              timerSystem.stop();
+              const newState = gameHandleTimeout(state);
+              stateManager.setState(newState, 'timer:tick:timeout');
 
-            // Only call onRoundEnd if state was actually changed (guard against race condition)
-            if (newState.status === GameStatus.ROUND_RESULT) {
-              controller.onRoundEnd();
+              // Only call onRoundEnd if state was actually changed (guard against race condition)
+              if (newState.status === GameStatus.ROUND_RESULT) {
+                controller.onRoundEnd();
+              }
             }
           }
-        })
+        )
       )
     );
 
@@ -233,27 +237,27 @@ export const initApp = async () => {
 
     // Subscribe to InputSystem events
     const unsubscribeStartGame = eventBus.subscribe(
-      'input:start-game',
+      EVENTS.INPUT_START_GAME,
       (/** @type {{ gameType?: "classic" | "daily" }} */ { gameType }) => {
         controller.handleStart(gameType || MODE_IDS.CLASSIC);
       }
     );
     eventUnsubscribers.push(/** @type {() => void} */ (unsubscribeStartGame));
 
-    const unsubscribeNextRound = eventBus.subscribe('input:next-round', () => {
+    const unsubscribeNextRound = eventBus.subscribe(EVENTS.INPUT_NEXT_ROUND, () => {
       controller.handleNext();
     });
     eventUnsubscribers.push(/** @type {() => void} */ (unsubscribeNextRound));
 
     const unsubscribeSubmit = eventBus.subscribe(
-      'input:submit',
+      EVENTS.INPUT_SUBMIT,
       (/** @type {{ pseudo: string }} */ { pseudo }) => {
         controller.handleSubmit(pseudo);
       }
     );
     eventUnsubscribers.push(/** @type {() => void} */ (unsubscribeSubmit));
 
-    const unsubscribeReplay = eventBus.subscribe('input:replay', () => {
+    const unsubscribeReplay = eventBus.subscribe(EVENTS.INPUT_REPLAY, () => {
       controller.handleReplay();
     });
     eventUnsubscribers.push(/** @type {() => void} */ (unsubscribeReplay));
@@ -261,7 +265,7 @@ export const initApp = async () => {
     // Game abandoned: track when user leaves (tab hidden / page unload) while a game is in progress
     let gameAbandonTracked = false;
     const unsubStateForAbandon = eventBus.subscribe(
-      'state:changed',
+      EVENTS.STATE_CHANGED,
       (/** @type {{ state: { status: string } }} */ { state }) => {
         if (state?.status !== GameStatus.PLAYING) gameAbandonTracked = false;
         // Persist in-progress game state (best-effort)
@@ -308,7 +312,7 @@ export const initApp = async () => {
     eventUnsubscribers.push(
       /** @type {() => void} */ (
         eventBus.subscribe(
-          'achievement:unlocked',
+          EVENTS.ACHIEVEMENT_UNLOCKED,
           (/** @type {{id: string, achievement: any}} */ { id, achievement }) => {
             achievementPresenter.enqueue({ id, achievement });
           }

@@ -7,8 +7,9 @@
  */
 
 import { safeAsync, handleError, APIError, ValidationError } from '../core/ErrorHandler.js';
+import { EVENTS } from '../core/eventTypes.js';
 import { createMapQueryAdapter, createRoundRulesAdapter } from '../game/ports.js';
-import { UI_TIMING } from '../config/visual-constants.js';
+import { UI_TIMING } from '@lib/config/visual-constants.js';
 import { getModeStrategy } from './modeStrategies.js';
 
 /**
@@ -148,7 +149,7 @@ export function createGameFlowController(deps) {
 
     if (!ready) {
       ui.showToast(i18n.t('error.mapLoadFailed'), 'error', 3500);
-      const unsub = eventBus.subscribe('map:tiles-loaded', () => {
+      const unsub = eventBus.subscribe(EVENTS.MAP_TILES_LOADED, () => {
         unsub();
         startRoundNow();
       });
@@ -318,7 +319,7 @@ export function createGameFlowController(deps) {
     });
 
     // Emit game started event
-    eventBus.emit('game:started', {
+    eventBus.emit(EVENTS.GAME_STARTED, {
       gameType,
       capitalCount: state.targets?.length || state.capitals.length || state.countries.length,
     });
@@ -387,7 +388,7 @@ export function createGameFlowController(deps) {
     if (!strategy.hasRequiredData(currentRound)) return;
 
     // Emit round completed event
-    eventBus.emit('game:round:completed', { round: currentRound });
+    eventBus.emit(EVENTS.GAME_ROUND_COMPLETED, { round: currentRound });
 
     analytics.track(
       currentRound.status === 'timeout' ? 'round_timeout' : 'round_completed',
@@ -417,7 +418,7 @@ export function createGameFlowController(deps) {
       mapSystem.clearOnResultContinue();
 
       // Emit score updated event
-      eventBus.emit('score:updated', {
+      eventBus.emit(EVENTS.SCORE_UPDATED, {
         oldScore: state.totalScore - currentRound.score,
         newScore: state.totalScore,
         delta: currentRound.score,
