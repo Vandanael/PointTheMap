@@ -220,7 +220,7 @@ export const RoundResult = (distance, score, isTimeout, isLast, baseScore, timeB
             ? `
           <div class="mb-4">
             <div class="text-2xl font-bold text-primary mb-1">${t('base')}: ${formatScore(baseScore || 0)} pts</div>
-            <div class="text-3xl font-black text-green-400 mb-2 animate-bounce">⚡ ${t('speedBonus')}: +${formatScore(timeBonus)} pts</div>
+            <div class="result-speed-bonus text-xl font-black text-green-400 mb-2 animate-bounce whitespace-nowrap">⚡ ${t('speedBonus')}: +${formatScore(timeBonus)} pts</div>
             <div class="text-5xl font-black text-yellow-400 animate-pulse" id="pointsDisplay">${formatScore(score)} pts</div>
           </div>
         `

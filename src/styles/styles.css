@@ -773,6 +773,13 @@ body.light-theme .result-line-distance {
   position: relative;
 }
 
+/* Round result: keep speed bonus on a single line on all screens */
+#round-result .result-speed-bonus {
+  white-space: nowrap;
+  font-size: clamp(0.85rem, 3.2vw, 1.25rem);
+  line-height: 1.2;
+}
+
 /* Prevent text overflow in UI elements */
 .mode-label,
 .challenge-title,
