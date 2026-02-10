@@ -277,7 +277,11 @@ function stripInlineScripts({ enabled = false } = {}) {
 
         // Remove inline event handlers like onload="...", onload='...', onload=...
         // This is intentionally broad to cover all attribute quoting styles.
-        out = out.replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+        const inlineHandlerRe = /\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi;
+        while (inlineHandlerRe.test(out)) {
+          out = out.replace(inlineHandlerRe, '');
+          inlineHandlerRe.lastIndex = 0;
+        }
         return out;
       },
     },

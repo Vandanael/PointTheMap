@@ -22,7 +22,12 @@ const logger = createLogger('submit');
  */
 function applyTimeBonus(baseScore, distance, timeElapsed, gameType) {
   const modeConfig = getTimeBonusConfig(gameType);
-  if (!timeElapsed || modeConfig?.distanceThreshold == null || distance >= modeConfig.distanceThreshold) {
+  if (
+    !timeElapsed ||
+    modeConfig?.distanceThreshold === null ||
+    modeConfig?.distanceThreshold === undefined ||
+    distance >= modeConfig.distanceThreshold
+  ) {
     return 0;
   }
   const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
