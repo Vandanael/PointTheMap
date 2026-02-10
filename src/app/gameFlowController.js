@@ -588,11 +588,11 @@ export function createGameFlowController(deps) {
               round.endTime && round.startTime
                 ? Math.floor(round.endTime - round.startTime)
                 : undefined,
-            correctCountryId: round.correctCountryId,
-            clickedCountryId: round.clickedCountryId,
-            distanceToTargetKm: round.distanceToTargetKm,
-            correctCivilizationId: round.correctCivilizationId,
-            clickedCivilizationId: round.clickedCivilizationId,
+            correctCountryId: round.correctCountryId ?? undefined,
+            clickedCountryId: round.clickedCountryId ?? undefined,
+            distanceToTargetKm: round.distanceToTargetKm ?? undefined,
+            correctCivilizationId: round.correctCivilizationId ?? undefined,
+            clickedCivilizationId: round.clickedCivilizationId ?? undefined,
           };
 
           // Use original target names from session to ensure exact match with server expectations
