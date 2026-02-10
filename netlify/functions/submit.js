@@ -302,7 +302,8 @@ export default async function submitHandler(req, context) {
     let existingPseudo = null;
     if (existingPseudoResult.length > 0) {
       const first = existingPseudoResult[0];
-      if (first) existingPseudo = first.pseudo;
+      if (first && first.pseudo !== null && first.pseudo !== undefined)
+        existingPseudo = first.pseudo;
       if (existingPseudo !== trimmedPseudo) {
         return errorJson('pseudo_already_set_for_this_ip', 'Pseudo already set for this IP', 409, {
           pseudo: existingPseudo,
@@ -324,7 +325,12 @@ export default async function submitHandler(req, context) {
       `;
 
       const doubleCheckRow = doubleCheckResult[0];
-      if (doubleCheckRow && doubleCheckRow.pseudo !== trimmedPseudo) {
+      if (
+        doubleCheckRow &&
+        doubleCheckRow.pseudo !== null &&
+        doubleCheckRow.pseudo !== undefined &&
+        doubleCheckRow.pseudo !== trimmedPseudo
+      ) {
         logger.info('[submit] Pseudo mismatch detected');
         return errorJson('pseudo_already_set_for_this_ip', 'Pseudo already set for this IP', 409, {
           pseudo: doubleCheckRow.pseudo,
@@ -363,7 +369,7 @@ export default async function submitHandler(req, context) {
           WHERE game_type = ${gameType}
             AND (score > ${totalScore} OR (score = ${totalScore} AND time < ${gameDuration}))
         `;
-        rank = parseInt(rankResult[0]?.rank || '1', 10);
+        rank = parseInt(rankResult[0]?.rank ?? '1', 10);
         isTopFifty = rank <= 50;
         logger.info('[submit] Rank calculated:', rank);
       } catch (rankError) {
