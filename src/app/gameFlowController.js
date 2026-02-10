@@ -604,6 +604,20 @@ export function createGameFlowController(deps) {
           const targetName =
             target && typeof target === 'object' && 'name' in target ? target.name : null;
 
+          // Debug logging for round sanitization
+          if (index === 0) {
+            deps.logger.log('[submit] Round 0 sanitization debug:', {
+              gameType: state.gameType,
+              'round.capital': round.capital,
+              'round.country': round.country,
+              'round.stadium': round.stadium,
+              'round.civilization': round.civilization,
+              target,
+              targetName,
+              isCivMode: deps.config.isCivilizationCategory(state.gameType),
+            });
+          }
+
           // Set mode-specific fields from round data, with fallback to session target
           if (deps.config.isCapitalCategory(state.gameType)) {
             const capitalName = round.capital?.name || targetName;
@@ -611,6 +625,7 @@ export function createGameFlowController(deps) {
               deps.logger.error('[submit] Missing capital name for round', index, {
                 round,
                 target,
+                gameType: state.gameType,
               });
             }
             sanitizedRound.capital = capitalName || 'Unknown';
@@ -620,6 +635,7 @@ export function createGameFlowController(deps) {
               deps.logger.error('[submit] Missing country name for round', index, {
                 round,
                 target,
+                gameType: state.gameType,
               });
             }
             sanitizedRound.country = countryName || 'Unknown';
@@ -632,6 +648,7 @@ export function createGameFlowController(deps) {
               deps.logger.error('[submit] Missing stadium name for round', index, {
                 round,
                 target,
+                gameType: state.gameType,
               });
             }
             sanitizedRound.stadium = stadiumName || 'Unknown';
@@ -644,12 +661,21 @@ export function createGameFlowController(deps) {
               deps.logger.error('[submit] Missing civilization name for round', index, {
                 round,
                 target,
+                gameType: state.gameType,
               });
             }
             sanitizedRound.civilization = civilizationName || 'Unknown';
             if (round.civilization?.id) {
               sanitizedRound.civilizationId = round.civilization.id;
             }
+          } else {
+            // Unknown game type - this should never happen but log it if it does
+            deps.logger.error('[submit] Unknown game type, defaulting to capital', {
+              gameType: state.gameType,
+              round,
+              target,
+            });
+            sanitizedRound.capital = targetName || 'Unknown';
           }
 
           // Final safety check: convert any null string/number fields to undefined for Zod validation
@@ -659,6 +685,18 @@ export function createGameFlowController(deps) {
               sanitizedRound[key] = undefined;
             }
           });
+
+          // Debug: Log final sanitized round for first round
+          if (index === 0) {
+            deps.logger.log('[submit] Round 0 after sanitization:', {
+              capital: sanitizedRound.capital,
+              country: sanitizedRound.country,
+              stadium: sanitizedRound.stadium,
+              civilization: sanitizedRound.civilization,
+              hasClick: !!sanitizedRound.click,
+              status: sanitizedRound.status,
+            });
+          }
 
           return sanitizedRound;
         });
