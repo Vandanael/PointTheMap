@@ -191,6 +191,8 @@ vi.mock('./i18n.js', () => ({
   getLang: vi.fn(() => 'en'),
   t: vi.fn((k) => k),
   getCivilizationName: vi.fn((name) => name),
+  getCountryDisplayName: vi.fn((countryId, fallback = '') => fallback),
+  getStadiumName: vi.fn((stadiumId, fallback = '') => fallback),
   getTargetNameEn: vi.fn((target) => target?.name ?? null),
 }));
 vi.mock('./ui/components.js', () => ({ AchievementUnlockModal: vi.fn(() => '') }));
