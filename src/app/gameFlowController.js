@@ -775,12 +775,7 @@ export function createGameFlowController(deps) {
             const dailyNumber = isDailyVariant(state.gameType)
               ? share.getDailyNumber(currentStats[dailyDateKey])
               : null;
-            const shareText = share.formatShareText(
-              dailyNumber,
-              avgDistance,
-              state.rounds,
-              i18n.getLang()
-            );
+            const shareText = share.formatShareText(dailyNumber, avgDistance, state.rounds);
             const success = await share.shareGameResults(shareText);
             analytics.track('share_clicked', { source: 'result', success });
             ui.showToast(

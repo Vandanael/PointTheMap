@@ -64,6 +64,14 @@ const translations = {
     shareOnAchievement: 'Partager cette réussite',
     shareGameMessage: `Point The Map — Devine les capitales ! ${PUBLIC_URL}`,
     mapLockedHint: 'Carte verrouillée',
+    shareResults: {
+      title: 'Point The Map',
+      dailyTitle: 'Point The Map — Quotidien #{{dailyNumber}}',
+      scoreLabel: 'Score',
+      avgLabel: 'moy',
+      roundsLabel: 'manches',
+      under20km: '< 20 km',
+    },
 
     // Footer
     about: 'À propos',
@@ -870,6 +878,14 @@ const translations = {
     shareOnAchievement: 'Share this achievement',
     shareGameMessage: `Point The Map — Try to guess the capitals! ${PUBLIC_URL}`,
     mapLockedHint: 'Map locked',
+    shareResults: {
+      title: 'Point The Map',
+      dailyTitle: 'Point The Map — Daily #{{dailyNumber}}',
+      scoreLabel: 'Score',
+      avgLabel: 'avg',
+      roundsLabel: 'rounds',
+      under20km: '< 20 km',
+    },
 
     // Footer
     about: 'About',

@@ -38,10 +38,9 @@ export const getDailyNumber = (dailyDate) => {
  * @param {number | null} dailyNumber - Daily challenge number (null for classic mode)
  * @param {number} avgDistance - Average distance in km
  * @param {Array<{distance: number}>} rounds - Array of round results
- * @param {string} lang - Language code ('en' or 'fr')
- * @returns {string} Formatted share text
+ * @returns {string} Formatted share text (language determined by current i18n setting)
  */
-export const formatShareText = (dailyNumber, avgDistance, rounds, lang) => {
+export const formatShareText = (dailyNumber, avgDistance, rounds) => {
   try {
     // Calculate badges
     const perfectRounds = rounds.filter((r) => r.distance < 1).length;
@@ -50,34 +49,34 @@ export const formatShareText = (dailyNumber, avgDistance, rounds, lang) => {
     // Build share text
     const lines = [];
 
-    // Title line
+    // Title line (fully localized)
     if (dailyNumber !== null) {
-      lines.push(`Point The Map — Daily #${dailyNumber}`);
+      lines.push(t('shareResults.dailyTitle', { dailyNumber }));
     } else {
-      lines.push('Point The Map');
+      lines.push(t('shareResults.title'));
     }
 
-    // Score line
-    const scoreLabel = lang === 'fr' ? 'Score' : 'Score';
-    const avgLabel = lang === 'fr' ? 'moy' : 'avg';
+    // Score line (fully localized)
+    const scoreLabel = t('shareResults.scoreLabel');
+    const avgLabel = t('shareResults.avgLabel');
     lines.push(`${scoreLabel}: ${avgDistance.toFixed(2)} km ${avgLabel}`);
 
-    // Badges line (only if any badges)
+    // Badges line (only if any badges, fully localized)
     const badges = [];
     if (perfectRounds > 0) {
-      // Use translation system - temporarily set language if needed
       const perfectLabel = t('category.perfect');
       badges.push(`${perfectLabel} x${perfectRounds}`);
     }
     if (under20kmRounds > 0) {
-      badges.push(`< 20 km x${under20kmRounds}`);
+      const under20kmLabel = t('shareResults.under20km');
+      badges.push(`${under20kmLabel} x${under20kmRounds}`);
     }
     if (badges.length > 0) {
       lines.push(badges.join(' — '));
     }
 
-    // Rounds info
-    const roundsLabel = lang === 'fr' ? 'rounds' : 'rounds';
+    // Rounds info (fully localized)
+    const roundsLabel = t('shareResults.roundsLabel');
     lines.push(`(${rounds.length} ${roundsLabel})`);
 
     // URL
