@@ -1,6 +1,6 @@
 {
   "name": "pointthemap",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "type": "module",
   "description": "Point The Map - Geography game",
   "packageManager": "npm@10.0.0",

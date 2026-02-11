@@ -354,7 +354,7 @@ export const StartScreen = () => `
       </div>
     </div>
 
-    <div class="lobby-version-top">v0.12</div>
+    <div class="lobby-version-top">v0.13</div>
 
     <!-- Footer collé en bas -->
     <div class="lobby-footer" style="position: relative; z-index: 1;">
