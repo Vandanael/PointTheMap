@@ -1,0 +1,55 @@
+import { test, expect } from '@playwright/test';
+
+test('about page loads and toggles work @smoke', async ({ page }) => {
+  // Navigate to about page
+  await page.goto('/about.html');
+
+  // Wait for page to load
+  await expect(page.locator('h1')).toBeVisible();
+
+  // Verify default is English
+  await expect(page.locator('#content-en')).toBeVisible();
+  await expect(page.locator('#content-fr')).toHaveClass(/hidden/);
+
+  // Test language toggle
+  await page.locator('#btn-lang').click();
+
+  // Should now show French
+  await expect(page.locator('#content-fr')).toBeVisible();
+  await expect(page.locator('#content-en')).toHaveClass(/hidden/);
+  await expect(page.locator('#lang-icon')).toHaveText('FR');
+
+  // Toggle back to English
+  await page.locator('#btn-lang').click();
+  await expect(page.locator('#content-en')).toBeVisible();
+  await expect(page.locator('#lang-icon')).toHaveText('EN');
+
+  // Test theme toggle (default is dark)
+  await expect(page.locator('body')).not.toHaveClass(/light-theme/);
+  await expect(page.locator('#theme-icon')).toHaveText('🌙');
+
+  // Toggle to light theme
+  await page.locator('#btn-theme').click();
+  await expect(page.locator('body')).toHaveClass(/light-theme/);
+  await expect(page.locator('#theme-icon')).toHaveText('☀️');
+
+  // Toggle back to dark
+  await page.locator('#btn-theme').click();
+  await expect(page.locator('body')).not.toHaveClass(/light-theme/);
+  await expect(page.locator('#theme-icon')).toHaveText('🌙');
+});
+
+test('about page share button works', async ({ page }) => {
+  await page.goto('/about.html');
+
+  // Grant clipboard permissions
+  await page.context().grantPermissions(['clipboard-write', 'clipboard-read']);
+
+  // Click share button (will copy to clipboard if navigator.share not available)
+  await page.locator('#btn-share').click();
+
+  // Check if URL was copied to clipboard or share dialog appeared
+  // In headless mode, navigator.share is not available, so clipboard is used
+  const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+  expect(clipboardText).toContain('127.0.0.1');
+});
