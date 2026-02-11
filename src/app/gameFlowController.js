@@ -256,7 +256,7 @@ export function createGameFlowController(deps) {
     ui.showGameUI(progress.current, progress.total, state.totalScore);
 
     const displayName = strategy.getDisplayName(target, i18n);
-    const displaySubtitle = strategy.getDisplaySubtitle(target);
+    const displaySubtitle = strategy.getDisplaySubtitle(target, i18n);
 
     const onReady = () => {
       const currentState = stateManager.getState();
@@ -489,7 +489,7 @@ export function createGameFlowController(deps) {
     ui.updateGameUI(progress.current, progress.total, state.totalScore);
 
     const displayName = strategy.getDisplayName(target, i18n);
-    const displaySubtitle = strategy.getDisplaySubtitle(target);
+    const displaySubtitle = strategy.getDisplaySubtitle(target, i18n);
 
     ui.showRoundTransition(progress.current, progress.total);
 

@@ -722,8 +722,8 @@ export const Toast = (id, message, type = 'info', options = {}) => {
   const icon = compact ? '' : icons[type] || icons.info;
   const colorClass = `toast-${type}`;
   const wrapperClass = compact
-    ? 'fixed top-6 left-1/2 -translate-x-1/2 max-w-xs w-full px-3 toast-slide-up'
-    : 'fixed top-6 left-1/2 -translate-x-1/2 max-w-md w-full px-4 toast-slide-up';
+    ? 'fixed top-6 left-1/2 -translate-x-1/2 max-w-xs px-3 toast-slide-up'
+    : 'fixed top-6 left-1/2 -translate-x-1/2 max-w-md px-4 toast-slide-up';
   const innerClass = compact
     ? `${colorClass} text-white rounded-lg shadow-lg py-2.5 px-3 flex items-center gap-2 ${center ? 'justify-center' : ''}`
     : `${colorClass} text-white rounded-xl shadow-lg p-4 flex items-start gap-3`;

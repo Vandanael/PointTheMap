@@ -19,7 +19,13 @@ import { FEATURES } from '@lib/config/features.js';
 import { MODE_IDS, getTimeBonusConfig } from '@lib/config/game-modes.js';
 import { eventBus } from '../core/EventBus.js';
 import { EVENTS } from '../core/eventTypes.js';
-import { getCivilizationName, t } from '../i18n.js';
+import {
+  getCivilizationName,
+  getCapitalName,
+  getCountryDisplayName,
+  getStadiumName,
+  t,
+} from '../i18n.js';
 
 /**
  * @typedef {Object} ScoreResult
@@ -52,7 +58,13 @@ export class ScoringSystem {
         if (round.score !== null) {
           const targetName = round.civilization
             ? getCivilizationName(round.civilization.id, round.civilization.name)
-            : round.capital?.name || round.country?.name || round.stadium?.name || 'Unknown';
+            : round.capital
+              ? getCapitalName(round.capital.countryId, round.capital.name)
+              : round.country
+                ? getCountryDisplayName(round.country.countryId, round.country.name)
+                : round.stadium
+                  ? getStadiumName(round.stadium.id, round.stadium.name)
+                  : 'Unknown';
           eventBus.emit(EVENTS.SCORE_CALCULATED, {
             round: round.roundNumber,
             distance: round.distance,

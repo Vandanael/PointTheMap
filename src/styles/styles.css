@@ -1528,16 +1528,20 @@ body.light-theme .challenge-info {
   transition: color 0.2s ease;
 }
 
-.category-btn:hover {
-  transform: scale(1.02);
-  border-color: var(--accent) !important;
+/* Hover effects only on devices with actual hover capability (not touch screens) */
+@media (hover: hover) {
+  .category-btn:hover {
+    transform: scale(1.02);
+    border-color: var(--accent) !important;
+  }
+
+  .category-btn:hover span,
+  .category-btn:hover .text-secondary {
+    color: var(--text-primary);
+  }
 }
 
-.category-btn:hover span,
-.category-btn:hover .text-secondary {
-  color: var(--text-primary);
-}
-
+/* Active state stays outside media query for touch feedback */
 .category-btn:active {
   transform: scale(0.98);
 }

@@ -4,6 +4,7 @@
  * ~45 iconic stadiums worldwide
  *
  * Structure:
+ * - id: Unique stadium identifier (slug)
  * - name: Stadium name
  * - city: City where the stadium is located
  * - country: Country name
@@ -12,7 +13,7 @@
  * - popular: true = globally famous stadium
  *            false = less-known stadium
  *
- * @typedef {{ name: string, city: string, country: string, lat: number, lng: number, popular: boolean }} StadiumEntry
+ * @typedef {{ id: string, name: string, city: string, country: string, lat: number, lng: number, popular: boolean }} StadiumEntry
  */
 
 import { logger } from '../utils/logger.js';
@@ -20,6 +21,7 @@ import { logger } from '../utils/logger.js';
 export const stadiums = [
   // ── Popular : club icons ──
   {
+    id: 'santiago_bernabeu',
     name: 'Santiago Bernabéu',
     city: 'Madrid',
     country: 'Espagne',
@@ -28,6 +30,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'camp_nou',
     name: 'Camp Nou',
     city: 'Barcelona',
     country: 'Espagne',
@@ -36,6 +39,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'allianz_arena',
     name: 'Allianz Arena',
     city: 'München',
     country: 'Allemagne',
@@ -43,8 +47,17 @@ export const stadiums = [
     lng: 11.5752,
     popular: true,
   },
-  { name: 'San Siro', city: 'Milano', country: 'Italie', lat: 45.4773, lng: 9.1357, popular: true },
   {
+    id: 'san_siro',
+    name: 'San Siro',
+    city: 'Milano',
+    country: 'Italie',
+    lat: 45.4773,
+    lng: 9.1357,
+    popular: true,
+  },
+  {
+    id: 'wembley_stadium',
     name: 'Wembley Stadium',
     city: 'London',
     country: 'Royaume-Uni',
@@ -53,6 +66,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'old_trafford',
     name: 'Old Trafford',
     city: 'Manchester',
     country: 'Royaume-Uni',
@@ -61,6 +75,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'anfield',
     name: 'Anfield',
     city: 'Liverpool',
     country: 'Royaume-Uni',
@@ -69,6 +84,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'olympiastadion_berlin',
     name: 'Olympiastadion',
     city: 'Berlin',
     country: 'Allemagne',
@@ -77,6 +93,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'maracana',
     name: 'Maracanã',
     city: 'Rio de Janeiro',
     country: 'Brésil',
@@ -85,6 +102,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'azteca',
     name: 'Azteca',
     city: 'México',
     country: 'Mexique',
@@ -93,6 +111,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'emirates_stadium',
     name: 'Emirates Stadium',
     city: 'London',
     country: 'Royaume-Uni',
@@ -101,6 +120,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'etihad_stadium',
     name: 'Etihad Stadium',
     city: 'Manchester',
     country: 'Royaume-Uni',
@@ -109,6 +129,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'allianz_stadium_turin',
     name: 'Allianz Stadium',
     city: 'Turin',
     country: 'Italie',
@@ -117,6 +138,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'signal_iduna_park',
     name: 'Signal Iduna Park',
     city: 'Dortmund',
     country: 'Allemagne',
@@ -125,6 +147,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'tottenham_hotspur_stadium',
     name: 'Tottenham Hotspur Stadium',
     city: 'London',
     country: 'Royaume-Uni',
@@ -133,6 +156,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'stamford_bridge',
     name: 'Stamford Bridge',
     city: 'London',
     country: 'Royaume-Uni',
@@ -141,6 +165,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'parc_des_princes',
     name: 'Parc des Princes',
     city: 'Paris',
     country: 'France',
@@ -149,6 +174,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'velodrome',
     name: 'Vélodrome',
     city: 'Marseille',
     country: 'France',
@@ -157,6 +183,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'estadio_da_luz',
     name: 'Estádio da Luz',
     city: 'Lisboa',
     country: 'Portugal',
@@ -165,6 +192,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'stadio_olimpico_rome',
     name: 'Stadio Olimpico',
     city: 'Rome',
     country: 'Italie',
@@ -173,6 +201,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'st_james_park',
     name: "St James' Park",
     city: 'Newcastle',
     country: 'Royaume-Uni',
@@ -181,6 +210,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'celtic_park',
     name: 'Celtic Park',
     city: 'Glasgow',
     country: 'Royaume-Uni',
@@ -189,6 +219,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'johan_cruyff_arena',
     name: 'Johan Cruyff Arena',
     city: 'Amsterdam',
     country: 'Pays-Bas',
@@ -197,6 +228,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'la_bombonera',
     name: 'La Bombonera',
     city: 'Buenos Aires',
     country: 'Argentine',
@@ -205,6 +237,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'estadio_monumental',
     name: 'Estadio Monumental',
     city: 'Buenos Aires',
     country: 'Argentine',
@@ -214,6 +247,7 @@ export const stadiums = [
   },
   // ── Popular : national stadiums ──
   {
+    id: 'stade_de_france',
     name: 'Stade de France',
     city: 'Saint-Denis',
     country: 'France',
@@ -222,6 +256,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'hampden_park',
     name: 'Hampden Park',
     city: 'Glasgow',
     country: 'Royaume-Uni',
@@ -230,6 +265,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'puskas_arena',
     name: 'Puskás Arena',
     city: 'Budapest',
     country: 'Hongrie',
@@ -238,6 +274,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'king_baudouin_stadium',
     name: 'King Baudouin Stadium',
     city: 'Brussels',
     country: 'Belgique',
@@ -246,6 +283,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'croke_park',
     name: 'Croke Park',
     city: 'Dublin',
     country: 'Irlande',
@@ -255,6 +293,7 @@ export const stadiums = [
   },
   // ── Popular : World Cup & Olympic finals ──
   {
+    id: 'luzhniki_stadium',
     name: 'Luzhniki Stadium',
     city: 'Moscow',
     country: 'Russie',
@@ -263,6 +302,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'lusail_stadium',
     name: 'Lusail Stadium',
     city: 'Lusail',
     country: 'Qatar',
@@ -271,6 +311,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'fnb_stadium',
     name: 'FNB Stadium',
     city: 'Johannesburg',
     country: 'Afrique du Sud',
@@ -279,6 +320,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'rose_bowl',
     name: 'Rose Bowl',
     city: 'Pasadena',
     country: 'États-Unis',
@@ -287,6 +329,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'metlife_stadium',
     name: 'MetLife Stadium',
     city: 'East Rutherford',
     country: 'États-Unis',
@@ -295,6 +338,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'sofi_stadium',
     name: 'SoFi Stadium',
     city: 'Inglewood',
     country: 'États-Unis',
@@ -303,6 +347,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'nissan_stadium_yokohama',
     name: 'Nissan Stadium',
     city: 'Yokohama',
     country: 'Japon',
@@ -311,6 +356,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'seoul_world_cup_stadium',
     name: 'Seoul World Cup Stadium',
     city: 'Seoul',
     country: 'Corée du Sud',
@@ -319,6 +365,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'national_stadium_tokyo',
     name: 'National Stadium',
     city: 'Tokyo',
     country: 'Japon',
@@ -327,6 +374,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'green_point_stadium',
     name: 'Green Point Stadium',
     city: 'Cape Town',
     country: 'Afrique du Sud',
@@ -335,6 +383,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'loftus_versfeld',
     name: 'Loftus Versfeld',
     city: 'Pretoria',
     country: 'Afrique du Sud',
@@ -343,6 +392,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'al_bayt_stadium',
     name: 'Al Bayt Stadium',
     city: 'Al Khor',
     country: 'Qatar',
@@ -351,6 +401,7 @@ export const stadiums = [
     popular: true,
   },
   {
+    id: 'estadio_centenario',
     name: 'Estadio Centenario',
     city: 'Montevideo',
     country: 'Uruguay',
@@ -362,6 +413,7 @@ export const stadiums = [
   // ── Obscure (well-known in their league / region, less so globally) ──
   // --- Espagne ---
   {
+    id: 'san_mames',
     name: 'San Mamés',
     city: 'Bilbao',
     country: 'Espagne',
@@ -370,6 +422,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'mestalla',
     name: 'Mestalla',
     city: 'Valencia',
     country: 'Espagne',
@@ -378,6 +431,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'la_romareda',
     name: 'La Romareda',
     city: 'Zaragoza',
     country: 'Espagne',
@@ -386,6 +440,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'anoeta',
     name: 'Anoeta',
     city: 'San Sebastián',
     country: 'Espagne',
@@ -394,6 +449,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'estadio_la_cartuja',
     name: 'Estadio La Cartuja',
     city: 'Sevilla',
     country: 'Espagne',
@@ -403,6 +459,7 @@ export const stadiums = [
   },
   // --- Portugal ---
   {
+    id: 'jose_alvalade',
     name: 'José Alvalade',
     city: 'Lisboa',
     country: 'Portugal',
@@ -411,6 +468,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'estadio_do_dragao',
     name: 'Estádio do Dragão',
     city: 'Porto',
     country: 'Portugal',
@@ -419,6 +477,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'algarve_estadio',
     name: 'Algarve Estádio',
     city: 'Faro',
     country: 'Portugal',
@@ -428,6 +487,7 @@ export const stadiums = [
   },
   // --- Allemagne ---
   {
+    id: 'deutsche_bank_park',
     name: 'Deutsche Bank Park',
     city: 'Frankfurt',
     country: 'Allemagne',
@@ -436,6 +496,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'merkur_spiel_arena',
     name: 'Merkur Spiel-Arena',
     city: 'Düsseldorf',
     country: 'Allemagne',
@@ -444,6 +505,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'weserstadion',
     name: 'Weserstadion',
     city: 'Bremen',
     country: 'Allemagne',
@@ -452,6 +514,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'dreisamstadion',
     name: 'Dreisamstadion',
     city: 'Freiburg',
     country: 'Allemagne',
@@ -459,8 +522,17 @@ export const stadiums = [
     lng: 7.8853,
     popular: false,
   },
-  { name: 'Tivoli', city: 'Köln', country: 'Allemagne', lat: 50.9375, lng: 6.9603, popular: false },
   {
+    id: 'tivoli',
+    name: 'Tivoli',
+    city: 'Köln',
+    country: 'Allemagne',
+    lat: 50.9375,
+    lng: 6.9603,
+    popular: false,
+  },
+  {
+    id: 'kessler_wood',
     name: 'Kessler Wood',
     city: 'Villingen',
     country: 'Allemagne',
@@ -469,6 +541,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'bernstedt_arena',
     name: 'Bernstedt Arena',
     city: 'Halle',
     country: 'Allemagne',
@@ -478,6 +551,7 @@ export const stadiums = [
   },
   // --- Italie ---
   {
+    id: 'stadio_diego_armando_maradona',
     name: 'Stadio Diego Armando Maradona',
     city: 'Napoli',
     country: 'Italie',
@@ -486,6 +560,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'gewiss_stadium',
     name: 'Gewiss Stadium',
     city: 'Bergamo',
     country: 'Italie',
@@ -494,6 +569,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stadio_artemio_franchi',
     name: 'Stadio Artemio Franchi',
     city: 'Firenze',
     country: 'Italie',
@@ -503,6 +579,7 @@ export const stadiums = [
   },
   // --- France ---
   {
+    id: 'groupama_stadium',
     name: 'Groupama Stadium',
     city: 'Lyon',
     country: 'France',
@@ -511,6 +588,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_de_la_mosson',
     name: 'Stade de la Mosson',
     city: 'Montpellier',
     country: 'France',
@@ -519,6 +597,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_pierre_mauroy',
     name: 'Stade Pierre-Mauroy',
     city: 'Lille',
     country: 'France',
@@ -527,6 +606,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'allianz_riviera',
     name: 'Allianz Riviera',
     city: 'Nice',
     country: 'France',
@@ -535,6 +615,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_de_la_beaujoire',
     name: 'Stade de la Beaujoire',
     city: 'Nantes',
     country: 'France',
@@ -543,6 +624,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_geoffroy_guichard',
     name: 'Stade Geoffroy-Guichard',
     city: 'Saint-Étienne',
     country: 'France',
@@ -551,6 +633,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'matmut_atlantique',
     name: 'Matmut Atlantique',
     city: 'Bordeaux',
     country: 'France',
@@ -559,6 +642,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_bollaert_delelis',
     name: 'Stade Bollaert-Delelis',
     city: 'Lens',
     country: 'France',
@@ -567,6 +651,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_de_strasbourg',
     name: 'Stade de Strasbourg',
     city: 'Strasbourg',
     country: 'France',
@@ -575,6 +660,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_oceane',
     name: 'Stade Oceane',
     city: 'Le Havre',
     country: 'France',
@@ -583,6 +669,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_saint_symphorien',
     name: 'Stade Saint-Symphorien',
     city: 'Metz',
     country: 'France',
@@ -591,6 +678,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_de_toulouse',
     name: 'Stade de Toulouse',
     city: 'Toulouse',
     country: 'France',
@@ -599,6 +687,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_de_caen',
     name: 'Stade de Caen',
     city: 'Caen',
     country: 'France',
@@ -607,6 +696,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_jean_bouin',
     name: 'Stade Jean-Bouin',
     city: 'Paris',
     country: 'France',
@@ -615,6 +705,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_auguste_delaune',
     name: 'Stade Auguste Delaune',
     city: 'Reims',
     country: 'France',
@@ -623,6 +714,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_de_rennes',
     name: 'Stade de Rennes',
     city: 'Rennes',
     country: 'France',
@@ -631,6 +723,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_gaston_bourgogne',
     name: 'Stade Gaston Bourgogne',
     city: 'Dijon',
     country: 'France',
@@ -639,6 +732,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_de_nancy',
     name: 'Stade de Nancy',
     city: 'Nancy',
     country: 'France',
@@ -647,6 +741,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_de_lorient',
     name: 'Stade de Lorient',
     city: 'Lorient',
     country: 'France',
@@ -655,6 +750,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_francis_le_blond',
     name: 'Stade Francis Le Blond',
     city: 'Brest',
     country: 'France',
@@ -663,6 +759,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_de_guingamp',
     name: 'Stade de Guingamp',
     city: 'Guingamp',
     country: 'France',
@@ -671,6 +768,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_d_angers',
     name: "Stade d'Angers",
     city: 'Angers',
     country: 'France',
@@ -679,6 +777,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_de_rouen',
     name: 'Stade de Rouen',
     city: 'Rouen',
     country: 'France',
@@ -687,6 +786,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_de_la_picardie',
     name: 'Stade de la Picardie',
     city: 'Amiens',
     country: 'France',
@@ -695,6 +795,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_de_tours',
     name: 'Stade de Tours',
     city: 'Tours',
     country: 'France',
@@ -703,6 +804,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_du_mans',
     name: 'Stade du Mans',
     city: 'Le Mans',
     country: 'France',
@@ -711,6 +813,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_de_troyes',
     name: 'Stade de Troyes',
     city: 'Troyes',
     country: 'France',
@@ -720,6 +823,7 @@ export const stadiums = [
   },
   // --- France : DOM-TOM ---
   {
+    id: 'stade_felix_eboue',
     name: 'Stade Félix Éboué',
     city: 'Fort-de-France',
     country: 'France',
@@ -728,6 +832,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_nelson_mandela',
     name: 'Stade Nelson Mandela',
     city: 'Saint-Denis',
     country: 'France',
@@ -736,6 +841,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_sylvain',
     name: 'Stade Sylvain',
     city: 'Cayenne',
     country: 'France',
@@ -744,6 +850,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_de_guadeloupe',
     name: 'Stade de Guadeloupe',
     city: 'Basse-Terre',
     country: 'France',
@@ -752,6 +859,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stade_mahale',
     name: 'Stade Mahalé',
     city: 'Mamoudzou',
     country: 'France',
@@ -761,6 +869,7 @@ export const stadiums = [
   },
   // --- Royaume-Uni ---
   {
+    id: 'elland_road',
     name: 'Elland Road',
     city: 'Leeds',
     country: 'Royaume-Uni',
@@ -769,6 +878,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'goodison_park',
     name: 'Goodison Park',
     city: 'Liverpool',
     country: 'Royaume-Uni',
@@ -777,6 +887,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'craven_cottage',
     name: 'Craven Cottage',
     city: 'London',
     country: 'Royaume-Uni',
@@ -785,6 +896,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'ibrox_stadium',
     name: 'Ibrox Stadium',
     city: 'Glasgow',
     country: 'Royaume-Uni',
@@ -794,6 +906,7 @@ export const stadiums = [
   },
   // --- Pays-Bas ---
   {
+    id: 'de_kuip',
     name: 'De Kuip',
     city: 'Rotterdam',
     country: 'Pays-Bas',
@@ -802,6 +915,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'philips_stadion',
     name: 'Philips Stadion',
     city: 'Eindhoven',
     country: 'Pays-Bas',
@@ -810,6 +924,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'grolsch_veste',
     name: 'Grolsch Veste',
     city: 'Enschede',
     country: 'Pays-Bas',
@@ -818,8 +933,17 @@ export const stadiums = [
     popular: false,
   },
   // --- Tchéquie ---
-  { name: 'Letná', city: 'Praha', country: 'Tchéquie', lat: 50.0955, lng: 14.4126, popular: false },
   {
+    id: 'letna',
+    name: 'Letná',
+    city: 'Praha',
+    country: 'Tchéquie',
+    lat: 50.0955,
+    lng: 14.4126,
+    popular: false,
+  },
+  {
+    id: 'eden_arena',
     name: 'Eden Arena',
     city: 'Praha',
     country: 'Tchéquie',
@@ -829,6 +953,7 @@ export const stadiums = [
   },
   // --- Europe de l'Est ---
   {
+    id: 'arena_nationala',
     name: 'Arena Națională',
     city: 'București',
     country: 'Roumanie',
@@ -837,6 +962,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'stadion_rajko_mitic',
     name: 'Stadion Rajko Mitić',
     city: 'Belgrade',
     country: 'Serbie',
@@ -845,6 +971,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'legia_warsaw_stadium',
     name: 'Legia Warsaw Stadium',
     city: 'Warszawa',
     country: 'Pologne',
@@ -854,6 +981,7 @@ export const stadiums = [
   },
   // --- Scandinav. / Baltique ---
   {
+    id: 'parken',
     name: 'Parken',
     city: 'København',
     country: 'Danemark',
@@ -862,6 +990,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'ullevaal_stadion',
     name: 'Ullevaal Stadion',
     city: 'Oslo',
     country: 'Norvège',
@@ -870,6 +999,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'friends_arena',
     name: 'Friends Arena',
     city: 'Solna',
     country: 'Suède',
@@ -878,6 +1008,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'helsinki_olympiastadion',
     name: 'Helsinki Olympiastadion',
     city: 'Helsinki',
     country: 'Finlande',
@@ -887,6 +1018,7 @@ export const stadiums = [
   },
   // --- Irlande ---
   {
+    id: 'aviva_stadium',
     name: 'Aviva Stadium',
     city: 'Dublin',
     country: 'Irlande',
@@ -896,6 +1028,7 @@ export const stadiums = [
   },
   // --- Amériques ---
   {
+    id: 'estadio_mineirao',
     name: 'Estádio Mineirão',
     city: 'Belo Horizonte',
     country: 'Brésil',
@@ -904,6 +1037,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'estadio_da_fonte_nova',
     name: 'Estádio da Fonte Nova',
     city: 'Salvador',
     country: 'Brésil',
@@ -912,6 +1046,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'arena_da_amazonia',
     name: 'Arena da Amazônia',
     city: 'Manaus',
     country: 'Brésil',
@@ -920,6 +1055,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'estadio_omnilife',
     name: 'Estadio Omnilife',
     city: 'Guadalajara',
     country: 'Mexique',
@@ -929,6 +1065,7 @@ export const stadiums = [
   },
   // --- Asie / Moyen-Orient ---
   {
+    id: 'rajamangala_stadium',
     name: 'Rajamangala Stadium',
     city: 'Bangkok',
     country: 'Thaïlande',
@@ -937,6 +1074,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'gelora_bung_karno',
     name: 'Gelora Bung Karno',
     city: 'Jakarta',
     country: 'Indonésie',
@@ -945,6 +1083,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'bukit_jalil',
     name: 'Bukit Jalil',
     city: 'Kuala Lumpur',
     country: 'Malaisie',
@@ -953,6 +1092,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'narasimha_puram',
     name: 'Narasimha Puram',
     city: 'Chennai',
     country: 'Inde',
@@ -961,6 +1101,7 @@ export const stadiums = [
     popular: false,
   },
   {
+    id: 'etihad_airways_arena',
     name: 'Etihad Airways Arena',
     city: 'Dubai',
     country: 'Émirats Arabes Unis',

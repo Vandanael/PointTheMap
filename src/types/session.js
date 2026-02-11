@@ -6,6 +6,7 @@
  * @typedef {Object} Capital
  * @property {string} name
  * @property {string} country
+ * @property {string} countryId
  * @property {number} lat
  * @property {number} lng
  * @property {boolean} [popular]
@@ -20,6 +21,7 @@
 
 /**
  * @typedef {Object} Stadium
+ * @property {string} id
  * @property {string} name
  * @property {string} city
  * @property {string} country

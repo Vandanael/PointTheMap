@@ -15,7 +15,7 @@ import { MAP_ANIMATIONS } from '@lib/config/visual-constants.js';
  * @property {(round: any) => any} getTarget
  * @property {(round: any) => boolean} hasRequiredData
  * @property {(target: any, i18n: any) => string} getDisplayName
- * @property {(target: any) => string} getDisplaySubtitle
+ * @property {(target: any, i18n: any) => string} getDisplaySubtitle
  * @property {(MAP: any) => { center: [number,number], zoom: number }} getMapView
  * @property {(round: any) => number | null} getDisplayDistance
  * @property {(mapSystem: any, round: any, clickCoords: [number,number]) => Promise<void>|void} showClickResult
@@ -28,8 +28,14 @@ const capitalStrategy = {
   targetType: 'capital',
   getTarget: (round) => round.capital,
   hasRequiredData: (round) => Boolean(round.capital),
-  getDisplayName: (target) => target.name,
-  getDisplaySubtitle: (target) => (target && 'country' in target ? target.country : ''),
+  getDisplayName: (target, i18n) =>
+    target.countryId ? i18n.getCapitalName(target.countryId, target.name) : target.name,
+  getDisplaySubtitle: (target, i18n) =>
+    target && target.countryId
+      ? i18n.getCountryDisplayName(target.countryId, target.country || '')
+      : target && 'country' in target
+        ? target.country
+        : '',
   getMapView: (MAP) => ({
     center: /** @type {[number,number]} */ (MAP.CENTER),
     zoom: MAP.ZOOM,
@@ -58,8 +64,9 @@ const countryStrategy = {
   targetType: 'country',
   getTarget: (round) => round.country,
   hasRequiredData: (round) => Boolean(round.country),
-  getDisplayName: (target) => target.name,
-  getDisplaySubtitle: () => '',
+  getDisplayName: (target, i18n) =>
+    target.countryId ? i18n.getCountryDisplayName(target.countryId, target.name) : target.name,
+  getDisplaySubtitle: (_target, _i18n) => '',
   getMapView: (MAP) => ({
     center: /** @type {[number,number]} */ (MAP.CENTER),
     zoom: MAP.ZOOM,
@@ -106,8 +113,9 @@ const stadiumStrategy = {
   targetType: 'stadium',
   getTarget: (round) => round.stadium,
   hasRequiredData: (round) => Boolean(round.stadium),
-  getDisplayName: (target) => target.name,
-  getDisplaySubtitle: () => '',
+  getDisplayName: (target, i18n) =>
+    target.id ? i18n.getStadiumName(target.id, target.name) : target.name,
+  getDisplaySubtitle: (_target, _i18n) => '',
   getMapView: (MAP) => ({
     center: /** @type {[number,number]} */ (MAP.EUROPE_CENTER),
     zoom: MAP.EUROPE_ZOOM,
@@ -138,7 +146,7 @@ const civilizationStrategy = {
   hasRequiredData: (round) => Boolean(round.civilization),
   getDisplayName: (target, i18n) =>
     target.id ? i18n.getCivilizationName(target.id, target.name) : target.name,
-  getDisplaySubtitle: () => '',
+  getDisplaySubtitle: (_target, _i18n) => '',
   getMapView: (MAP) => ({
     center: /** @type {[number,number]} */ (MAP.CENTER),
     zoom: MAP.ZOOM,

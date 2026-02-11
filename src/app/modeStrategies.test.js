@@ -25,6 +25,9 @@ describe('modeStrategies', () => {
 
   const mockI18n = {
     getCivilizationName: vi.fn((id, fallback) => `i18n:${id}`),
+    getCapitalName: vi.fn((countryId, fallback) => fallback || `capital:${countryId}`),
+    getCountryDisplayName: vi.fn((countryId, fallback) => fallback || `country:${countryId}`),
+    getStadiumName: vi.fn((stadiumId, fallback) => fallback || `stadium:${stadiumId}`),
   };
 
   describe('getModeStrategy', () => {
