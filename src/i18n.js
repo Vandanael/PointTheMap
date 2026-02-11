@@ -1737,3 +1737,26 @@ export const getStadiumName = (stadiumId, fallback = '') => {
   const out = t(key);
   return out === key ? fallback : out;
 };
+
+/**
+ * Get target name in English (for analytics/Plausible).
+ * @param {{ name?: string, countryId?: string, id?: string } | null} target
+ * @param {'capital' | 'country' | 'stadium' | 'civilization'} targetType
+ * @returns {string | null}
+ */
+export const getTargetNameEn = (target, targetType) => {
+  if (!target) return null;
+  const en = translations.en;
+  switch (targetType) {
+    case 'capital':
+      return en.capital?.[target.countryId] ?? target.name ?? null;
+    case 'country':
+      return en.country?.[target.countryId] ?? target.name ?? null;
+    case 'stadium':
+      return en.stadium?.[target.id] ?? target.name ?? null;
+    case 'civilization':
+      return en.civilization?.[target.id] ?? target.name ?? null;
+    default:
+      return target.name ?? null;
+  }
+};

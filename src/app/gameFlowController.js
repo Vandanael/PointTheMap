@@ -11,6 +11,7 @@ import { EVENTS } from '../core/eventTypes.js';
 import { createMapQueryAdapter, createRoundRulesAdapter } from '../game/ports.js';
 import { UI_TIMING } from '@lib/config/visual-constants.js';
 import { getModeStrategy } from './modeStrategies.js';
+import { getTargetNameEn } from '../i18n.js';
 
 /**
  * @typedef {Object} GameFlowDeps
@@ -205,7 +206,7 @@ export function createGameFlowController(deps) {
       roundNumber: round.roundNumber,
       roundId: round.roundId,
       targetType,
-      targetName: target?.name ?? null,
+      targetName: getTargetNameEn(target, targetType),
       targetId:
         targetType === 'civilization' && target && 'id' in target ? (target.id ?? null) : null,
       targetCountryId:
