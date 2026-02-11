@@ -65,6 +65,9 @@ const translations = {
     shareGameMessage: `Point The Map — Devine les capitales ! ${PUBLIC_URL}`,
     mapLockedHint: 'Carte verrouillée',
 
+    // Footer
+    about: 'À propos',
+
     // Stats
     myStats: 'Mes Statistiques',
     stats: {
@@ -868,6 +871,9 @@ const translations = {
     shareGameMessage: `Point The Map — Try to guess the capitals! ${PUBLIC_URL}`,
     mapLockedHint: 'Map locked',
 
+    // Footer
+    about: 'About',
+
     // Stats
     myStats: 'My Stats',
     stats: {
@@ -1637,7 +1643,7 @@ let currentLang = null;
 
 const initLang = () => {
   if (currentLang === null) {
-    currentLang = readStoredLang() || 'fr';
+    currentLang = readStoredLang() || 'en';
     // Set HTML lang attribute on init
     document.documentElement.lang = currentLang;
   }

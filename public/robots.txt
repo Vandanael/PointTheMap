@@ -1,3 +1,5 @@
 # robots.txt - Allow search engines to index the site
 User-agent: *
 Allow: /
+
+Sitemap: https://pointthemap.net/sitemap.xml

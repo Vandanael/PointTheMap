@@ -360,6 +360,10 @@ export const StartScreen = () => `
     <div class="lobby-footer" style="position: relative; z-index: 1;">
       <div class="lobby-footer-content">
         <div class="text-center md:text-left text-tertiary text-sm">
+          <a href="/about.html" class="text-secondary hover:underline no-underline transition-colors">
+            ${t('about')}
+          </a>
+          <span class="mx-1">·</span>
           ${t('madeBy')}
           <a href="https://github.com/Vandanael" target="_blank" rel="noopener noreferrer" class="font-semibold transition-colors no-underline hover:underline text-secondary">
             Vandanael

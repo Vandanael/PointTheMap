@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes"
+    />
+
+    <title>Point The Map</title>
+    <meta
+      name="description"
+      content="Point The Map is a geography game where you place countries, cities, and locations on a blank world map in five guesses. No account, no ads, just quick rounds."
+    />
+
+    <link rel="canonical" href="https://pointthemap.net/about.html" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://pointthemap.net/about.html" />
+    <meta property="og:title" content="Point The Map" />
+    <meta
+      property="og:description"
+      content="Point The Map is a geography game where you place countries, cities, and locations on a blank world map in five guesses. No account, no ads, just quick rounds."
+    />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Point The Map" />
+    <meta
+      name="twitter:description"
+      content="Point The Map is a geography game where you place countries, cities, and locations on a blank world map in five guesses."
+    />
+    <meta name="twitter:image" content="/og-image.png" />
+
+    <link rel="icon" href="/favicon.svg" />
+
+    <style>
+      :root {
+        --bg-primary: #020617;
+        --bg-secondary: #0f172a;
+        --bg-tertiary: #1e293b;
+        --text-primary: #f8fafc;
+        --text-secondary: #a7b4c7;
+        --text-tertiary: #64748b;
+        --border-color: #2d3b4e;
+        --accent: #facc15;
+      }
+
+      body.light-theme {
+        --bg-primary: #f5f3f0;
+        --bg-secondary: #ebe8e3;
+        --bg-tertiary: #ddd9d2;
+        --text-primary: #1a1816;
+        --text-secondary: #2f2d29;
+        --text-tertiary: #5b5853;
+        --border-color: #b5b1a8;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        line-height: 1.6;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      main {
+        flex: 1;
+        max-width: 750px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+        width: 100%;
+      }
+
+      /* Header */
+      header {
+        margin-bottom: 3rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+
+      .header-left {
+        flex: 1;
+      }
+
+      .header-right {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        flex-shrink: 0;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: -0.02em;
+        margin-bottom: 0.5rem;
+      }
+
+      .subtitle {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+      }
+
+      .back-link {
+        display: inline-block;
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+      }
+
+      .back-link:hover {
+        text-decoration: underline;
+      }
+
+      /* Toggle buttons - match main game exactly */
+      .toggle-btn {
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 1rem;
+        font-weight: 600;
+      }
+
+      .toggle-btn:hover {
+        background: var(--bg-secondary);
+      }
+
+      .toggle-btn:active {
+        transform: scale(0.95);
+      }
+
+      /* Theme transition */
+      body {
+        transition:
+          background-color 0.3s ease,
+          color 0.3s ease;
+      }
+
+      header,
+      .toggle-btn,
+      footer {
+        transition:
+          background-color 0.3s ease,
+          color 0.3s ease,
+          border-color 0.3s ease;
+      }
+
+      /* Content sections */
+      section {
+        margin-bottom: 3rem;
+      }
+
+      section.hidden {
+        display: none;
+      }
+
+      h2 {
+        font-size: 1.75rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        margin-bottom: 2rem;
+      }
+
+      h3 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+        color: var(--text-primary);
+      }
+
+      p {
+        margin-bottom: 1rem;
+        color: var(--text-secondary);
+      }
+
+      ul {
+        list-style: none;
+        padding: 0;
+        margin-bottom: 1rem;
+      }
+
+      ul li {
+        padding-left: 1.5rem;
+        position: relative;
+        margin-bottom: 0.5rem;
+        color: var(--text-secondary);
+      }
+
+      ul li::before {
+        content: '—';
+        position: absolute;
+        left: 0;
+        color: var(--accent);
+        font-weight: bold;
+      }
+
+      hr {
+        border: none;
+        border-top: 1px solid var(--border-color);
+        margin: 2rem 0;
+      }
+
+      /* Footer - match lobby footer exactly (full width, sticky bottom) */
+      footer {
+        width: 100%;
+        padding: 1rem 0;
+        margin-top: auto;
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border-color);
+      }
+
+      .footer-content {
+        max-width: 850px;
+        margin: 0 auto;
+        padding: 0 1rem;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        flex-wrap: nowrap;
+      }
+
+      @media (min-width: 768px) {
+        .footer-content {
+          padding: 0 1.5rem;
+        }
+      }
+
+      .footer-left {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        font-size: 0.875rem;
+        color: var(--text-tertiary);
+      }
+
+      footer a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.2s ease;
+      }
+
+      footer a:hover {
+        text-decoration: underline;
+        color: var(--text-primary);
+      }
+
+      .share-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 0;
+        transition: color 0.2s ease;
+      }
+
+      .share-btn:hover {
+        text-decoration: underline;
+        color: var(--text-primary);
+      }
+
+      /* Responsive */
+      @media (max-width: 640px) {
+        main {
+          padding: 1.5rem 1rem;
+        }
+
+        h1 {
+          font-size: 2rem;
+        }
+
+        h2 {
+          font-size: 1.5rem;
+        }
+
+        h3 {
+          font-size: 1.1rem;
+        }
+
+        .header-right {
+          flex-shrink: 0;
+        }
+
+        .footer-content {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.75rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <a href="/" class="back-link">← <span data-i18n="backToGame">Back to Game</span></a>
+
+      <header>
+        <div class="header-left">
+          <h1>Point The Map</h1>
+          <p class="subtitle" data-i18n="subtitle">About this geography game</p>
+        </div>
+        <div class="header-right">
+          <button
+            id="btn-lang"
+            class="toggle-btn"
+            title="Change language"
+            aria-label="Toggle language"
+          >
+            <span id="lang-icon">EN</span>
+          </button>
+          <button id="btn-theme" class="toggle-btn" title="Change theme" aria-label="Toggle theme">
+            <span id="theme-icon">🌙</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- ENGLISH -->
+      <section id="content-en" lang="en">
+        <h2>What is Point The Map?</h2>
+        <p>
+          <strong>Point The Map</strong> is a small browser geography game where you place
+          countries, cities, or locations on a blank world map in <strong>five guesses</strong>.
+        </p>
+        <p>No installation, no account — just quick rounds you can play in one or two minutes.</p>
+
+        <hr />
+
+        <h3>How it works</h3>
+        <ul>
+          <li>Choose a mode (countries, capitals, etc.)</li>
+          <li>You get <strong>5 guesses</strong></li>
+          <li>After each guess, the map shows the distance</li>
+          <li>Try to be as accurate as possible</li>
+          <li>Play again instantly, no signup</li>
+        </ul>
+
+        <hr />
+
+        <h3>Privacy</h3>
+        <ul>
+          <li>No account required</li>
+          <li>No personal data stored</li>
+          <li>No ads inside the game</li>
+          <li>Only anonymous, cookie-free analytics via Plausible</li>
+        </ul>
+        <p>No emails. No profiles. No selling data.</p>
+
+        <hr />
+
+        <h3>Why this game exists</h3>
+        <p>
+          Point The Map was created as a simple way to mix <strong>fun and geography</strong> during
+          short breaks.
+        </p>
+        <p>It is meant to stay lightweight, fast, and slightly challenging without pressure.</p>
+
+        <hr />
+
+        <h3>What's next</h3>
+        <ul>
+          <li>A chill 10-second version to take your time</li>
+          <li>Mobile and UI improvements</li>
+          <li>Stats and score recovery features</li>
+          <li>Performance optimizations</li>
+          <li>Login system (only if users request it)</li>
+        </ul>
+      </section>
+
+      <!-- FRANÇAIS -->
+      <section id="content-fr" lang="fr" class="hidden">
+        <h2>Qu'est-ce que Point The Map ?</h2>
+        <p>
+          <strong>Point The Map</strong> est un petit jeu de géographie jouable dans le navigateur
+          où vous placez des pays, villes ou lieux sur une carte du monde vide en
+          <strong>cinq essais</strong>.
+        </p>
+        <p>Pas d'installation, pas de compte, juste des parties rapides de une ou deux minutes.</p>
+
+        <hr />
+
+        <h3>Comment jouer</h3>
+        <ul>
+          <li>Choisissez un mode (pays, capitales, civilisations, stades de foot)</li>
+          <li>Vous avez <strong>5 essais</strong></li>
+          <li>Après chaque tentative, la carte affiche la distance</li>
+          <li>Essayez d'être le plus précis possible</li>
+          <li>Rejouez instantanément, sans inscription</li>
+        </ul>
+
+        <hr />
+
+        <h3>Vie privée</h3>
+        <ul>
+          <li>Aucun compte requis</li>
+          <li>Aucune donnée personnelle stockée</li>
+          <li>Pas de publicité dans le jeu</li>
+          <li>Uniquement des statistiques anonymes, sans cookies, via Plausible</li>
+        </ul>
+        <p>Pas d'emails. Pas de profils. Pas de revente de données.</p>
+
+        <hr />
+
+        <h3>Pourquoi ce jeu existe</h3>
+        <p>
+          Point The Map a été créé pour mélanger <strong>plaisir et géographie</strong> pendant de
+          courtes pauses.
+        </p>
+        <p>Le but est de rester léger, rapide et compétitif sans pression.</p>
+
+        <hr />
+
+        <h3>À venir</h3>
+        <ul>
+          <li>Une version chill 10 secondes pour prendre le temps</li>
+          <li>Améliorations mobile et interface</li>
+          <li>Ajout de stats et récupérations des scores</li>
+          <li>Optimisations de performance</li>
+          <li>Un login uniquement si les utilisateurs le demandent</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-content">
+        <div class="footer-left">
+          <a href="/" data-i18n="about">About</a>
+          <span>·</span>
+          <span data-i18n="madeBy">Made by</span>
+          <a href="https://github.com/Vandanael" target="_blank" rel="noopener noreferrer"
+            >Vandanael</a
+          >
+        </div>
+        <button class="share-btn" id="btn-share" data-i18n="share">Share</button>
+      </div>
+    </footer>
+
+    <script>
+      // Language management - sync with main app (localStorage key: ptm_lang)
+      const LANG_KEY = 'ptm_lang';
+      const THEME_KEY = 'ptm_theme';
+
+      const translations = {
+        en: {
+          backToGame: 'Back to Game',
+          subtitle: 'About this geography game',
+          about: 'About',
+          madeBy: 'Made by',
+          share: 'Share',
+        },
+        fr: {
+          backToGame: 'Retour au jeu',
+          subtitle: 'À propos de ce jeu de géographie',
+          about: 'À propos',
+          madeBy: 'Par',
+          share: 'Partager',
+        },
+      };
+
+      function getLang() {
+        try {
+          const stored = localStorage.getItem(LANG_KEY);
+          return stored ? JSON.parse(stored) : 'en';
+        } catch {
+          return 'en';
+        }
+      }
+
+      function setLang(lang) {
+        try {
+          localStorage.setItem(LANG_KEY, JSON.stringify(lang));
+        } catch {}
+      }
+
+      function getTheme() {
+        try {
+          const stored = localStorage.getItem(THEME_KEY);
+          return stored ? JSON.parse(stored) : 'dark';
+        } catch {
+          return 'dark';
+        }
+      }
+
+      function setTheme(theme) {
+        try {
+          localStorage.setItem(THEME_KEY, JSON.stringify(theme));
+        } catch {}
+      }
+
+      function updateTheme(theme) {
+        document.body.classList.toggle('light-theme', theme === 'light');
+        const icon = document.getElementById('theme-icon');
+        if (icon) {
+          icon.textContent = theme === 'light' ? '☀️' : '🌙';
+        }
+      }
+
+      function updateContent(lang) {
+        // Update content sections
+        document.getElementById('content-en').classList.toggle('hidden', lang !== 'en');
+        document.getElementById('content-fr').classList.toggle('hidden', lang !== 'fr');
+
+        // Update lang icon
+        const langIcon = document.getElementById('lang-icon');
+        if (langIcon) {
+          langIcon.textContent = lang.toUpperCase();
+        }
+
+        // Update HTML lang attribute
+        document.documentElement.lang = lang;
+
+        // Update i18n strings
+        document.querySelectorAll('[data-i18n]').forEach((el) => {
+          const key = el.dataset.i18n;
+          if (translations[lang] && translations[lang][key]) {
+            el.textContent = translations[lang][key];
+          }
+        });
+      }
+
+      // Initialize
+      const currentLang = getLang();
+      updateContent(currentLang);
+
+      const currentTheme = getTheme();
+      updateTheme(currentTheme);
+
+      // Language toggle listener
+      document.getElementById('btn-lang')?.addEventListener('click', () => {
+        const newLang = getLang() === 'en' ? 'fr' : 'en';
+        setLang(newLang);
+        updateContent(newLang);
+      });
+
+      // Theme toggle listener
+      document.getElementById('btn-theme')?.addEventListener('click', () => {
+        const newTheme = getTheme() === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme);
+        updateTheme(newTheme);
+      });
+
+      // Share button
+      document.getElementById('btn-share')?.addEventListener('click', async () => {
+        const url = window.location.origin;
+        const text =
+          currentLang === 'fr'
+            ? `Point The Map — Devine les capitales ! ${url}`
+            : `Point The Map — Try to guess the capitals! ${url}`;
+
+        try {
+          if (navigator.share) {
+            await navigator.share({ text, url });
+          } else {
+            await navigator.clipboard.writeText(url);
+            alert(currentLang === 'fr' ? 'Lien copié !' : 'Link copied!');
+          }
+        } catch (err) {
+          console.error('Share failed:', err);
+        }
+      });
+    </script>
+  </body>
+</html>
