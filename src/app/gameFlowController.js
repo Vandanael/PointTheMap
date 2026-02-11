@@ -32,7 +32,7 @@ import { getTargetNameEn } from '../i18n.js';
  * @property {{ formatShareText: any, shareGameResults: any, getDailyNumber: any }} share
  * @property {{ track: any }} analytics
  * @property {typeof import('../utils/logger.js').logger} logger
- * @property {{ t: any, getLang: any, getCivilizationName: (id: string, fallback?: string) => string }} i18n
+ * @property {{ t: any, getLang: any, getCivilizationName: (id: string, fallback?: string) => string, getCountryDisplayName: (countryId: string, fallback?: string) => string, getStadiumName: (stadiumId: string, fallback?: string) => string }} i18n
  * @property {{ TIMING: any, MAP: any, MODE_IDS: any, isDailyVariant: any, isCapitalCategory: any, isStadiumCategory: any, isCountryCategory: any, isCivilizationCategory: any }} config
  */
 

@@ -47,7 +47,7 @@ import { errorHandler } from './core/ErrorHandler.js';
 import { updateStats, getStats } from './features/StatsManager.js';
 import { checkAchievements } from './features/AchievementManager.js';
 import { formatShareText, shareGameResults, getDailyNumber } from './features/Share.js';
-import { getLang, t, getCivilizationName } from './i18n.js';
+import { getLang, t, getCivilizationName, getCountryDisplayName, getStadiumName } from './i18n.js';
 
 // Import new modules
 import { initLifecycle } from './app/lifecycle.js';
@@ -138,7 +138,7 @@ export const initApp = async () => {
       share: { formatShareText, shareGameResults, getDailyNumber },
       analytics,
       logger,
-      i18n: { t, getLang, getCivilizationName },
+      i18n: { t, getLang, getCivilizationName, getCountryDisplayName, getStadiumName },
       config: {
         TIMING,
         MAP,
