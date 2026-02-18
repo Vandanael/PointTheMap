@@ -30,8 +30,10 @@ jobs:
       - run: npm run test:run
       - run: npm run build
       - run: npm run check:budget
-      - if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-        run: npx playwright install --with-deps
+      - if: github.event_name == 'pull_request'
+        run: npx playwright install chromium
+      - if: github.ref == 'refs/heads/main' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: npx playwright install --with-deps chromium
       - if: github.ref == 'refs/heads/main'
         run: npm run e2e:smoke
       - if: github.event_name == 'pull_request'
