@@ -45,6 +45,12 @@ test('about page share button works', async ({ page }) => {
   // Grant clipboard permissions
   await page.context().grantPermissions(['clipboard-write', 'clipboard-read']);
 
+  // Dismiss Netlify deploy-preview drawer if present (it intercepts pointer events)
+  await page.evaluate(() => {
+    const drawer = document.querySelector('iframe[title="Netlify Drawer"]');
+    if (drawer) drawer.style.display = 'none';
+  });
+
   // Click share button (will copy to clipboard if navigator.share not available)
   await page.locator('#btn-share').click();
 
