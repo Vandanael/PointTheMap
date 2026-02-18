@@ -67,59 +67,55 @@ describe('api.js', () => {
     it('accepts valid classic payload', () => {
       const payload = {
         ...base,
-        capitals: [{ name: 'Paris', country: 'France', lat: 1, lng: 2 }],
+        targets: [{ name: 'Paris', country: 'France', lat: 1, lng: 2 }],
       };
       expect(validateStartSessionPayload(payload, 'classic').valid).toBe(true);
     });
 
-    it('rejects classic mode without capitals', () => {
+    it('rejects classic mode without targets', () => {
       const result = validateStartSessionPayload(base, 'classic');
       expect(result.valid).toBe(false);
-      expect(result.error).toBe('Missing capitals');
+      expect(result.error).toMatch(/expected array/i);
     });
 
-    it('rejects country mode without countries', () => {
-      const payload = {
-        ...base,
-        capitals: [{ name: 'Paris', country: 'France', lat: 1, lng: 2 }],
-      };
-      const result = validateStartSessionPayload(payload, 'country');
+    it('rejects country mode without targets', () => {
+      const result = validateStartSessionPayload(base, 'country');
       expect(result.valid).toBe(false);
-      expect(result.error).toBe('Missing countries');
+      expect(result.error).toMatch(/expected array/i);
     });
 
-    it('accepts country mode with countries', () => {
+    it('accepts country mode with targets', () => {
       const payload = {
         ...base,
-        countries: [{ name: 'France', countryId: 'FRA' }],
+        targets: [{ name: 'France', countryId: 'FRA' }],
       };
       expect(validateStartSessionPayload(payload, 'country').valid).toBe(true);
     });
 
-    it('rejects stadium mode without stadiums', () => {
+    it('rejects stadium mode without targets', () => {
       const result = validateStartSessionPayload(base, 'stadium');
       expect(result.valid).toBe(false);
-      expect(result.error).toBe('Missing stadiums');
+      expect(result.error).toMatch(/expected array/i);
     });
 
-    it('accepts stadium mode with stadiums', () => {
+    it('accepts stadium mode with targets', () => {
       const payload = {
         ...base,
-        stadiums: [{ name: 'Wembley', city: 'London', country: 'UK', lat: 51.5, lng: -0.3 }],
+        targets: [{ name: 'Wembley', city: 'London', country: 'UK', lat: 51.5, lng: -0.3 }],
       };
       expect(validateStartSessionPayload(payload, 'stadium').valid).toBe(true);
     });
 
-    it('rejects civilization mode without civilizations', () => {
+    it('rejects civilization mode without targets', () => {
       const result = validateStartSessionPayload(base, 'civilization');
       expect(result.valid).toBe(false);
-      expect(result.error).toBe('Missing civilizations');
+      expect(result.error).toMatch(/expected array/i);
     });
 
-    it('accepts civilization mode with civilizations', () => {
+    it('accepts civilization mode with targets', () => {
       const payload = {
         ...base,
-        civilizations: [{ id: 'rome', name: 'Roman Empire' }],
+        targets: [{ id: 'rome', name: 'Roman Empire' }],
       };
       expect(validateStartSessionPayload(payload, 'civilization').valid).toBe(true);
     });
@@ -145,9 +141,9 @@ describe('api.js', () => {
       const result = await api.start('classic');
 
       expect(result).toHaveProperty('token');
-      expect(result).toHaveProperty('capitals');
+      expect(result).toHaveProperty('targets');
       expect(result).toHaveProperty('startTime');
-      expect(Array.isArray(result.capitals)).toBe(true);
+      expect(Array.isArray(result.targets)).toBe(true);
     });
 
     it('should generate a unique token', async () => {
@@ -163,15 +159,15 @@ describe('api.js', () => {
       expect(loadSelectBalancedCapitals).toHaveBeenCalled();
     });
 
-    it('should format capitals without popular field', async () => {
+    it('should format targets without popular field in classic mode', async () => {
       const result = await api.start();
 
-      result.capitals.forEach((capital) => {
-        expect(capital).toHaveProperty('name');
-        expect(capital).toHaveProperty('country');
-        expect(capital).toHaveProperty('lat');
-        expect(capital).toHaveProperty('lng');
-        expect(capital).not.toHaveProperty('popular');
+      result.targets.forEach((target) => {
+        expect(target).toHaveProperty('name');
+        expect(target).toHaveProperty('country');
+        expect(target).toHaveProperty('lat');
+        expect(target).toHaveProperty('lng');
+        expect(target).not.toHaveProperty('popular');
       });
     });
 
@@ -291,6 +287,22 @@ describe('api.js', () => {
       expect(parsed.success).toBe(true);
     });
 
+    it('rejects country payload without countryId', () => {
+      const countryRounds = mockRounds.map((round) => ({
+        ...round,
+        country: { name: 'France' },
+      }));
+      const payload = {
+        token: 'token-123',
+        pseudo: 'USER',
+        rounds: __testOnlyFormatRoundsForSubmit(countryRounds, MODE_IDS.COUNTRY),
+        gameType: MODE_IDS.COUNTRY,
+        payloadVersion: 1,
+      };
+      const parsed = SubmitSchema.safeParse(payload);
+      expect(parsed.success).toBe(false);
+    });
+
     it('builds a valid submit payload for country_daily rounds', async () => {
       const countryRounds = mockRounds.map((round) => ({
         ...round,
@@ -343,6 +355,22 @@ describe('api.js', () => {
       };
       const parsed = SubmitSchema.safeParse(payload);
       expect(parsed.success).toBe(true);
+    });
+
+    it('rejects civilization payload without civilizationId', () => {
+      const civRounds = mockRounds.map((round) => ({
+        ...round,
+        civilization: { name: 'Roman Empire' },
+      }));
+      const payload = {
+        token: 'token-123',
+        pseudo: 'USER',
+        rounds: __testOnlyFormatRoundsForSubmit(civRounds, MODE_IDS.CIVILIZATION),
+        gameType: MODE_IDS.CIVILIZATION,
+        payloadVersion: 1,
+      };
+      const parsed = SubmitSchema.safeParse(payload);
+      expect(parsed.success).toBe(false);
     });
   });
 

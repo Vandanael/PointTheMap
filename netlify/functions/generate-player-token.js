@@ -1,13 +1,26 @@
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
 import { getDatabase } from './db.js';
-import { errorEnvelope, successEnvelope, createLogger } from './_utils.js';
+import {
+  errorEnvelope,
+  successEnvelope,
+  createLogger,
+  getClientIp,
+  isDatabaseConnectionError,
+} from './_utils.js';
+import { createFallbackRateLimiter, checkDbRateLimit } from './_rate-limit.js';
 
 const logger = createLogger('generate-player-token');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error('JWT_SECRET environment variable is required');
 const TOKEN_EXPIRY = '1y'; // Token valide 1 an
+const RATE_LIMIT_MAX = 10;
+
+const fallbackLimiter = createFallbackRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  maxRequests: RATE_LIMIT_MAX,
+});
 
 /**
  * @param {Request} req
@@ -26,6 +39,29 @@ export default async (req, context) => {
 
   try {
     const sql = getDatabase(context);
+    const ip = getClientIp(req, context);
+
+    const rateLimit = await checkDbRateLimit({
+      ip,
+      sql,
+      keyPrefix: 'player-token-',
+      maxRequests: RATE_LIMIT_MAX,
+      fallback: fallbackLimiter,
+      logger,
+    });
+
+    if (!rateLimit.allowed) {
+      return errorEnvelope(
+        'rate_limited',
+        'Rate limit exceeded. Try again later.',
+        429,
+        undefined,
+        {
+          'X-RateLimit-Limit': String(RATE_LIMIT_MAX),
+          'X-RateLimit-Remaining': '0',
+        }
+      );
+    }
 
     // Generate new player_id
     const player_id = randomUUID();
@@ -49,13 +85,25 @@ export default async (req, context) => {
       { expiresIn: TOKEN_EXPIRY }
     );
 
-    return successEnvelope({
-      token,
-      player_id,
-      expires_in: TOKEN_EXPIRY,
-    });
+    return successEnvelope(
+      {
+        token,
+        player_id,
+        expires_in: TOKEN_EXPIRY,
+      },
+      {
+        'X-RateLimit-Limit': String(RATE_LIMIT_MAX),
+        'X-RateLimit-Remaining': String(Math.max(0, rateLimit.remaining)),
+      }
+    );
   } catch (error) {
     logger.error('Error generating player token:', error);
-    return errorEnvelope('internal_error', 'Internal server error', 500);
+    return errorEnvelope(
+      isDatabaseConnectionError(error) ? 'db_connection_error' : 'internal_error',
+      isDatabaseConnectionError(error)
+        ? 'Database connection error. Please try again later.'
+        : 'Internal server error',
+      isDatabaseConnectionError(error) ? 503 : 500
+    );
   }
 };

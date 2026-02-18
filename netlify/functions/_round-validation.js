@@ -99,10 +99,55 @@ export const validateRounds = (rounds, sessionTargets, gameType) => {
       typeof expected === 'object' && expected !== null && 'name' in expected
         ? expected.name
         : expected;
-    if (targetField !== expectedName) {
+
+    if (isCountryMode) {
+      const expectedCountryId =
+        typeof expected === 'object' && expected !== null && 'countryId' in expected
+          ? expected.countryId
+          : undefined;
+      if (
+        typeof expectedCountryId !== 'string' ||
+        typeof round?.countryId !== 'string' ||
+        round.countryId !== expectedCountryId
+      ) {
+        return { valid: false, error: `Country ID mismatch at round ${i + 1}` };
+      }
+
+      // Keep name as secondary diagnostic only (ID is source of truth)
+      if (typeof expectedName === 'string' && targetField !== expectedName) {
+        logger.warn('Country name differs but ID matches', {
+          roundIndex: i,
+          expectedName,
+          providedName: targetField,
+          expectedCountryId,
+        });
+      }
+    } else if (isCivilizationMode) {
+      const expectedCivilizationId =
+        typeof expected === 'object' && expected !== null && 'id' in expected
+          ? expected.id
+          : undefined;
+      if (
+        typeof expectedCivilizationId !== 'string' ||
+        typeof round?.civilizationId !== 'string' ||
+        round.civilizationId !== expectedCivilizationId
+      ) {
+        return { valid: false, error: `Civilization ID mismatch at round ${i + 1}` };
+      }
+
+      // Keep name as secondary diagnostic only (ID is source of truth)
+      if (typeof expectedName === 'string' && targetField !== expectedName) {
+        logger.warn('Civilization name differs but ID matches', {
+          roundIndex: i,
+          expectedName,
+          providedName: targetField,
+          expectedCivilizationId,
+        });
+      }
+    } else if (targetField !== expectedName) {
       return {
         valid: false,
-        error: `${isCountryMode ? 'Country' : isCivilizationMode ? 'Civilization' : isStadiumMode ? 'Stadium' : 'Capital'} mismatch at round ${i + 1}`,
+        error: `${isStadiumMode ? 'Stadium' : 'Capital'} mismatch at round ${i + 1}`,
       };
     }
 

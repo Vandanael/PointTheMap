@@ -184,9 +184,10 @@ export function createGameFlowController(deps) {
     });
 
     // Emit game started event
+    const targetCount = Array.isArray(state.targets) ? state.targets.length : 0;
     eventBus.emit(EVENTS.GAME_STARTED, {
       gameType,
-      capitalCount: state.targets?.length || state.capitals.length || state.countries.length,
+      capitalCount: targetCount,
     });
 
     const target = game.getCurrentTarget(state);

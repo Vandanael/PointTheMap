@@ -159,7 +159,7 @@ describe('ScoringSystem', () => {
   });
 
   describe('calculateScoreWithTime', () => {
-    it('should calculate score with time (currently no time bonus)', () => {
+    it('should calculate score with time', () => {
       const result = system.calculateScoreWithTime(100, 5000);
 
       expect(result).toHaveProperty('distance');
@@ -316,22 +316,32 @@ describe('ScoringSystem', () => {
 
   describe('calculateTimeBonus', () => {
     it('should return 0 when feature flag is disabled', () => {
-      const bonus = system.calculateTimeBonus(5000, 4000, 50, 50);
+      const bonus = system.calculateTimeBonus(5000, 4000, 50, 'classic');
       expect(bonus).toBe(0);
     });
 
     it('should return 0 when answered after half time', () => {
-      const bonus = system.calculateTimeBonus(5000, 6000, 2000, 10);
+      const bonus = system.calculateTimeBonus(5000, 6000, 2000, 'classic');
       expect(bonus).toBe(0);
     });
 
-    it('should award max bonus for daily mode when fast and accurate', () => {
-      const bonus = system.calculateTimeBonus(5000, 5000, 5000, 10, 'daily');
+    it('should award max bonus for daily mode when fast', () => {
+      const bonus = system.calculateTimeBonus(5000, 5000, 5000, 'daily');
+      expect(bonus).toBe(1000);
+    });
+
+    it('should award max bonus for classic mode when fast', () => {
+      const bonus = system.calculateTimeBonus(5000, 5000, 5000, 'classic');
+      expect(bonus).toBe(1000);
+    });
+
+    it('should award bonus for country mode with same config', () => {
+      const bonus = system.calculateTimeBonus(5000, 5000, 5000, 'country');
       expect(bonus).toBe(1000);
     });
 
     it('should return 0 for daily mode when answered after half time', () => {
-      const bonus = system.calculateTimeBonus(5000, 6000, 2500, 250, 'daily');
+      const bonus = system.calculateTimeBonus(5000, 6000, 2500, 'daily');
       expect(bonus).toBe(0);
     });
   });
@@ -366,16 +376,22 @@ describe('ScoringSystem', () => {
         expect(system.calculateCountryScore(0)).toBe(5000);
       });
 
-      it('should return 4000 for distance ≤ 50 km', () => {
+      it('should keep anchor values at 50km and 200km', () => {
         expect(system.calculateCountryScore(50)).toBe(4000);
-        expect(system.calculateCountryScore(1)).toBe(4000);
-        expect(system.calculateCountryScore(25)).toBe(4000);
+        expect(system.calculateCountryScore(200)).toBe(3000);
       });
 
-      it('should return 3000 for distance > 50 and ≤ 200 km', () => {
-        expect(system.calculateCountryScore(200)).toBe(3000);
-        expect(system.calculateCountryScore(100)).toBe(3000);
-        expect(system.calculateCountryScore(51)).toBe(3000);
+      it('should stay smooth around 50km and 200km boundaries', () => {
+        const score49 = system.calculateCountryScore(49);
+        const score50 = system.calculateCountryScore(50);
+        const score51 = system.calculateCountryScore(51);
+        const score199 = system.calculateCountryScore(199);
+        const score200 = system.calculateCountryScore(200);
+        const score201 = system.calculateCountryScore(201);
+        expect(Math.abs(score49 - score50)).toBeLessThan(100);
+        expect(Math.abs(score50 - score51)).toBeLessThan(100);
+        expect(Math.abs(score199 - score200)).toBeLessThan(100);
+        expect(Math.abs(score200 - score201)).toBeLessThan(100);
       });
 
       it('should return score in (0, 3000] for distance > 200 km (decay)', () => {
@@ -408,7 +424,7 @@ describe('ScoringSystem', () => {
       };
       const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
 
-      it('should return totalScore 5000 when click is inside country and not timed out', () => {
+      it('should return totalScore above base score when click is inside country and not timed out', () => {
         const result = system.calculateCountryClickScore(
           /** @type {[number, number]} */ ([0.5, 0.5]),
           minimalPolygonFeature,
@@ -420,6 +436,19 @@ describe('ScoringSystem', () => {
         expect(result.totalScore).toBeGreaterThan(5000);
         expect(result.score).toBe(5000);
         expect(result.distanceToCountry).toBe(0);
+      });
+
+      it('should award time bonus in country daily mode for a fast accurate click', () => {
+        const result = system.calculateCountryClickScore(
+          /** @type {[number, number]} */ ([0.5, 0.5]),
+          minimalPolygonFeature,
+          true,
+          1000,
+          'country_daily',
+          totalTimeAllowed
+        );
+        expect(result.totalScore).toBeGreaterThan(5000);
+        expect(result.score).toBe(5000);
       });
 
       it('should return totalScore 0 when timed out', () => {

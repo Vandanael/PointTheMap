@@ -13,6 +13,11 @@ const MAX_QUEUE_SIZE = 20;
 const MAX_DEDUPE_KEYS = 200;
 const FLUSH_DELAY_MS = 5000;
 const ERROR_REPORT_URL = '/api/error-report';
+const ERROR_MONITORING_SAMPLE_RATE = (() => {
+  const value = Number.parseFloat(import.meta.env.VITE_ERROR_MONITORING_SAMPLE_RATE || '1');
+  if (!Number.isFinite(value)) return 1;
+  return Math.max(0, Math.min(1, value));
+})();
 
 class ErrorMonitoring {
   #enabled = false;
@@ -108,6 +113,8 @@ class ErrorMonitoring {
    * @param {Object} context - Additional context
    */
   #sendToProvider(error, context) {
+    if (Math.random() > ERROR_MONITORING_SAMPLE_RATE) return;
+
     const serialized = this.#serializeError(error);
     const contextStr = context?.type || context?.message || '';
     const dedupeKey = serialized.message + '|' + contextStr;

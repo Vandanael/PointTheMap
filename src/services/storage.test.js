@@ -34,7 +34,8 @@ vi.mock('../core/EventBus.js', () => ({
 
 // Import AFTER mocks
 import {
-  storage,
+  getStorageValue,
+  setStorageValue,
   getLastPseudo,
   setLastPseudo,
   getTheme,
@@ -56,11 +57,11 @@ describe('storage.js', () => {
     mockStorageManager.set.mockReturnValue(true);
   });
 
-  describe('storage.get', () => {
+  describe('getStorageValue', () => {
     it('should get value from storage', () => {
       mockStorageManager.get.mockReturnValue('test-value');
 
-      const result = storage.get('test-key');
+      const result = getStorageValue('test-key');
 
       expect(mockStorageManager.get).toHaveBeenCalledWith('test-key');
       expect(result).toBe('test-value');
@@ -69,17 +70,17 @@ describe('storage.js', () => {
     it('should return null for missing keys', () => {
       mockStorageManager.get.mockReturnValue(null);
 
-      const result = storage.get('missing-key');
+      const result = getStorageValue('missing-key');
 
       expect(result).toBeNull();
     });
   });
 
-  describe('storage.set', () => {
+  describe('setStorageValue', () => {
     it('should set value in storage', () => {
       mockStorageManager.set.mockReturnValue(true);
 
-      const result = storage.set('test-key', 'test-value');
+      const result = setStorageValue('test-key', 'test-value');
 
       expect(mockStorageManager.set).toHaveBeenCalledWith('test-key', 'test-value');
       expect(result).toBe(true);
@@ -94,7 +95,7 @@ describe('storage.js', () => {
 
       mockStorageManager.autoCleanup.mockReturnValue(1048576); // 1MB freed
 
-      const result = storage.set('test-key', 'test-value');
+      const result = setStorageValue('test-key', 'test-value');
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Storage quota exceeded. Attempting cleanup...'
@@ -119,7 +120,7 @@ describe('storage.js', () => {
 
       mockStorageManager.autoCleanup.mockReturnValue(1024);
 
-      const result = storage.set('test-key', 'test-value');
+      const result = setStorageValue('test-key', 'test-value');
 
       expect(mockEventBus.emit).toHaveBeenCalledWith(
         'storage:quota-failed',
@@ -137,7 +138,7 @@ describe('storage.js', () => {
 
       mockStorageManager.autoCleanup.mockReturnValue(1024);
 
-      const result = storage.set('test-key', 'test-value');
+      const result = setStorageValue('test-key', 'test-value');
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Failed to save after cleanup',
@@ -157,7 +158,7 @@ describe('storage.js', () => {
         throw new Error('Other error');
       });
 
-      const result = storage.set('test-key', 'test-value');
+      const result = setStorageValue('test-key', 'test-value');
 
       expect(result).toBe(false);
     });

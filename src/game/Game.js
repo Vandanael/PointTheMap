@@ -99,11 +99,7 @@ import { pointInPolygon } from '@lib/geo-utils/index.js';
  * @typedef {Object} GameState
  * @property {GameStatusType} status
  * @property {string | null} token
- * @property {Array<Capital|Country|Stadium|Civilization>} [targets] - Domain model: generic session targets
- * @property {Capital[]} capitals - Legacy: only populated for capital modes
- * @property {Country[]} countries - Legacy: only populated for country modes
- * @property {Stadium[]} stadiums - Legacy: only populated for stadium modes
- * @property {import('./Game.js').Civilization[]} civilizations - Legacy: only populated for civilization modes
+ * @property {Array<Capital|Country|Stadium|Civilization>} [targets] - Generic session targets
  * @property {Round[]} rounds
  * @property {number} currentRoundIndex
  * @property {Round | null} currentRound
@@ -133,12 +129,7 @@ export const GameStatus = {
 export const createGameState = () => ({
   status: GameStatus.IDLE,
   token: null,
-  targets: [], // Domain model: generic session targets
-  // Legacy compatibility fields - avoid writing these outside of startGame.
-  capitals: [],
-  countries: [],
-  stadiums: [],
-  civilizations: [],
+  targets: [],
   rounds: [],
   currentRoundIndex: 0,
   currentRound: null,
@@ -152,19 +143,6 @@ export const createGameState = () => ({
     MODE_IDS.CLASSIC
   ),
   runtimeConfig: null,
-});
-
-/**
- * Build legacy compatibility fields from targets.
- * @param {Array<Capital|Country|Stadium|Civilization>} targets
- * @param {string} roundGameType
- */
-const buildLegacyTargetFields = (targets, roundGameType) => ({
-  capitals: roundGameType === 'capital' ? /** @type {Capital[]} */ (targets) : [],
-  countries: roundGameType === MODE_IDS.COUNTRY ? /** @type {Country[]} */ (targets) : [],
-  stadiums: roundGameType === MODE_IDS.STADIUM ? /** @type {Stadium[]} */ (targets) : [],
-  civilizations:
-    roundGameType === MODE_IDS.CIVILIZATION ? /** @type {Civilization[]} */ (targets) : [],
 });
 
 /**
@@ -203,10 +181,7 @@ export const startGame = async (
     ...createGameState(),
     status: GameStatus.PLAYING,
     token: session.token,
-    // Domain model: store targets semantically (not mode-specific field names)
     targets,
-    // Legacy fields: maintained for backward compatibility with existing code
-    ...buildLegacyTargetFields(targets, roundGameType),
     currentRound: createRound(targets[0], 0, roundGameType, 0),
     gameType: /** @type {'classic' | 'daily' | 'country' | 'stadium' | 'civilization'} */ (
       gameType
@@ -382,13 +357,6 @@ export const getCurrentTarget = (state) => {
   const key = getRoundGameType(state.gameType);
   return round[key] ?? null;
 };
-
-/**
- * Get current capital being played (legacy compatibility)
- * @param {GameState} state - Current game state
- * @returns {Capital | null}
- */
-export const getCurrentCapital = (state) => state.currentRound?.capital || null;
 
 /**
  * Check if current round is the last round

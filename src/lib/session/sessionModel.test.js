@@ -4,7 +4,7 @@ import {
   toPersistenceModel,
   isPersistenceModel,
   isDomainModel,
-} from './sessionModel.js';
+} from '@lib/session/sessionModel.js';
 
 describe('Session Domain Model', () => {
   describe('toDomainModel', () => {
