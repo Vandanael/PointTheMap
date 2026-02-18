@@ -38,6 +38,7 @@ import {
   isStadiumCategory,
   isCivilizationCategory,
 } from '@lib/config/game-modes.js';
+import { API } from '@lib/config/index.js';
 import { generateId } from '../utils/id.js';
 import { logger } from '../utils/logger.js';
 import { loadCapitals, loadSelectBalancedCapitals } from '../data/capitals-loader.js';
@@ -504,7 +505,9 @@ export const processRetryQueue = async () => {
   let successful = 0;
   let failed = 0;
   const MAX_RETRIES = 3;
-  const MAX_AGE_MS = 86400000;
+  // Retry entries depend on a valid submit session token.
+  // Keeping them longer than the backend session window only creates guaranteed 401s.
+  const MAX_AGE_MS = API.SESSION_EXPIRY_MS;
   for (let i = queue.length - 1; i >= 0; i--) {
     const entry = queue[i];
 
@@ -529,7 +532,20 @@ export const processRetryQueue = async () => {
       );
       removeFromRetryQueue(i);
       successful++;
-    } catch {
+    } catch (error) {
+      const isTerminalApiError =
+        error instanceof APIError &&
+        (error.status === 400 ||
+          error.status === 401 ||
+          error.status === 403 ||
+          error.status === 409);
+
+      if (isTerminalApiError) {
+        removeFromRetryQueue(i);
+        failed++;
+        continue;
+      }
+
       entry.attempts++;
       const updatedQueue = getRetryQueue();
       updatedQueue[i] = entry;
