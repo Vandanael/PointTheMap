@@ -4,6 +4,9 @@ on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,39 +19,58 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run check:migrations
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
+      - run: npm run audit:prod
+      - run: npm run audit:ci
       - run: npm run test:run
       - run: npm run build
       - run: npm run check:budget
-      - if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
-        run: npx playwright install --with-deps
-      - if: github.ref == 'refs/heads/main'
+      - if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: npx playwright install --with-deps chromium
+      - if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         run: npm run e2e:smoke
-      - if: github.event_name == 'pull_request'
-        id: resolve_preview
+      - if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        run: E2E_MODE=dev npx playwright test tests/e2e/submit-flow.spec.js --project=chromium
+      - if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        id: select_nightly_target
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/ci/resolve-preview-url.mjs
-      - if: github.event_name == 'pull_request'
+          NIGHTLY_PREVIEW_URL: ${{ vars.E2E_BASE_URL }}
+        run: |
+          selected_url="${NIGHTLY_PREVIEW_URL:-https://pointthemap.net}"
+          echo "Using nightly E2E target URL: $selected_url"
+          echo "e2e_base_url=$selected_url" >> "$GITHUB_OUTPUT"
+      - if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         env:
-          E2E_BASE_URL: ${{ steps.resolve_preview.outputs.preview_url }}
+          E2E_BASE_URL: ${{ steps.select_nightly_target.outputs.e2e_base_url }}
         run: node scripts/ci/preflight-e2e-target.mjs
-      - if: github.event_name == 'pull_request'
+      - if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         env:
-          E2E_BASE_URL: ${{ steps.resolve_preview.outputs.preview_url }}
+          E2E_MODE: preview
+          E2E_BASE_URL: ${{ steps.select_nightly_target.outputs.e2e_base_url }}
           E2E_BYPASS_TOKEN: ${{ secrets.E2E_BYPASS_TOKEN }}
         run: npm run e2e:preview -- --retries=1
-      - if: always() && github.event_name == 'pull_request'
+      - if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         uses: actions/upload-artifact@v4
         with:
           name: playwright-e2e-pr
+          path: |
+            test-results
+            playwright-report
+          if-no-files-found: ignore
+      - if: failure() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e-pr-failure
           path: |
             test-results
             playwright-report
