@@ -33,16 +33,36 @@ jobs:
         run: npm run e2e:smoke
       - if: github.event_name == 'pull_request'
         id: resolve_preview
+        continue-on-error: true
+        timeout-minutes: 7
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/ci/resolve-preview-url.mjs
       - if: github.event_name == 'pull_request'
+        id: select_preview
         env:
-          E2E_BASE_URL: ${{ steps.resolve_preview.outputs.preview_url }}
+          RESOLVED_PREVIEW_URL: ${{ steps.resolve_preview.outputs.preview_url }}
+          FALLBACK_PREVIEW_URL: ${{ vars.E2E_BASE_URL }}
+        run: |
+          selected_url="${RESOLVED_PREVIEW_URL:-}"
+          if [ -z "$selected_url" ]; then
+            selected_url="${FALLBACK_PREVIEW_URL:-}"
+          fi
+
+          if [ -z "$selected_url" ]; then
+            echo "::error::Unable to determine E2E preview URL. Set repository variable E2E_BASE_URL as fallback."
+            exit 1
+          fi
+
+          echo "Using E2E preview URL: $selected_url"
+          echo "e2e_base_url=$selected_url" >> "$GITHUB_OUTPUT"
+      - if: github.event_name == 'pull_request'
+        env:
+          E2E_BASE_URL: ${{ steps.select_preview.outputs.e2e_base_url }}
         run: node scripts/ci/preflight-e2e-target.mjs
       - if: github.event_name == 'pull_request'
         env:
-          E2E_BASE_URL: ${{ steps.resolve_preview.outputs.preview_url }}
+          E2E_BASE_URL: ${{ steps.select_preview.outputs.e2e_base_url }}
           E2E_BYPASS_TOKEN: ${{ secrets.E2E_BYPASS_TOKEN }}
         run: npm run e2e:preview -- --retries=1
       - if: always() && github.event_name == 'pull_request'
