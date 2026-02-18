@@ -35,6 +35,17 @@ describe('achievementPresenter', () => {
     document.body.innerHTML = '';
   });
 
+  const waitForAchievementModal = async (id) => {
+    await vi.waitFor(
+      () => {
+        const modal = document.getElementById('achievement-modal');
+        expect(modal).toBeTruthy();
+        expect(modal?.textContent).toContain(id);
+      },
+      { timeout: 3000 }
+    );
+  };
+
   describe('Achievement queue', () => {
     it('should show achievements sequentially without stacking', async () => {
       const achievement1 = {
@@ -61,25 +72,13 @@ describe('achievementPresenter', () => {
       presenter.enqueue(achievement1);
       presenter.enqueue(achievement2);
 
-      // Wait for first modal to show
-      await new Promise((resolve) => setTimeout(resolve, 1100));
-
-      // First modal should be shown
-      let modal = document.getElementById('achievement-modal');
-      expect(modal).toBeTruthy();
-      expect(modal?.textContent).toContain('ach1');
+      await waitForAchievementModal('ach1');
 
       // Close first modal
       const closeBtn = document.getElementById('btn-close-achievement');
       closeBtn?.click();
 
-      // Wait a bit for cleanup and second modal
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Second modal should now be shown
-      modal = document.getElementById('achievement-modal');
-      expect(modal).toBeTruthy();
-      expect(modal?.textContent).toContain('ach2');
+      await waitForAchievementModal('ach2');
     });
 
     it('should cleanup handlers between modals', async () => {
@@ -95,8 +94,7 @@ describe('achievementPresenter', () => {
 
       presenter.enqueue(achievement1);
 
-      // Wait for modal to show
-      await new Promise((resolve) => setTimeout(resolve, 1100));
+      await waitForAchievementModal('ach1');
 
       const closeBtn = document.getElementById('btn-close-achievement');
       expect(closeBtn).toBeTruthy();
@@ -117,12 +115,7 @@ describe('achievementPresenter', () => {
       };
 
       presenter.enqueue(achievement2);
-      await new Promise((resolve) => setTimeout(resolve, 1100));
-
-      // New modal should exist
-      const modal = document.getElementById('achievement-modal');
-      expect(modal).toBeTruthy();
-      expect(modal?.textContent).toContain('ach2');
+      await waitForAchievementModal('ach2');
     });
 
     it('should handle share button click', async () => {
@@ -137,7 +130,7 @@ describe('achievementPresenter', () => {
       };
 
       presenter.enqueue(achievement);
-      await new Promise((resolve) => setTimeout(resolve, 1100));
+      await waitForAchievementModal('ach1');
 
       const shareBtn = document.getElementById('btn-share-achievement-ach1');
       expect(shareBtn).toBeTruthy();
@@ -145,12 +138,11 @@ describe('achievementPresenter', () => {
       // Click share button
       shareBtn?.click();
 
-      // Wait for async share to complete
-      await new Promise((resolve) => setTimeout(resolve, 100));
-
-      expect(mockShare.shareGameResults).toHaveBeenCalled();
-      expect(mockUI.showToast).toHaveBeenCalledWith('shareCopied', 'success', 3000, {
-        compact: true,
+      await vi.waitFor(() => {
+        expect(mockShare.shareGameResults).toHaveBeenCalled();
+        expect(mockUI.showToast).toHaveBeenCalledWith('shareCopied', 'success', 3000, {
+          compact: true,
+        });
       });
     });
 
@@ -166,9 +158,7 @@ describe('achievementPresenter', () => {
       };
 
       presenter.enqueue(achievement);
-      await new Promise((resolve) => setTimeout(resolve, 1100));
-
-      expect(document.getElementById('achievement-modal')).toBeTruthy();
+      await waitForAchievementModal('ach1');
 
       presenter.cleanup();
 

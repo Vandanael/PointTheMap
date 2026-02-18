@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { clickMapSafely } from './helpers/map-interactions.js';
 
 test('classic flow: start, play, see result', async ({ page }) => {
   const consoleErrors = [];
@@ -26,7 +27,7 @@ test('classic flow: start, play, see result', async ({ page }) => {
   await page.locator('#btn-ready').click();
 
   await expect(page.locator('#game-header')).toBeVisible();
-  await page.locator('#map').click();
+  await clickMapSafely(page);
 
   await expect(page.locator('#round-result')).toBeVisible();
   await expect(page.locator('#pointsDisplay')).toBeVisible();

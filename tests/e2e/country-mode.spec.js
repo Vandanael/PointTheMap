@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { clickMapSafely } from './helpers/map-interactions.js';
 
 test('country mode loads and accepts a click', async ({ page }) => {
   await page.goto('/');
@@ -16,7 +17,7 @@ test('country mode loads and accepts a click', async ({ page }) => {
   await page.locator('#btn-ready').click();
 
   await expect(page.locator('#map')).toBeVisible();
-  await page.locator('#map').click();
+  await clickMapSafely(page);
 
   await expect(page.locator('#round-result')).toBeVisible();
 });

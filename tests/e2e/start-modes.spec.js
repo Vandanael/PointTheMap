@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { clickMapSafely } from './helpers/map-interactions.js';
 
 const cases = [
   { id: 'category-capitals', label: 'capitals' },
@@ -73,7 +74,7 @@ test.describe('Start screen', () => {
       await expect(page.locator('#timer-bar')).toBeVisible();
       await expect(page.locator('#map')).toBeVisible();
 
-      await page.locator('#map').click();
+      await clickMapSafely(page);
 
       await expect(page.locator('#round-result')).toBeVisible();
       await expect
