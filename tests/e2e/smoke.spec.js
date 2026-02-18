@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { clickMapSafely } from './helpers/map-interactions.js';
 
 test('smoke: can start classic round @smoke', async ({ page }) => {
   const pageErrors = [];
@@ -63,6 +64,6 @@ test('smoke: can start classic round @smoke', async ({ page }) => {
   await expect(page.locator('#timer-bar')).toBeVisible();
   await expect(page.locator('#map')).toBeVisible();
 
-  await page.locator('#map').click();
+  await clickMapSafely(page);
   await expect(page.locator('#round-result')).toBeVisible();
 });

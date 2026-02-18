@@ -135,7 +135,14 @@ jobs:
           node-version: 20
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run e2e:dev
+      - id: resolve_preview
+        run: node scripts/ci/resolve-preview-url.mjs
+      - env:
+          E2E_BASE_URL: ${{ steps.resolve_preview.outputs.preview_url }}
+        run: node scripts/ci/preflight-e2e-target.mjs
+      - env:
+          E2E_BASE_URL: ${{ steps.resolve_preview.outputs.preview_url }}
+        run: npm run e2e:preview
 ```
 
 ### Netlify Post-Deploy Hook

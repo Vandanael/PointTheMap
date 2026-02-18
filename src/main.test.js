@@ -278,8 +278,6 @@ describe('main.js wiring', () => {
   };
 
   beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(MOCK_DATE);
     vi.clearAllMocks();
     mockState = playingState;
     mockStateManagerInstance.getState.mockImplementation(() => mockState);
@@ -290,7 +288,6 @@ describe('main.js wiring', () => {
   });
 
   afterEach(() => {
-    vi.useRealTimers();
     eventBus.clear?.();
   });
 

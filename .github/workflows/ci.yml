@@ -4,9 +4,15 @@ on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
+  checks: read
+  deployments: read
+  pull-requests: read
 
 jobs:
   gatekeeper:
@@ -24,12 +30,33 @@ jobs:
       - run: npm run test:run
       - run: npm run build
       - run: npm run check:budget
-      - if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
-        run: npx playwright install --with-deps
+      - if: github.ref == 'refs/heads/main' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: npx playwright install --with-deps chromium
       - if: github.ref == 'refs/heads/main'
         run: npm run e2e:smoke
-      - if: github.event_name == 'pull_request'
+      - if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        id: select_nightly_target
         env:
-          E2E_BASE_URL: https://preview-e2e--pointthemap.netlify.app
+          NIGHTLY_PREVIEW_URL: ${{ vars.E2E_BASE_URL }}
+        run: |
+          selected_url="${NIGHTLY_PREVIEW_URL:-https://pointthemap.net}"
+          echo "Using nightly E2E target URL: $selected_url"
+          echo "e2e_base_url=$selected_url" >> "$GITHUB_OUTPUT"
+      - if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        env:
+          E2E_BASE_URL: ${{ steps.select_nightly_target.outputs.e2e_base_url }}
+        run: node scripts/ci/preflight-e2e-target.mjs
+      - if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        env:
+          E2E_MODE: preview
+          E2E_BASE_URL: ${{ steps.select_nightly_target.outputs.e2e_base_url }}
           E2E_BYPASS_TOKEN: ${{ secrets.E2E_BYPASS_TOKEN }}
-        run: npm run e2e:preview
+        run: npm run e2e:preview -- --retries=1
+      - if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e-pr
+          path: |
+            test-results
+            playwright-report
+          if-no-files-found: ignore

@@ -286,12 +286,9 @@ const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
         ? Math.max(0, r.distanceToTargetKm)
         : undefined;
     // Use timeElapsed from sanitized round if available, otherwise calculate from endTime/startTime
-    // @ts-ignore - timeElapsed can be added during sanitization
     const timeElapsed =
-      // @ts-ignore - timeElapsed can be added during sanitization
       typeof r?.timeElapsed === 'number'
-        ? // @ts-ignore - timeElapsed can be added during sanitization
-          Math.max(0, Math.round(r.timeElapsed))
+        ? Math.max(0, Math.round(r.timeElapsed))
         : typeof r?.endTime === 'number' && typeof r?.startTime === 'number'
           ? Math.max(0, Math.round(r.endTime - r.startTime))
           : undefined;
@@ -305,7 +302,6 @@ const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
     if (isCountryCategory(gameType) || isCountryCategory(r.gameType)) {
       // Handle both object format (r.country.name) and string format (r.country)
       const countryName = typeof r?.country === 'string' ? r.country : r?.country?.name;
-      // @ts-ignore - countryId can be added during sanitization
       const countryIdValue = typeof r?.countryId === 'string' ? r.countryId : r?.country?.countryId;
       return {
         ...base,
@@ -320,7 +316,6 @@ const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
     if (isStadiumCategory(gameType) || isStadiumCategory(r.gameType)) {
       // Handle both object format (r.stadium.name) and string format (r.stadium)
       const stadiumName = typeof r?.stadium === 'string' ? r.stadium : r?.stadium?.name;
-      // @ts-ignore - city can be added during sanitization
       const cityName = typeof r?.city === 'string' ? r.city : r?.stadium?.city;
       return {
         ...base,
@@ -332,7 +327,6 @@ const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
     if (isCivilizationCategory(gameType) || isCivilizationCategory(r.gameType)) {
       // Handle both object format (r.civilization.name) and string format (r.civilization)
       const civName = typeof r?.civilization === 'string' ? r.civilization : r?.civilization?.name;
-      // @ts-ignore - civilizationId can be added during sanitization
       const civId = typeof r?.civilizationId === 'string' ? r.civilizationId : r?.civilization?.id;
       return {
         ...base,

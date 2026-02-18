@@ -77,6 +77,10 @@ import { pointInPolygon } from '@lib/geo-utils/index.js';
  * @property {number | null} [distanceToTargetKm] - For country/civilization mode
  * @property {'playing' | 'completed' | 'timeout'} status
  * @property {string} [gameType] - 'capital' | 'country' | 'stadium' | 'civilization'
+ * @property {number} [timeElapsed] - Added during round sanitization (ms)
+ * @property {string} [countryId] - Added during country-mode sanitization
+ * @property {string} [city] - Added during stadium-mode sanitization
+ * @property {string} [civilizationId] - Added during civilization-mode sanitization
  */
 
 /**
@@ -88,7 +92,7 @@ import { pointInPolygon } from '@lib/geo-utils/index.js';
  */
 
 /**
- * @typedef {import('../config/game-modes.js').RuntimeGameConfig} RuntimeGameConfig
+ * @typedef {import('@lib/config/game-modes.js').RuntimeGameConfig} RuntimeGameConfig
  */
 
 /**

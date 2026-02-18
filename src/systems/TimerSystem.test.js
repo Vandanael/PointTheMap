@@ -20,6 +20,7 @@ describe('TimerSystem', () => {
     // Cleanup all event listeners
     unsubscribers.forEach((unsub) => unsub());
     unsubscribers = [];
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
