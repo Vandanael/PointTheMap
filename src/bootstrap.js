@@ -100,8 +100,7 @@ export const initApp = async () => {
 
     stateManager.registerValidator('status', (/** @type {unknown} */ value) => {
       const valid = Object.values(GameStatus);
-      // @ts-ignore - value is checked against valid array
-      if (!valid.includes(value)) {
+      if (!valid.includes(/** @type {import('./game/Game.js').GameStatusType} */ (value))) {
         return `status must be one of: ${valid.join(', ')}`;
       }
       return true;
@@ -352,8 +351,9 @@ export const initApp = async () => {
     };
   } catch (error) {
     if (document.body) document.body.dataset.appInitError = 'true';
-    // @ts-ignore - debug signal for e2e
-    window.__appInitError = error instanceof Error ? error.message : String(error);
+    // E2E test signal — see e2e/ tests
+    /** @type {any} */ (window).__appInitError =
+      error instanceof Error ? error.message : String(error);
     errorHandler.handle(error instanceof Error ? error : new Error(String(error)), 'init', {
       showToUser: true,
       fatal: true,

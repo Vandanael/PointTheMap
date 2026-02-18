@@ -7,7 +7,7 @@ import {
   __testOnlyFormatRoundsForSubmit,
 } from './api.js';
 import { SubmitSchema } from '@lib/schemas/submit.js';
-import { MODE_IDS } from '../config/game-modes.js';
+import { MODE_IDS } from '@lib/config/game-modes.js';
 
 // Mock dependencies
 vi.mock('../config/index.js', () => ({

@@ -1,4 +1,12 @@
 import { GAME, API } from '../../lib/config/index.js';
+import {
+  isCountryCategory,
+  isStadiumCategory,
+  isCivilizationCategory,
+} from '../../lib/config/game-modes.js';
+import { createLogger } from './_utils.js';
+
+const logger = createLogger('validation');
 
 /**
  * @param {number} gameDuration
@@ -20,7 +28,7 @@ export const checkPlausibility = (gameDuration) => {
  */
 export const validateRounds = (rounds, sessionTargets, gameType) => {
   if (!Array.isArray(rounds) || rounds.length !== GAME.ROUNDS) {
-    console.error('[validateRounds] Invalid rounds array:', {
+    logger.error('Invalid rounds array:', {
       isArray: Array.isArray(rounds),
       length: rounds?.length,
       expected: GAME.ROUNDS,
@@ -29,11 +37,11 @@ export const validateRounds = (rounds, sessionTargets, gameType) => {
     return { valid: false, error: 'Invalid rounds count' };
   }
 
-  const isCountryMode = gameType === 'country' || gameType === 'country_daily';
-  const isCivilizationMode = gameType === 'civilization' || gameType === 'civilization_daily';
-  const isStadiumMode = gameType === 'stadium' || gameType === 'stadium_daily';
+  const isCountryMode = isCountryCategory(gameType);
+  const isCivilizationMode = isCivilizationCategory(gameType);
+  const isStadiumMode = isStadiumCategory(gameType);
 
-  console.log('[validateRounds] Starting validation:', {
+  logger.debug('Starting validation:', {
     gameType,
     isCountryMode,
     isCivilizationMode,
@@ -64,7 +72,7 @@ export const validateRounds = (rounds, sessionTargets, gameType) => {
 
     if (!round || !targetField) {
       // Enhanced logging for debugging
-      console.error('[validateRounds] Missing round or targetField:', {
+      logger.error('Missing round or targetField:', {
         roundIndex: i,
         gameType,
         isCountryMode,

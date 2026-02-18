@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getStats, updateStats, resetStats } from './StatsManager.js';
-import { MODE_IDS } from '../config/game-modes.js';
+import { MODE_IDS } from '@lib/config/game-modes.js';
 
 vi.mock('../storage/StorageManager.js', () => {
   let store = {};
