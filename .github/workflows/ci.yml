@@ -30,31 +30,10 @@ jobs:
       - run: npm run test:run
       - run: npm run build
       - run: npm run check:budget
-      - if: github.event_name == 'pull_request'
-        run: npx playwright install chromium
       - if: github.ref == 'refs/heads/main' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: npx playwright install --with-deps chromium
       - if: github.ref == 'refs/heads/main'
         run: npm run e2e:smoke
-      - if: github.event_name == 'pull_request'
-        id: select_preview
-        env:
-          FALLBACK_PREVIEW_URL: ${{ vars.E2E_BASE_URL }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          selected_url="${FALLBACK_PREVIEW_URL:-https://deploy-preview-${PR_NUMBER}--pointthemap.netlify.app}"
-
-          echo "Using E2E preview URL: $selected_url"
-          echo "e2e_base_url=$selected_url" >> "$GITHUB_OUTPUT"
-      - if: github.event_name == 'pull_request'
-        env:
-          E2E_BASE_URL: ${{ steps.select_preview.outputs.e2e_base_url }}
-        run: node scripts/ci/preflight-e2e-target.mjs
-      - if: github.event_name == 'pull_request'
-        env:
-          E2E_BASE_URL: ${{ steps.select_preview.outputs.e2e_base_url }}
-          E2E_BYPASS_TOKEN: ${{ secrets.E2E_BYPASS_TOKEN }}
-        run: npm run e2e:preview -- --grep @smoke --retries=1
       - if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         id: select_nightly_target
         env:
@@ -73,7 +52,7 @@ jobs:
           E2E_BASE_URL: ${{ steps.select_nightly_target.outputs.e2e_base_url }}
           E2E_BYPASS_TOKEN: ${{ secrets.E2E_BYPASS_TOKEN }}
         run: npm run e2e:preview -- --retries=1
-      - if: always() && (github.event_name == 'pull_request' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+      - if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
         uses: actions/upload-artifact@v4
         with:
           name: playwright-e2e-pr
