@@ -94,11 +94,16 @@ export default async function startHandler(req, context) {
           decoded.player_id !== undefined
         ) {
           player_id = decoded.player_id;
-          await sql`
+          const playerRows = await sql`
             UPDATE players
             SET last_seen = NOW()
             WHERE player_id = ${player_id}
+            RETURNING player_id
           `;
+          if (!Array.isArray(playerRows) || playerRows.length === 0) {
+            logger.warn('Player token references unknown player; ignoring player_id');
+            player_id = null;
+          }
         }
       } catch (jwtError) {
         const error = /** @type {Error} */ (jwtError);
