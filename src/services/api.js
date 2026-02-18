@@ -505,10 +505,10 @@ export const submitWithRetry = async (
       error.message.includes('500');
 
     if (isNetworkError) {
-    addToRetryQueue(token, rounds, pseudo, gameType, csrfToken);
-    throw new GameError('error.submitDeferred', 'NETWORK_ERROR');
-  }
-  throw error;
+      addToRetryQueue(token, rounds, pseudo, gameType, csrfToken);
+      throw new GameError('error.submitDeferred', 'NETWORK_ERROR');
+    }
+    throw error;
   }
 };
 
