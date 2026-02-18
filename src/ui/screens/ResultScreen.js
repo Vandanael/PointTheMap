@@ -3,24 +3,18 @@
 import { getLastPseudo } from '../../services/storage.js';
 import { t } from '../../i18n.js';
 import { logger } from '../../utils/logger.js';
-import { domCache as _domCache, render, remove, bindClick, app } from '../dom.js';
+import { domCache as _domCache, render, remove, bindClick } from '../dom.js';
 import { UI_TIMING } from '@lib/config/visual-constants.js';
 import { debounce } from '../../utils/performance.js';
 import { activateFocusTrap, deactivateFocusTrap } from '../../utils/focusTrap.js';
-import {
-  GameOverScreen,
-  FinalResults,
-  PseudoLockedDialog,
-  ResumePrompt,
-  Toast,
-} from '../components.js';
+import { GameOverScreen, FinalResults } from '../components.js';
+import { createToastController } from './result/toastController.js';
+import { createModalController } from './result/modalController.js';
 
 // Rate limiting for submit button
 const MIN_SUBMIT_INTERVAL = 2000; // 2 seconds between submissions
 
 /**
- * @typedef {'info' | 'error' | 'success' | 'warning'} ToastType
- * @typedef {{ compact?: boolean, center?: boolean }} ToastOptions
  * @typedef {{ rank: number, isTopFifty: boolean }} FinalResultsPayload
  */
 
@@ -39,8 +33,8 @@ export const createResultScreen = (deps) => {
   /** @type {null | ((e: Event) => void)} */
   let _pseudoKeypressHandler = null;
 
-  // Track toast timers for cleanup
-  const _toastTimers = new Map();
+  const toastController = createToastController();
+  const modalController = createModalController();
 
   /** @param {number} totalScore */
   const showGameOver = (totalScore) => {
@@ -197,123 +191,6 @@ export const createResultScreen = (deps) => {
     _domCache.invalidate('result-modal');
   };
 
-  /** @param {string} message */
-  const showError = (message) => {
-    const container = app();
-    if (!container) return;
-    const errorEl = document.createElement('div');
-    errorEl.className =
-      'fixed top-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-red-600 text-white p-4 rounded-lg shadow-lg';
-    errorEl.style.zIndex = 'var(--z-overlay)';
-    errorEl.textContent = message;
-    container.appendChild(errorEl);
-    setTimeout(() => errorEl.remove(), UI_TIMING.ERROR_DISPLAY);
-  };
-
-  /**
-   * @param {string} pseudo
-   * @param {() => void} [onConfirm]
-   */
-  const showPseudoLockedDialog = (pseudo, onConfirm) => {
-    render(PseudoLockedDialog(pseudo));
-    const closePseudoLocked = () => {
-      deactivateFocusTrap();
-      remove('pseudo-locked-modal');
-      _domCache.invalidate('pseudo-locked-modal');
-      if (onConfirm) onConfirm();
-    };
-    const closePseudoLockedWithoutConfirm = () => {
-      deactivateFocusTrap();
-      remove('pseudo-locked-modal');
-      _domCache.invalidate('pseudo-locked-modal');
-    };
-    bindClick('btn-pseudo-locked-ok', closePseudoLocked);
-    const pseudoLockedModal = document.getElementById('pseudo-locked-modal');
-    if (pseudoLockedModal) {
-      requestAnimationFrame(() =>
-        activateFocusTrap(/** @type {HTMLElement} */ (pseudoLockedModal), {
-          onEscape: closePseudoLockedWithoutConfirm,
-        })
-      );
-    }
-  };
-
-  /**
-   * Show resume prompt modal and resolve user choice.
-   * @returns {Promise<boolean>}
-   */
-  const showResumePrompt = () =>
-    new Promise((resolve) => {
-      remove('resume-modal');
-      render(ResumePrompt());
-
-      const close = (value) => {
-        deactivateFocusTrap();
-        remove('resume-modal');
-        _domCache.invalidate('resume-modal');
-        resolve(value);
-      };
-
-      bindClick('btn-resume-continue', () => close(true));
-      bindClick('btn-resume-discard', () => close(false));
-
-      const resumeModal = document.getElementById('resume-modal');
-      if (resumeModal) {
-        requestAnimationFrame(() =>
-          activateFocusTrap(/** @type {HTMLElement} */ (resumeModal), {
-            onEscape: () => close(false),
-          })
-        );
-      }
-    });
-
-  /**
-   * @param {string} message
-   * @param {ToastType} [type='info']
-   * @param {number} [duration=5000]
-   * @param {ToastOptions} [options]
-   * @returns {string}
-   */
-  const showToast = (message, type = 'info', duration = 5000, options = {}) => {
-    const toastId = `toast-${Date.now()}`;
-    render(Toast(toastId, message, type, options));
-
-    const closeBtn = document.getElementById(`${toastId}-close`);
-    if (closeBtn) {
-      bindClick(`${toastId}-close`, () => {
-        closeToast(toastId);
-      });
-    }
-
-    if (duration > 0) {
-      const timerId = setTimeout(() => {
-        closeToast(toastId);
-      }, duration);
-      _toastTimers.set(toastId, timerId);
-    }
-
-    return toastId;
-  };
-
-  /** @param {string} toastId */
-  const closeToast = (toastId) => {
-    const timerId = _toastTimers.get(toastId);
-    if (timerId) {
-      clearTimeout(timerId);
-      _toastTimers.delete(toastId);
-    }
-
-    const toast = document.getElementById(toastId);
-    if (!toast) return;
-
-    toast.classList.remove('toast-slide-up');
-    toast.classList.add('toast-slide-down');
-
-    setTimeout(() => {
-      remove(toastId);
-    }, UI_TIMING.TOAST_SLIDE_OUT);
-  };
-
   const destroy = () => {
     const pseudoInput = document.getElementById('pseudo-input');
     if (pseudoInput) {
@@ -324,19 +201,18 @@ export const createResultScreen = (deps) => {
     _pseudoInputHandler = null;
     _pseudoKeypressHandler = null;
 
-    _toastTimers.forEach((timerId) => clearTimeout(timerId));
-    _toastTimers.clear();
+    toastController.destroy();
   };
 
   return {
     showGameOver,
     showFinalResults,
     hideGameOver,
-    showError,
-    showPseudoLockedDialog,
-    showResumePrompt,
-    showToast,
-    closeToast,
+    showError: modalController.showError,
+    showPseudoLockedDialog: modalController.showPseudoLockedDialog,
+    showResumePrompt: modalController.showResumePrompt,
+    showToast: toastController.showToast,
+    closeToast: toastController.closeToast,
     destroy,
   };
 };

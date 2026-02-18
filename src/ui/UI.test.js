@@ -423,3 +423,29 @@ describe('UI - Resume Prompt', () => {
     await expect(promise).resolves.toBe(false);
   });
 });
+
+describe('UI - Error Modal', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    const root = document.createElement('div');
+    root.id = 'app';
+    document.body.appendChild(root);
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('showError() renders a centered error modal overlay', () => {
+    UI.showError('Something went wrong');
+
+    const modal = document.getElementById('app-error-modal');
+    expect(modal).toBeTruthy();
+    expect(modal?.className).toContain('fixed inset-0');
+    expect(modal?.className).toContain('items-center');
+    expect(modal?.className).toContain('justify-center');
+    expect(modal?.textContent).toContain('Something went wrong');
+    expect(modal?.textContent).not.toContain('⚠️');
+    expect(modal?.textContent).not.toContain('❌');
+  });
+});
