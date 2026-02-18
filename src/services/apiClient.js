@@ -76,7 +76,13 @@ export const createApiClient = (deps) => {
       const data = await res.json().catch(() => ({
         error: res.status === 502 ? 'Bad Gateway - Server error' : 'Service Unavailable',
       }));
-      throw new APIError(data.error || `HTTP ${res.status}`, res.status, data);
+      const message =
+        typeof data?.error === 'string'
+          ? data.error
+          : typeof data?.error?.message === 'string'
+            ? data.error.message
+            : `HTTP ${res.status}`;
+      throw new APIError(message, res.status, data);
     }
 
     const data = await res.json().catch(() => ({ error: 'Invalid response' }));
@@ -89,6 +95,11 @@ export const createApiClient = (deps) => {
             ? data.error.message
             : `HTTP ${res.status}`;
       throw new APIError(errorMessage, res.status, data);
+    }
+
+    // Envelope v2: { ok: true, data, meta? } - keep legacy fallback for older endpoints.
+    if (data && typeof data === 'object' && data.ok === true && 'data' in data) {
+      return data.data;
     }
 
     return data;

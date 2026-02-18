@@ -10,6 +10,7 @@
 --   006_rename_sessions_capitals_to_targets.sql — rename sessions.capitals -> sessions.targets
 --   007_add_session_token_to_scores.sql — add session_token on scores
 --   008_add_ip_pseudo_locks.sql — add atomic pseudo lock table
+--   009_submit_idempotency_and_constraints.sql — enforce score/session idempotency and checks
 --
 -- Tables: players, scores, sessions, rate_limits, ip_pseudo_locks
 
@@ -33,10 +34,26 @@ CREATE TABLE IF NOT EXISTS scores (
   rounds JSONB NOT NULL,
   timestamp BIGINT NOT NULL,
   game_type VARCHAR(20) NOT NULL DEFAULT 'classic',
-  session_token VARCHAR(36),
+  session_token VARCHAR(36) NOT NULL,
   ip VARCHAR(45),
   player_id UUID REFERENCES players(player_id),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT scores_session_token_unique UNIQUE (session_token),
+  CONSTRAINT scores_pseudo_format_check CHECK (pseudo ~ '^[A-Z]{3,5}$'),
+  CONSTRAINT scores_nonnegative_score_check CHECK (score >= 0),
+  CONSTRAINT scores_nonnegative_time_check CHECK (time >= 0),
+  CONSTRAINT scores_game_type_check CHECK (
+    game_type IN (
+      'classic',
+      'daily',
+      'country',
+      'country_daily',
+      'stadium',
+      'stadium_daily',
+      'civilization',
+      'civilization_daily'
+    )
+  )
 );
 
 -- Indexes to improve query performance

@@ -3,7 +3,13 @@
 
 import { ErrorReportSchema } from '../../lib/schemas/error-report.js';
 import { getDatabase } from './db.js';
-import { jsonResponse, parseJsonBody, getClientIp, createLogger } from './_utils.js';
+import {
+  errorEnvelope,
+  successEnvelope,
+  parseJsonBody,
+  getClientIp,
+  createLogger,
+} from './_utils.js';
 import { createFallbackRateLimiter, checkDbRateLimit } from './_rate-limit.js';
 
 const logger = createLogger('error-report');
@@ -33,7 +39,7 @@ const isMissingErrorLogsTable = (error) => {
  */
 export default async function errorReportHandler(req, context) {
   if (req.method !== 'POST') {
-    return jsonResponse({ error: 'Method not allowed' }, 405);
+    return errorEnvelope('method_not_allowed', 'Method not allowed', 405);
   }
 
   let sql;
@@ -41,7 +47,7 @@ export default async function errorReportHandler(req, context) {
     sql = getDatabase(context);
   } catch (dbError) {
     logger.error('Database connection failed:', /** @type {Error} */ (dbError).message);
-    return jsonResponse({ error: 'Service unavailable' }, 503);
+    return errorEnvelope('service_unavailable', 'Service unavailable', 503);
   }
 
   const ip = getClientIp(req, context);
@@ -54,13 +60,18 @@ export default async function errorReportHandler(req, context) {
     logger,
   });
   if (!rateLimit.allowed) {
-    return jsonResponse({ error: 'Rate limit exceeded' }, 429);
+    return errorEnvelope('rate_limited', 'Rate limit exceeded', 429);
   }
 
   const body = await parseJsonBody(req);
   const parsed = ErrorReportSchema.safeParse(body);
   if (!parsed.success) {
-    return jsonResponse({ error: 'Invalid error report payload' }, 400);
+    return errorEnvelope(
+      'invalid_error_report_payload',
+      'Invalid error report payload',
+      400,
+      parsed.error.flatten()
+    );
   }
 
   const { errors } = parsed.data;
@@ -82,11 +93,11 @@ export default async function errorReportHandler(req, context) {
   } catch (dbError) {
     if (isMissingErrorLogsTable(dbError)) {
       logger.warn('error_logs table missing; dropping error report payload');
-      return new Response(null, { status: 204 });
+      return successEnvelope({ stored: false, reason: 'table_missing' });
     }
     logger.error('Failed to insert error logs:', /** @type {Error} */ (dbError).message);
-    return jsonResponse({ error: 'Failed to store errors' }, 500);
+    return errorEnvelope('store_failed', 'Failed to store errors', 500);
   }
 
-  return new Response(null, { status: 204 });
+  return successEnvelope({ stored: true });
 }

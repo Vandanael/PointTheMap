@@ -3,8 +3,8 @@
 
 import { getDatabase } from './db.js';
 import {
-  jsonResponse,
-  successResponse,
+  successEnvelope,
+  errorEnvelope,
   parseJsonBody,
   getClientIp,
   isDatabaseConnectionError,
@@ -44,7 +44,51 @@ const isE2EBypass = (req) => {
  * @returns {Response}
  */
 const errorJson = (code, message, status = 400, details = undefined, headers = undefined) =>
-  jsonResponse({ ok: false, error: { code, message, details } }, status, headers);
+  errorEnvelope(code, message, status, details, headers);
+
+/**
+ * Read a previously inserted score for this session token and rebuild a submit response.
+ * @param {any} sql
+ * @param {string} token
+ * @returns {Promise<null | { score: number, rank: number, isTopFifty: boolean, rounds: any[] }>}
+ */
+const getReplayResult = async (sql, token) => {
+  const rows = await sql`
+    SELECT score, time, rounds, game_type
+    FROM scores
+    WHERE session_token = ${token}
+    ORDER BY id DESC
+    LIMIT 1
+  `;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return null;
+  }
+
+  const row = /** @type {{ score?: number, time?: number, rounds?: any[], game_type?: string }} */ (rows[0]);
+  const score = Number.isFinite(row.score) ? row.score : 0;
+  const time = Number.isFinite(row.time) ? row.time : 0;
+  const gameType = row.game_type || 'classic';
+
+  let rank = 0;
+  try {
+    const rankResult = await sql`
+      SELECT COUNT(*) + 1 as rank
+      FROM scores
+      WHERE game_type = ${gameType}
+        AND (score > ${score} OR (score = ${score} AND time < ${time}))
+    `;
+    rank = parseInt(rankResult[0]?.rank ?? '0', 10);
+  } catch {
+    rank = 0;
+  }
+
+  return {
+    score,
+    rank,
+    isTopFifty: rank > 0 && rank <= 50,
+    rounds: Array.isArray(row.rounds) ? row.rounds : [],
+  };
+};
 
 const SUPPORTED_PAYLOAD_VERSIONS = new Set([1]);
 
@@ -169,6 +213,11 @@ export default async function submitHandler(req, context) {
       return errorJson('invalid_pseudo', 'Invalid pseudo (3-5 uppercase letters required)', 400);
     }
 
+    const existingReplay = await getReplayResult(sql, token);
+    if (existingReplay) {
+      return successEnvelope(existingReplay, {}, { idempotentReplay: true });
+    }
+
     let sessionResult;
     try {
       sessionResult = await sql`
@@ -188,6 +237,10 @@ export default async function submitHandler(req, context) {
     }
 
     if (sessionResult.length === 0) {
+      const replay = await getReplayResult(sql, token);
+      if (replay) {
+        return successEnvelope(replay, {}, { idempotentReplay: true });
+      }
       return errorJson('session_not_found', 'Session not found or expired', 401);
     }
 
@@ -313,7 +366,7 @@ export default async function submitHandler(req, context) {
       // Atomic transaction: mark session used, insert score, update player, delete session
       logger.info('[submit] Starting database transaction');
       const txnQueries = [
-        sql`UPDATE sessions SET used = true WHERE token = ${token}`,
+        sql`UPDATE sessions SET used = true WHERE token = ${token} AND used = false`,
         sql`
           INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, session_token, ip, player_id)
           VALUES (${trimmedPseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}::jsonb, ${now}, ${gameType}, ${token}, ${clientIp}, ${session.playerId})
@@ -353,7 +406,7 @@ export default async function submitHandler(req, context) {
       }
 
       logger.info('[submit] Submission successful');
-      return successResponse({
+      return successEnvelope({
         score: totalScore,
         rank,
         isTopFifty,
@@ -362,6 +415,13 @@ export default async function submitHandler(req, context) {
     } catch (dbError) {
       const error = /** @type {Error & {code?: string}} */ (dbError);
       logger.error('[submit] Database operation failed:', error.message, error.code, error.stack);
+
+      if (error.code === '23505') {
+        const replay = await getReplayResult(sql, token);
+        if (replay) {
+          return successEnvelope(replay, {}, { idempotentReplay: true });
+        }
+      }
 
       // Handle database connection errors
       if (isDatabaseConnectionError(error)) {

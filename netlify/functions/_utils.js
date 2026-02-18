@@ -57,6 +57,7 @@ export function jsonResponse(data, status = 200, additionalHeaders = {}) {
   /** @type {Record<string, string>} */
   const headers = {
     'Content-Type': 'application/json',
+    'x-api-version': '2',
     ...additionalHeaders,
   };
   return new Response(JSON.stringify(data), {
@@ -66,23 +67,69 @@ export function jsonResponse(data, status = 200, additionalHeaders = {}) {
 }
 
 /**
- * Create error response
- * @param {string} message - Error message
- * @param {number} [status=500] - HTTP status code
- * @returns {Response} Error response
+ * Create standardized error response envelope.
+ * @param {string} code
+ * @param {string} message
+ * @param {number} [status=400]
+ * @param {unknown} [details]
+ * @param {Record<string, string>} [additionalHeaders]
+ * @returns {Response}
  */
-export function errorResponse(message, status = 500) {
-  return jsonResponse({ error: message }, status);
+export function errorEnvelope(
+  code,
+  message,
+  status = 400,
+  details = undefined,
+  additionalHeaders = undefined
+) {
+  return jsonResponse(
+    {
+      ok: false,
+      error: { code, message, details },
+    },
+    status,
+    additionalHeaders
+  );
 }
 
 /**
- * Create success response
- * @param {*} data - Success data
- * @param {Record<string, string>} [additionalHeaders={}] - Additional headers
- * @returns {Response} Success response
+ * Create standardized success response envelope.
+ * @param {unknown} data
+ * @param {Record<string, string>} [additionalHeaders]
+ * @param {unknown} [meta]
+ * @param {number} [status=200]
+ * @returns {Response}
+ */
+export function successEnvelope(data, additionalHeaders = {}, meta = undefined, status = 200) {
+  return jsonResponse(
+    {
+      ok: true,
+      data,
+      ...(meta !== undefined ? { meta } : {}),
+    },
+    status,
+    additionalHeaders
+  );
+}
+
+/**
+ * Backward-compatible wrapper mapped to envelope.
+ * @param {string} message
+ * @param {number} [status=500]
+ * @returns {Response}
+ */
+export function errorResponse(message, status = 500) {
+  return errorEnvelope('request_failed', message, status);
+}
+
+/**
+ * Backward-compatible wrapper mapped to envelope.
+ * @param {unknown} data
+ * @param {Record<string, string>} [additionalHeaders]
+ * @returns {Response}
  */
 export function successResponse(data, additionalHeaders = {}) {
-  return jsonResponse(data, 200, additionalHeaders);
+  return successEnvelope(data, additionalHeaders);
 }
 
 /**
@@ -129,28 +176,25 @@ export function handleDatabaseError(error, context = '') {
   const errorMessage = error instanceof Error ? error.message : String(error);
   const errorCode = err?.code;
 
-  // Log error details in development
   if (isDev) {
     utilsLogger.error(`[${context}] Database error:`, errorMessage, errorCode, err?.stack);
   } else {
     utilsLogger.error(`[${context}] Database error occurred`);
   }
 
-  // Connection errors
   if (isDatabaseConnectionError(error)) {
-    return errorResponse('Database connection error. Please try again later.', 503);
+    return errorEnvelope('db_connection_error', 'Database connection error. Please try again later.', 503);
   }
 
-  // Missing column errors (migration needed)
   if (isMissingColumnError(error)) {
-    return errorResponse(
+    return errorEnvelope(
+      'db_schema_error',
       'Database schema error: missing column. Please run the migration script.',
       500
     );
   }
 
-  // Generic database error
-  return errorResponse('Database error. Please try again later.', 500);
+  return errorEnvelope('db_error', 'Database error. Please try again later.', 500);
 }
 
 /**
@@ -161,7 +205,7 @@ export function handleDatabaseError(error, context = '') {
  */
 export function validateMethod(req, expectedMethod) {
   if (req.method !== expectedMethod) {
-    return errorResponse('Method not allowed', 405);
+    return errorEnvelope('method_not_allowed', 'Method not allowed', 405);
   }
   return null;
 }
@@ -200,7 +244,7 @@ export async function parseJsonBody(req) {
 export function validateRequiredFields(body, requiredFields) {
   for (const field of requiredFields) {
     if (!(field in body) || body[field] === null || body[field] === undefined) {
-      return errorResponse(`Missing required field: ${field}`, 400);
+      return errorEnvelope('missing_required_field', `Missing required field: ${field}`, 400);
     }
   }
   return null;
