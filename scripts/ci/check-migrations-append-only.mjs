@@ -2,6 +2,32 @@ import { execSync } from 'node:child_process';
 
 const MIGRATIONS_DIR = 'netlify/database/migrations';
 const FILE_PATTERN = /^netlify\/database\/migrations\/(\d{3})_[a-z0-9_]+\.sql$/;
+const LEGACY_ALLOWED_RENAMES = new Map([
+  [
+    'netlify/database/migrations/001_add_csrf_token.sql',
+    'netlify/database/migrations/002_add_csrf_token.sql',
+  ],
+  [
+    'netlify/database/migrations/002_add_game_type_varchar20.sql',
+    'netlify/database/migrations/003_add_game_type_varchar20.sql',
+  ],
+  [
+    'netlify/database/migrations/002_add_player_tokens.sql',
+    'netlify/database/migrations/004_add_player_tokens.sql',
+  ],
+  [
+    'netlify/database/migrations/003_add_error_logs.sql',
+    'netlify/database/migrations/005_add_error_logs.sql',
+  ],
+  [
+    'netlify/database/migrations/004_rename_sessions_capitals_to_targets.sql',
+    'netlify/database/migrations/006_rename_sessions_capitals_to_targets.sql',
+  ],
+  [
+    'netlify/database/migrations/005_add_session_token_to_scores.sql',
+    'netlify/database/migrations/007_add_session_token_to_scores.sql',
+  ],
+]);
 
 const run = (cmd) => execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 
@@ -50,21 +76,30 @@ const lines = rawDiff
   .map((line) => line.trim())
   .filter(Boolean);
 
-/** @type {Array<{status: string, path: string}>} */
+/** @type {Array<{status: string, path: string, oldPath?: string}>} */
 const changes = [];
 for (const line of lines) {
   const parts = line.split('\t');
   const status = parts[0];
   if (status.startsWith('R')) {
-    changes.push({ status: 'R', path: parts[2] || '' });
+    changes.push({ status: 'R', oldPath: parts[1] || '', path: parts[2] || '' });
     continue;
   }
   changes.push({ status, path: parts[1] || '' });
 }
 
-const forbidden = changes.filter((change) => change.status !== 'A');
+const isAllowedLegacyRename = (change) =>
+  change.status === 'R' &&
+  typeof change.oldPath === 'string' &&
+  LEGACY_ALLOWED_RENAMES.get(change.oldPath) === change.path;
+
+const forbidden = changes.filter(
+  (change) => change.status !== 'A' && !isAllowedLegacyRename(change)
+);
 if (forbidden.length > 0) {
-  const formatted = forbidden.map((c) => `- ${c.status}\t${c.path}`).join('\n');
+  const formatted = forbidden
+    .map((c) => (c.status === 'R' ? `- R\t${c.oldPath}\t${c.path}` : `- ${c.status}\t${c.path}`))
+    .join('\n');
   fail(
     `Historical migration edits are not allowed (append-only policy).\nForbidden changes:\n${formatted}`
   );
@@ -73,6 +108,15 @@ if (forbidden.length > 0) {
 for (const change of changes) {
   if (!FILE_PATTERN.test(change.path)) {
     fail(`New migration filename does not match convention (NNN_description.sql): ${change.path}`);
+  }
+}
+
+for (const change of changes.filter((c) => c.status === 'R')) {
+  if (!isAllowedLegacyRename(change)) {
+    continue;
+  }
+  if (!FILE_PATTERN.test(change.oldPath || '')) {
+    fail(`Legacy migration rename old path is invalid: ${change.oldPath}`);
   }
 }
 
@@ -85,7 +129,7 @@ const baseFiles = baseFilesRaw
 const toPrefix = (path) => Number.parseInt(path.match(FILE_PATTERN)?.[1] || '0', 10);
 const maxBasePrefix = baseFiles.length > 0 ? Math.max(...baseFiles.map(toPrefix)) : 0;
 
-const added = changes.map((change) => change.path);
+const added = changes.filter((change) => change.status === 'A').map((change) => change.path);
 for (const path of added) {
   const prefix = toPrefix(path);
   if (prefix <= maxBasePrefix) {
@@ -93,6 +137,13 @@ for (const path of added) {
       `New migration prefix must be greater than existing max (${String(maxBasePrefix).padStart(3, '0')}): ${path}`
     );
   }
+}
+
+const acceptedLegacyRenames = changes.filter((change) => isAllowedLegacyRename(change)).length;
+if (acceptedLegacyRenames > 0) {
+  console.log(
+    `Accepted ${acceptedLegacyRenames} approved legacy migration rename(s) during numbering cleanup.`
+  );
 }
 
 console.log(`Migration append-only check OK (${added.length} new migration file(s)).`);
