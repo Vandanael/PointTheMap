@@ -46,14 +46,18 @@ jobs:
         env:
           RESOLVED_PREVIEW_URL: ${{ steps.resolve_preview.outputs.preview_url }}
           FALLBACK_PREVIEW_URL: ${{ vars.E2E_BASE_URL }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           selected_url="${RESOLVED_PREVIEW_URL:-}"
           if [ -z "$selected_url" ]; then
             selected_url="${FALLBACK_PREVIEW_URL:-}"
           fi
+          if [ -z "$selected_url" ]; then
+            selected_url="https://deploy-preview-${PR_NUMBER}--pointthemap.netlify.app"
+          fi
 
           if [ -z "$selected_url" ]; then
-            echo "::error::Unable to determine E2E preview URL. Set repository variable E2E_BASE_URL as fallback."
+            echo "::error::Unable to determine E2E preview URL."
             exit 1
           fi
 
