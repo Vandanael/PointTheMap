@@ -35,31 +35,12 @@ jobs:
       - if: github.ref == 'refs/heads/main'
         run: npm run e2e:smoke
       - if: github.event_name == 'pull_request'
-        id: resolve_preview
-        continue-on-error: true
-        timeout-minutes: 7
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/ci/resolve-preview-url.mjs
-      - if: github.event_name == 'pull_request'
         id: select_preview
         env:
-          RESOLVED_PREVIEW_URL: ${{ steps.resolve_preview.outputs.preview_url }}
           FALLBACK_PREVIEW_URL: ${{ vars.E2E_BASE_URL }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          selected_url="${RESOLVED_PREVIEW_URL:-}"
-          if [ -z "$selected_url" ]; then
-            selected_url="${FALLBACK_PREVIEW_URL:-}"
-          fi
-          if [ -z "$selected_url" ]; then
-            selected_url="https://deploy-preview-${PR_NUMBER}--pointthemap.netlify.app"
-          fi
-
-          if [ -z "$selected_url" ]; then
-            echo "::error::Unable to determine E2E preview URL."
-            exit 1
-          fi
+          selected_url="${FALLBACK_PREVIEW_URL:-https://deploy-preview-${PR_NUMBER}--pointthemap.netlify.app}"
 
           echo "Using E2E preview URL: $selected_url"
           echo "e2e_base_url=$selected_url" >> "$GITHUB_OUTPUT"
