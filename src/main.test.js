@@ -364,14 +364,16 @@ describe('main.js wiring', () => {
         'test-token',
         submitState.rounds,
         'USER',
-        'classic'
+        'classic',
+        null
       );
       expect(submitWithRetry).toHaveBeenNthCalledWith(
         2,
         'test-token',
         submitState.rounds,
         lockedPseudo,
-        'classic'
+        'classic',
+        null
       );
       expect(UI.showFinalResults).toHaveBeenCalledWith(
         10000,

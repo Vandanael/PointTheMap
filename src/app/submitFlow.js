@@ -155,7 +155,8 @@ export function createSubmitFlow(context) {
           state.token,
           submissionRounds,
           currentPseudo,
-          state.gameType
+          state.gameType,
+          state.csrfToken || null
         );
         storage.setLastPseudo(currentPseudo);
 

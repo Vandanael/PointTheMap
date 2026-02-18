@@ -109,6 +109,7 @@ import { pointInPolygon } from '@lib/geo-utils/index.js';
  * @property {SubmitResult | null} result
  * @property {string | null} error
  * @property {number} sessionBestScore
+ * @property {string | null} csrfToken
  * @property {'classic' | 'daily' | 'country' | 'stadium' | 'civilization'} gameType
  * @property {RuntimeGameConfig | null} runtimeConfig - Mode-derived config for this session (set at start)
  */
@@ -139,6 +140,7 @@ export const createGameState = () => ({
   result: null,
   error: null,
   sessionBestScore: 0,
+  csrfToken: null,
   gameType: /** @type {'classic' | 'daily' | 'country' | 'stadium' | 'civilization'} */ (
     MODE_IDS.CLASSIC
   ),
@@ -187,6 +189,7 @@ export const startGame = async (
       gameType
     ),
     sessionBestScore: previousBestScore,
+    csrfToken: session.csrfToken || null,
     runtimeConfig,
   };
 };

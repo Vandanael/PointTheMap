@@ -80,7 +80,7 @@ export const getRetryQueue = () => {
   }
 };
 
-/** @param {Array<{ token: string; rounds: unknown; pseudo: string; gameType?: string; attempts?: number; addedAt?: number }>} queue */
+/** @param {Array<{ token: string; rounds: unknown; pseudo: string; gameType?: string; attempts?: number; addedAt?: number; csrfToken?: string | null }>} queue */
 export const saveRetryQueue = (queue) => {
   try {
     return storageManager.set(RETRY_QUEUE_KEY, queue);
@@ -107,14 +107,21 @@ export const saveRetryQueue = (queue) => {
   }
 };
 
-/** @param {string} token @param {unknown} rounds @param {string} pseudo @param {string} [gameType] */
-export const addToRetryQueue = (token, rounds, pseudo, gameType = MODE_IDS.CLASSIC) => {
+/** @param {string} token @param {unknown} rounds @param {string} pseudo @param {string} [gameType] @param {string | null} [csrfToken] */
+export const addToRetryQueue = (
+  token,
+  rounds,
+  pseudo,
+  gameType = MODE_IDS.CLASSIC,
+  csrfToken = null
+) => {
   const queue = getRetryQueue();
   queue.push({
     token,
     rounds,
     pseudo,
     gameType,
+    csrfToken,
     attempts: 0,
     addedAt: Date.now(),
   });
