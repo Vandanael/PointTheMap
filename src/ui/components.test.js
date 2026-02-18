@@ -3,6 +3,9 @@ import {
   leaderboardTypeFromSelection,
   selectionFromLeaderboardType,
   StartScreen,
+  MapErrorModal,
+  Leaderboard,
+  Toast,
 } from './components.js';
 
 describe('leaderboardTypeFromSelection', () => {
@@ -138,5 +141,27 @@ describe('StartScreen mobile mode selector', () => {
     expect(optionValues).toEqual(['capitals', 'countries', 'stadiums', 'civilizations']);
     expect(optionValues).not.toContain('classic');
     expect(optionValues).not.toContain('daily');
+  });
+});
+
+describe('Error UI consistency', () => {
+  it('MapErrorModal is centered on all screens', () => {
+    const html = MapErrorModal('Error message');
+    expect(html).toContain('id="map-error-modal"');
+    expect(html).toContain('items-center');
+    expect(html).toContain('justify-center');
+    expect(html).not.toContain('items-start');
+    expect(html).not.toContain('modal-top-center');
+  });
+
+  it('Leaderboard error state does not include warning emoji', () => {
+    const html = Leaderboard([], null, false, 'network error');
+    expect(html).not.toContain('⚠️');
+  });
+
+  it('Error toast does not include emoji icon', () => {
+    const html = Toast('toast-id', 'Error occurred', 'error');
+    expect(html).not.toContain('❌');
+    expect(html).not.toContain('⚠️');
   });
 });

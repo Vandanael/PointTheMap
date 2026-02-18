@@ -529,7 +529,6 @@ export const Leaderboard = (scores, highlightPseudo = null, loading = false, err
           ? `
       <!-- Network/server error -->
       <div class="leaderboard-center-state text-center py-8">
-        <div class="text-4xl mb-4">⚠️</div>
         <p class="text-tertiary mb-4">${t('error.leaderboardRetry')}</p>
         <button id="btn-retry-leaderboard" class="text-yellow-400 hover:text-yellow-300 font-bold">
           ${t('error.retry')}
@@ -707,7 +706,7 @@ export const ResumePrompt = () => `
  * @param {string} message
  */
 export const MapErrorModal = (message) => `
-  <div id="map-error-modal" class="fixed inset-0 modal-bg flex items-start justify-center p-4 modal-top-center" style="z-index: var(--z-modal);" role="dialog" aria-modal="true">
+  <div id="map-error-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-modal);" role="dialog" aria-modal="true">
     <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content text-center">
       <div class="text-3xl font-black text-primary mb-4">${t('error.title')}</div>
       <div class="text-secondary text-base mb-8">${escapeHtml(message)}</div>
@@ -721,7 +720,7 @@ export const MapErrorModal = (message) => `
  * @param {string} id - Toast ID
  * @param {string} message - Message to display
  * @param {"info" | "warning" | "error" | "success"} type - Type of toast
- * @param {{ compact?: boolean, center?: boolean }} [options] - compact: smaller modal, no emoji, text only; center: center text horizontally
+ * @param {{ compact?: boolean, center?: boolean }} [options] - compact: smaller toast, text only; center: center text horizontally
  * @returns {string} HTML string
  */
 export const Toast = (id, message, type = 'info', options = {}) => {
@@ -730,8 +729,8 @@ export const Toast = (id, message, type = 'info', options = {}) => {
   /** @type {Record<"info" | "warning" | "error" | "success", string>} */
   const icons = {
     info: 'ℹ️',
-    warning: '⚠️',
-    error: '❌',
+    warning: '',
+    error: '',
     success: '',
   };
 

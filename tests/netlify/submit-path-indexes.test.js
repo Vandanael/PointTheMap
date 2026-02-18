@@ -15,10 +15,12 @@ describe('submit and rate-limit hot path index guards', () => {
 
   it('keeps hot-path queries aligned with indexed columns', () => {
     const submit = fs.readFileSync('netlify/functions/submit.js', 'utf8');
+    const submitTransaction = fs.readFileSync('netlify/functions/submit/transaction.js', 'utf8');
+    const submitHotPath = `${submit}\n${submitTransaction}`;
     const rateLimit = fs.readFileSync('netlify/functions/_rate-limit.js', 'utf8');
 
-    expect(submit).toMatch(/where game_type\s*=\s*\$\{/i);
-    expect(submit).toMatch(/score > \$\{|score = \$\{.*time < \$\{/i);
+    expect(submitHotPath).toMatch(/where game_type\s*=\s*\$\{/i);
+    expect(submitHotPath).toMatch(/score > \$\{|score = \$\{.*time < \$\{/i);
     expect(rateLimit).toMatch(/delete from rate_limits where expires_at < now\(\)/i);
   });
 });

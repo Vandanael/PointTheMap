@@ -5,6 +5,7 @@ This folder is intentionally minimal and only keeps operational documentation th
 ## Kept
 
 - `docs/architecture.md` — current coordinator boundaries and module responsibilities.
+- `docs/architecture/submit-flow.md` — Netlify submit handler module boundaries and request path.
 - `docs/event-bus.md` — canonical EventBus contract usage.
 - `docs/ui-flow.md` — UX flow overview across core modules.
 - `docs/analytics-events.md` — production analytics event inventory.
