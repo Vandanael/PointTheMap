@@ -26,6 +26,7 @@
  * @property {import('../game/Game.js').Round[]} rounds
  * @property {string} pseudo
  * @property {string} gameType
+ * @property {string | null} [csrfToken]
  * @property {number} addedAt
  * @property {number} attempts
  */
@@ -379,7 +380,7 @@ export const api = {
     return session;
   },
 
-  submit: async (token, rounds, pseudo, gameType = MODE_IDS.CLASSIC) => {
+  submit: async (token, rounds, pseudo, gameType = MODE_IDS.CLASSIC, csrfToken = null) => {
     if (USE_MOCK) {
       return mockSubmit(token, rounds, pseudo);
     }
@@ -397,8 +398,10 @@ export const api = {
         details: parsedPayload.error.flatten(),
       });
     }
+    const headers = csrfToken ? { 'X-CSRF-Token': csrfToken } : undefined;
     return fetchApi('submit', {
       method: 'POST',
+      headers,
       body: JSON.stringify(payload),
     });
   },
@@ -432,10 +435,11 @@ export const submitWithRetry = async (
   pseudo,
   gameType = /** @type {'classic' | 'daily' | 'country' | 'stadium' | 'civilization' | 'country_daily' | 'stadium_daily' | 'civilization_daily'} */ (
     MODE_IDS.CLASSIC
-  )
+  ),
+  csrfToken = null
 ) => {
   try {
-    const result = await api.submit(token, rounds, pseudo, gameType);
+    const result = await api.submit(token, rounds, pseudo, gameType, csrfToken);
     const queue = getRetryQueue();
     const index = queue.findIndex((e) => e.token === token && e.pseudo === pseudo);
     if (index !== -1) {
@@ -479,7 +483,7 @@ export const submitWithRetry = async (
       error.message.includes('500');
 
     if (isNetworkError) {
-      addToRetryQueue(token, rounds, pseudo, gameType);
+      addToRetryQueue(token, rounds, pseudo, gameType, csrfToken);
       throw new GameError(
         'Score en attente de synchronisation (connexion perdue). Réessai automatique...',
         'NETWORK_ERROR'
@@ -516,7 +520,13 @@ export const processRetryQueue = async () => {
     }
 
     try {
-      await api.submit(entry.token, entry.rounds, entry.pseudo, entry.gameType || MODE_IDS.CLASSIC);
+      await api.submit(
+        entry.token,
+        entry.rounds,
+        entry.pseudo,
+        entry.gameType || MODE_IDS.CLASSIC,
+        entry.csrfToken || null
+      );
       removeFromRetryQueue(i);
       successful++;
     } catch {

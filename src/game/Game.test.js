@@ -195,6 +195,7 @@ describe('Game.js', () => {
         result: null,
         error: null,
         sessionBestScore: 0,
+        csrfToken: null,
         gameType: 'classic',
         runtimeConfig: null,
       });

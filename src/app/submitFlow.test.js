@@ -88,6 +88,7 @@ describe('submitFlow', () => {
 
   const makeGameState = (gameType = 'classic') => ({
     token: 'test-token-12345678',
+    csrfToken: 'csrf-token-123',
     gameType,
     totalScore: 10000,
     rounds: [
@@ -134,7 +135,8 @@ describe('submitFlow', () => {
           expect.objectContaining({ capital: 'Paris', status: 'completed' }),
         ]),
         'TEST',
-        'classic'
+        'classic',
+        'csrf-token-123'
       );
     });
 
@@ -289,7 +291,8 @@ describe('submitFlow', () => {
         state.token,
         expect.any(Array),
         'LOCKE',
-        state.gameType
+        state.gameType,
+        state.csrfToken || null
       );
     });
   });
