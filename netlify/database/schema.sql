@@ -3,9 +3,15 @@
 -- It is NOT a migration script; do not run it against a database that already has tables.
 -- Migration history: netlify/database/migrations/
 --   001_initial_schema.sql  — base tables with game_type VARCHAR(10)
---   002_add_game_type_varchar20.sql — widen game_type to VARCHAR(20) for 'civilization'
+--   002_add_csrf_token.sql — add csrf_token to sessions
+--   003_add_game_type_varchar20.sql — widen game_type to VARCHAR(20) for 'civilization'
+--   004_add_player_tokens.sql — add players table and player_id links
+--   005_add_error_logs.sql — add error_logs table for monitoring
+--   006_rename_sessions_capitals_to_targets.sql — rename sessions.capitals -> sessions.targets
+--   007_add_session_token_to_scores.sql — add session_token on scores
+--   008_add_ip_pseudo_locks.sql — add atomic pseudo lock table
 --
--- Tables: players, scores, sessions, rate_limits
+-- Tables: players, scores, sessions, rate_limits, ip_pseudo_locks
 
 -- Anonymous players table
 CREATE TABLE IF NOT EXISTS players (
@@ -75,3 +81,13 @@ CREATE TABLE IF NOT EXISTS rate_limits (
 
 -- Index to clean up old entries
 CREATE INDEX IF NOT EXISTS idx_rate_limits_expires_at ON rate_limits(expires_at);
+
+-- Pseudo lock table (one pseudo per IP)
+CREATE TABLE IF NOT EXISTS ip_pseudo_locks (
+  ip VARCHAR(45) PRIMARY KEY,
+  pseudo VARCHAR(5) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ip_pseudo_locks_updated_at ON ip_pseudo_locks(updated_at);

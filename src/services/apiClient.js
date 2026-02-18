@@ -18,7 +18,7 @@ export const createApiClient = (deps) => {
   return async (endpoint, options = {}) => {
     const headers = {
       'Content-Type': 'application/json',
-      ...(options.headers || {}),
+      ...options.headers,
     };
 
     // Add player token to all requests

@@ -31,7 +31,7 @@ The E2E tests work for **both pre-production and production** - same tests, diff
 #### Deploy Previews (Pre-production) - Full Suite Recommended
 
 ```bash
-# Run ALL 12 E2E tests before merging (~1-2 minutes)
+# Run full E2E suite before merging
 ./scripts/e2e-deploy.sh https://deploy-preview-123--pointthemap.netlify.app
 
 # Or just smoke tests for quick check
@@ -79,6 +79,8 @@ The E2E tests work for **both pre-production and production** - same tests, diff
 
 - ✅ **game-flow.spec.js** - Complete classic game flow
 - ✅ **submit-flow.spec.js** - Score submission (mocked)
+  - Runs in local/dev and preview
+  - Uses preview bypass token when present; otherwise falls back to mocked API responses
 - ✅ **resume.spec.js** - Resume/discard in-progress games
 
 ## Debugging Failed Tests
@@ -101,20 +103,26 @@ npx playwright test --debug
 #### Question Modal Not Appearing
 
 **Symptom:** Test fails waiting for `#question-modal`
-**Cause:** Missing i18n functions (getCountryDisplayName, getStadiumName)
-**Fix:** Ensure all i18n functions are properly imported in bootstrap.js
+**Cause:** Start action failed or the app never reached playable state
+**Fix:** Inspect test diagnostics from `ensureAppBootstrapped` and network request failures
 
 #### App Init Timeout
 
 **Symptom:** Test fails waiting for `appReady`
-**Cause:** JavaScript error during initialization
-**Fix:** Check browser console logs in test output
+**Cause:** Initialization issue or readiness flag missing
+**Fix:** Check browser console logs and page/request errors emitted by `ensureAppBootstrapped`
 
 #### Map Click Not Registering
 
 **Symptom:** Test times out on map click
 **Cause:** GeoJSON not loaded or map not initialized
-**Fix:** Check MapSystem initialization and GeoJSON loading
+**Fix:** Use `clickMapSafely` helper and verify no blocking modal is visible
+
+#### Module Script MIME Error During E2E
+
+**Symptom:** Browser reports module script loaded with `application/json`
+**Cause:** Over-broad Playwright route pattern accidentally intercepting JS module files
+**Fix:** Intercept Netlify functions with explicit patterns only (e.g. `**/.netlify/functions/submit*`)
 
 ## CI/CD Integration
 
@@ -129,8 +137,8 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm ci
@@ -160,11 +168,12 @@ Test deployments automatically after Netlify builds:
 
 ```javascript
 import { test, expect } from '@playwright/test';
+import { ensureAppBootstrapped } from './helpers/app-bootstrap.js';
 
 test('test name', async ({ page }) => {
   // 1. Navigate and wait for app ready
   await page.goto('/');
-  await page.waitForFunction(() => document.body.dataset.appReady === 'true', { timeout: 30000 });
+  await ensureAppBootstrapped(page);
 
   // 2. Interact with UI
   await page.locator('#start-modal').click();
@@ -190,11 +199,11 @@ test('critical path @smoke', async ({ page }) => {
 
 **The same E2E tests run against any URL - the tests don't change, only the target environment.**
 
-| Environment      | Recommended Tests | Duration | When to Run                  |
-| ---------------- | ----------------- | -------- | ---------------------------- |
-| Deploy Preview   | Full suite (12)   | 1-2 min  | Before merging PR            |
-| Production       | Smoke tests (2)   | 30 sec   | After each production deploy |
-| Production (bug) | Full suite (12)   | 1-2 min  | When smoke tests fail        |
+| Environment      | Recommended Tests | Duration (approx) | When to Run                  |
+| ---------------- | ----------------- | ----------------- | ---------------------------- |
+| Deploy Preview   | Full suite        | 3-5 min           | Before merging PR            |
+| Production       | Smoke tests       | 30-60 sec         | After each production deploy |
+| Production (bug) | Full suite        | 3-5 min           | When smoke tests fail        |
 
 ### After Each Deploy
 

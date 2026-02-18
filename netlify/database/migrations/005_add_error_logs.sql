@@ -1,4 +1,4 @@
--- Migration: Add error_logs table for self-hosted error monitoring
+-- Migration 005: Add error_logs table for self-hosted error monitoring
 
 CREATE TABLE IF NOT EXISTS error_logs (
   id SERIAL PRIMARY KEY,

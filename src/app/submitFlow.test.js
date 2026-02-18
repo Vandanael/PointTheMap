@@ -265,7 +265,12 @@ describe('submitFlow', () => {
       // First attempt: 409 pseudo lock — second: also fails so we exhaust attempts
       const lockError = Object.assign(new Error('Locked'), {
         status: 409,
-        data: { error: { code: 'pseudo_already_set_for_this_ip' }, pseudo: 'LOCKE' },
+        data: {
+          error: {
+            code: 'pseudo_already_set_for_this_ip',
+            details: { pseudo: 'LOCKE' },
+          },
+        },
       });
       mockContext.api.submitWithRetry
         .mockRejectedValueOnce(lockError)
@@ -275,7 +280,17 @@ describe('submitFlow', () => {
       const { handleSubmit } = createSubmitFlow(mockContext);
       await handleSubmit('OTHER');
 
-      expect(mockContext.ui.showPseudoLockedDialog).toHaveBeenCalled();
+      expect(mockContext.ui.showPseudoLockedDialog).toHaveBeenCalledWith(
+        'LOCKE',
+        expect.any(Function)
+      );
+      expect(mockContext.api.submitWithRetry).toHaveBeenNthCalledWith(
+        2,
+        state.token,
+        expect.any(Array),
+        'LOCKE',
+        state.gameType
+      );
     });
   });
 

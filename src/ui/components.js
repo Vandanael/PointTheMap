@@ -276,7 +276,7 @@ export const StartScreen = () => `
           </div>
 
           <!-- Right side: Category Grid (2x2) - Compact -->
-          <div class="lobby-categories-wrapper">
+          <div class="lobby-categories-wrapper desktop-mode-controls">
             <div class="category-grid">
               <button
                 id="category-capitals"
@@ -344,6 +344,18 @@ export const StartScreen = () => `
                 ${t('daily')}
               </button>
             </div>
+          </div>
+
+          <div class="mobile-mode-select-wrapper">
+            <label class="mode-label mobile-mode-label" for="mobile-game-mode-select">
+              ${t('selectCategory')}
+            </label>
+            <select id="mobile-game-mode-select" class="mobile-mode-select" aria-label="${t('selectCategory')}">
+              <option value="capitals">${t('capitals')}</option>
+              <option value="countries">${t('countries')}</option>
+              <option value="stadiums">${t('stadiums')}</option>
+              <option value="civilizations">${t('civilizations')}</option>
+            </select>
           </div>
 
           <!-- Main Action Button -->

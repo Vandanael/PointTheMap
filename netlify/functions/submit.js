@@ -17,6 +17,7 @@ import { recordDbFailure, isDbBreakerOpen, getDbBreakerUntil } from './_circuit-
 import { createFallbackRateLimiter, checkDbRateLimit } from './_rate-limit.js';
 import { checkPlausibility, validateRounds } from './_round-validation.js';
 import { scoreRound } from './_round-scoring.js';
+import { acquirePseudoLock } from './_pseudo-lock.js';
 
 const logger = createLogger('submit');
 const E2E_BYPASS_ENABLED = process.env.E2E_BYPASS_ENABLED === '1';
@@ -280,18 +281,17 @@ export default async function submitHandler(req, context) {
       return errorJson('client_ip_unknown', 'Unable to verify player identity', 400);
     }
 
-    let existingPseudoResult;
+    /** @type {{ ok: true } | { ok: false, pseudo: string | null }} */
+    let pseudoLockResult;
     try {
-      existingPseudoResult = await sql`
-        SELECT pseudo
-        FROM scores
-        WHERE ip = ${clientIp}
-        ORDER BY timestamp DESC
-        LIMIT 1
-      `;
+      pseudoLockResult = await acquirePseudoLock({
+        sql,
+        ip: clientIp,
+        pseudo: trimmedPseudo,
+      });
     } catch (dbError) {
       const error = /** @type {Error & {code?: string}} */ (dbError);
-      logger.error('Database query error (pseudo check):', error.message, error.code);
+      logger.error('Database query error (pseudo lock):', error.message, error.code);
       return errorJson(
         isDatabaseConnectionError(error) ? 'db_connection_error' : 'db_error',
         'Database error. Please try again later.',
@@ -299,44 +299,17 @@ export default async function submitHandler(req, context) {
       );
     }
 
-    let existingPseudo = null;
-    if (existingPseudoResult.length > 0) {
-      const first = existingPseudoResult[0];
-      if (first && first.pseudo !== null && first.pseudo !== undefined)
-        existingPseudo = first.pseudo;
-      if (existingPseudo !== trimmedPseudo) {
-        return errorJson('pseudo_already_set_for_this_ip', 'Pseudo already set for this IP', 409, {
-          pseudo: existingPseudo,
-        });
-      }
+    if (!pseudoLockResult.ok) {
+      const lockedPseudo = 'pseudo' in pseudoLockResult ? pseudoLockResult.pseudo : null;
+      return errorJson('pseudo_already_set_for_this_ip', 'Pseudo already set for this IP', 409, {
+        pseudo: lockedPseudo,
+      });
     }
 
     let rank = 1;
     let isTopFifty = false;
 
     try {
-      // Double-check pseudo hasn't changed (authoritative check before transaction)
-      const doubleCheckResult = await sql`
-        SELECT pseudo
-        FROM scores
-        WHERE ip = ${clientIp}
-        ORDER BY timestamp DESC
-        LIMIT 1
-      `;
-
-      const doubleCheckRow = doubleCheckResult[0];
-      if (
-        doubleCheckRow &&
-        doubleCheckRow.pseudo !== null &&
-        doubleCheckRow.pseudo !== undefined &&
-        doubleCheckRow.pseudo !== trimmedPseudo
-      ) {
-        logger.info('[submit] Pseudo mismatch detected');
-        return errorJson('pseudo_already_set_for_this_ip', 'Pseudo already set for this IP', 409, {
-          pseudo: doubleCheckRow.pseudo,
-        });
-      }
-
       // Atomic transaction: mark session used, insert score, update player, delete session
       logger.info('[submit] Starting database transaction');
       const txnQueries = [
