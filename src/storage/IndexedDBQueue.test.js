@@ -9,8 +9,8 @@ describe('IndexedDBQueue', () => {
     // Create new queue instance
     queue = new IndexedDBQueue();
 
-    // Wait for initialization
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    // Ensure IndexedDB init is complete
+    await queue.count();
   });
 
   afterEach(async () => {

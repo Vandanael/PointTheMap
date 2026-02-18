@@ -284,6 +284,7 @@ describe('UI - Leaderboard Timeout', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 

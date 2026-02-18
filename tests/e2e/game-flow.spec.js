@@ -1,9 +1,15 @@
 import { test, expect } from '@playwright/test';
+import { clickMapSafely } from './helpers/map-interactions.js';
 
 test('classic flow: start, play, see result', async ({ page }) => {
   const consoleErrors = [];
   page.on('console', (msg) => {
-    if (msg.type() === 'error') consoleErrors.push(msg.text());
+    if (msg.type() === 'error') {
+      const text = msg.text();
+      // Ignore Netlify deploy-preview drawer CSP errors (not a bug in app code)
+      if (text.includes('app.netlify.com')) return;
+      consoleErrors.push(text);
+    }
   });
 
   await page.goto('/');
@@ -21,7 +27,7 @@ test('classic flow: start, play, see result', async ({ page }) => {
   await page.locator('#btn-ready').click();
 
   await expect(page.locator('#game-header')).toBeVisible();
-  await page.locator('#map').click();
+  await clickMapSafely(page);
 
   await expect(page.locator('#round-result')).toBeVisible();
   await expect(page.locator('#pointsDisplay')).toBeVisible();
