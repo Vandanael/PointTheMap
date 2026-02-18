@@ -341,7 +341,7 @@ export const capitals = [
     lng: 18.4241,
     popular: true,
   },
-  { name: 'Lagos', country: 'Nigeria', countryId: 'NGA', lat: 6.5244, lng: 3.3792, popular: true },
+  { name: 'Lagos', country: 'Nigeria', countryId: 'UNK', lat: 6.5244, lng: 3.3792, popular: true },
   {
     name: 'Canberra',
     country: 'Australie',
@@ -1148,7 +1148,7 @@ export const capitals = [
   {
     name: 'Mbabane',
     country: 'Eswatini',
-    countryId: 'UNK',
+    countryId: 'SWZ',
     lat: -26.3054,
     lng: 31.1367,
     popular: false,
@@ -1341,7 +1341,7 @@ export const capitals = [
   {
     name: 'Cayenne',
     country: 'Guyane',
-    countryId: 'GUY',
+    countryId: 'UNK',
     lat: 4.9333,
     lng: -52.3333,
     popular: false,

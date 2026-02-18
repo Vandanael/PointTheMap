@@ -9,72 +9,59 @@ import { EVENTS } from '../core/eventTypes.js';
 // Export storage manager for direct access if needed
 export { storageManager, QuotaExceededError };
 
-// Legacy API - kept for backwards compatibility
-export const storage = {
-  /** @param {string} key */
-  get: (key) => storageManager.get(key),
-  /** @param {string} key @param {unknown} value */
-  set: (key, value) => {
-    try {
-      return storageManager.set(key, value);
-    } catch (error) {
-      if (error instanceof QuotaExceededError) {
-        // Handle quota exceeded
-        logger.error('Storage quota exceeded. Attempting cleanup...');
+/** @param {string} key */
+export const getStorageValue = (key) => storageManager.get(key);
 
-        // Emit event for UI notification
-        eventBus.emit(EVENTS.STORAGE_QUOTA_EXCEEDED, {
-          message: 'Storage limit reached. Cleaning up old data...',
-        });
+/** @param {string} key @param {unknown} value */
+export const setStorageValue = (key, value) => {
+  try {
+    return storageManager.set(key, value);
+  } catch (error) {
+    if (error instanceof QuotaExceededError) {
+      logger.error('Storage quota exceeded. Attempting cleanup...');
+      eventBus.emit(EVENTS.STORAGE_QUOTA_EXCEEDED, {
+        message: 'Storage limit reached. Cleaning up old data...',
+      });
 
-        try {
-          // Try to free up 1MB
-          const freed = storageManager.autoCleanup(1024 * 1024);
-          logger.info(`Cleaned up ${freed} bytes`);
+      try {
+        const freed = storageManager.autoCleanup(1024 * 1024);
+        logger.info(`Cleaned up ${freed} bytes`);
+        const success = storageManager.set(key, value);
 
-          // Retry the operation
-          const success = storageManager.set(key, value);
-
-          if (success) {
-            // Emit success event
-            eventBus.emit(EVENTS.STORAGE_QUOTA_RECOVERED, {
-              message: `Cleaned up ${Math.round(freed / 1024)}KB successfully.`,
-              freedBytes: freed,
-            });
-          } else {
-            // Emit failure event
-            eventBus.emit(EVENTS.STORAGE_QUOTA_FAILED, {
-              message: 'Unable to free enough space. Some data may not be saved.',
-            });
-          }
-
-          return success;
-        } catch (retryError) {
-          logger.error('Failed to save after cleanup', retryError);
-
-          // Emit failure event
-          eventBus.emit(EVENTS.STORAGE_QUOTA_FAILED, {
-            message: 'Storage full. Unable to save data.',
+        if (success) {
+          eventBus.emit(EVENTS.STORAGE_QUOTA_RECOVERED, {
+            message: `Cleaned up ${Math.round(freed / 1024)}KB successfully.`,
+            freedBytes: freed,
           });
-
-          return false;
+        } else {
+          eventBus.emit(EVENTS.STORAGE_QUOTA_FAILED, {
+            message: 'Unable to free enough space. Some data may not be saved.',
+          });
         }
+
+        return success;
+      } catch (retryError) {
+        logger.error('Failed to save after cleanup', retryError);
+        eventBus.emit(EVENTS.STORAGE_QUOTA_FAILED, {
+          message: 'Storage full. Unable to save data.',
+        });
+        return false;
       }
-      return false;
     }
-  },
+    return false;
+  }
 };
 
-export const getLastPseudo = () => storage.get('lastPseudo');
+export const getLastPseudo = () => getStorageValue('lastPseudo');
 /** @param {string} pseudo */
-export const setLastPseudo = (pseudo) => storage.set('lastPseudo', pseudo);
-export const getTheme = () => storage.get('theme') || 'dark';
+export const setLastPseudo = (pseudo) => setStorageValue('lastPseudo', pseudo);
+export const getTheme = () => getStorageValue('theme') || 'dark';
 /** @param {string} theme */
-export const setTheme = (theme) => storage.set('theme', theme);
+export const setTheme = (theme) => setStorageValue('theme', theme);
 
-export const getMapView = () => storage.get('mapView');
+export const getMapView = () => getStorageValue('mapView');
 /** @param {{ lat: number; lng: number } | [number, number]} center @param {number} zoom */
-export const setMapView = (center, zoom) => storage.set('mapView', { center, zoom });
+export const setMapView = (center, zoom) => setStorageValue('mapView', { center, zoom });
 
 const RETRY_QUEUE_KEY = 'retry_queue';
 

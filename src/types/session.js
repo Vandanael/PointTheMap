@@ -42,10 +42,7 @@
  * @property {string} token
  * @property {number} startTime
  * @property {string} csrfToken
- * @property {Capital[]} [capitals]
- * @property {Country[]} [countries]
- * @property {Stadium[]} [stadiums]
- * @property {Civilization[]} [civilizations]
+ * @property {Array<Capital | Country | Stadium | Civilization>} targets
  */
 
 /**

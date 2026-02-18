@@ -89,34 +89,17 @@ export class ScoringSystem {
   }
 
   /**
-   * Calculate time bonus based on speed and distance threshold
-   * Matches server-side logic in _round-scoring.js
+   * Calculate time bonus based only on response speed.
+   * Matches server-side logic in _round-scoring.js.
    *
    * @param {number} baseScore - Base score before bonus
    * @param {number} totalTimeMs - Total time allowed
    * @param {number} timeRemainingMs - Time remaining
-   * @param {number} distanceKm - Distance in kilometers (checked against distanceThreshold)
-   * @param {string} [gameMode='classic'] - Game mode ('classic' or 'daily')
+   * @param {string} [gameMode='classic'] - Game mode
    * @returns {number} Time bonus (0-maxBonus)
    */
-  calculateTimeBonus(
-    baseScore,
-    totalTimeMs,
-    timeRemainingMs,
-    distanceKm,
-    gameMode = MODE_IDS.CLASSIC
-  ) {
+  calculateTimeBonus(baseScore, totalTimeMs, timeRemainingMs, gameMode = MODE_IDS.CLASSIC) {
     const modeConfig = getTimeBonusConfig(gameMode);
-
-    // Check distance threshold - only apply time bonus if close enough
-    // (matches server-side logic in _round-scoring.js:26-32)
-    if (
-      modeConfig?.distanceThreshold !== null &&
-      modeConfig?.distanceThreshold !== undefined &&
-      distanceKm >= modeConfig.distanceThreshold
-    ) {
-      return 0;
-    }
 
     return calculateTimeBonusLib({
       baseScore,
@@ -147,7 +130,7 @@ export class ScoringSystem {
     // Calculate time bonus
     const timeBonus =
       totalTimeMs !== null
-        ? this.calculateTimeBonus(baseScore, totalTimeMs, timeRemainingMs, distanceKm, gameMode)
+        ? this.calculateTimeBonus(baseScore, totalTimeMs, timeRemainingMs, gameMode)
         : 0;
 
     return {
@@ -323,13 +306,7 @@ export class ScoringSystem {
     const timeRemaining = total - timeElapsedMs;
 
     // Time bonus (if enabled for country mode)
-    const timeBonus = this.calculateTimeBonus(
-      baseScore,
-      total,
-      timeRemaining,
-      distanceToCountry,
-      gameMode
-    );
+    const timeBonus = this.calculateTimeBonus(baseScore, total, timeRemaining, gameMode);
 
     return {
       distance: Math.round(distanceToCountry),

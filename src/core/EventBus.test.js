@@ -136,6 +136,27 @@ describe('EventBus', () => {
       expect(exactHandler).toHaveBeenCalledTimes(1);
       expect(wildcardHandler).toHaveBeenCalledTimes(1);
     });
+
+    it('should compile wildcard matchers once at subscribe time', () => {
+      eventBus.subscribe('timer:*', vi.fn());
+      eventBus.subscribe('game:*:completed', vi.fn());
+
+      // @ts-expect-error - internal test hook
+      expect(eventBus._wildcardMatchers.size).toBe(2);
+      // @ts-expect-error - internal test hook
+      expect(typeof eventBus._wildcardMatchers.get('timer:*')).toBe('function');
+      // @ts-expect-error - internal test hook
+      expect(typeof eventBus._wildcardMatchers.get('game:*:completed')).toBe('function');
+    });
+
+    it('should cleanup wildcard matcher when last wildcard listener is removed', () => {
+      const handler = vi.fn();
+      eventBus.subscribe('timer:*', handler);
+      eventBus.unsubscribe('timer:*', handler);
+
+      // @ts-expect-error - internal test hook
+      expect(eventBus._wildcardMatchers.has('timer:*')).toBe(false);
+    });
   });
 
   describe('Error isolation', () => {

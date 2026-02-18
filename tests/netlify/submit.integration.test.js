@@ -6,7 +6,7 @@ const E2E_TOKEN = 'test-bypass-token';
 /**
  * @typedef {{
  *   token: string,
- *   targets: Array<{ name: string, country: string, lat: number, lng: number }>,
+ *   targets: Array<Record<string, any>>,
  *   startTime: number,
  *   used: boolean,
  *   gameType: string,
@@ -36,6 +36,58 @@ const buildSubmitBody = ({ token, pseudo, gameType = 'classic' }) => {
 };
 
 /**
+ * @param {{ token: string, pseudo: string, gameType?: string }} params
+ */
+const buildCountrySubmitBody = ({ token, pseudo, gameType = 'country' }) => {
+  const targets = [
+    { name: 'France', countryId: 'FRA' },
+    { name: 'Germany', countryId: 'DEU' },
+    { name: 'Spain', countryId: 'ESP' },
+    { name: 'Italy', countryId: 'ITA' },
+    { name: 'Portugal', countryId: 'PRT' },
+  ];
+  return {
+    token,
+    pseudo,
+    gameType,
+    payloadVersion: 1,
+    rounds: targets.map((target) => ({
+      country: target.name,
+      countryId: target.countryId,
+      click: null,
+      status: 'timeout',
+      score: 0,
+    })),
+  };
+};
+
+/**
+ * @param {{ token: string, pseudo: string, gameType?: string }} params
+ */
+const buildCivilizationSubmitBody = ({ token, pseudo, gameType = 'civilization' }) => {
+  const targets = [
+    { name: 'Roman Empire', id: 'rome' },
+    { name: 'Mongol Empire', id: 'mongol' },
+    { name: 'Ottoman Empire', id: 'ottoman' },
+    { name: 'Aztec Empire', id: 'aztec' },
+    { name: 'Inca Empire', id: 'inca' },
+  ];
+  return {
+    token,
+    pseudo,
+    gameType,
+    payloadVersion: 1,
+    rounds: targets.map((target) => ({
+      civilization: target.name,
+      civilizationId: target.id,
+      click: null,
+      status: 'timeout',
+      score: 0,
+    })),
+  };
+};
+
+/**
  * @param {{ token: string, gameType?: string, csrfToken?: string, used?: boolean }} params
  * @returns {SessionRow}
  */
@@ -47,6 +99,58 @@ const buildSession = ({ token, gameType = 'classic', csrfToken = 'csrf-token', u
     { name: 'Berlin', country: 'Germany', lat: 52.52, lng: 13.405 },
     { name: 'Rome', country: 'Italy', lat: 41.9028, lng: 12.4964 },
     { name: 'Madrid', country: 'Spain', lat: 40.4168, lng: -3.7038 },
+  ],
+  startTime: Date.now() - 90_000,
+  used,
+  gameType,
+  expiresAt: new Date(Date.now() + 60_000),
+  csrfToken,
+  playerId: null,
+});
+
+/**
+ * @param {{ token: string, gameType?: string, csrfToken?: string, used?: boolean }} params
+ * @returns {SessionRow}
+ */
+const buildCountrySession = ({
+  token,
+  gameType = 'country',
+  csrfToken = 'csrf-token',
+  used = false,
+}) => ({
+  token,
+  targets: [
+    { name: 'France', countryId: 'FRA', popular: true },
+    { name: 'Germany', countryId: 'DEU', popular: true },
+    { name: 'Spain', countryId: 'ESP', popular: true },
+    { name: 'Italy', countryId: 'ITA', popular: true },
+    { name: 'Portugal', countryId: 'PRT', popular: true },
+  ],
+  startTime: Date.now() - 90_000,
+  used,
+  gameType,
+  expiresAt: new Date(Date.now() + 60_000),
+  csrfToken,
+  playerId: null,
+});
+
+/**
+ * @param {{ token: string, gameType?: string, csrfToken?: string, used?: boolean }} params
+ * @returns {SessionRow}
+ */
+const buildCivilizationSession = ({
+  token,
+  gameType = 'civilization',
+  csrfToken = 'csrf-token',
+  used = false,
+}) => ({
+  token,
+  targets: [
+    { name: 'Roman Empire', id: 'rome', popular: true },
+    { name: 'Mongol Empire', id: 'mongol', popular: true },
+    { name: 'Ottoman Empire', id: 'ottoman', popular: true },
+    { name: 'Aztec Empire', id: 'aztec', popular: false },
+    { name: 'Inca Empire', id: 'inca', popular: false },
   ],
   startTime: Date.now() - 90_000,
   used,
@@ -129,19 +233,25 @@ const createFakeSql = (options = {}) => {
     }
 
     if (query.startsWith('insert into ip_pseudo_locks')) {
-      const [ip, pseudo] = values;
+      const [ip, pseudo, ttlHours] = values;
       const existing = state.ipPseudoLocks.get(ip);
-      if (!existing || existing === pseudo) {
-        state.ipPseudoLocks.set(ip, pseudo);
-        return [{ pseudo }];
+      const now = Date.now();
+      const ttlMs = (Number(ttlHours) || 0) * 60 * 60 * 1000;
+      const isExpired = existing ? now - existing.updatedAtMs > ttlMs : false;
+      if (!existing || existing.pseudo === pseudo || isExpired) {
+        const next = { pseudo, updatedAtMs: now };
+        state.ipPseudoLocks.set(ip, next);
+        return [{ pseudo: next.pseudo, updated_at: new Date(next.updatedAtMs).toISOString() }];
       }
       return [];
     }
 
     if (query.includes('from ip_pseudo_locks') && query.includes('where ip =')) {
       const ip = values[0];
-      const pseudo = state.ipPseudoLocks.get(ip);
-      return pseudo ? [{ pseudo }] : [];
+      const lock = state.ipPseudoLocks.get(ip);
+      return lock
+        ? [{ pseudo: lock.pseudo, updated_at: new Date(lock.updatedAtMs).toISOString() }]
+        : [];
     }
 
     if (query.startsWith('update sessions set used = true where token =')) {
@@ -302,7 +412,37 @@ describe('submit integration', () => {
     const conflictBody = resA.status === 409 ? bodyA : bodyB;
     expect(conflictBody.error.code).toBe('pseudo_already_set_for_this_ip');
     expect(conflictBody.error.details.pseudo).toBeTypeOf('string');
+    expect(conflictBody.error.details.lock).toBeTruthy();
+    expect(conflictBody.error.details.lock.pseudo).toBeTypeOf('string');
+    expect(conflictBody.error.details.lock.updatedAt).toBeTypeOf('string');
+    expect(conflictBody.error.details.lock.expiresAt).toBeTypeOf('string');
     expect(fake.state.scores).toHaveLength(1);
+  });
+
+  it('allows lock takeover after TTL expiry', async () => {
+    const fake = createFakeSql({
+      sessions: [buildSession({ token: 'token-expired-lock' })],
+    });
+    fake.state.ipPseudoLocks.set('203.0.113.7', {
+      pseudo: 'OLD',
+      updatedAtMs: Date.now() - 31 * 24 * 60 * 60 * 1000,
+    });
+
+    vi.resetModules();
+    vi.doMock('../../netlify/functions/db.js', () => ({
+      getDatabase: vi.fn(() => fake.sql),
+    }));
+    const { default: handler } = await import('../../netlify/functions/submit.js');
+
+    const req = makeRequest({
+      body: buildSubmitBody({ token: 'token-expired-lock', pseudo: 'NEWW' }),
+    });
+    const res = await handler(req, { ip: '203.0.113.7' });
+    const payload = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(payload.ok).toBe(true);
+    expect(fake.state.ipPseudoLocks.get('203.0.113.7')?.pseudo).toBe('NEWW');
   });
 
   it('rolls back submit transaction when score insert fails', async () => {
@@ -354,5 +494,97 @@ describe('submit integration', () => {
     expect(body.ok).toBe(true);
     expect(body.meta?.idempotentReplay).toBe(true);
     expect(fake.state.scores).toHaveLength(1);
+  });
+
+  it('rejects replay when csrf token does not match', async () => {
+    const fake = createFakeSql({
+      sessions: [buildSession({ token: 'token-csrf-replay' })],
+    });
+
+    vi.resetModules();
+    vi.doMock('../../netlify/functions/db.js', () => ({
+      getDatabase: vi.fn(() => fake.sql),
+    }));
+    const { default: handler } = await import('../../netlify/functions/submit.js');
+
+    const first = await handler(
+      makeRequest({ body: buildSubmitBody({ token: 'token-csrf-replay', pseudo: 'ALFA' }) }),
+      { ip: '198.51.100.33' }
+    );
+    const second = await handler(
+      makeRequest({
+        body: buildSubmitBody({ token: 'token-csrf-replay', pseudo: 'ALFA' }),
+        csrfToken: 'wrong-csrf-token',
+      }),
+      { ip: '198.51.100.33' }
+    );
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(403);
+    const payload = await second.json();
+    expect(payload.error.code).toBe('csrf_mismatch');
+  });
+
+  it('rejects country submission when countryId does not match session target IDs', async () => {
+    const fake = createFakeSql({
+      sessions: [buildCountrySession({ token: 'token-country-id-check' })],
+    });
+
+    vi.resetModules();
+    vi.doMock('../../netlify/functions/db.js', () => ({
+      getDatabase: vi.fn(() => fake.sql),
+    }));
+    const { default: handler } = await import('../../netlify/functions/submit.js');
+
+    const body = buildCountrySubmitBody({ token: 'token-country-id-check', pseudo: 'ALFA' });
+    body.rounds[0].countryId = 'BRA';
+    const res = await handler(makeRequest({ body }), { ip: '198.51.100.42' });
+    const payload = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(payload.error.code).toBe('invalid_rounds');
+    expect(payload.error.message).toMatch(/country id mismatch/i);
+  });
+
+  it('accepts country submission when IDs match even if display names differ', async () => {
+    const fake = createFakeSql({
+      sessions: [buildCountrySession({ token: 'token-country-name-diff' })],
+    });
+
+    vi.resetModules();
+    vi.doMock('../../netlify/functions/db.js', () => ({
+      getDatabase: vi.fn(() => fake.sql),
+    }));
+    const { default: handler } = await import('../../netlify/functions/submit.js');
+
+    const body = buildCountrySubmitBody({ token: 'token-country-name-diff', pseudo: 'ALFA' });
+    body.rounds[0].country = 'France (localized)';
+    const res = await handler(makeRequest({ body }), { ip: '198.51.100.43' });
+    const payload = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(payload.ok).toBe(true);
+    expect(fake.state.scores).toHaveLength(1);
+  });
+
+  it('rejects civilization submission when civilizationId does not match session target IDs', async () => {
+    const fake = createFakeSql({
+      sessions: [buildCivilizationSession({ token: 'token-civ-id-check' })],
+    });
+
+    vi.resetModules();
+    vi.doMock('../../netlify/functions/db.js', () => ({
+      getDatabase: vi.fn(() => fake.sql),
+    }));
+    const { default: handler } = await import('../../netlify/functions/submit.js');
+
+    const body = buildCivilizationSubmitBody({ token: 'token-civ-id-check', pseudo: 'ALFA' });
+    body.rounds[2].civilizationId = 'wrong-id';
+    const res = await handler(makeRequest({ body }), { ip: '198.51.100.44' });
+    const payload = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(payload.error.code).toBe('invalid_rounds');
+    expect(payload.error.message).toMatch(/civilization id mismatch/i);
   });
 });

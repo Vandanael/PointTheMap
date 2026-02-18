@@ -134,6 +134,14 @@ describe('recordClick', () => {
     expect(result.endTime).toBeGreaterThan(0);
   });
 
+  it('awards time bonus for perfect click in daily mode', () => {
+    const clickCoords = [48.8566, 2.3522];
+    const result = recordClick(round, clickCoords, 'daily', undefined, null, null, roundRules);
+
+    expect(result.status).toBe('completed');
+    expect(result.score).toBe(6000);
+  });
+
   it('records a click and calculates score for nearby click', () => {
     // Click 50km from Paris (approximately)
     const clickCoords = [48.4, 2.3522];

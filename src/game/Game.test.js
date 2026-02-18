@@ -6,7 +6,6 @@ import {
   handleTimeout,
   nextRound,
   resetGame,
-  getCurrentCapital,
   isLastRound,
   getProgress,
   checkIfNewSessionBest,
@@ -181,11 +180,7 @@ describe('Game.js', () => {
       expect(state).toEqual({
         status: GameStatus.IDLE,
         token: null,
-        targets: [], // Domain model field
-        capitals: [],
-        countries: [],
-        stadiums: [],
-        civilizations: [],
+        targets: [],
         rounds: [],
         currentRoundIndex: 0,
         currentRound: null,
@@ -211,7 +206,7 @@ describe('Game.js', () => {
 
       api.start.mockResolvedValue({
         token: 'test-token-123',
-        capitals: mockCapitals,
+        targets: mockCapitals,
       });
 
       const initialState = createGameState();
@@ -220,7 +215,7 @@ describe('Game.js', () => {
       expect(api.start).toHaveBeenCalledWith('classic');
       expect(newState.status).toBe(GameStatus.PLAYING);
       expect(newState.token).toBe('test-token-123');
-      expect(newState.capitals).toEqual(mockCapitals);
+      expect(newState.targets).toEqual(mockCapitals);
       expect(newState.gameType).toBe('classic');
       expect(newState.currentRound).toBeDefined();
       expect(createRound).toHaveBeenCalledWith(mockCapitals[0], 0, 'capital', 0);
@@ -231,7 +226,7 @@ describe('Game.js', () => {
 
       api.start.mockResolvedValue({
         token: 'daily-token',
-        capitals: mockCapitals,
+        targets: mockCapitals,
       });
 
       const initialState = createGameState();
@@ -241,10 +236,10 @@ describe('Game.js', () => {
       expect(newState.gameType).toBe('daily');
     });
 
-    it('should handle empty capitals array', async () => {
+    it('should handle empty targets array', async () => {
       api.start.mockResolvedValue({
         token: 'test-token',
-        capitals: [],
+        targets: [],
       });
 
       const initialState = createGameState();
@@ -254,7 +249,7 @@ describe('Game.js', () => {
       expect(newState.error).toBe('error.noTargetsCapitals');
     });
 
-    it('should handle missing capitals', async () => {
+    it('should handle missing targets', async () => {
       api.start.mockResolvedValue({
         token: 'test-token',
       });
@@ -278,7 +273,7 @@ describe('Game.js', () => {
 
       api.start.mockResolvedValue({
         token: 'test-token',
-        capitals: mockCapitals,
+        targets: mockCapitals,
       });
 
       const initialState = createGameState();
@@ -296,7 +291,7 @@ describe('Game.js', () => {
 
       api.start.mockResolvedValue({
         token: 'country-token',
-        countries: mockCountries,
+        targets: mockCountries,
       });
 
       const initialState = createGameState();
@@ -306,8 +301,7 @@ describe('Game.js', () => {
       expect(newState.status).toBe(GameStatus.PLAYING);
       expect(newState.gameType).toBe('country');
       expect(newState.token).toBe('country-token');
-      expect(newState.countries).toEqual(mockCountries);
-      expect(newState.capitals).toEqual([]);
+      expect(newState.targets).toEqual(mockCountries);
       expect(newState.currentRound).toBeDefined();
       expect(newState.currentRound.country).toEqual(mockCountries[0]);
       expect(newState.currentRound.capital).toBeNull();
@@ -323,7 +317,7 @@ describe('Game.js', () => {
 
       api.start.mockResolvedValue({
         token: 'stadium-token',
-        stadiums: mockStadiums,
+        targets: mockStadiums,
       });
 
       const initialState = createGameState();
@@ -332,7 +326,7 @@ describe('Game.js', () => {
       expect(api.start).toHaveBeenCalledWith('stadium');
       expect(newState.status).toBe(GameStatus.PLAYING);
       expect(newState.gameType).toBe('stadium');
-      expect(newState.stadiums).toEqual(mockStadiums);
+      expect(newState.targets).toEqual(mockStadiums);
       expect(newState.currentRound).toBeDefined();
       expect(newState.runtimeConfig).toBeDefined();
     });
@@ -345,7 +339,7 @@ describe('Game.js', () => {
 
       api.start.mockResolvedValue({
         token: 'civ-token',
-        civilizations: mockCivilizations,
+        targets: mockCivilizations,
       });
 
       const initialState = createGameState();
@@ -354,7 +348,7 @@ describe('Game.js', () => {
       expect(api.start).toHaveBeenCalledWith('civilization');
       expect(newState.status).toBe(GameStatus.PLAYING);
       expect(newState.gameType).toBe('civilization');
-      expect(newState.civilizations).toEqual(mockCivilizations);
+      expect(newState.targets).toEqual(mockCivilizations);
       expect(newState.currentRound).toBeDefined();
       expect(newState.runtimeConfig).toBeDefined();
     });
@@ -367,7 +361,7 @@ describe('Game.js', () => {
 
       api.start.mockResolvedValue({
         token: 'country-daily-token',
-        countries: mockCountries,
+        targets: mockCountries,
       });
 
       const initialState = createGameState();
@@ -376,7 +370,7 @@ describe('Game.js', () => {
       expect(api.start).toHaveBeenCalledWith('country_daily');
       expect(newState.status).toBe(GameStatus.PLAYING);
       expect(newState.gameType).toBe('country_daily');
-      expect(newState.countries).toEqual(mockCountries);
+      expect(newState.targets).toEqual(mockCountries);
       expect(newState.currentRound).toBeDefined();
     });
 
@@ -388,7 +382,7 @@ describe('Game.js', () => {
 
       api.start.mockResolvedValue({
         token: 'stadium-daily-token',
-        stadiums: mockStadiums,
+        targets: mockStadiums,
       });
 
       const initialState = createGameState();
@@ -397,7 +391,7 @@ describe('Game.js', () => {
       expect(api.start).toHaveBeenCalledWith('stadium_daily');
       expect(newState.status).toBe(GameStatus.PLAYING);
       expect(newState.gameType).toBe('stadium_daily');
-      expect(newState.stadiums).toEqual(mockStadiums);
+      expect(newState.targets).toEqual(mockStadiums);
       expect(newState.currentRound).toBeDefined();
     });
 
@@ -409,7 +403,7 @@ describe('Game.js', () => {
 
       api.start.mockResolvedValue({
         token: 'civ-daily-token',
-        civilizations: mockCivilizations,
+        targets: mockCivilizations,
       });
 
       const initialState = createGameState();
@@ -418,7 +412,7 @@ describe('Game.js', () => {
       expect(api.start).toHaveBeenCalledWith('civilization_daily');
       expect(newState.status).toBe(GameStatus.PLAYING);
       expect(newState.gameType).toBe('civilization_daily');
-      expect(newState.civilizations).toEqual(mockCivilizations);
+      expect(newState.targets).toEqual(mockCivilizations);
       expect(newState.currentRound).toBeDefined();
     });
   });
@@ -534,7 +528,7 @@ describe('Game.js', () => {
         ...createGameState(),
         status: GameStatus.PLAYING,
         gameType: 'country',
-        countries: [country],
+        targets: [country],
         currentRound,
         runtimeConfig: { roundCount: 5, timerMs: 5000, graceMs: 1000, dangerZoneMs: 2000 },
         rounds: [],
@@ -567,7 +561,7 @@ describe('Game.js', () => {
         ...createGameState(),
         status: GameStatus.PLAYING,
         gameType: 'civilization',
-        civilizations: [civ],
+        targets: [civ],
         currentRound,
         runtimeConfig: { roundCount: 5, timerMs: 5000, graceMs: 1000, dangerZoneMs: 2000 },
         rounds: [],
@@ -725,7 +719,6 @@ describe('Game.js', () => {
         ...createGameState(),
         status: GameStatus.ROUND_RESULT,
         targets: capitals, // Domain model
-        capitals,
         currentRoundIndex: 0,
         rounds: [],
       };
@@ -747,54 +740,6 @@ describe('Game.js', () => {
       expect(newState.status).toBe(GameStatus.IDLE);
       expect(newState.rounds).toEqual([]);
       expect(newState.totalScore).toBe(0);
-    });
-  });
-
-  describe('getCurrentCapital', () => {
-    it('should return current capital from current round', () => {
-      const capital = { name: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522 };
-      const state = {
-        ...createGameState(),
-        currentRound: {
-          capital,
-          roundNumber: 0,
-          startTime: Date.now(),
-          endTime: null,
-          click: null,
-          distance: null,
-          score: null,
-          status: 'playing',
-        },
-      };
-
-      const result = getCurrentCapital(state);
-
-      expect(result).toEqual(capital);
-    });
-
-    it('should return null when no current round', () => {
-      const state = {
-        ...createGameState(),
-        currentRound: null,
-      };
-
-      const result = getCurrentCapital(state);
-
-      expect(result).toBeNull();
-    });
-
-    it('should return null when current round has no capital', () => {
-      const state = {
-        ...createGameState(),
-        currentRound: {
-          roundNumber: 0,
-          startTime: Date.now(),
-        },
-      };
-
-      const result = getCurrentCapital(state);
-
-      expect(result).toBeNull();
     });
   });
 
@@ -997,7 +942,7 @@ describe('Game.js', () => {
 
       api.start.mockResolvedValue({
         token: 'test-token',
-        capitals: mockCapitals,
+        targets: mockCapitals,
       });
 
       // Start game
@@ -1038,7 +983,7 @@ describe('Game.js', () => {
 
       api.start.mockResolvedValue({
         token: 'test-token',
-        capitals: mockCapitals,
+        targets: mockCapitals,
       });
 
       // Start game
@@ -1083,7 +1028,7 @@ describe('Game.js', () => {
         ...createGameState(),
         status: GameStatus.PLAYING,
         gameType: 'country',
-        countries: [country],
+        targets: [country],
         currentRound,
         runtimeConfig: { roundCount: 5, timerMs: 5000, graceMs: 1000, dangerZoneMs: 2000 },
         rounds: [],
@@ -1219,7 +1164,7 @@ describe('Game.js', () => {
         ...createGameState(),
         status: GameStatus.PLAYING,
         gameType: 'civilization',
-        civilizations: [civ],
+        targets: [civ],
         currentRound,
         runtimeConfig: { roundCount: 5, timerMs: 5000, graceMs: 1000, dangerZoneMs: 2000 },
         rounds: [],

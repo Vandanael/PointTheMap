@@ -46,6 +46,48 @@ export function createLogger(context = 'app') {
 
 const utilsLogger = createLogger('utils');
 
+const SENSITIVE_LOG_KEYS = new Set([
+  'token',
+  'sessionToken',
+  'csrfToken',
+  'csrf_token',
+  'pseudo',
+  'click',
+  'rounds',
+  'authorization',
+]);
+
+/**
+ * Redact an identifier-like token for logs.
+ * @param {unknown} value
+ * @returns {string}
+ */
+export function redactToken(value) {
+  if (typeof value !== 'string' || value.length === 0) return '[redacted]';
+  if (value.length <= 6) return '***';
+  return `${value.slice(0, 4)}***${value.slice(-2)}`;
+}
+
+/**
+ * Redact potentially sensitive fields recursively for logging.
+ * @param {unknown} value
+ * @returns {unknown}
+ */
+export function redactForLog(value) {
+  if (Array.isArray(value)) return `[array:${value.length}]`;
+  if (!value || typeof value !== 'object') return value;
+  /** @type {Record<string, unknown>} */
+  const out = {};
+  for (const [key, fieldValue] of Object.entries(value)) {
+    if (SENSITIVE_LOG_KEYS.has(key)) {
+      out[key] = key.toLowerCase().includes('token') ? redactToken(fieldValue) : '[redacted]';
+      continue;
+    }
+    out[key] = fieldValue && typeof fieldValue === 'object' ? redactForLog(fieldValue) : fieldValue;
+  }
+  return out;
+}
+
 /**
  * Create JSON response
  * @param {*} data - Response data
@@ -221,8 +263,19 @@ export function validateMethod(req, expectedMethod) {
  * @returns {string} Client IP address
  */
 export function getClientIp(req, context) {
-  const ip = String(context?.ip ?? req.headers.get('x-forwarded-for') ?? 'unknown');
-  return ip.split(',')[0].trim();
+  const contextIp = context?.ip;
+  if (contextIp) return String(contextIp).split(',')[0].trim();
+
+  const edgeIp = req.headers.get('x-nf-client-connection-ip');
+  if (edgeIp) return String(edgeIp).split(',')[0].trim();
+
+  // In local/dev tooling we allow x-forwarded-for fallback for convenience.
+  if (process.env.NODE_ENV !== 'production') {
+    const forwardedIp = req.headers.get('x-forwarded-for');
+    if (forwardedIp) return String(forwardedIp).split(',')[0].trim();
+  }
+
+  return 'unknown';
 }
 
 /**

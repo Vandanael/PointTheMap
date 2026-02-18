@@ -1,6 +1,9 @@
 /**
  * Middleware functions for Netlify functions
  * Centralized cross-cutting concerns like database connection
+ *
+ * @deprecated Runtime handlers are intentionally flat to avoid esbuild minification edge-cases
+ * in Netlify function bundles. Keep this file for backward compatibility in tests/utilities only.
  */
 
 import { getDatabase } from './db.js';

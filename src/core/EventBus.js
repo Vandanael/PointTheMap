@@ -13,10 +13,31 @@
 
 import { logger } from '../utils/logger.js';
 
+/**
+ * Compile a wildcard event pattern into a reusable matcher.
+ * @param {string} pattern
+ * @returns {(event: string) => boolean}
+ */
+function compileWildcardMatcher(pattern) {
+  if (pattern === '*') return () => true;
+
+  // Fast path: single trailing wildcard (e.g., "timer:*")
+  if (pattern.endsWith('*') && pattern.indexOf('*') === pattern.length - 1) {
+    const prefix = pattern.slice(0, -1);
+    return (event) => event.startsWith(prefix);
+  }
+
+  const escaped = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\*/g, '.*');
+  const regex = new RegExp(`^${escaped}$`);
+  return (event) => regex.test(event);
+}
+
 class EventBus {
   constructor() {
     /** @type {Map<string, Set<Function>>} */
     this._listeners = new Map();
+    /** @type {Map<string, (event: string) => boolean>} */
+    this._wildcardMatchers = new Map();
     /** @type {WeakMap<Function, Function>} */
     this._onceListeners = new WeakMap();
   }
@@ -39,6 +60,9 @@ class EventBus {
     if (!listeners) {
       listeners = new Set();
       this._listeners.set(event, listeners);
+      if (event.includes('*')) {
+        this._wildcardMatchers.set(event, compileWildcardMatcher(event));
+      }
     }
     listeners.add(handler);
 
@@ -91,6 +115,7 @@ class EventBus {
     // Cleanup empty listener sets
     if (listeners.size === 0) {
       this._listeners.delete(event);
+      this._wildcardMatchers.delete(event);
     }
   }
 
@@ -114,13 +139,11 @@ class EventBus {
     }
 
     // Collect wildcard matches (e.g., "timer:*" matches "timer:started")
-    for (const [listenerEvent, listeners] of this._listeners.entries()) {
-      if (listenerEvent.includes('*')) {
-        const pattern = listenerEvent.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\*/g, '.*');
-        const regex = new RegExp(`^${pattern}$`);
-        if (regex.test(event)) {
-          listeners.forEach((h) => handlers.add(h));
-        }
+    for (const [listenerEvent, matcher] of this._wildcardMatchers.entries()) {
+      if (!matcher(event)) continue;
+      const listeners = this._listeners.get(listenerEvent);
+      if (listeners) {
+        listeners.forEach((h) => handlers.add(h));
       }
     }
 
@@ -140,6 +163,7 @@ class EventBus {
    */
   clear() {
     this._listeners.clear();
+    this._wildcardMatchers.clear();
   }
 
   /**

@@ -13,21 +13,15 @@ import { createLogger } from './_utils.js';
 const logger = createLogger('submit');
 
 /**
- * Apply time bonus using shared lib with server-side distanceThreshold guard.
+ * Apply time bonus using shared lib (speed only, no distance gate).
  * @param {number} baseScore
- * @param {number} distance
  * @param {number} timeElapsed
  * @param {string} gameType
  * @returns {number} time bonus
  */
-function applyTimeBonus(baseScore, distance, timeElapsed, gameType) {
+function applyTimeBonus(baseScore, timeElapsed, gameType) {
   const modeConfig = getTimeBonusConfig(gameType);
-  if (
-    !timeElapsed ||
-    modeConfig?.distanceThreshold === null ||
-    modeConfig?.distanceThreshold === undefined ||
-    distance >= modeConfig.distanceThreshold
-  ) {
+  if (!timeElapsed) {
     return 0;
   }
   const totalTimeAllowed = GAME.TIMER_MS + GAME.GRACE_PERIOD_MS;
@@ -83,7 +77,7 @@ export function scoreRound(round, i, session) {
         : distanceToPolygonBorder([round.click.lat, round.click.lng], targetFeature.geometry);
       serverScore = calculateCountryScore(distance);
 
-      serverScore += applyTimeBonus(serverScore, distance, round.timeElapsed, modeKey);
+      serverScore += applyTimeBonus(serverScore, round.timeElapsed, modeKey);
       serverScore = Math.round(serverScore); // Round serverScore here for consistency
 
       if (round.score && Math.abs(round.score - serverScore) > 100) {
@@ -141,7 +135,7 @@ export function scoreRound(round, i, session) {
         : distanceToPolygonBorder([round.click.lat, round.click.lng], targetFeature.geometry);
       serverScore = calculateCountryScore(distance);
 
-      serverScore += applyTimeBonus(serverScore, distance, round.timeElapsed, modeKey);
+      serverScore += applyTimeBonus(serverScore, round.timeElapsed, modeKey);
       serverScore = Math.round(serverScore); // Round serverScore here for consistency
 
       if (round.score && Math.abs(round.score - serverScore) > 100) {
@@ -200,7 +194,7 @@ export function scoreRound(round, i, session) {
     }
 
     const baseScore = Math.round(calculateScore(distance));
-    const timeBonus = applyTimeBonus(baseScore, distance, round.timeElapsed, modeKey);
+    const timeBonus = applyTimeBonus(baseScore, round.timeElapsed, modeKey);
     const totalScore = baseScore + timeBonus;
 
     if (round.score && Math.abs(round.score - totalScore) > 1) {
@@ -245,7 +239,7 @@ export function scoreRound(round, i, session) {
   }
 
   const baseScore = Math.round(calculateScore(distance));
-  const timeBonus = applyTimeBonus(baseScore, distance, round.timeElapsed, modeKey);
+  const timeBonus = applyTimeBonus(baseScore, round.timeElapsed, modeKey);
   const totalScore = baseScore + timeBonus;
 
   if (round.score && Math.abs(round.score - totalScore) > 1) {

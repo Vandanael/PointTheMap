@@ -18,12 +18,15 @@ const UNKNOWN_LOCKED_PSEUDO = 'LOCKED';
 
 /**
  * Extract locked pseudo from API error payloads.
- * Supports both legacy `data.pseudo` and canonical `data.error.details.pseudo`.
+ * Supports legacy `data.pseudo` and canonical lock details.
  * @param {any} err
  * @returns {string}
  */
 const getLockedPseudo = (err) =>
-  err?.data?.error?.details?.pseudo || err?.data?.pseudo || UNKNOWN_LOCKED_PSEUDO;
+  err?.data?.error?.details?.lock?.pseudo ||
+  err?.data?.error?.details?.pseudo ||
+  err?.data?.pseudo ||
+  UNKNOWN_LOCKED_PSEUDO;
 
 /**
  * Create submit flow handlers.
@@ -68,14 +71,7 @@ export function createSubmitFlow(context) {
     MAP,
   } = context;
 
-  const {
-    isCapitalCategory,
-    isCountryCategory,
-    isStadiumCategory,
-    isCivilizationCategory,
-    isDailyVariant,
-    MODE_IDS,
-  } = config;
+  const { isDailyVariant, MODE_IDS } = config;
 
   // Store share button handler for cleanup
   /** @type {(() => void) | null} */
@@ -149,148 +145,12 @@ export function createSubmitFlow(context) {
       try {
         /** @type {GameState} */
         const state = stateManager.getState();
-        const sanitizedRounds = state.rounds.map((round, index) => {
-          const sanitizedRound = {
-            click: round.click,
-            status: round.status,
-            score:
-              round.score !== null && typeof round.score === 'number'
-                ? Math.max(0, Math.floor(round.score))
-                : 0,
-            timeElapsed:
-              round.endTime && round.startTime ? Math.floor(round.endTime - round.startTime) : 0,
-            correctCountryId: round.correctCountryId ?? undefined,
-            clickedCountryId: round.clickedCountryId ?? undefined,
-            distanceToTargetKm: round.distanceToTargetKm ?? undefined,
-            correctCivilizationId: round.correctCivilizationId ?? undefined,
-            clickedCivilizationId: round.clickedCivilizationId ?? undefined,
-          };
-
-          // Use original target names from session to ensure exact match with server expectations
-          const target =
-            state.targets && state.targets.length > index ? state.targets[index] : null;
-
-          // Extract target name — prefer explicit target from session for validation accuracy
-          const targetName =
-            target && typeof target === 'object' && 'name' in target ? target.name : null;
-
-          // Debug logging for round sanitization
-          if (index === 0) {
-            logger.log('[submit] Round 0 sanitization debug:', {
-              gameType: state.gameType,
-              'round.capital': round.capital,
-              'round.country': round.country,
-              'round.stadium': round.stadium,
-              'round.civilization': round.civilization,
-              target,
-              targetName,
-              isCivMode: isCivilizationCategory(state.gameType),
-            });
-          }
-
-          // Set mode-specific fields from round data, with fallback to session target
-          if (isCapitalCategory(state.gameType)) {
-            const capitalName = round.capital?.name || targetName;
-            if (!capitalName) {
-              logger.error('[submit] Missing capital name for round', index, {
-                round,
-                target,
-                gameType: state.gameType,
-              });
-            }
-            sanitizedRound.capital = capitalName || 'Unknown';
-          } else if (isCountryCategory(state.gameType)) {
-            const countryName = round.country?.name || round.country?.countryId || targetName;
-            if (!countryName) {
-              logger.error('[submit] Missing country name for round', index, {
-                round,
-                target,
-                gameType: state.gameType,
-              });
-            }
-            sanitizedRound.country = countryName || 'Unknown';
-            if (round.country?.countryId) {
-              sanitizedRound.countryId = round.country.countryId;
-            }
-          } else if (isStadiumCategory(state.gameType)) {
-            const stadiumName = round.stadium?.name || targetName;
-            if (!stadiumName) {
-              logger.error('[submit] Missing stadium name for round', index, {
-                round,
-                target,
-                gameType: state.gameType,
-              });
-            }
-            sanitizedRound.stadium = stadiumName || 'Unknown';
-            if (round.stadium?.city) {
-              sanitizedRound.city = round.stadium.city;
-            }
-          } else if (isCivilizationCategory(state.gameType)) {
-            const civilizationName = round.civilization?.name || targetName;
-            if (!civilizationName) {
-              logger.error('[submit] Missing civilization name for round', index, {
-                round,
-                target,
-                gameType: state.gameType,
-              });
-            }
-            sanitizedRound.civilization = civilizationName || 'Unknown';
-            if (round.civilization?.id) {
-              sanitizedRound.civilizationId = round.civilization.id;
-            }
-          } else {
-            // Unknown game type — this should never happen but log it if it does
-            logger.error('[submit] Unknown game type, defaulting to capital', {
-              gameType: state.gameType,
-              round,
-              target,
-            });
-            sanitizedRound.capital = targetName || 'Unknown';
-          }
-
-          // Final safety check: convert any null string/number fields to undefined for Zod validation
-          // Zod .optional() accepts undefined but NOT null (except 'click' which is explicitly nullable)
-          Object.keys(sanitizedRound).forEach((key) => {
-            if (key !== 'click' && sanitizedRound[key] === null) {
-              sanitizedRound[key] = undefined;
-            }
-          });
-
-          // Debug: Log final sanitized round for first round
-          if (index === 0) {
-            logger.log('[submit] Round 0 after sanitization:', {
-              capital: sanitizedRound.capital,
-              country: sanitizedRound.country,
-              stadium: sanitizedRound.stadium,
-              civilization: sanitizedRound.civilization,
-              hasClick: !!sanitizedRound.click,
-              status: sanitizedRound.status,
-            });
-          }
-
-          return sanitizedRound;
-        });
-
-        // Debug logging for payload validation
-        logger.log('[submit] Prepared payload for submission:', {
-          token: state.token?.substring(0, 8) + '...',
-          pseudo: currentPseudo,
-          gameType: state.gameType,
-          roundsCount: sanitizedRounds.length,
-          firstRoundSample: sanitizedRounds[0] && {
-            score: sanitizedRounds[0].score,
-            timeElapsed: sanitizedRounds[0].timeElapsed,
-            country: sanitizedRounds[0].country,
-            civilization: sanitizedRounds[0].civilization,
-            click: sanitizedRounds[0].click,
-            status: sanitizedRounds[0].status,
-          },
-        });
+        const submissionRounds = state.rounds;
 
         /** @type {import('../game/Game.js').SubmitResult} */
         const result = await api.submitWithRetry(
           state.token,
-          sanitizedRounds,
+          submissionRounds,
           currentPseudo,
           state.gameType,
           state.csrfToken || null
@@ -392,11 +252,11 @@ export function createSubmitFlow(context) {
       if (lastError.status === 409 && errorCode === PSEUDO_LOCK_ERROR) {
         ui.showPseudoLockedDialog(getLockedPseudo(lastError), () => {});
       } else {
-        const apiError = new APIError(
-          lastError.message || i18n.t('error.submitError'),
-          lastError.status || 500,
-          lastError.data
-        );
+        const resolvedMessage =
+          typeof lastError?.message === 'string' && lastError.message.startsWith('error.')
+            ? i18n.t(lastError.message)
+            : lastError?.message || i18n.t('error.submitError');
+        const apiError = new APIError(resolvedMessage, lastError.status || 500, lastError.data);
         handleError(apiError, 'score:submit', { showToUser: true, fatal: false });
       }
     }
