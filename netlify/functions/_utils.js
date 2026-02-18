@@ -80,9 +80,7 @@ export function redactForLog(value) {
   const out = {};
   for (const [key, fieldValue] of Object.entries(value)) {
     if (SENSITIVE_LOG_KEYS.has(key)) {
-      out[key] = key.toLowerCase().includes('token')
-        ? redactToken(fieldValue)
-        : '[redacted]';
+      out[key] = key.toLowerCase().includes('token') ? redactToken(fieldValue) : '[redacted]';
       continue;
     }
     out[key] = fieldValue && typeof fieldValue === 'object' ? redactForLog(fieldValue) : fieldValue;

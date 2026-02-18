@@ -2,7 +2,11 @@ import { readFileSync } from 'fs';
 import { join, relative } from 'path';
 
 const ROOT = process.cwd();
-const TARGETS = ['netlify/functions/submit.js', 'netlify/functions/start.js', 'netlify/functions/error-report.js'];
+const TARGETS = [
+  'netlify/functions/submit.js',
+  'netlify/functions/start.js',
+  'netlify/functions/error-report.js',
+];
 
 const offenders = [];
 
@@ -31,7 +35,9 @@ for (const relPath of TARGETS) {
 }
 
 if (offenders.length > 0) {
-  console.error('Log privacy check failed: sensitive logger payload without explicit redaction marker.');
+  console.error(
+    'Log privacy check failed: sensitive logger payload without explicit redaction marker.'
+  );
   for (const offender of offenders) console.error(`- ${offender}`);
   process.exit(1);
 }

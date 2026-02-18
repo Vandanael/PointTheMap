@@ -71,10 +71,7 @@ export function createSubmitFlow(context) {
     MAP,
   } = context;
 
-  const {
-    isDailyVariant,
-    MODE_IDS,
-  } = config;
+  const { isDailyVariant, MODE_IDS } = config;
 
   // Store share button handler for cleanup
   /** @type {(() => void) | null} */
@@ -259,11 +256,7 @@ export function createSubmitFlow(context) {
           typeof lastError?.message === 'string' && lastError.message.startsWith('error.')
             ? i18n.t(lastError.message)
             : lastError?.message || i18n.t('error.submitError');
-        const apiError = new APIError(
-          resolvedMessage,
-          lastError.status || 500,
-          lastError.data
-        );
+        const apiError = new APIError(resolvedMessage, lastError.status || 500, lastError.data);
         handleError(apiError, 'score:submit', { showToUser: true, fatal: false });
       }
     }

@@ -216,10 +216,7 @@ export default async function submitHandler(req, context) {
     try {
       await sql`DELETE FROM sessions WHERE expires_at <= NOW()`;
     } catch (cleanupError) {
-      logger.warn(
-        '[submit] session cleanup skipped:',
-        /** @type {Error} */ (cleanupError).message
-      );
+      logger.warn('[submit] session cleanup skipped:', /** @type {Error} */ (cleanupError).message);
     }
 
     logger.info('[submit] Function invoked');
