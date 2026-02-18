@@ -426,7 +426,8 @@ describe('main.js wiring', () => {
           },
         ],
         'USER',
-        'classic'
+        'classic',
+        null
       );
       expect(submitWithRetry).toHaveBeenNthCalledWith(
         2,
@@ -495,7 +496,8 @@ describe('main.js wiring', () => {
           },
         ],
         lockedPseudo,
-        'classic'
+        'classic',
+        null
       );
       expect(UI.showFinalResults).toHaveBeenCalledWith(
         10000,
