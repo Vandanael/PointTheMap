@@ -117,7 +117,11 @@ class PlayerAuth {
         throw new Error(`Failed to generate token: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const payload = await response.json();
+      const data =
+        payload && typeof payload === 'object' && payload.ok === true && 'data' in payload
+          ? payload.data
+          : payload;
       this.token = data.token;
       this.playerId = data.player_id;
 

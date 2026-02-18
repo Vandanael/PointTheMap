@@ -8,8 +8,11 @@ vi.mock('../../netlify/functions/db.js', () => ({
 }));
 
 vi.mock('../../netlify/functions/_utils.js', () => ({
-  successResponse: (body, headers) => ({ status: 200, body, headers }),
-  errorResponse: (message, status) => ({ status, body: { error: message } }),
+  successEnvelope: (body, headers) => ({ status: 200, body: { ok: true, data: body }, headers }),
+  errorEnvelope: (code, message, status) => ({
+    status,
+    body: { ok: false, error: { code, message } },
+  }),
   handleDatabaseError: vi.fn(),
   createLogger: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() })),
 }));
@@ -34,7 +37,7 @@ describe('leaderboard function', () => {
       {}
     );
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([
+    expect(res.body.data).toEqual([
       { rank: 1, pseudo: 'AAA', score: 100, time: 10 },
       { rank: 2, pseudo: 'BBB', score: 90, time: 12 },
     ]);

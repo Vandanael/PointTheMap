@@ -93,6 +93,22 @@ const createFakeSql = (options = {}) => {
       return [{ count: next.count }];
     }
 
+    if (query.includes('from scores') && query.includes('where session_token =')) {
+      const token = values[0];
+      const existing = [...state.scores]
+        .filter((score) => score.sessionToken === token)
+        .sort((a, b) => b.id - a.id)[0];
+      if (!existing) return [];
+      return [
+        {
+          score: existing.score,
+          time: existing.time,
+          rounds: existing.rounds,
+          game_type: existing.gameType,
+        },
+      ];
+    }
+
     if (query.includes('from sessions') && query.includes('where token =')) {
       const token = values[0];
       const session = state.sessions.get(token);
@@ -131,7 +147,7 @@ const createFakeSql = (options = {}) => {
     if (query.startsWith('update sessions set used = true where token =')) {
       const token = values[0];
       const session = state.sessions.get(token);
-      if (session) session.used = true;
+      if (session && !session.used) session.used = true;
       return [];
     }
 
@@ -140,7 +156,14 @@ const createFakeSql = (options = {}) => {
         throw new Error('forced_insert_failure');
       }
       const [pseudo, score, time, rounds, timestamp, gameType, sessionToken, ip, playerId] = values;
+      const duplicate = state.scores.some((existing) => existing.sessionToken === sessionToken);
+      if (duplicate) {
+        const err = /** @type {Error & { code?: string }} */ (new Error('duplicate key value'));
+        err.code = '23505';
+        throw err;
+      }
       state.scores.push({
+        id: state.scores.length + 1,
         pseudo,
         score,
         time,
@@ -303,5 +326,33 @@ describe('submit integration', () => {
     expect(storedSession).toBeTruthy();
     expect(storedSession?.used).toBe(false);
     expect(fake.state.scores).toHaveLength(0);
+  });
+
+  it('returns idempotent replay when same session token is submitted again', async () => {
+    const fake = createFakeSql({
+      sessions: [buildSession({ token: 'token-idempotent' })],
+    });
+
+    vi.resetModules();
+    vi.doMock('../../netlify/functions/db.js', () => ({
+      getDatabase: vi.fn(() => fake.sql),
+    }));
+    const { default: handler } = await import('../../netlify/functions/submit.js');
+
+    const first = await handler(
+      makeRequest({ body: buildSubmitBody({ token: 'token-idempotent', pseudo: 'ALFA' }) }),
+      { ip: '198.51.100.8' }
+    );
+    const second = await handler(
+      makeRequest({ body: buildSubmitBody({ token: 'token-idempotent', pseudo: 'ALFA' }) }),
+      { ip: '198.51.100.8' }
+    );
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    const body = await second.json();
+    expect(body.ok).toBe(true);
+    expect(body.meta?.idempotentReplay).toBe(true);
+    expect(fake.state.scores).toHaveLength(1);
   });
 });

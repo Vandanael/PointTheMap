@@ -2,9 +2,9 @@
 // Flat handler (no compose) to avoid "w is not a function" after esbuild minification
 
 import { randomUUID } from 'crypto';
-import { capitals } from '../../src/data/capitals.js';
-import { civilizations } from '../../src/data/civilizations.js';
-import { stadiums } from '../../src/data/stadiums.js';
+import { capitals } from '../../lib/data/capitals.js';
+import { civilizations } from '../../lib/data/civilizations.js';
+import { stadiums } from '../../lib/data/stadiums.js';
 import {
   selectCapitals,
   selectCountries,
@@ -16,8 +16,8 @@ import { API } from '../../lib/config/index.js';
 import { StartBodySchema } from '../../lib/schemas/start.js';
 import { getDatabase } from './db.js';
 import {
-  errorResponse,
-  successResponse,
+  errorEnvelope,
+  successEnvelope,
   parseJsonBody,
   handleDatabaseError,
   createLogger,
@@ -48,7 +48,7 @@ const countries = Array.from(countryMap.values());
 export default async function startHandler(req, context) {
   try {
     if (req.method !== 'POST') {
-      return errorResponse('Method not allowed', 405);
+      return errorEnvelope('method_not_allowed', 'Method not allowed', 405);
     }
 
     let sql;
@@ -57,14 +57,18 @@ export default async function startHandler(req, context) {
     } catch (dbError) {
       const error = /** @type {Error} */ (dbError);
       logger.error('Database connection failed:', error.message);
-      return errorResponse('Database connection failed. Please try again later.', 503);
+      return errorEnvelope(
+        'db_connection_failed',
+        'Database connection failed. Please try again later.',
+        503
+      );
     }
     context.sql = sql;
 
     const body = await parseJsonBody(req);
     const parsed = StartBodySchema.safeParse(body);
     if (!parsed.success) {
-      return errorResponse('Invalid game mode', 400);
+      return errorEnvelope('invalid_game_mode', 'Invalid game mode', 400, parsed.error.flatten());
     }
     const { gameType } = parsed.data;
 
@@ -147,7 +151,7 @@ export default async function startHandler(req, context) {
       };
     } else {
       if (!mode.capitalSelection) {
-        return errorResponse('Capital mode configuration missing', 500);
+        return errorEnvelope('capital_mode_missing', 'Capital mode configuration missing', 500);
       }
       selectedTargets = selectCapitals(
         /** @type {{ capitalSelection: any }} */ (mode),
@@ -172,7 +176,7 @@ export default async function startHandler(req, context) {
       VALUES (${token}, ${JSON.stringify(selectedTargets)}::jsonb, ${startTime}, false, ${gameType}, ${expiresAt}, ${csrfToken}, ${player_id})
     `;
 
-    return successResponse({
+    return successEnvelope({
       token,
       ...clientData,
       startTime,
@@ -184,6 +188,6 @@ export default async function startHandler(req, context) {
       return handleDatabaseError(err, 'start');
     }
     logger.error('Uncaught error:', err?.message, err?.stack);
-    return errorResponse('An error occurred. Please try again later.', 500);
+    return errorEnvelope('internal_error', 'An error occurred. Please try again later.', 500);
   }
 }

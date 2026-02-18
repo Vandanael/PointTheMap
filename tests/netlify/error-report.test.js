@@ -5,7 +5,11 @@ vi.mock('../../netlify/functions/db.js', () => ({
 }));
 
 vi.mock('../../netlify/functions/_utils.js', () => ({
-  jsonResponse: (body, status) => ({ status, body }),
+  errorEnvelope: (code, message, status) => ({
+    status,
+    body: { ok: false, error: { code, message } },
+  }),
+  successEnvelope: (data) => ({ status: 200, body: { ok: true, data } }),
   parseJsonBody: vi.fn(async () => ({})),
   getClientIp: vi.fn(() => '127.0.0.1'),
   createLogger: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() })),

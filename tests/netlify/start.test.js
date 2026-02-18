@@ -5,8 +5,11 @@ vi.mock('../../netlify/functions/db.js', () => ({
 }));
 
 vi.mock('../../netlify/functions/_utils.js', () => ({
-  errorResponse: (message, status) => ({ status, body: { error: message } }),
-  successResponse: (body) => ({ status: 200, body }),
+  errorEnvelope: (code, message, status) => ({
+    status,
+    body: { ok: false, error: { code, message } },
+  }),
+  successEnvelope: (body) => ({ status: 200, body: { ok: true, data: body } }),
   parseJsonBody: vi.fn(async () => ({})),
   handleDatabaseError: vi.fn(),
   createLogger: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() })),
@@ -41,9 +44,9 @@ vi.mock('crypto', async (importOriginal) => {
   };
 });
 
-vi.mock('../../src/data/capitals.js', () => ({ capitals: [] }));
-vi.mock('../../src/data/civilizations.js', () => ({ civilizations: [] }));
-vi.mock('../../src/data/stadiums.js', () => ({ stadiums: [] }));
+vi.mock('../../lib/data/capitals.js', () => ({ capitals: [] }));
+vi.mock('../../lib/data/civilizations.js', () => ({ civilizations: [] }));
+vi.mock('../../lib/data/stadiums.js', () => ({ stadiums: [] }));
 
 const makeReq = (method, body) => ({
   method,

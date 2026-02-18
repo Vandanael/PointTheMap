@@ -3,7 +3,7 @@
 
 import { LeaderboardQuerySchema } from '../../lib/schemas/leaderboard.js';
 import { getDatabase } from './db.js';
-import { successResponse, errorResponse, handleDatabaseError, createLogger } from './_utils.js';
+import { successEnvelope, errorEnvelope, handleDatabaseError, createLogger } from './_utils.js';
 
 const logger = createLogger('leaderboard');
 
@@ -16,7 +16,7 @@ const LEADERBOARD_TOP_LIMIT = 50;
 export default async function leaderboardHandler(req, context) {
   try {
     if (req.method !== 'GET') {
-      return errorResponse('Method not allowed', 405);
+      return errorEnvelope('method_not_allowed', 'Method not allowed', 405);
     }
 
     let sql;
@@ -25,7 +25,11 @@ export default async function leaderboardHandler(req, context) {
     } catch (dbError) {
       const error = /** @type {Error} */ (dbError);
       logger.error('Database connection failed:', error.message);
-      return errorResponse('Database connection failed. Please try again later.', 503);
+      return errorEnvelope(
+        'db_connection_failed',
+        'Database connection failed. Please try again later.',
+        503
+      );
     }
 
     const url = new URL(req.url, `http://${req.headers.get('host') || 'localhost'}`);
@@ -33,16 +37,20 @@ export default async function leaderboardHandler(req, context) {
       type: url.searchParams.get('type') ?? undefined,
     });
     if (!parsed.success) {
-      return errorResponse('Invalid leaderboard type', 400);
+      return errorEnvelope(
+        'invalid_leaderboard_type',
+        'Invalid leaderboard type',
+        400,
+        parsed.error.flatten()
+      );
     }
     const { type } = parsed.data;
 
     const dailyTypes = new Set(['daily', 'country_daily', 'stadium_daily', 'civilization_daily']);
     let query;
     if (dailyTypes.has(type)) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayTimestamp = today.getTime();
+      const now = new Date();
+      const todayTimestamp = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
       const tomorrowTimestamp = todayTimestamp + 86400000;
 
       query = sql`
@@ -99,7 +107,7 @@ export default async function leaderboardHandler(req, context) {
       time: s.time ?? 0,
     }));
 
-    return successResponse(topScores, {
+    return successEnvelope(topScores, {
       'Cache-Control': 'public, max-age=30, s-maxage=30',
     });
   } catch (error) {
@@ -108,6 +116,6 @@ export default async function leaderboardHandler(req, context) {
       return handleDatabaseError(err, 'leaderboard');
     }
     logger.error('Uncaught error:', err?.message, err?.stack);
-    return errorResponse('An error occurred. Please try again later.', 500);
+    return errorEnvelope('internal_error', 'An error occurred. Please try again later.', 500);
   }
 }

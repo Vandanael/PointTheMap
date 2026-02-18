@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
 import { getDatabase } from './db.js';
-import { errorResponse, successResponse, createLogger } from './_utils.js';
+import { errorEnvelope, successEnvelope, createLogger } from './_utils.js';
 
 const logger = createLogger('generate-player-token');
 
@@ -21,7 +21,7 @@ export default async (req, context) => {
 
   // Only accept POST
   if (req.method !== 'POST') {
-    return errorResponse('Method not allowed', 405);
+    return errorEnvelope('method_not_allowed', 'Method not allowed', 405);
   }
 
   try {
@@ -49,13 +49,13 @@ export default async (req, context) => {
       { expiresIn: TOKEN_EXPIRY }
     );
 
-    return successResponse({
+    return successEnvelope({
       token,
       player_id,
       expires_in: TOKEN_EXPIRY,
     });
   } catch (error) {
     logger.error('Error generating player token:', error);
-    return errorResponse('Internal server error', 500);
+    return errorEnvelope('internal_error', 'Internal server error', 500);
   }
 };
