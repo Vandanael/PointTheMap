@@ -9,7 +9,10 @@ vi.mock('../../netlify/functions/db.js', () => ({
 
 vi.mock('../../netlify/functions/_utils.js', () => ({
   successEnvelope: (body, headers) => ({ status: 200, body: { ok: true, data: body }, headers }),
-  errorEnvelope: (code, message, status) => ({ status, body: { ok: false, error: { code, message } } }),
+  errorEnvelope: (code, message, status) => ({
+    status,
+    body: { ok: false, error: { code, message } },
+  }),
   handleDatabaseError: vi.fn(),
   createLogger: vi.fn(() => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn() })),
 }));

@@ -64,7 +64,9 @@ const getReplayResult = async (sql, token) => {
     return null;
   }
 
-  const row = /** @type {{ score?: number, time?: number, rounds?: any[], game_type?: string }} */ (rows[0]);
+  const row = /** @type {{ score?: number, time?: number, rounds?: any[], game_type?: string }} */ (
+    rows[0]
+  );
   const score = Number.isFinite(row.score) ? row.score : 0;
   const time = Number.isFinite(row.time) ? row.time : 0;
   const gameType = row.game_type || 'classic';

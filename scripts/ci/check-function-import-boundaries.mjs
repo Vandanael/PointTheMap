@@ -23,7 +23,12 @@ for (const file of walk(FUNCTIONS_DIR)) {
   const lines = content.split('\n');
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
-    if (line.includes("'../../src/") || line.includes('"../../src/') || line.includes("'../src/") || line.includes('"../src/')) {
+    if (
+      line.includes("'../../src/") ||
+      line.includes('"../../src/') ||
+      line.includes("'../src/") ||
+      line.includes('"../src/')
+    ) {
       offenders.push(`${relative(ROOT, file)}:${i + 1}: ${line.trim()}`);
     }
   }

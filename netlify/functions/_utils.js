@@ -183,7 +183,11 @@ export function handleDatabaseError(error, context = '') {
   }
 
   if (isDatabaseConnectionError(error)) {
-    return errorEnvelope('db_connection_error', 'Database connection error. Please try again later.', 503);
+    return errorEnvelope(
+      'db_connection_error',
+      'Database connection error. Please try again later.',
+      503
+    );
   }
 
   if (isMissingColumnError(error)) {

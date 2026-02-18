@@ -5,7 +5,10 @@ vi.mock('../../netlify/functions/db.js', () => ({
 }));
 
 vi.mock('../../netlify/functions/_utils.js', () => ({
-  errorEnvelope: (code, message, status) => ({ status, body: { ok: false, error: { code, message } } }),
+  errorEnvelope: (code, message, status) => ({
+    status,
+    body: { ok: false, error: { code, message } },
+  }),
   successEnvelope: (body) => ({ status: 200, body: { ok: true, data: body } }),
   parseJsonBody: vi.fn(async () => ({})),
   handleDatabaseError: vi.fn(),
