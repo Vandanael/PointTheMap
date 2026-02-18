@@ -1,4 +1,4 @@
--- Migration: Add session_token to scores for auditability
+-- Migration 007: Add session_token to scores for auditability
 
 ALTER TABLE scores ADD COLUMN IF NOT EXISTS session_token VARCHAR(36);
 

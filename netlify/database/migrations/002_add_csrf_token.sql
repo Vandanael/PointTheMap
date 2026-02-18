@@ -1,4 +1,4 @@
--- Migration: Add CSRF token support to sessions table
+-- Migration 002: Add CSRF token support to sessions table
 -- Sprint 6 - Security enhancements
 
 -- Add csrf_token column to sessions table

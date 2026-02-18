@@ -19,21 +19,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run check:migrations
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
+      - run: npm run audit:prod
+      - run: npm run audit:ci
       - run: npm run test:run
       - run: npm run build
       - run: npm run check:budget
-      - if: github.ref == 'refs/heads/main' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      - if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: npx playwright install --with-deps chromium
-      - if: github.ref == 'refs/heads/main'
+      - if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         run: npm run e2e:smoke
+      - if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        run: E2E_MODE=dev npx playwright test tests/e2e/submit-flow.spec.js --project=chromium
       - if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         id: select_nightly_target
         env:
@@ -56,6 +63,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-e2e-pr
+          path: |
+            test-results
+            playwright-report
+          if-no-files-found: ignore
+      - if: failure() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-e2e-pr-failure
           path: |
             test-results
             playwright-report

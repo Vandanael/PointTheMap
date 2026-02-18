@@ -229,10 +229,7 @@ function stripDataModulePreload({ enabled = false } = {}) {
     transformIndexHtml: {
       order: 'post',
       handler(html) {
-        return html.replace(
-          /<link[^>]+rel=\"modulepreload\"[^>]+href=\"data:[^\"]+\"[^>]*>\\n?/g,
-          ''
-        );
+        return html.replace(/<link[^>]+rel="modulepreload"[^>]+href="data:[^"]+"[^>]*>\\n?/g, '');
       },
     },
   };

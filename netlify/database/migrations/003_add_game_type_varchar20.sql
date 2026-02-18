@@ -1,4 +1,4 @@
--- Migration 002: Widen game_type column to VARCHAR(20)
+-- Migration 003: Widen game_type column to VARCHAR(20)
 -- Applied: when civilization mode was added
 -- Reason: 'civilization' is 12 characters; VARCHAR(10) caused truncation errors.
 -- All existing game type values ('classic', 'daily', 'country', 'country_daily',

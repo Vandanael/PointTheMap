@@ -16,7 +16,6 @@ const ERROR_REPORT_URL = '/api/error-report';
 
 class ErrorMonitoring {
   #enabled = false;
-  #initialized = false;
   #providerReady = false;
   /** @type {Array<{message: string, stack?: string, context?: string, type?: string}>} */
   #queue = [];
@@ -39,7 +38,6 @@ class ErrorMonitoring {
       this.#initializeProvider();
       this.#setupGlobalHandlers();
       this.#subscribeToEvents();
-      this.#initialized = true;
       logger.info('ErrorMonitoring: Initialized');
     } else {
       logger.info('ErrorMonitoring: Not initialized (dev mode)');
