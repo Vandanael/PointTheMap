@@ -1,4 +1,4 @@
--- Migration 002: Add player tokens system
+-- Migration 004: Add player tokens system
 -- This migration creates the players table and adds player_id to scores
 
 -- Create players table to track anonymous players

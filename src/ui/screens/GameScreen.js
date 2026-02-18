@@ -190,7 +190,7 @@ export const createGameScreen = (deps) => {
     const bar = _domCache.get('timer-bar');
     bar?.classList.remove('timer-danger');
     bar?.classList.remove('timer-danger-start');
-    p.offsetHeight;
+    void p.offsetHeight;
   };
 
   /**

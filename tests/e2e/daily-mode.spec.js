@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { ensureAppBootstrapped } from './helpers/app-bootstrap.js';
 
 const mockCapitals = [
   { name: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522 },
@@ -24,11 +25,7 @@ test('daily mode: can start daily challenge', async ({ page }) => {
   });
 
   await page.goto('/');
-  await page.waitForFunction(
-    () =>
-      document.body.dataset.appReady === 'true' || document.body.dataset.appInitError === 'true',
-    { timeout: 30000 }
-  );
+  await ensureAppBootstrapped(page);
 
   await expect(page.locator('#start-modal')).toBeVisible();
   await page.locator('#category-capitals').click();

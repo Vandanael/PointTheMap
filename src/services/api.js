@@ -390,7 +390,13 @@ export const api = {
       gameType,
       payloadVersion: 1,
     };
-    SubmitSchema.safeParse(payload);
+    const parsedPayload = SubmitSchema.safeParse(payload);
+    if (!parsedPayload.success) {
+      throw new GameError('Invalid submit payload', 'VALIDATION_ERROR', {
+        source: 'submit',
+        details: parsedPayload.error.flatten(),
+      });
+    }
     return fetchApi('submit', {
       method: 'POST',
       body: JSON.stringify(payload),

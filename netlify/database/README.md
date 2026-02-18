@@ -8,9 +8,10 @@ Rules:
 - Every change must be added as a new, numbered SQL file in `migrations/`.
 - Migrations are applied in order and are append-only (never edit old migrations).
 
-Example naming:
+Naming convention:
 
-- `netlify/database/migrations/003_add_scores_index.sql`
+- `netlify/database/migrations/NNN_description.sql` (three-digit prefix)
+- Example: `netlify/database/migrations/009_add_scores_index.sql`
 
 Suggested workflow:
 

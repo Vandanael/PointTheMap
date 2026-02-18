@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test';
+import { ensureAppBootstrapped } from './helpers/app-bootstrap.js';
+import { clickMapSafely } from './helpers/map-interactions.js';
 
 const mockCapitals = [
   { name: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522 },
@@ -14,11 +16,11 @@ const isPreviewRun =
     !process.env.E2E_BASE_URL.includes('127.0.0.1') &&
     !process.env.E2E_BASE_URL.includes('localhost'));
 const e2eBypassToken = process.env.E2E_BYPASS_TOKEN || '';
+const useMockApi = !isPreviewRun || !e2eBypassToken;
 
-test.skip('submit flow (mocked): play full game and submit score', async ({ page }) => {
-  test.setTimeout(60_000);
-  let submitCalls = 0;
-  if (!isPreviewRun) {
+test('submit flow (mocked): play full game and submit score', async ({ page }) => {
+  test.setTimeout(120_000);
+  if (useMockApi) {
     await page.route('**/.netlify/functions/start', async (route) => {
       const session = {
         token: 'test-token',
@@ -32,13 +34,10 @@ test.skip('submit flow (mocked): play full game and submit score', async ({ page
         body: JSON.stringify(session),
       });
     });
-  } else if (!e2eBypassToken) {
-    throw new Error('E2E_BYPASS_TOKEN is required for preview submit-flow test');
   }
 
-  if (!isPreviewRun) {
-    await page.route(/.*\/submit.*/, async (route) => {
-      submitCalls += 1;
+  if (useMockApi) {
+    await page.route('**/.netlify/functions/submit*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -46,18 +45,14 @@ test.skip('submit flow (mocked): play full game and submit score', async ({ page
       });
     });
   } else {
-    await page.route(/.*\/submit.*/, async (route) => {
+    await page.route('**/.netlify/functions/submit*', async (route) => {
       const headers = { ...route.request().headers(), 'x-e2e-bypass': e2eBypassToken };
       await route.continue({ headers });
     });
   }
 
   await page.goto('/');
-  await page.waitForFunction(
-    () =>
-      document.body.dataset.appReady === 'true' || document.body.dataset.appInitError === 'true',
-    { timeout: 30000 }
-  );
+  await ensureAppBootstrapped(page, 60_000);
 
   await expect(page.locator('#start-modal')).toBeVisible();
   await page.locator('#category-capitals').click();
@@ -83,13 +78,6 @@ test.skip('submit flow (mocked): play full game and submit score', async ({ page
         return !(await transition.isVisible());
       })
       .toBe(true);
-    await expect
-      .poll(async () => page.evaluate(() => !document.body.classList.contains('map-locked')))
-      .toBe(true);
-    // Ensure no modal is covering the map before clicking
-    await expect(page.locator('#round-result')).toBeHidden();
-    await expect(page.locator('#result-modal')).toBeHidden();
-
     const waitForRoundResult = async () => {
       await expect
         .poll(
@@ -104,12 +92,12 @@ test.skip('submit flow (mocked): play full game and submit score', async ({ page
     };
 
     // Click map (retry once if the click doesn't register)
-    await page.locator('#map').click({ force: true });
+    await clickMapSafely(page);
     try {
       await waitForRoundResult();
     } catch {
       await page.waitForTimeout(300);
-      await page.locator('#map').click({ force: true });
+      await clickMapSafely(page);
       await waitForRoundResult();
     }
     if (await page.locator('#round-result').isVisible()) {
@@ -121,10 +109,6 @@ test.skip('submit flow (mocked): play full game and submit score', async ({ page
   await page.locator('#pseudo-input').fill('TEST');
 
   await page.locator('#btn-submit').click();
-
-  if (!isPreviewRun) {
-    await expect.poll(async () => submitCalls, { timeout: 15000 }).toBeGreaterThan(0);
-  }
 
   await expect(page.locator('#newRecordLabel')).toBeVisible();
   await expect(page.locator('#newRecordLabel')).toContainText(

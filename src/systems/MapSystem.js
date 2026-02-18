@@ -36,8 +36,6 @@ import { MAP } from '@lib/config/index.js';
 
 export class MapSystem {
   #initialized = false;
-  /** @type {string | null} */
-  #containerId = null;
   /** @type {MapRenderer | null} */
   #renderer = null;
   /** @type {GeoJSONManager | null} */
@@ -87,7 +85,6 @@ export class MapSystem {
     try {
       this.#setupTileListeners();
       await loadLeaflet();
-      this.#containerId = containerId;
       this.#renderer = new MapRenderer({ L: /** @type {typeof import('leaflet')} */ (L) });
       this.#renderer.init(containerId);
       this.#geoManager = new GeoJSONManager({

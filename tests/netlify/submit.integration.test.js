@@ -1,0 +1,307 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const E2E_HEADER = 'x-e2e-bypass';
+const E2E_TOKEN = 'test-bypass-token';
+
+/**
+ * @typedef {{
+ *   token: string,
+ *   targets: Array<{ name: string, country: string, lat: number, lng: number }>,
+ *   startTime: number,
+ *   used: boolean,
+ *   gameType: string,
+ *   expiresAt: Date,
+ *   csrfToken: string,
+ *   playerId: string | null
+ * }} SessionRow
+ */
+
+/**
+ * @param {{ token: string, pseudo: string, gameType?: string }} params
+ */
+const buildSubmitBody = ({ token, pseudo, gameType = 'classic' }) => {
+  const targets = ['Paris', 'London', 'Berlin', 'Rome', 'Madrid'];
+  return {
+    token,
+    pseudo,
+    gameType,
+    payloadVersion: 1,
+    rounds: targets.map((name) => ({
+      capital: name,
+      click: null,
+      status: 'timeout',
+      score: 0,
+    })),
+  };
+};
+
+/**
+ * @param {{ token: string, gameType?: string, csrfToken?: string, used?: boolean }} params
+ * @returns {SessionRow}
+ */
+const buildSession = ({ token, gameType = 'classic', csrfToken = 'csrf-token', used = false }) => ({
+  token,
+  targets: [
+    { name: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522 },
+    { name: 'London', country: 'United Kingdom', lat: 51.5074, lng: -0.1278 },
+    { name: 'Berlin', country: 'Germany', lat: 52.52, lng: 13.405 },
+    { name: 'Rome', country: 'Italy', lat: 41.9028, lng: 12.4964 },
+    { name: 'Madrid', country: 'Spain', lat: 40.4168, lng: -3.7038 },
+  ],
+  startTime: Date.now() - 90_000,
+  used,
+  gameType,
+  expiresAt: new Date(Date.now() + 60_000),
+  csrfToken,
+  playerId: null,
+});
+
+/**
+ * @param {{
+ *   sessions?: SessionRow[],
+ *   failOnInsertScore?: boolean
+ * }} [options]
+ */
+const createFakeSql = (options = {}) => {
+  const state = {
+    sessions: new Map((options.sessions || []).map((s) => [s.token, structuredClone(s)])),
+    scores: [],
+    players: new Map(),
+    rateLimits: new Map(),
+    ipPseudoLocks: new Map(),
+  };
+
+  /**
+   * @param {string} raw
+   */
+  const normalize = (raw) => raw.replace(/\s+/g, ' ').trim().toLowerCase();
+
+  /**
+   * @param {string} query
+   * @param {any[]} values
+   */
+  const execute = async (query, values) => {
+    if (query.startsWith('delete from rate_limits where expires_at < now()')) {
+      return [];
+    }
+
+    if (query.startsWith('insert into rate_limits')) {
+      const key = values[0];
+      const prev = state.rateLimits.get(key) || { count: 0 };
+      const next = { count: prev.count + 1, expiresAt: values[1] };
+      state.rateLimits.set(key, next);
+      return [{ count: next.count }];
+    }
+
+    if (query.includes('from sessions') && query.includes('where token =')) {
+      const token = values[0];
+      const session = state.sessions.get(token);
+      if (!session) return [];
+      if (session.expiresAt <= new Date()) return [];
+      return [
+        {
+          token: session.token,
+          targets: session.targets,
+          start_time: String(session.startTime),
+          used: session.used,
+          game_type: session.gameType,
+          expires_at: session.expiresAt,
+          csrf_token: session.csrfToken,
+          player_id: session.playerId,
+        },
+      ];
+    }
+
+    if (query.startsWith('insert into ip_pseudo_locks')) {
+      const [ip, pseudo] = values;
+      const existing = state.ipPseudoLocks.get(ip);
+      if (!existing || existing === pseudo) {
+        state.ipPseudoLocks.set(ip, pseudo);
+        return [{ pseudo }];
+      }
+      return [];
+    }
+
+    if (query.includes('from ip_pseudo_locks') && query.includes('where ip =')) {
+      const ip = values[0];
+      const pseudo = state.ipPseudoLocks.get(ip);
+      return pseudo ? [{ pseudo }] : [];
+    }
+
+    if (query.startsWith('update sessions set used = true where token =')) {
+      const token = values[0];
+      const session = state.sessions.get(token);
+      if (session) session.used = true;
+      return [];
+    }
+
+    if (query.startsWith('insert into scores')) {
+      if (options.failOnInsertScore) {
+        throw new Error('forced_insert_failure');
+      }
+      const [pseudo, score, time, rounds, timestamp, gameType, sessionToken, ip, playerId] = values;
+      state.scores.push({
+        pseudo,
+        score,
+        time,
+        rounds,
+        timestamp,
+        gameType,
+        sessionToken,
+        ip,
+        playerId,
+      });
+      return [];
+    }
+
+    if (query.startsWith('update players')) {
+      return [];
+    }
+
+    if (query.startsWith('delete from sessions where token =')) {
+      const token = values[0];
+      state.sessions.delete(token);
+      return [];
+    }
+
+    if (query.startsWith('select count(*) + 1 as rank from scores')) {
+      const [gameType, totalScore, gameDuration] = values;
+      let better = 0;
+      for (const score of state.scores) {
+        if (score.gameType !== gameType) continue;
+        if (score.score > totalScore || (score.score === totalScore && score.time < gameDuration)) {
+          better += 1;
+        }
+      }
+      return [{ rank: String(better + 1) }];
+    }
+
+    return [];
+  };
+
+  const sql = (strings, ...values) => {
+    const query = normalize(strings.join(' '));
+    return {
+      query,
+      values,
+      run: () => execute(query, values),
+      then(resolve, reject) {
+        return execute(query, values).then(resolve, reject);
+      },
+    };
+  };
+
+  sql.transaction = async (queries) => {
+    const snapshot = structuredClone({
+      sessions: Array.from(state.sessions.entries()),
+      scores: state.scores,
+      players: Array.from(state.players.entries()),
+      rateLimits: Array.from(state.rateLimits.entries()),
+      ipPseudoLocks: Array.from(state.ipPseudoLocks.entries()),
+    });
+    try {
+      for (const q of queries) {
+        if (q && typeof q.run === 'function') {
+          await q.run();
+        } else {
+          await q;
+        }
+      }
+    } catch (error) {
+      state.sessions = new Map(snapshot.sessions);
+      state.scores = snapshot.scores;
+      state.players = new Map(snapshot.players);
+      state.rateLimits = new Map(snapshot.rateLimits);
+      state.ipPseudoLocks = new Map(snapshot.ipPseudoLocks);
+      throw error;
+    }
+  };
+
+  return { sql, state };
+};
+
+/**
+ * @param {{
+ *   body: any,
+ *   csrfToken?: string,
+ *   bypass?: boolean
+ * }} params
+ */
+const makeRequest = ({ body, csrfToken = 'csrf-token', bypass = true }) => {
+  const headers = new Headers({
+    'content-type': 'application/json',
+    'x-csrf-token': csrfToken,
+  });
+  if (bypass) headers.set(E2E_HEADER, E2E_TOKEN);
+  return new Request('http://localhost/.netlify/functions/submit', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+};
+
+beforeEach(() => {
+  process.env.E2E_BYPASS_ENABLED = '1';
+  process.env.E2E_BYPASS_TOKEN = E2E_TOKEN;
+});
+
+afterEach(() => {
+  delete process.env.E2E_BYPASS_ENABLED;
+  delete process.env.E2E_BYPASS_TOKEN;
+  vi.restoreAllMocks();
+});
+
+describe('submit integration', () => {
+  it('enforces pseudo lock across concurrent submissions from same IP', async () => {
+    const fake = createFakeSql({
+      sessions: [buildSession({ token: 'token-A' }), buildSession({ token: 'token-B' })],
+    });
+
+    vi.resetModules();
+    vi.doMock('../../netlify/functions/db.js', () => ({
+      getDatabase: vi.fn(() => fake.sql),
+    }));
+    const { default: handler } = await import('../../netlify/functions/submit.js');
+
+    const reqA = makeRequest({ body: buildSubmitBody({ token: 'token-A', pseudo: 'ALFA' }) });
+    const reqB = makeRequest({ body: buildSubmitBody({ token: 'token-B', pseudo: 'BETA' }) });
+
+    const [resA, resB] = await Promise.all([
+      handler(reqA, { ip: '203.0.113.5' }),
+      handler(reqB, { ip: '203.0.113.5' }),
+    ]);
+    const bodyA = await resA.json();
+    const bodyB = await resB.json();
+
+    const statuses = [resA.status, resB.status].sort();
+    expect(statuses).toEqual([200, 409]);
+
+    const conflictBody = resA.status === 409 ? bodyA : bodyB;
+    expect(conflictBody.error.code).toBe('pseudo_already_set_for_this_ip');
+    expect(conflictBody.error.details.pseudo).toBeTypeOf('string');
+    expect(fake.state.scores).toHaveLength(1);
+  });
+
+  it('rolls back submit transaction when score insert fails', async () => {
+    const session = buildSession({ token: 'token-fail' });
+    const fake = createFakeSql({
+      sessions: [session],
+      failOnInsertScore: true,
+    });
+
+    vi.resetModules();
+    vi.doMock('../../netlify/functions/db.js', () => ({
+      getDatabase: vi.fn(() => fake.sql),
+    }));
+    const { default: handler } = await import('../../netlify/functions/submit.js');
+
+    const req = makeRequest({ body: buildSubmitBody({ token: 'token-fail', pseudo: 'ALFA' }) });
+    const res = await handler(req, { ip: '198.51.100.7' });
+    expect(res.status).toBe(500);
+
+    const storedSession = fake.state.sessions.get('token-fail');
+    expect(storedSession).toBeTruthy();
+    expect(storedSession?.used).toBe(false);
+    expect(fake.state.scores).toHaveLength(0);
+  });
+});

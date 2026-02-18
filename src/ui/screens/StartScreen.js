@@ -73,7 +73,7 @@ export const createStartScreen = (deps) => {
   let _leaderboardCategory = 'capitals';
 
   // Track start screen listeners for cleanup
-  /** @type {Array<{ element: HTMLElement; listener: () => void }>} */
+  /** @type {Array<{ element: HTMLElement; type: keyof HTMLElementEventMap; listener: EventListener }>} */
   let _startScreenListeners = [];
   /** @type {null | (() => void)} */
   let _langChangeCleanup = null;
@@ -447,86 +447,130 @@ export const createStartScreen = (deps) => {
 
     /** @type {Array<"capitals"|"countries"|"civilizations"|"stadiums">} */
     const categoryButtons = ['capitals', 'countries', 'civilizations', 'stadiums'];
+    /** @type {Array<"classic"|"daily">} */
+    const modeButtons = ['classic', 'daily'];
+    const slider = document.getElementById('pill-slider');
+    const mobileModeSelect = /** @type {HTMLSelectElement | null} */ (
+      document.getElementById('mobile-game-mode-select')
+    );
+
+    const syncMobileModeSelect = () => {
+      if (!mobileModeSelect) return;
+      if (mobileModeSelect.value !== selectedCategory) {
+        mobileModeSelect.value = selectedCategory;
+      }
+    };
+
+    /** @param {"classic"|"daily"} mode */
+    const setSelectedMode = (mode) => {
+      selectedMode = mode;
+
+      if (slider) {
+        if (mode === MODE_IDS.DAILY) {
+          slider.classList.add('slide-right');
+        } else {
+          slider.classList.remove('slide-right');
+        }
+      }
+
+      modeButtons.forEach((m) => {
+        const modeBtn = document.getElementById(`mode-${m}`);
+        if (modeBtn) {
+          if (m === mode) {
+            modeBtn.classList.add('pill-option-active');
+            modeBtn.setAttribute('aria-checked', 'true');
+          } else {
+            modeBtn.classList.remove('pill-option-active');
+            modeBtn.setAttribute('aria-checked', 'false');
+          }
+        }
+      });
+      syncMobileModeSelect();
+    };
+
+    /** @param {"capitals"|"countries"|"civilizations"|"stadiums"} category */
+    const setSelectedCategory = (category) => {
+      selectedCategory = category;
+      updateChallengeCard(category);
+
+      if (!isLowEndDevice()) {
+        if (category === 'countries' && !_geoPreloadStarted.countries) {
+          _geoPreloadStarted.countries = true;
+          preloadCountriesGeoJSON();
+        }
+        if (category === 'civilizations' && !_geoPreloadStarted.civilizations) {
+          _geoPreloadStarted.civilizations = true;
+          preloadCivilizationsGeoJSON();
+        }
+      }
+
+      categoryButtons.forEach((cat) => {
+        const catBtn = document.getElementById(`category-${cat}`);
+        if (catBtn) {
+          if (cat === category) {
+            catBtn.classList.add('category-active');
+            catBtn.style.borderColor = 'var(--accent)';
+            const textEl = catBtn.querySelector('.text-secondary, .text-primary');
+            if (textEl) {
+              textEl.classList.remove('text-secondary');
+              textEl.classList.add('text-primary');
+            }
+          } else {
+            catBtn.classList.remove('category-active');
+            catBtn.style.borderColor = 'var(--border-color)';
+            const textEl = catBtn.querySelector('.text-primary, .text-secondary');
+            if (textEl) {
+              textEl.classList.remove('text-primary');
+              textEl.classList.add('text-secondary');
+            }
+          }
+        }
+      });
+      syncMobileModeSelect();
+    };
+
     categoryButtons.forEach((category) => {
       const btn = document.getElementById(`category-${category}`);
       if (btn) {
         const categoryListener = () => {
-          selectedCategory = category;
-          updateChallengeCard(category);
-          if (!isLowEndDevice()) {
-            if (category === 'countries' && !_geoPreloadStarted.countries) {
-              _geoPreloadStarted.countries = true;
-              preloadCountriesGeoJSON();
-            }
-            if (category === 'civilizations' && !_geoPreloadStarted.civilizations) {
-              _geoPreloadStarted.civilizations = true;
-              preloadCivilizationsGeoJSON();
-            }
-          }
-
-          categoryButtons.forEach((cat) => {
-            const catBtn = document.getElementById(`category-${cat}`);
-            if (catBtn) {
-              if (cat === category) {
-                catBtn.classList.add('category-active');
-                catBtn.style.borderColor = 'var(--accent)';
-                const textEl = catBtn.querySelector('.text-secondary, .text-primary');
-                if (textEl) {
-                  textEl.classList.remove('text-secondary');
-                  textEl.classList.add('text-primary');
-                }
-              } else {
-                catBtn.classList.remove('category-active');
-                catBtn.style.borderColor = 'var(--border-color)';
-                const textEl = catBtn.querySelector('.text-primary, .text-secondary');
-                if (textEl) {
-                  textEl.classList.remove('text-primary');
-                  textEl.classList.add('text-secondary');
-                }
-              }
-            }
-          });
+          setSelectedCategory(category);
         };
         btn.addEventListener('click', categoryListener);
-        _startScreenListeners.push({ element: btn, listener: categoryListener });
+        _startScreenListeners.push({ element: btn, type: 'click', listener: categoryListener });
       }
     });
-
-    /** @type {Array<"classic"|"daily">} */
-    const modeButtons = ['classic', 'daily'];
-    const slider = document.getElementById('pill-slider');
 
     modeButtons.forEach((mode) => {
       const btn = document.getElementById(`mode-${mode}`);
       if (btn) {
         const modeListener = () => {
-          selectedMode = mode;
-
-          if (slider) {
-            if (mode === MODE_IDS.DAILY) {
-              slider.classList.add('slide-right');
-            } else {
-              slider.classList.remove('slide-right');
-            }
-          }
-
-          modeButtons.forEach((m) => {
-            const modeBtn = document.getElementById(`mode-${m}`);
-            if (modeBtn) {
-              if (m === mode) {
-                modeBtn.classList.add('pill-option-active');
-                modeBtn.setAttribute('aria-checked', 'true');
-              } else {
-                modeBtn.classList.remove('pill-option-active');
-                modeBtn.setAttribute('aria-checked', 'false');
-              }
-            }
-          });
+          setSelectedMode(mode);
         };
         btn.addEventListener('click', modeListener);
-        _startScreenListeners.push({ element: btn, listener: modeListener });
+        _startScreenListeners.push({ element: btn, type: 'click', listener: modeListener });
       }
     });
+
+    if (mobileModeSelect) {
+      const mobileModeListener = () => {
+        const value = mobileModeSelect.value;
+        if (
+          value === 'capitals' ||
+          value === 'countries' ||
+          value === 'stadiums' ||
+          value === 'civilizations'
+        ) {
+          setSelectedCategory(value);
+        }
+      };
+      mobileModeSelect.addEventListener('change', mobileModeListener);
+      _startScreenListeners.push({
+        element: mobileModeSelect,
+        type: 'change',
+        listener: mobileModeListener,
+      });
+      syncMobileModeSelect();
+    }
 
     let _startingGame = false;
     let _loaderInterval = null;
@@ -747,8 +791,8 @@ export const createStartScreen = (deps) => {
     document.body.classList.remove('start-screen-visible');
     delete document.body.dataset.appReady;
 
-    _startScreenListeners.forEach(({ element, listener }) => {
-      element?.removeEventListener('click', listener);
+    _startScreenListeners.forEach(({ element, type, listener }) => {
+      element?.removeEventListener(type, listener);
     });
     _startScreenListeners = [];
 
@@ -758,8 +802,8 @@ export const createStartScreen = (deps) => {
   };
 
   const destroy = () => {
-    _startScreenListeners.forEach(({ element, listener }) => {
-      element?.removeEventListener('click', listener);
+    _startScreenListeners.forEach(({ element, type, listener }) => {
+      element?.removeEventListener(type, listener);
     });
     _startScreenListeners = [];
     _langChangeCleanup?.();

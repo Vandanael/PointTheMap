@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { leaderboardTypeFromSelection, selectionFromLeaderboardType } from './components.js';
+import {
+  leaderboardTypeFromSelection,
+  selectionFromLeaderboardType,
+  StartScreen,
+} from './components.js';
 
 describe('leaderboardTypeFromSelection', () => {
   it('classic + capitals → classic', () => {
@@ -104,5 +108,35 @@ describe('selectionFromLeaderboardType', () => {
       variant: 'classic',
       category: 'capitals',
     });
+  });
+});
+
+describe('StartScreen mobile mode selector', () => {
+  it('keeps classic/daily toggle outside the mobile category dropdown', () => {
+    document.body.innerHTML = StartScreen();
+
+    const mobileSelect = document.getElementById('mobile-game-mode-select');
+    const modeClassic = document.getElementById('mode-classic');
+    const modeDaily = document.getElementById('mode-daily');
+
+    expect(mobileSelect).not.toBeNull();
+    expect(modeClassic).not.toBeNull();
+    expect(modeDaily).not.toBeNull();
+    expect(mobileSelect?.contains(modeClassic)).toBe(false);
+    expect(mobileSelect?.contains(modeDaily)).toBe(false);
+  });
+
+  it('renders only game categories in mobile dropdown options', () => {
+    document.body.innerHTML = StartScreen();
+
+    const mobileSelect = /** @type {HTMLSelectElement | null} */ (
+      document.getElementById('mobile-game-mode-select')
+    );
+    expect(mobileSelect).not.toBeNull();
+
+    const optionValues = Array.from(mobileSelect?.options || []).map((opt) => opt.value);
+    expect(optionValues).toEqual(['capitals', 'countries', 'stadiums', 'civilizations']);
+    expect(optionValues).not.toContain('classic');
+    expect(optionValues).not.toContain('daily');
   });
 });

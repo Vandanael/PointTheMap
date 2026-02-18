@@ -14,6 +14,16 @@ import { handleError, APIError, ValidationError } from '../core/ErrorHandler.js'
 
 const PSEUDO_LOCK_ERROR = 'pseudo_already_set_for_this_ip';
 const MAX_SUBMIT_ATTEMPTS = 2; // initial attempt + one retry on 409
+const UNKNOWN_LOCKED_PSEUDO = 'LOCKED';
+
+/**
+ * Extract locked pseudo from API error payloads.
+ * Supports both legacy `data.pseudo` and canonical `data.error.details.pseudo`.
+ * @param {any} err
+ * @returns {string}
+ */
+const getLockedPseudo = (err) =>
+  err?.data?.error?.details?.pseudo || err?.data?.pseudo || UNKNOWN_LOCKED_PSEUDO;
 
 /**
  * Create submit flow handlers.
@@ -359,10 +369,11 @@ export function createSubmitFlow(context) {
 
         if (is409Lock && canRetry409) {
           restoreSubmitButton();
+          const lockedPseudo = getLockedPseudo(err);
           await new Promise((resolve) => {
-            ui.showPseudoLockedDialog(err.data.pseudo, () => resolve(undefined));
+            ui.showPseudoLockedDialog(lockedPseudo, () => resolve(undefined));
           });
-          currentPseudo = err.data.pseudo;
+          currentPseudo = lockedPseudo;
           continue;
         }
         lastError = err;
@@ -378,7 +389,7 @@ export function createSubmitFlow(context) {
           ? lastError.data.error
           : lastError?.data?.error);
       if (lastError.status === 409 && errorCode === PSEUDO_LOCK_ERROR) {
-        ui.showPseudoLockedDialog(lastError.data.pseudo, () => {});
+        ui.showPseudoLockedDialog(getLockedPseudo(lastError), () => {});
       } else {
         const apiError = new APIError(
           lastError.message || i18n.t('error.submitError'),

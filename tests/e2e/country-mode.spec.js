@@ -1,13 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { ensureAppBootstrapped } from './helpers/app-bootstrap.js';
 import { clickMapSafely } from './helpers/map-interactions.js';
 
 test('country mode loads and accepts a click', async ({ page }) => {
   await page.goto('/');
-  await page.waitForFunction(
-    () =>
-      document.body.dataset.appReady === 'true' || document.body.dataset.appInitError === 'true',
-    { timeout: 30000 }
-  );
+  await ensureAppBootstrapped(page);
 
   await expect(page.locator('#start-modal')).toBeVisible();
   await page.locator('#category-countries').click();

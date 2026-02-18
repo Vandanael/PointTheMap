@@ -1,5 +1,20 @@
 import { test, expect } from '@playwright/test';
+import { ensureAppBootstrapped } from './helpers/app-bootstrap.js';
 import { clickMapSafely } from './helpers/map-interactions.js';
+
+const hasTrustedNetlifyHost = (text) => {
+  const urlMatches = text.match(/https?:\/\/[^\s)"']+/g) || [];
+  return urlMatches.some((rawUrl) => {
+    try {
+      return new URL(rawUrl).hostname === 'app.netlify.com';
+    } catch {
+      return false;
+    }
+  });
+};
+
+const isIgnorableNetlifyDrawerCspError = (text) =>
+  text.includes('Content Security Policy') && hasTrustedNetlifyHost(text);
 
 test('classic flow: start, play, see result', async ({ page }) => {
   const consoleErrors = [];
@@ -7,17 +22,13 @@ test('classic flow: start, play, see result', async ({ page }) => {
     if (msg.type() === 'error') {
       const text = msg.text();
       // Ignore Netlify deploy-preview drawer CSP errors (not a bug in app code)
-      if (text.includes('app.netlify.com')) return;
+      if (isIgnorableNetlifyDrawerCspError(text)) return;
       consoleErrors.push(text);
     }
   });
 
   await page.goto('/');
-  await page.waitForFunction(
-    () =>
-      document.body.dataset.appReady === 'true' || document.body.dataset.appInitError === 'true',
-    { timeout: 30000 }
-  );
+  await ensureAppBootstrapped(page);
 
   await expect(page.locator('#start-modal')).toBeVisible();
   await page.locator('#category-capitals').click();

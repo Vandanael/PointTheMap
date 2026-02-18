@@ -62,18 +62,6 @@ class Analytics {
   }
 
   /**
-   * Send data using sendBeacon for reliability
-   * @param {string} url - Endpoint URL
-   * @param {Object} data - Data to send
-   */
-  #sendBeacon(url, data) {
-    if (navigator.sendBeacon) {
-      const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-      navigator.sendBeacon(url, blob);
-    }
-  }
-
-  /**
    * Respect global privacy signals (GPC / DNT).
    * @returns {boolean}
    */
