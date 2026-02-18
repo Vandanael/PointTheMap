@@ -822,6 +822,8 @@ const translations = {
         'Le classement est temporairement indisponible. Réessayez dans quelques instants.',
       submitFailed:
         "Impossible d'enregistrer votre score pour le moment. Il sera envoyé automatiquement plus tard.",
+      submitDeferred:
+        "Impossible d'enregistrer votre score pour le moment. Il sera envoyé automatiquement plus tard.",
       startFailed: 'Impossible de démarrer la partie. Veuillez réessayer.',
       retry: 'Réessayer',
       leaderboardRetry: 'Le classement est temporairement indisponible.',
@@ -1635,6 +1637,8 @@ const translations = {
       leaderboardUnavailable:
         'The leaderboard is temporarily unavailable. Try again in a few moments.',
       submitFailed: 'Unable to save your score at the moment. It will be sent automatically later.',
+      submitDeferred:
+        'Unable to save your score at the moment. It will be sent automatically later.',
       startFailed: 'Unable to start the game. Please try again.',
       retry: 'Retry',
       leaderboardRetry: 'The leaderboard is temporarily unavailable.',

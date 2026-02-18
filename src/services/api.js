@@ -4,10 +4,7 @@
 /**
  * @typedef {Object} StartSessionResponse
  * @property {string} token
- * @property {import('../game/Game.js').Capital[]} [capitals]
- * @property {import('../game/Game.js').Country[]} [countries]
- * @property {import('../game/Game.js').Stadium[]} [stadiums]
- * @property {import('../game/Game.js').Civilization[]} [civilizations]
+ * @property {Array<import('../game/Game.js').Capital | import('../game/Game.js').Country | import('../game/Game.js').Stadium | import('../game/Game.js').Civilization>} targets
  * @property {number} startTime
  * @property {string} csrfToken
  */
@@ -179,7 +176,7 @@ const mockStart = async (gameType = MODE_IDS.CLASSIC) => {
 
     return {
       token: generateId(),
-      countries: selected.map((c) => ({
+      targets: selected.map((c) => ({
         name: c.name,
         countryId: c.countryId,
         popular: c.popular,
@@ -198,7 +195,7 @@ const mockStart = async (gameType = MODE_IDS.CLASSIC) => {
     const selected = selectBalancedStadiums(stadiums);
     return {
       token: generateId(),
-      stadiums: selected.map((s) => ({
+      targets: selected.map((s) => ({
         name: s.name,
         city: s.city,
         country: s.country,
@@ -222,7 +219,7 @@ const mockStart = async (gameType = MODE_IDS.CLASSIC) => {
     );
     return {
       token: generateId(),
-      civilizations: selected.map((c) => ({
+      targets: selected.map((c) => ({
         id: c.id,
         name: c.name,
         popular: c.popular,
@@ -241,7 +238,7 @@ const mockStart = async (gameType = MODE_IDS.CLASSIC) => {
   const selected = selectBalancedCapitals(capitals);
   return {
     token: generateId(),
-    capitals: selected.map((c) => ({
+    targets: selected.map((c) => ({
       name: c.name,
       country: c.country,
       lat: c.lat,
@@ -270,81 +267,107 @@ const mockSubmit = (token, rounds, _pseudo) => {
 
 /**
  * Format rounds for API submission
- * @param {import('../game/Game.js').Round[]} rounds
- * @param {string} [gameType='classic']
- * @returns {Array<Object>}
+ * @param {import('../game/Game.js').Round} r
+ * @returns {{
+ *   base: {
+ *     click: { lat: number, lng: number } | null,
+ *     status: string,
+ *     score: number,
+ *     timeElapsed: number | undefined
+ *   },
+ *   safeDistance: number | undefined
+ * }}
  */
-const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
-  rounds.map((r) => {
-    const clickLat = r?.click?.lat;
-    const clickLng = r?.click?.lng;
-    const safeClick =
-      Number.isFinite(clickLat) && Number.isFinite(clickLng)
-        ? { lat: clickLat, lng: clickLng }
-        : null;
-    const safeDistance =
-      typeof r?.distanceToTargetKm === 'number' && Number.isFinite(r.distanceToTargetKm)
-        ? Math.max(0, r.distanceToTargetKm)
+const roundBaseSubmitData = (r) => {
+  const clickLat = r?.click?.lat;
+  const clickLng = r?.click?.lng;
+  const safeClick =
+    Number.isFinite(clickLat) && Number.isFinite(clickLng)
+      ? { lat: clickLat, lng: clickLng }
+      : null;
+  const safeDistance =
+    typeof r?.distanceToTargetKm === 'number' && Number.isFinite(r.distanceToTargetKm)
+      ? Math.max(0, r.distanceToTargetKm)
+      : undefined;
+  const timeElapsed =
+    typeof r?.timeElapsed === 'number'
+      ? Math.max(0, Math.round(r.timeElapsed))
+      : typeof r?.endTime === 'number' && typeof r?.startTime === 'number'
+        ? Math.max(0, Math.round(r.endTime - r.startTime))
         : undefined;
-    // Use timeElapsed from sanitized round if available, otherwise calculate from endTime/startTime
-    const timeElapsed =
-      typeof r?.timeElapsed === 'number'
-        ? Math.max(0, Math.round(r.timeElapsed))
-        : typeof r?.endTime === 'number' && typeof r?.startTime === 'number'
-          ? Math.max(0, Math.round(r.endTime - r.startTime))
-          : undefined;
-    const base = {
+
+  return {
+    base: {
       click: safeClick,
       status: typeof r?.status === 'string' ? r.status : 'unknown',
       score: Math.max(0, Math.round(Number(r?.score) || 0)),
       timeElapsed,
-    };
+    },
+    safeDistance,
+  };
+};
 
-    if (isCountryCategory(gameType) || isCountryCategory(r.gameType)) {
-      // Handle both object format (r.country.name) and string format (r.country)
-      const countryName = typeof r?.country === 'string' ? r.country : r?.country?.name;
-      const countryIdValue = typeof r?.countryId === 'string' ? r.countryId : r?.country?.countryId;
-      return {
-        ...base,
-        country: countryName,
-        countryId: countryIdValue,
-        correctCountryId: r?.correctCountryId,
-        clickedCountryId: r?.clickedCountryId,
-        distanceToTargetKm: safeDistance,
-      };
-    }
+/** @param {import('../game/Game.js').Round} r */
+const toCountrySubmitRound = (r) => {
+  const { base, safeDistance } = roundBaseSubmitData(r);
+  const countryName = typeof r?.country === 'string' ? r.country : r?.country?.name;
+  const countryIdValue = typeof r?.countryId === 'string' ? r.countryId : r?.country?.countryId;
+  return {
+    ...base,
+    country: countryName,
+    countryId: countryIdValue,
+    correctCountryId: r?.correctCountryId,
+    clickedCountryId: r?.clickedCountryId,
+    distanceToTargetKm: safeDistance,
+  };
+};
 
-    if (isStadiumCategory(gameType) || isStadiumCategory(r.gameType)) {
-      // Handle both object format (r.stadium.name) and string format (r.stadium)
-      const stadiumName = typeof r?.stadium === 'string' ? r.stadium : r?.stadium?.name;
-      const cityName = typeof r?.city === 'string' ? r.city : r?.stadium?.city;
-      return {
-        ...base,
-        stadium: stadiumName,
-        city: cityName,
-      };
-    }
+/** @param {import('../game/Game.js').Round} r */
+const toStadiumSubmitRound = (r) => {
+  const { base } = roundBaseSubmitData(r);
+  const stadiumName = typeof r?.stadium === 'string' ? r.stadium : r?.stadium?.name;
+  const cityName = typeof r?.city === 'string' ? r.city : r?.stadium?.city;
+  return {
+    ...base,
+    stadium: stadiumName,
+    city: cityName,
+  };
+};
 
-    if (isCivilizationCategory(gameType) || isCivilizationCategory(r.gameType)) {
-      // Handle both object format (r.civilization.name) and string format (r.civilization)
-      const civName = typeof r?.civilization === 'string' ? r.civilization : r?.civilization?.name;
-      const civId = typeof r?.civilizationId === 'string' ? r.civilizationId : r?.civilization?.id;
-      return {
-        ...base,
-        civilization: civName,
-        civilizationId: civId,
-        correctCivilizationId: r?.correctCivilizationId,
-        clickedCivilizationId: r?.clickedCivilizationId,
-        distanceToTargetKm: safeDistance,
-      };
-    }
+/** @param {import('../game/Game.js').Round} r */
+const toCivilizationSubmitRound = (r) => {
+  const { base, safeDistance } = roundBaseSubmitData(r);
+  const civName = typeof r?.civilization === 'string' ? r.civilization : r?.civilization?.name;
+  const civId = typeof r?.civilizationId === 'string' ? r.civilizationId : r?.civilization?.id;
+  return {
+    ...base,
+    civilization: civName,
+    civilizationId: civId,
+    correctCivilizationId: r?.correctCivilizationId,
+    clickedCivilizationId: r?.clickedCivilizationId,
+    distanceToTargetKm: safeDistance,
+  };
+};
 
-    // Handle both object format (r.capital.name) and string format (r.capital)
-    const capitalName = typeof r?.capital === 'string' ? r.capital : r?.capital?.name;
-    return {
-      ...base,
-      capital: capitalName,
-    };
+/** @param {import('../game/Game.js').Round} r */
+const toCapitalSubmitRound = (r) => {
+  const { base } = roundBaseSubmitData(r);
+  const capitalName = typeof r?.capital === 'string' ? r.capital : r?.capital?.name;
+  return {
+    ...base,
+    capital: capitalName,
+  };
+};
+
+const formatRoundsForSubmit = (rounds, gameType = MODE_IDS.CLASSIC) =>
+  rounds.map((r) => {
+    if (isCountryCategory(gameType) || isCountryCategory(r.gameType))
+      return toCountrySubmitRound(r);
+    if (isStadiumCategory(gameType) || isStadiumCategory(r.gameType))
+      return toStadiumSubmitRound(r);
+    if (isCivilizationCategory(gameType) || isCivilizationCategory(r.gameType))
+      return toCivilizationSubmitRound(r);
+    return toCapitalSubmitRound(r);
   });
 
 // Expose for tests only (no runtime usage).
@@ -353,7 +376,7 @@ export const __testOnlyFormatRoundsForSubmit = formatRoundsForSubmit;
 export const api = {
   start: async (gameType = MODE_IDS.CLASSIC) => {
     if (USE_MOCK) {
-      logger.log('[API] Mode mock activé');
+      logger.log('[API] Mock mode enabled');
       const session = await mockStart(gameType);
       const validation = validateStartSessionPayload(session, gameType);
       if (!validation.valid) {
@@ -450,11 +473,9 @@ export const submitWithRetry = async (
         status: error.status,
         code: error.code,
         message: error.message,
-        details: error.data?.error?.details,
         apiCode: error.apiCode,
         gameType,
         roundsCount: rounds.length,
-        pseudo,
       });
     } else {
       logger.error('[api:submit] Unexpected error:', error);
@@ -481,10 +502,7 @@ export const submitWithRetry = async (
 
     if (isNetworkError) {
       addToRetryQueue(token, rounds, pseudo, gameType);
-      throw new GameError(
-        'Score en attente de synchronisation (connexion perdue). Réessai automatique...',
-        'NETWORK_ERROR'
-      );
+      throw new GameError('error.submitDeferred', 'NETWORK_ERROR');
     }
     throw error;
   }

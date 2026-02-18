@@ -64,6 +64,12 @@ export default async function startHandler(req, context) {
       );
     }
     context.sql = sql;
+    // Best-effort TTL cleanup for stale sessions.
+    try {
+      await sql`DELETE FROM sessions WHERE expires_at <= NOW()`;
+    } catch (cleanupError) {
+      logger.warn('Session cleanup skipped:', /** @type {Error} */ (cleanupError).message);
+    }
 
     const body = await parseJsonBody(req);
     const parsed = StartBodySchema.safeParse(body);
@@ -115,7 +121,7 @@ export default async function startHandler(req, context) {
         new Date()
       );
       clientData = {
-        countries: selectedTargets.map((c) => ({
+        targets: selectedTargets.map((c) => ({
           name: c.name,
           countryId: c.countryId,
           popular: c.popular,
@@ -128,7 +134,7 @@ export default async function startHandler(req, context) {
         new Date()
       );
       clientData = {
-        civilizations: selectedTargets.map((c) => ({
+        targets: selectedTargets.map((c) => ({
           id: c.id,
           name: c.name,
           popular: c.popular,
@@ -141,7 +147,7 @@ export default async function startHandler(req, context) {
         new Date()
       );
       clientData = {
-        stadiums: selectedTargets.map((s) => ({
+        targets: selectedTargets.map((s) => ({
           name: s.name,
           city: s.city,
           country: s.country,
@@ -159,7 +165,7 @@ export default async function startHandler(req, context) {
         new Date()
       );
       clientData = {
-        capitals: selectedTargets.map((c) => ({
+        targets: selectedTargets.map((c) => ({
           name: c.name,
           country: c.country,
           lat: c.lat,

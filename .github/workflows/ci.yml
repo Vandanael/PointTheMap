@@ -27,6 +27,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check:migrations
+      - run: npm run check:log-privacy
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck

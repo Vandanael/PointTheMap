@@ -9,11 +9,19 @@ import {
   getClientIp,
   isDatabaseConnectionError,
   createLogger,
+  redactForLog,
+  redactToken,
 } from './_utils.js';
 import { API } from '../../lib/config/index.js';
 import { toDomainModel } from '../../lib/session/sessionModel.js';
 import { SubmitSchema } from '../../lib/schemas/submit.js';
-import { recordDbFailure, isDbBreakerOpen, getDbBreakerUntil } from './_circuit-breaker.js';
+import {
+  recordDbFailure,
+  isDbBreakerOpen,
+  getDbBreakerUntil,
+  recordDbBreakerShortCircuit,
+  getDbBreakerStats,
+} from './_circuit-breaker.js';
 import { createFallbackRateLimiter, checkDbRateLimit } from './_rate-limit.js';
 import { checkPlausibility, validateRounds } from './_round-validation.js';
 import { scoreRound } from './_round-scoring.js';
@@ -22,8 +30,17 @@ import { acquirePseudoLock } from './_pseudo-lock.js';
 const logger = createLogger('submit');
 const E2E_BYPASS_ENABLED = process.env.E2E_BYPASS_ENABLED === '1';
 const E2E_BYPASS_TOKEN = process.env.E2E_BYPASS_TOKEN;
+const IS_PRODUCTION =
+  process.env.NODE_ENV === 'production' ||
+  process.env.CONTEXT === 'production' ||
+  process.env.NETLIFY_ENV === 'production';
+
+if (IS_PRODUCTION && E2E_BYPASS_ENABLED) {
+  logger.warn('[submit] E2E_BYPASS_ENABLED is set in production; bypass remains blocked');
+}
 
 const isE2EBypass = (req) => {
+  if (IS_PRODUCTION) return false;
   if (!E2E_BYPASS_ENABLED || !E2E_BYPASS_TOKEN) return false;
   const token = req.headers.get('x-e2e-bypass');
   return token === E2E_BYPASS_TOKEN;
@@ -106,20 +123,74 @@ const fallbackLimiter = createFallbackRateLimiter({
  */
 export default async function submitHandler(req, context) {
   try {
+    /** @type {{ startedAt: number, bypass: boolean, stages: Record<string, number> }} */
+    const metrics = {
+      startedAt: Date.now(),
+      bypass: false,
+      stages: {},
+    };
+    /**
+     * @param {string} stage
+     * @param {number} startedAt
+     */
+    const markStage = (stage, startedAt) => {
+      metrics.stages[stage] = Date.now() - startedAt;
+    };
+    /**
+     * @param {Response} response
+     * @param {'success' | 'rejected' | 'failure'} outcome
+     * @param {Record<string, unknown>} [details]
+     */
+    const finish = (response, outcome, details = undefined) => {
+      const payload = {
+        outcome,
+        totalMs: Date.now() - metrics.startedAt,
+        bypass: metrics.bypass,
+        stages: metrics.stages,
+        breaker: {
+          ...getDbBreakerStats(),
+          isOpen: isDbBreakerOpen(),
+        },
+        ...(details ? { details } : {}),
+      };
+      if (outcome === 'success') {
+        logger.info('[submit] metrics', payload);
+      } else if (outcome === 'rejected') {
+        logger.warn('[submit] metrics', payload);
+      } else {
+        logger.error('[submit] metrics', payload);
+      }
+      return response;
+    };
+
     if (req.method !== 'POST') {
-      return errorJson('method_not_allowed', 'Method not allowed', 405);
+      return finish(errorJson('method_not_allowed', 'Method not allowed', 405), 'rejected');
+    }
+
+    if (IS_PRODUCTION && req.headers.get('x-e2e-bypass')) {
+      logger.warn('[submit] Bypass header blocked in production');
+      return finish(
+        errorJson('bypass_not_allowed', 'E2E bypass is not allowed in production', 403),
+        'rejected'
+      );
     }
 
     const bypass = isE2EBypass(req);
+    metrics.bypass = bypass;
 
     if (isDbBreakerOpen()) {
+      recordDbBreakerShortCircuit();
       const retryAfterSeconds = Math.ceil((getDbBreakerUntil() - Date.now()) / 1000);
-      return errorJson(
-        'service_unavailable',
-        'Service temporarily unavailable. Please retry.',
-        503,
-        { retryAfter: retryAfterSeconds },
-        { 'Retry-After': String(retryAfterSeconds) }
+      return finish(
+        errorJson(
+          'service_unavailable',
+          'Service temporarily unavailable. Please retry.',
+          503,
+          { retryAfter: retryAfterSeconds },
+          { 'Retry-After': String(retryAfterSeconds) }
+        ),
+        'failure',
+        { reason: 'db_breaker_open' }
       );
     }
 
@@ -130,19 +201,33 @@ export default async function submitHandler(req, context) {
       const error = /** @type {Error} */ (dbError);
       logger.error('Database connection failed:', error.message);
       recordDbFailure(dbError);
-      return errorJson(
-        'db_connection_failed',
-        'Database connection failed. Please try again later.',
-        503
+      return finish(
+        errorJson(
+          'db_connection_failed',
+          'Database connection failed. Please try again later.',
+          503
+        ),
+        'failure',
+        { reason: 'db_connection_setup_failed' }
       );
     }
     context.sql = sql;
+    // Best-effort TTL cleanup for stale sessions.
+    try {
+      await sql`DELETE FROM sessions WHERE expires_at <= NOW()`;
+    } catch (cleanupError) {
+      logger.warn(
+        '[submit] session cleanup skipped:',
+        /** @type {Error} */ (cleanupError).message
+      );
+    }
 
     logger.info('[submit] Function invoked');
 
     const ip = getClientIp(req, context);
 
     if (!bypass) {
+      const rateLimitStart = Date.now();
       // Wrap rate limit check in try-catch
       let rateLimit;
       try {
@@ -159,48 +244,60 @@ export default async function submitHandler(req, context) {
         logger.error('Rate limit check failed:', rateLimitError);
         rateLimit = fallbackLimiter.check(ip);
       }
+      markStage('rateLimitMs', rateLimitStart);
 
       if (!rateLimit.allowed) {
-        return errorJson('rate_limited', 'Rate limit exceeded. Try again later.', 429);
+        return finish(
+          errorJson('rate_limited', 'Rate limit exceeded. Try again later.', 429),
+          'rejected'
+        );
       }
       logger.info('[submit] rate limit ok, remaining:', rateLimit.remaining);
     } else {
       logger.info('[submit] e2e bypass enabled: skipping rate limit');
+      metrics.stages.rateLimitMs = 0;
     }
 
+    const parseAndValidateStart = Date.now();
     const body = await parseJsonBody(req);
     const parsed = SubmitSchema.safeParse(body);
+    markStage('parseAndValidateMs', parseAndValidateStart);
     if (!parsed.success) {
       logger.error('[submit] Payload validation failed:', parsed.error.flatten());
-      logger.info('[submit] Invalid payload details:', {
-        fieldErrors: parsed.error.flatten().fieldErrors,
-        formErrors: parsed.error.flatten().formErrors,
-        payloadPreview: {
-          token: body?.token?.substring(0, 8) + '...',
-          pseudo: body?.pseudo,
+      logger.info(
+        '[submit] Invalid payload details:',
+        redactForLog({
+          fieldErrors: parsed.error.flatten().fieldErrors,
+          formErrors: parsed.error.flatten().formErrors,
+          token: body?.token,
           gameType: body?.gameType,
           roundsCount: body?.rounds?.length,
-          firstRound: body?.rounds?.[0],
-        },
-      });
-      return errorJson('invalid_payload', 'Invalid payload', 400, parsed.error.flatten());
+        })
+      );
+      return finish(
+        errorJson('invalid_payload', 'Invalid payload', 400, parsed.error.flatten()),
+        'rejected'
+      );
     }
     const { token, rounds, pseudo, gameType = 'classic', payloadVersion } = parsed.data;
     const effectivePayloadVersion = payloadVersion ?? 1;
     if (!SUPPORTED_PAYLOAD_VERSIONS.has(effectivePayloadVersion)) {
-      return errorJson(
-        'unsupported_payload_version',
-        `Unsupported payload version (${effectivePayloadVersion})`,
-        400
+      return finish(
+        errorJson(
+          'unsupported_payload_version',
+          `Unsupported payload version (${effectivePayloadVersion})`,
+          400
+        ),
+        'rejected'
       );
     }
     const csrfToken = req.headers.get('x-csrf-token');
 
     logger.info(
       '[submit] Request details - Token:',
-      token?.substring(0, 8),
+      redactToken(token),
       'CSRF from header:',
-      csrfToken?.substring(0, 8),
+      redactToken(csrfToken),
       'payloadVersion:',
       payloadVersion ?? null
     );
@@ -212,14 +309,13 @@ export default async function submitHandler(req, context) {
       trimmedPseudo.length > 5 ||
       !/^[A-Z]{3,5}$/.test(trimmedPseudo)
     ) {
-      return errorJson('invalid_pseudo', 'Invalid pseudo (3-5 uppercase letters required)', 400);
+      return finish(
+        errorJson('invalid_pseudo', 'Invalid pseudo (3-5 uppercase letters required)', 400),
+        'rejected'
+      );
     }
 
-    const existingReplay = await getReplayResult(sql, token);
-    if (existingReplay) {
-      return successEnvelope(existingReplay, {}, { idempotentReplay: true });
-    }
-
+    const sessionLookupStart = Date.now();
     let sessionResult;
     try {
       sessionResult = await sql`
@@ -228,22 +324,26 @@ export default async function submitHandler(req, context) {
         WHERE token = ${token}
           AND expires_at > NOW()
       `;
+      markStage('sessionLookupMs', sessionLookupStart);
     } catch (dbError) {
       const error = /** @type {Error & {code?: string}} */ (dbError);
       logger.error('Database query error (session lookup):', error.message, error.code);
-      return errorJson(
-        isDatabaseConnectionError(error) ? 'db_connection_error' : 'db_error',
-        'Database error. Please try again later.',
-        isDatabaseConnectionError(error) ? 503 : 500
+      return finish(
+        errorJson(
+          isDatabaseConnectionError(error) ? 'db_connection_error' : 'db_error',
+          'Database error. Please try again later.',
+          isDatabaseConnectionError(error) ? 503 : 500
+        ),
+        'failure',
+        { stage: 'session_lookup' }
       );
     }
 
     if (sessionResult.length === 0) {
-      const replay = await getReplayResult(sql, token);
-      if (replay) {
-        return successEnvelope(replay, {}, { idempotentReplay: true });
-      }
-      return errorJson('session_not_found', 'Session not found or expired', 401);
+      return finish(
+        errorJson('session_not_found', 'Session not found or expired', 401),
+        'rejected'
+      );
     }
 
     const sessionRow = /** @type {any} */ (sessionResult[0]);
@@ -262,36 +362,45 @@ export default async function submitHandler(req, context) {
     // CSRF token validation (strict: reject any mismatch)
     if (session.csrfToken !== csrfToken) {
       logger.info('[submit] CSRF token mismatch, returning 403');
-      return errorJson('csrf_mismatch', 'Invalid CSRF token', 403);
+      return finish(errorJson('csrf_mismatch', 'Invalid CSRF token', 403), 'rejected');
     }
 
     if (session.used) {
-      return errorJson('session_used', 'Session already used', 401);
+      const replay = await getReplayResult(sql, token);
+      if (replay) {
+        return finish(successEnvelope(replay, {}, { idempotentReplay: true }), 'success', {
+          idempotentReplay: true,
+        });
+      }
+      return finish(errorJson('session_used', 'Session already used', 401), 'rejected');
     }
 
     if (session.gameType && session.gameType !== gameType) {
-      return errorJson('game_type_mismatch', 'Game type mismatch', 400);
+      return finish(errorJson('game_type_mismatch', 'Game type mismatch', 400), 'rejected');
     }
 
     const now = Date.now();
 
     if (session.startTime > now) {
-      return errorJson('invalid_session_timestamp', 'Invalid session timestamp', 400);
+      return finish(
+        errorJson('invalid_session_timestamp', 'Invalid session timestamp', 400),
+        'rejected'
+      );
     }
 
     const gameDuration = now - session.startTime;
 
     if (gameDuration < 0) {
-      return errorJson('invalid_game_duration', 'Invalid game duration', 400);
+      return finish(errorJson('invalid_game_duration', 'Invalid game duration', 400), 'rejected');
     }
 
     if (gameDuration > API.SESSION_EXPIRY_MS) {
       await sql`DELETE FROM sessions WHERE token = ${token}`;
-      return errorJson('session_expired', 'Session expired', 401);
+      return finish(errorJson('session_expired', 'Session expired', 401), 'rejected');
     }
 
     if (!bypass && gameDuration < API.MIN_GAME_DURATION_MS) {
-      return errorJson('suspicious_fast', 'Suspicious activity: too fast', 400);
+      return finish(errorJson('suspicious_fast', 'Suspicious activity: too fast', 400), 'rejected');
     }
 
     // Aggregate round timing sanity check (prevents impossible time bonuses)
@@ -301,30 +410,41 @@ export default async function submitHandler(req, context) {
     if (timeElapsedValues.length === rounds.length) {
       const totalElapsed = timeElapsedValues.reduce((sum, value) => sum + value, 0);
       if (totalElapsed > gameDuration + 1000) {
-        return errorJson('invalid_round_times', 'Round timings exceed total game duration', 400, {
-          totalElapsed,
-          gameDuration,
-        });
+        return finish(
+          errorJson('invalid_round_times', 'Round timings exceed total game duration', 400, {
+            totalElapsed,
+            gameDuration,
+          }),
+          'rejected'
+        );
       }
     }
 
+    const roundProcessingStart = Date.now();
     const validation = validateRounds(rounds, session.targets, session.gameType || 'classic');
     if (!validation.valid) {
-      return errorJson('invalid_rounds', validation.error || 'Invalid rounds', 400);
+      return finish(
+        errorJson('invalid_rounds', validation.error || 'Invalid rounds', 400),
+        'rejected'
+      );
     }
 
     if (!bypass) {
       const plausibility = checkPlausibility(gameDuration);
       if (!plausibility.valid) {
-        return errorJson(
-          'implausible_duration',
-          plausibility.reason || 'Session duration implausible',
-          400
+        return finish(
+          errorJson(
+            'implausible_duration',
+            plausibility.reason || 'Session duration implausible',
+            400
+          ),
+          'rejected'
         );
       }
     }
 
     const validatedRounds = rounds.map((round, i) => scoreRound(round, i, session));
+    markStage('roundValidationAndScoringMs', roundProcessingStart);
 
     const totalScore = validatedRounds.reduce(
       (/** @type {number} */ sum, /** @type {any} */ r) => sum + r.score,
@@ -333,10 +453,14 @@ export default async function submitHandler(req, context) {
     const clientIp = getClientIp(req, context);
 
     if (clientIp === 'unknown') {
-      return errorJson('client_ip_unknown', 'Unable to verify player identity', 400);
+      return finish(
+        errorJson('client_ip_unknown', 'Unable to verify player identity', 400),
+        'rejected'
+      );
     }
 
-    /** @type {{ ok: true } | { ok: false, pseudo: string | null }} */
+    const pseudoLockStart = Date.now();
+    /** @type {{ ok: true, lock: { pseudo: string, updatedAt: string, expiresAt: string } } | { ok: false, pseudo: string | null, lock: { pseudo: string | null, updatedAt: string | null, expiresAt: string | null } }} */
     let pseudoLockResult;
     try {
       pseudoLockResult = await acquirePseudoLock({
@@ -344,26 +468,36 @@ export default async function submitHandler(req, context) {
         ip: clientIp,
         pseudo: trimmedPseudo,
       });
+      markStage('pseudoLockMs', pseudoLockStart);
     } catch (dbError) {
       const error = /** @type {Error & {code?: string}} */ (dbError);
       logger.error('Database query error (pseudo lock):', error.message, error.code);
-      return errorJson(
-        isDatabaseConnectionError(error) ? 'db_connection_error' : 'db_error',
-        'Database error. Please try again later.',
-        isDatabaseConnectionError(error) ? 503 : 500
+      return finish(
+        errorJson(
+          isDatabaseConnectionError(error) ? 'db_connection_error' : 'db_error',
+          'Database error. Please try again later.',
+          isDatabaseConnectionError(error) ? 503 : 500
+        ),
+        'failure',
+        { stage: 'pseudo_lock' }
       );
     }
 
     if (!pseudoLockResult.ok) {
       const lockedPseudo = 'pseudo' in pseudoLockResult ? pseudoLockResult.pseudo : null;
-      return errorJson('pseudo_already_set_for_this_ip', 'Pseudo already set for this IP', 409, {
-        pseudo: lockedPseudo,
-      });
+      return finish(
+        errorJson('pseudo_already_set_for_this_ip', 'Pseudo already set for this IP', 409, {
+          pseudo: lockedPseudo,
+          lock: pseudoLockResult.lock,
+        }),
+        'rejected'
+      );
     }
 
     let rank = 1;
     let isTopFifty = false;
 
+    const transactionStart = Date.now();
     try {
       // Atomic transaction: mark session used, insert score, update player, delete session
       logger.info('[submit] Starting database transaction');
@@ -383,12 +517,13 @@ export default async function submitHandler(req, context) {
             `,
             ]
           : []),
-        sql`DELETE FROM sessions WHERE token = ${token}`,
       ];
       await sql.transaction(txnQueries);
       logger.info('[submit] Transaction committed');
+      markStage('transactionMs', transactionStart);
 
       let rankResult;
+      const rankLookupStart = Date.now();
       try {
         logger.info('[submit] Calculating rank');
         rankResult = await sql`
@@ -400,59 +535,79 @@ export default async function submitHandler(req, context) {
         rank = parseInt(rankResult[0]?.rank ?? '1', 10);
         isTopFifty = rank <= 50;
         logger.info('[submit] Rank calculated:', rank);
+        markStage('rankLookupMs', rankLookupStart);
       } catch (rankError) {
         // If rank query fails, we still return the score but with rank 0
         logger.error('[submit] Rank query error:', rankError);
         rank = 0;
         isTopFifty = false;
+        markStage('rankLookupMs', rankLookupStart);
       }
 
       logger.info('[submit] Submission successful');
-      return successEnvelope({
-        score: totalScore,
-        rank,
-        isTopFifty,
-        rounds: validatedRounds,
-      });
+      return finish(
+        successEnvelope({
+          score: totalScore,
+          rank,
+          isTopFifty,
+          rounds: validatedRounds,
+        }),
+        'success'
+      );
     } catch (dbError) {
+      markStage('transactionMs', transactionStart);
       const error = /** @type {Error & {code?: string}} */ (dbError);
       logger.error('[submit] Database operation failed:', error.message, error.code, error.stack);
 
       if (error.code === '23505') {
         const replay = await getReplayResult(sql, token);
         if (replay) {
-          return successEnvelope(replay, {}, { idempotentReplay: true });
+          return finish(successEnvelope(replay, {}, { idempotentReplay: true }), 'success', {
+            idempotentReplay: true,
+          });
         }
       }
 
       // Handle database connection errors
       if (isDatabaseConnectionError(error)) {
         logger.error('[submit] Connection error detected');
-        return errorJson(
-          'db_connection_error',
-          'Database connection error. Please try again later.',
-          503,
-          {
-            score: totalScore,
-            rank: 0,
-            isTopFifty: false,
-            rounds: validatedRounds,
-          }
+        return finish(
+          errorJson(
+            'db_connection_error',
+            'Database connection error. Please try again later.',
+            503,
+            {
+              score: totalScore,
+              rank: 0,
+              isTopFifty: false,
+              rounds: validatedRounds,
+            }
+          ),
+          'failure',
+          { stage: 'transaction' }
         );
       }
 
       logger.error('[submit] Generic database error');
-      return errorJson('db_error', 'Database error. Please try again later.', 500, {
-        score: totalScore,
-        rank: 0,
-        isTopFifty: false,
-        rounds: validatedRounds,
-      });
+      return finish(
+        errorJson('db_error', 'Database error. Please try again later.', 500, {
+          score: totalScore,
+          rank: 0,
+          isTopFifty: false,
+          rounds: validatedRounds,
+        }),
+        'failure',
+        { stage: 'transaction' }
+      );
     }
   } catch (outerError) {
     // Catch any unhandled errors that might cause 502
     const error = /** @type {Error & {code?: string}} */ (outerError);
     logger.error('[submit] Unhandled error caught:', error.message, error.code, error.stack);
+    logger.error('[submit] breaker stats on unhandled error:', {
+      ...getDbBreakerStats(),
+      isOpen: isDbBreakerOpen(),
+    });
 
     // Handle JSON parsing errors
     if (error instanceof SyntaxError) {

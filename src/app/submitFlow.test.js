@@ -116,7 +116,7 @@ describe('submitFlow', () => {
   });
 
   describe('handleSubmit — success path', () => {
-    it('calls api.submitWithRetry with sanitized rounds', async () => {
+    it('calls api.submitWithRetry with game rounds (canonical formatting lives in api service)', async () => {
       const state = makeGameState('classic');
       mockContext.stateManager.getState.mockReturnValue(state);
       mockContext.api.submitWithRetry.mockResolvedValue({
@@ -131,7 +131,10 @@ describe('submitFlow', () => {
       expect(mockContext.api.submitWithRetry).toHaveBeenCalledWith(
         'test-token-12345678',
         expect.arrayContaining([
-          expect.objectContaining({ capital: 'Paris', status: 'completed' }),
+          expect.objectContaining({
+            capital: expect.objectContaining({ name: 'Paris' }),
+            status: 'completed',
+          }),
         ]),
         'TEST',
         'classic'
@@ -212,8 +215,8 @@ describe('submitFlow', () => {
     });
   });
 
-  describe('handleSubmit — country mode round sanitization', () => {
-    it('includes country and countryId fields for country mode', async () => {
+  describe('handleSubmit — country mode forwarding', () => {
+    it('forwards country round objects and delegates payload shaping to api service', async () => {
       const state = {
         token: 'tok-12345678',
         gameType: 'country',
@@ -241,7 +244,9 @@ describe('submitFlow', () => {
       await handleSubmit('TEST');
 
       const [, rounds] = mockContext.api.submitWithRetry.mock.calls[0];
-      expect(rounds[0]).toMatchObject({ country: 'France', countryId: 'FRA' });
+      expect(rounds[0]).toMatchObject({
+        country: expect.objectContaining({ name: 'France', countryId: 'FRA' }),
+      });
       expect(rounds[0].capital).toBeUndefined();
     });
   });
