@@ -57,5 +57,7 @@ test('about page share button works', async ({ page }) => {
   // Check if URL was copied to clipboard or share dialog appeared
   // In headless mode, navigator.share is not available, so clipboard is used
   const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
-  expect(clipboardText).toContain('127.0.0.1');
+  // Assert a URL was copied — matches localhost in dev and the real host in deploy previews/production
+  const currentOrigin = new URL(page.url()).origin;
+  expect(clipboardText).toContain(currentOrigin);
 });
