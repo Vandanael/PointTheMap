@@ -14,6 +14,8 @@ This folder is intentionally minimal and only keeps operational documentation th
 - `docs/database-migrations.md` — migration policy and apply/verify runbook.
 - `docs/operations.md` — submit/runtime operations, idempotency, alerts, and incident checks.
 - `docs/remediation-program-roadmap.md` — sprint-by-sprint remediation implementation plan.
+- `docs/remediation-audit-execution-plan.md` — gated execution plan for current audit remediation cycle.
+- `docs/remediation-metrics-template.md` — pre/post baseline and gate evidence template.
 - `docs/remediation-traceability-matrix.md` — finding-to-work-to-evidence mapping.
 - `docs/remediation-definition-of-done.md` — strict completion policy (no half-done sprints).
 - `docs/remediation-risk-register.md` — risk tracking and residual-risk targets.

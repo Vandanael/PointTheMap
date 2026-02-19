@@ -6,7 +6,10 @@
 .github/skills/
 
 # Documentation (tous les .md sauf README.md)
-docs/
+docs/*
+!docs/README.md
+!docs/remediation-audit-execution-plan.md
+!docs/remediation-metrics-template.md
 supabase/
 
 # Environment variables

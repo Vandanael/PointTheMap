@@ -47,10 +47,13 @@ Ouvrir `http://localhost:5173`.
 
 ```bash
 npm run dev            # Dev server
-npm run build          # Production build + bundle budget
+npm run build          # Production build + bundle budget + CSS import guard
 npm run test:run       # Unit tests (Vitest)
 npm run e2e:dev        # Playwright smoke (dev)
 npm run e2e:preview    # Playwright smoke (build + preview)
+npm run visual:check   # Playwright visual regression comparison
+npm run bench:submit -- --base-url=http://127.0.0.1:8888 --runs=20
+npm run bench:submit:local -- --runs=100
 ```
 
 ## License & Copyright
