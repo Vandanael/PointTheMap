@@ -18,6 +18,16 @@ vi.mock('../../netlify/functions/_utils.js', () => ({
 vi.mock('../../lib/config/game-modes.js', () => ({
   getGameMode: vi.fn(() => ({ capitalSelection: { type: 'random' } })),
   isValidMode: vi.fn(() => false),
+  MODE_VALUES: [
+    'classic',
+    'daily',
+    'country',
+    'country_daily',
+    'stadium',
+    'stadium_daily',
+    'civilization',
+    'civilization_daily',
+  ],
 }));
 
 vi.mock('../../lib/config/index.js', () => ({
