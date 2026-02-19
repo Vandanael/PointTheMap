@@ -1,0 +1,85 @@
+/* ===================================
+   CONTRAST ENHANCEMENTS - OPTION 2
+   Depth Through Shadows & Borders
+   =================================== */
+
+/* Keep existing colors but add stronger borders */
+:root {
+  --border-color: #2d3b4e; /* More visible dark borders (was #1e293b) */
+
+  /* New shadow variables */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.7);
+}
+
+body.light-theme {
+  --border-color: #b5b1a8; /* Darker light mode borders (was #c9c5be) */
+
+  /* Light mode shadows */
+  --shadow-sm: 0 2px 4px rgba(26, 24, 22, 0.08);
+  --shadow-md: 0 4px 12px rgba(26, 24, 22, 0.12);
+  --shadow-lg: 0 8px 24px rgba(26, 24, 22, 0.16);
+  --shadow-xl: 0 12px 32px rgba(26, 24, 22, 0.2);
+}
+
+/* Apply shadows to modal elements */
+.modal-card {
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-color);
+}
+
+.modal-bg {
+  background: transparent; /* No overlay - consistent map colors throughout */
+}
+
+body.light-theme .modal-bg {
+  background: transparent; /* No overlay - consistent map colors throughout */
+}
+
+/* Add borders to cards and sections */
+.modal-section {
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Enhance button depth */
+.btn-primary {
+  box-shadow: 0 2px 8px rgba(250, 204, 21, 0.4);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(250, 204, 21, 0.5);
+}
+
+.btn-secondary {
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Add subtle inset shadows for input-like elements */
+.category-btn {
+  border: 1px solid var(--border-color);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhance card separation */
+.skeleton-card,
+.leaderboard-entry,
+.stats-grid {
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Make start modal overlay more visible */
+.start-modal-overlay {
+  background: rgba(2, 6, 23, 0.75); /* More opaque */
+}
+
+body.light-theme .start-modal-overlay {
+  background: rgba(245, 243, 240, 0.85);
+}

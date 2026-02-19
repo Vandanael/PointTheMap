@@ -239,13 +239,13 @@ export const StartScreen = () => `
     <!-- Toggle buttons: top-right (aligned to content width) -->
     <div class="lobby-header-icons absolute top-4 right-4 md:top-6 md:right-6 flex gap-2" style="z-index: 10;">
       <button id="btn-leaderboard" class="toggle-btn" title="Leaderboard" aria-label="Show leaderboard">
-        <span>🏆</span>
+        <span aria-hidden="true">🏆</span>
       </button>
       <button id="btn-lang" class="toggle-btn" title="Change language" aria-label="Toggle language">
         <span id="lang-icon">${getLang().toUpperCase()}</span>
       </button>
       <button id="btn-theme" class="toggle-btn" title="Change theme" aria-label="Toggle theme">
-        <span id="theme-icon">🌙</span>
+        <span id="theme-icon" aria-hidden="true">🌙</span>
       </button>
     </div>
 
@@ -451,7 +451,7 @@ export const FinalResults = (totalScore, pseudo, rank, isTopFifty, isNewSessionB
   const escapedPseudo = escapeHtml(pseudo);
   return `
   <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
-    ${isNewSessionBest ? `<div class="text-center mb-4 text-4xl animate-bounce">🏆</div>` : ''}
+    ${isNewSessionBest ? `<div class="text-center mb-4 text-4xl animate-bounce"><span aria-hidden="true">🏆</span></div>` : ''}
     <h2 class="text-4xl font-black text-primary mb-6 text-center tracking-tight uppercase" id="newRecordLabel">
       ${isNewSessionBest ? t('newPersonalBest') : isTopFifty ? t('top50') : t('scoreSaved')}
     </h2>
@@ -480,7 +480,8 @@ export const FinalResults = (totalScore, pseudo, rank, isTopFifty, isNewSessionB
  */
 const LeaderboardRow = (rank, pseudo, score, time, isHighlighted = false) => {
   const medals = ['🥇', '🥈', '🥉'];
-  const rankDisplay = rank <= 3 ? medals[rank - 1] : `#${rank}`;
+  const rankDisplay =
+    rank <= 3 ? `<span aria-hidden="true">${medals[rank - 1]}</span>` : `#${rank}`;
   const escapedPseudo = escapeHtml(pseudo);
 
   return `
@@ -539,7 +540,7 @@ export const Leaderboard = (scores, highlightPseudo = null, loading = false, err
             ? `
       <!-- No scores yet (empty state) -->
       <div class="leaderboard-center-state text-center py-8">
-        <div class="text-4xl mb-4">🏆</div>
+      <div class="text-4xl mb-4"><span aria-hidden="true">🏆</span></div>
         <p class="text-primary font-bold mb-2">${t('leaderboard.empty.title')}</p>
         <p class="text-tertiary text-sm">${t('leaderboard.empty.description')}</p>
       </div>
@@ -821,7 +822,7 @@ export const MyStatsModal = (stats) => {
 
           <div class="flex justify-between items-center py-3">
             <span class="text-secondary">${t('stats.dailyStreak')}</span>
-            <span class="text-2xl font-black text-yellow-400">${stats.streakDaily} 🔥</span>
+            <span class="text-2xl font-black text-yellow-400">${stats.streakDaily} <span aria-hidden="true">🔥</span></span>
           </div>
         </div>
 
@@ -843,7 +844,7 @@ export const AchievementUnlockModal = (achievementId, achievement) => {
          style="z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="achievement-modal-title">
       <div class="modal-card rounded-2xl max-w-sm w-full p-8 modal-content">
         <div class="text-center">
-          <div class="text-8xl mb-4 achievement-bounce">${achievement.icon}</div>
+          <div class="text-8xl mb-4 achievement-bounce"><span aria-hidden="true">${achievement.icon}</span></div>
           <div class="text-yellow-400 text-xs font-bold uppercase tracking-widest mb-2">
             ${t('achievement.unlocked')}
           </div>

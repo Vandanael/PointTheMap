@@ -8,22 +8,12 @@
  *   logger: { error: (...args: any[]) => void },
  *   isDatabaseConnectionError: (error: unknown) => boolean,
  *   errorJson: (code: string, message: string, status?: number, details?: unknown, headers?: Record<string, string>) => Response,
- *   finish: (response: Response, outcome: 'success' | 'rejected' | 'failure', details?: Record<string, unknown>) => Response,
- *   toDomainModel: (persistenceSession: any) => any
+ *   finish: (response: Response, outcome: 'success' | 'rejected' | 'failure', details?: Record<string, unknown>) => Response
  * }} deps
  * @returns {Promise<{ ok: false, response: Response } | { ok: true, session: any }>}
  */
 export async function loadActiveSessionByToken(deps) {
-  const {
-    sql,
-    token,
-    markStage,
-    logger,
-    isDatabaseConnectionError,
-    errorJson,
-    finish,
-    toDomainModel,
-  } = deps;
+  const { sql, token, markStage, logger, isDatabaseConnectionError, errorJson, finish } = deps;
 
   const sessionLookupStart = Date.now();
   let sessionResult;
@@ -63,7 +53,8 @@ export async function loadActiveSessionByToken(deps) {
   }
 
   const sessionRow = /** @type {any} */ (sessionResult[0]);
-  const persistenceSession = {
+  // API Boundary Guard: never spread DB rows. Map only approved keys.
+  const session = {
     token: sessionRow.token,
     targets: sessionRow.targets,
     startTime: parseInt(sessionRow.start_time, 10),
@@ -75,6 +66,6 @@ export async function loadActiveSessionByToken(deps) {
 
   return {
     ok: true,
-    session: toDomainModel(persistenceSession),
+    session,
   };
 }

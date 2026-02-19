@@ -24,6 +24,16 @@ npm run e2e:dev tests/e2e/country-mode.spec.js
 npm run e2e:preview
 ```
 
+### Visual Regression Snapshots
+
+```bash
+# Create/update screenshot baselines
+npm run visual:baseline
+
+# Compare current UI against saved baselines
+npm run visual:check
+```
+
 ### Test Netlify Deployment
 
 The E2E tests work for **both pre-production and production** - same tests, different URLs.

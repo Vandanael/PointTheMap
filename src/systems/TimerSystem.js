@@ -28,7 +28,7 @@ import { EVENTS } from '../core/eventTypes.js';
  * @property {() => void} [onStart] - Called when timer starts (after grace period)
  * @property {() => void} [onDangerZone] - Called when entering danger zone
  * @property {() => void} [onTimeout] - Called when timer expires
- * @property {(remaining: number) => void} [onTick] - Called on each tick (every 50ms)
+ * @property {(remaining: number) => void} [onTick] - Called on each tick
  */
 
 export class TimerSystem {
@@ -87,13 +87,31 @@ export class TimerSystem {
       this.#timeouts.push(mainTimeout);
 
       // Tick interval (for updates)
+      const tickStartAt =
+        typeof globalThis.performance !== 'undefined' &&
+        typeof globalThis.performance.now === 'function'
+          ? globalThis.performance.now()
+          : Date.now();
+
       const tickInterval = setInterval(() => {
         if (!this.#isRunning) {
           clearInterval(tickInterval);
           return;
         }
-        eventBus.emit(EVENTS.TIMER_TICK, { timestamp: Date.now(), roundId: context.roundId });
-      }, 50);
+        const now =
+          typeof globalThis.performance !== 'undefined' &&
+          typeof globalThis.performance.now === 'function'
+            ? globalThis.performance.now()
+            : Date.now();
+        const elapsedMs = Math.max(0, Math.round(now - tickStartAt));
+        const remainingMs = Math.max(0, timerMs - elapsedMs);
+        eventBus.emit(EVENTS.TIMER_TICK, {
+          timestamp: Date.now(),
+          elapsedMs,
+          remainingMs,
+          roundId: context.roundId,
+        });
+      }, 100);
 
       this.#intervals.push(tickInterval);
     }, graceMs);

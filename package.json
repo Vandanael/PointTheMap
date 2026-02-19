@@ -11,9 +11,10 @@
   "scripts": {
     "clean": "rm -rf dist test-results .netlify .vite",
     "dev": "vite",
-    "build": "vite build && npm run check:budget",
+    "build": "vite build && npm run check:budget && npm run check:css-imports",
     "prebuild": "npm run clean",
     "check:budget": "node scripts/check-bundle-budget.js",
+    "check:css-imports": "node scripts/ci/check-built-css-imports.mjs",
     "check:migrations": "node scripts/ci/check-migrations-order.mjs && node scripts/ci/check-migrations-append-only.mjs",
     "check:migrations:strict": "CHECK_MIGRATIONS_STRICT=1 node scripts/ci/check-migrations-order.mjs && CHECK_MIGRATIONS_STRICT=1 node scripts/ci/check-migrations-append-only.mjs",
     "check:boundaries": "node scripts/ci/check-function-import-boundaries.mjs",
@@ -38,6 +39,10 @@
     "e2e:dev": "E2E_MODE=dev playwright test",
     "e2e:preview": "E2E_MODE=preview playwright test",
     "e2e:smoke": "E2E_MODE=dev playwright test --grep @smoke",
+    "visual:baseline": "E2E_MODE=dev playwright test tests/e2e/visual-regression.spec.js --project=chromium --update-snapshots",
+    "visual:check": "E2E_MODE=dev playwright test tests/e2e/visual-regression.spec.js --project=chromium",
+    "bench:submit": "node scripts/bench/submit-benchmark.mjs",
+    "bench:submit:local": "node scripts/bench/submit-benchmark-local.mjs",
     "e2e:deploy": "./scripts/e2e-deploy.sh",
     "generate:start-screen": "node scripts/generate-start-screen-images.js",
     "optimize:geojson": "node scripts/optimize-countries-geojson.js",
@@ -47,7 +52,8 @@
     "check:civilizations": "node scripts/check-civilizations.js",
     "check:capitals": "node scripts/check-capitals.js",
     "check:data": "npm run check:capitals && npm run check:civilizations",
-    "inspect:basemap": "node scripts/inspect-basemap-names.js"
+    "inspect:basemap": "node scripts/inspect-basemap-names.js",
+    "bench:submit:compare": "node scripts/bench/compare-submit-benchmark.mjs"
   },
   "dependencies": {
     "@netlify/neon": "^0.1.2",

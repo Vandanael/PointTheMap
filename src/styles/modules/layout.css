@@ -1,0 +1,208 @@
+/* ===================================
+   LOBBY LAYOUT - DENSE & PROFESSIONAL
+   =================================== */
+
+/* Container - fixed top offset so title stays at same position before and after
+   load (skeleton vs full start screen), preventing layout shift. */
+.lobby-container {
+  padding-top: clamp(3.3rem, 10.5vh, 5.8rem);
+  padding-bottom: 1.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 1024px) {
+  .lobby-container {
+    padding-top: clamp(3.4rem, 12vh, 6rem);
+    padding-bottom: 2rem;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Content wrapper with max-width constraint */
+.lobby-content {
+  max-width: 850px;
+  margin: 0 auto;
+}
+
+/* Title - MUST stay on 2 lines, responsive font sizing */
+.lobby-title {
+  color: var(--text-primary);
+  font-weight: 900;
+  text-transform: uppercase;
+  line-height: 0.9;
+  margin-bottom: 1.25rem;
+  text-align: left;
+}
+
+/* Slightly bigger on small screens only; two lines (POINT / THE MAP) */
+.lobby-title-line {
+  font-size: clamp(4rem, 13vw, 5.75rem);
+  letter-spacing: 0.02em;
+}
+
+@media (min-width: 640px) {
+  .lobby-title-line {
+    font-size: clamp(4rem, 10vw, 6rem);
+  }
+}
+
+@media (min-width: 1024px) {
+  .lobby-title {
+    margin-bottom: 1rem;
+  }
+  .lobby-title-line {
+    font-size: clamp(4.5rem, 8vw, 5.5rem);
+  }
+}
+
+/* Main content area - Mobile: Vertical | Desktop: Side-by-side */
+.lobby-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .lobby-main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+}
+
+/* 5S Challenge Card - Left side on desktop */
+.lobby-challenge-wrapper {
+  order: 1;
+}
+
+@media (min-width: 1024px) {
+  .lobby-challenge-wrapper {
+    order: 1;
+  }
+}
+
+.lobby-categories-wrapper {
+  order: 2;
+}
+
+@media (min-width: 1024px) {
+  .lobby-categories-wrapper {
+    order: 2;
+  }
+}
+
+.lobby-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.desktop-mode-controls {
+  display: none;
+}
+
+.mobile-mode-select-wrapper {
+  display: block;
+}
+
+.mobile-mode-label {
+  text-align: left;
+}
+
+.mobile-mode-select {
+  width: 100%;
+  min-height: 2.875rem;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: var(--bg-tertiary) !important;
+  border: 2px solid var(--border-color) !important;
+  border-radius: 0.75rem;
+  color: var(--text-primary);
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.625rem 2.25rem 0.625rem 1rem;
+  line-height: 1.2;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--text-secondary) 50%),
+    linear-gradient(135deg, var(--text-secondary) 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.15rem) calc(50% - 3px),
+    calc(100% - 0.75rem) calc(50% - 3px);
+  background-size:
+    0.5rem 0.5rem,
+    0.5rem 0.5rem;
+  background-repeat: no-repeat;
+  outline: none;
+}
+
+.mobile-mode-select:focus-visible {
+  border-color: var(--accent);
+}
+
+.mobile-mode-select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-weight: 800;
+}
+
+@media (min-width: 1024px) {
+  .lobby-actions {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .desktop-mode-controls {
+    display: block;
+  }
+
+  .mobile-mode-select-wrapper {
+    display: none;
+  }
+}
+
+/* Footer */
+.lobby-footer {
+  width: 100%;
+  padding: 1rem 0;
+  margin-top: auto;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+}
+
+.lobby-footer-content {
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: nowrap;
+}
+
+.lobby-version-top {
+  text-align: center;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-bottom: 0.2rem;
+}
+
+@media (min-width: 768px) {
+  .lobby-footer-content {
+    padding: 0 1.5rem;
+  }
+}
