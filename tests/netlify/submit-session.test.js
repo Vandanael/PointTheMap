@@ -45,4 +45,3 @@ describe('submit session mapping', () => {
     }
   });
 });
-

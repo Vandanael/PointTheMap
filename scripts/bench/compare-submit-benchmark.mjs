@@ -13,7 +13,9 @@ const maxPctRaw = Number.parseFloat(args.get('--max-pct') || '20');
 const maxAbsRaw = Number.parseFloat(args.get('--max-abs-ms') || '200');
 
 if (!beforePath || !afterPath) {
-  console.error('Usage: node scripts/bench/compare-submit-benchmark.mjs --before=before.json --after=after.json [--max-pct=20] [--max-abs-ms=200]');
+  console.error(
+    'Usage: node scripts/bench/compare-submit-benchmark.mjs --before=before.json --after=after.json [--max-pct=20] [--max-abs-ms=200]'
+  );
   process.exit(1);
 }
 

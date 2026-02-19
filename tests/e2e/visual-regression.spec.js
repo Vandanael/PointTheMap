@@ -44,7 +44,10 @@ test('visual: start screen', async ({ page }) => {
   await ensureAppBootstrapped(page);
   await freezeAnimations(page);
   await expect(page.locator('#start-modal')).toBeVisible();
-  await expect(page).toHaveScreenshot('start-screen.png', { fullPage: true, maxDiffPixelRatio: 0.01 });
+  await expect(page).toHaveScreenshot('start-screen.png', {
+    fullPage: true,
+    maxDiffPixelRatio: 0.01,
+  });
 });
 
 test('visual: game round', async ({ page }) => {
@@ -57,7 +60,10 @@ test('visual: game round', async ({ page }) => {
   await expect(page.locator('#btn-ready')).toBeVisible();
   await page.locator('#btn-ready').click();
   await expect(page.locator('#game-header')).toBeVisible();
-  await expect(page).toHaveScreenshot('game-round.png', { fullPage: true, maxDiffPixelRatio: 0.01 });
+  await expect(page).toHaveScreenshot('game-round.png', {
+    fullPage: true,
+    maxDiffPixelRatio: 0.01,
+  });
 });
 
 test('visual: round result modal', async ({ page }) => {
@@ -71,5 +77,8 @@ test('visual: round result modal', async ({ page }) => {
   await page.locator('#btn-ready').click();
   await clickMapSafely(page);
   await expect(page.locator('#round-result')).toBeVisible();
-  await expect(page).toHaveScreenshot('round-result.png', { fullPage: true, maxDiffPixelRatio: 0.01 });
+  await expect(page).toHaveScreenshot('round-result.png', {
+    fullPage: true,
+    maxDiffPixelRatio: 0.01,
+  });
 });

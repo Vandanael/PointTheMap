@@ -135,7 +135,9 @@
   background-position:
     calc(100% - 1.15rem) calc(50% - 3px),
     calc(100% - 0.75rem) calc(50% - 3px);
-  background-size: 0.5rem 0.5rem, 0.5rem 0.5rem;
+  background-size:
+    0.5rem 0.5rem,
+    0.5rem 0.5rem;
   background-repeat: no-repeat;
   outline: none;
 }

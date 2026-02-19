@@ -196,7 +196,8 @@ const buildRoundsFromTargets = (targets = []) =>
 
 const { default: startHandler } = await import('../../netlify/functions/start.js');
 const { default: submitHandler } = await import('../../netlify/functions/submit.js');
-const { __testOnlyResetSessionCleanupState } = await import('../../netlify/functions/_session-cleanup.js');
+const { __testOnlyResetSessionCleanupState } =
+  await import('../../netlify/functions/_session-cleanup.js');
 
 __testOnlyResetSessionCleanupState();
 const sql = createSql();

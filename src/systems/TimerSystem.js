@@ -88,7 +88,8 @@ export class TimerSystem {
 
       // Tick interval (for updates)
       const tickStartAt =
-        typeof globalThis.performance !== 'undefined' && typeof globalThis.performance.now === 'function'
+        typeof globalThis.performance !== 'undefined' &&
+        typeof globalThis.performance.now === 'function'
           ? globalThis.performance.now()
           : Date.now();
 
