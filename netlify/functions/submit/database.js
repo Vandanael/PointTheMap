@@ -1,3 +1,5 @@
+import { cleanupExpiredSessions } from '../_session-cleanup.js';
+
 /**
  * Initialize database client for submit flow and attach to context.
  *
@@ -14,34 +16,31 @@
 export async function initSubmitDatabase(deps) {
   const { context, getDatabase, logger, recordDbFailure, errorJson, finish } = deps;
 
-  let sql;
-  try {
-    sql = getDatabase(context);
-  } catch (dbError) {
-    const error = /** @type {Error} */ (dbError);
-    logger.error('Database connection failed:', error.message);
-    recordDbFailure(dbError);
-    return {
-      ok: false,
-      response: finish(
-        errorJson(
-          'db_connection_failed',
-          'Database connection failed. Please try again later.',
-          503
+  let sql = context?.sql;
+  if (!sql) {
+    try {
+      sql = getDatabase(context);
+    } catch (dbError) {
+      const error = /** @type {Error} */ (dbError);
+      logger.error('Database connection failed:', error.message);
+      recordDbFailure(dbError);
+      return {
+        ok: false,
+        response: finish(
+          errorJson(
+            'db_connection_failed',
+            'Database connection failed. Please try again later.',
+            503
+          ),
+          'failure',
+          { reason: 'db_connection_setup_failed' }
         ),
-        'failure',
-        { reason: 'db_connection_setup_failed' }
-      ),
-    };
+      };
+    }
   }
   context.sql = sql;
 
-  // Best-effort TTL cleanup for stale sessions.
-  try {
-    await sql`DELETE FROM sessions WHERE expires_at <= NOW()`;
-  } catch (cleanupError) {
-    logger.warn('[submit] session cleanup skipped:', /** @type {Error} */ (cleanupError).message);
-  }
+  await cleanupExpiredSessions({ sql, logger, scope: 'submit' });
 
   return { ok: true, sql };
 }

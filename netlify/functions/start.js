@@ -22,6 +22,7 @@ import {
   handleDatabaseError,
   createLogger,
 } from './_utils.js';
+import { cleanupExpiredSessions } from './_session-cleanup.js';
 import jwt from 'jsonwebtoken';
 
 const logger = createLogger('start');
@@ -51,25 +52,22 @@ export default async function startHandler(req, context) {
       return errorEnvelope('method_not_allowed', 'Method not allowed', 405);
     }
 
-    let sql;
-    try {
-      sql = getDatabase(context);
-    } catch (dbError) {
-      const error = /** @type {Error} */ (dbError);
-      logger.error('Database connection failed:', error.message);
-      return errorEnvelope(
-        'db_connection_failed',
-        'Database connection failed. Please try again later.',
-        503
-      );
+    let sql = context?.sql;
+    if (!sql) {
+      try {
+        sql = getDatabase(context);
+      } catch (dbError) {
+        const error = /** @type {Error} */ (dbError);
+        logger.error('Database connection failed:', error.message);
+        return errorEnvelope(
+          'db_connection_failed',
+          'Database connection failed. Please try again later.',
+          503
+        );
+      }
     }
     context.sql = sql;
-    // Best-effort TTL cleanup for stale sessions.
-    try {
-      await sql`DELETE FROM sessions WHERE expires_at <= NOW()`;
-    } catch (cleanupError) {
-      logger.warn('Session cleanup skipped:', /** @type {Error} */ (cleanupError).message);
-    }
+    await cleanupExpiredSessions({ sql, logger, scope: 'start' });
 
     const body = await parseJsonBody(req);
     const parsed = StartBodySchema.safeParse(body);

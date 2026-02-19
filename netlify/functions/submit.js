@@ -13,7 +13,6 @@ import {
   redactToken,
 } from './_utils.js';
 import { API } from '../../lib/config/index.js';
-import { toDomainModel } from '../../lib/session/sessionModel.js';
 import { SubmitSchema } from '../../lib/schemas/submit.js';
 import {
   recordDbFailure,
@@ -158,7 +157,6 @@ export default async function submitHandler(req, context) {
       isDatabaseConnectionError,
       errorJson,
       finish,
-      toDomainModel,
     });
     if (sessionResult.ok === false) return sessionResult.response;
     const session = sessionResult.session;
