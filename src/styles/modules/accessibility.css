@@ -1,0 +1,52 @@
+/* ===================================
+   ACCESSIBILITY ENHANCEMENTS
+   =================================== */
+
+/* Skip to content link for keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--accent);
+  color: #000;
+  padding: 8px 16px;
+  text-decoration: none;
+  z-index: 9999;
+  font-weight: bold;
+  border-radius: 0 0 4px 0;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Respect prefers-color-scheme for auto theme */
+@media (prefers-color-scheme: light) {
+  body:not(.light-theme):not(.dark-theme) {
+    /* Auto-apply light theme if no manual selection */
+    --bg-primary: #f5f3f0;
+    --bg-secondary: #ebe8e3;
+    --bg-tertiary: #ddd9d2;
+    --text-primary: #1a1816;
+    --text-secondary: #3a3834;
+    --text-tertiary: #5b5853;
+    --border-color: #c9c5be;
+    --btn-secondary: #e2e8f0;
+    --btn-secondary-hover: #cbd5e1;
+  }
+}
+
+.hidden {
+  display: none !important;
+}
