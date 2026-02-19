@@ -112,26 +112,30 @@ describe('TimerSystem', () => {
       // Advance to start
       vi.advanceTimersByTime(GAME.GRACE_PERIOD_MS);
 
-      // Should tick every 50ms
-      vi.advanceTimersByTime(50);
+      // Should tick every 100ms
+      vi.advanceTimersByTime(100);
       expect(listener).toHaveBeenCalledTimes(1);
 
-      vi.advanceTimersByTime(50);
+      vi.advanceTimersByTime(100);
       expect(listener).toHaveBeenCalledTimes(2);
 
-      vi.advanceTimersByTime(100);
+      vi.advanceTimersByTime(200);
       expect(listener).toHaveBeenCalledTimes(4); // 2 more ticks
     });
 
-    it('passes timestamp in timer:tick event', () => {
+    it('passes timing payload in timer:tick event', () => {
       const listener = vi.fn();
       subscribe('timer:tick', listener);
 
       timer.start();
-      vi.advanceTimersByTime(GAME.GRACE_PERIOD_MS + 50);
+      vi.advanceTimersByTime(GAME.GRACE_PERIOD_MS + 100);
 
       expect(listener).toHaveBeenCalledWith(
-        expect.objectContaining({ timestamp: expect.any(Number) })
+        expect.objectContaining({
+          timestamp: expect.any(Number),
+          elapsedMs: expect.any(Number),
+          remainingMs: expect.any(Number),
+        })
       );
     });
   });
@@ -312,7 +316,7 @@ describe('TimerSystem', () => {
       expect(timer.isRunning).toBe(false);
 
       // Ticks should have been emitted throughout
-      expect(onTick.mock.calls.length).toBeGreaterThan(50); // At least once per 50ms
+      expect(onTick.mock.calls.length).toBeGreaterThan(25); // At least once per 100ms
     });
   });
 });
