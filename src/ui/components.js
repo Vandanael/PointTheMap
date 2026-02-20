@@ -62,7 +62,7 @@ export const TimerBar = () => `
  */
 export const GameHeader = (roundNum, totalRounds, totalScore) => {
   return `
-  <div id="game-header" class="game-header fixed top-0 left-0 right-0" style="z-index: var(--z-base);">
+  <header id="game-header" class="game-header fixed top-0 left-0 right-0" style="z-index: var(--z-base);">
     <div class="px-6 py-2 flex justify-between items-center" style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
       <div class="flex items-center gap-2">
         <div class="text-xs font-medium uppercase tracking-wider" style="color: var(--text-secondary);">${t('round')}</div>
@@ -73,7 +73,7 @@ export const GameHeader = (roundNum, totalRounds, totalScore) => {
         <div id="game-score" class="text-lg font-black text-yellow-400">${formatScore(totalScore)} pts</div>
       </div>
     </div>
-  </div>
+  </header>
 `;
 };
 
@@ -178,9 +178,9 @@ export const RoundResult = (distance, score, isTimeout, isLast, baseScore, timeB
       <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
         <div class="text-center mb-6">
           <div id="resultIcon" class="text-6xl mb-4">${getIcon()}</div>
-          <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="distanceLabel">${t('timeUp')}</div>
+          <p class="text-tertiary text-xs uppercase tracking-widest mb-2" id="distanceLabel">${t('timeUp')}</p>
           <div class="text-3xl font-black text-primary mb-6" id="distanceDisplay">${t('tooSlow')}</div>
-          <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="pointsEarnedLabel">${t('pointsEarned')}</div>
+          <p class="text-tertiary text-xs uppercase tracking-widest mb-2" id="pointsEarnedLabel">${t('pointsEarned')}</p>
           <div class="text-6xl font-black text-yellow-400 mb-2" id="pointsDisplay">0 pts</div>
         </div>
         ${Button('btn-next', isLast ? t('seeResults') : t('continue'), 'primary')}
@@ -211,10 +211,10 @@ export const RoundResult = (distance, score, isTimeout, isLast, baseScore, timeB
       <div class="text-center mb-6">
         <div id="resultIcon" class="text-6xl mb-4">${getIcon()}</div>
         ${categoryLabel ? `<div class="text-xl font-bold text-primary mb-2" id="categoryLabel">${categoryLabel}</div>` : ''}
-        <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="distanceLabel">${t('distance')}</div>
+        <p class="text-tertiary text-xs uppercase tracking-widest mb-2" id="distanceLabel">${t('distance')}</p>
         <div class="text-5xl font-black text-primary mb-6" id="distanceDisplay">${formatDistance(distance)}</div>
 
-        <div class="text-tertiary text-xs uppercase tracking-widest mb-2" id="pointsEarnedLabel">${t('pointsEarned')}</div>
+        <p class="text-tertiary text-xs uppercase tracking-widest mb-2" id="pointsEarnedLabel">${t('pointsEarned')}</p>
         ${
           hasTimeBonus
             ? `
@@ -237,7 +237,7 @@ export const RoundResult = (distance, score, isTimeout, isLast, baseScore, timeB
 export const StartScreen = () => `
   <div id="start-modal" class="start-modal-overlay fixed inset-0 flex flex-col" style="z-index: var(--z-modal);" role="dialog" aria-modal="true" aria-labelledby="challengeText">
     <!-- Toggle buttons: top-right (aligned to content width) -->
-    <div class="lobby-header-icons absolute top-4 right-4 md:top-6 md:right-6 flex gap-2" style="z-index: 10;">
+    <nav class="lobby-header-icons absolute top-4 right-4 md:top-6 md:right-6 flex gap-2" style="z-index: 10;" aria-label="Settings">
       <button id="btn-leaderboard" class="toggle-btn" title="Leaderboard" aria-label="Show leaderboard">
         <span aria-hidden="true">🏆</span>
       </button>
@@ -247,7 +247,7 @@ export const StartScreen = () => `
       <button id="btn-theme" class="toggle-btn" title="Change theme" aria-label="Toggle theme">
         <span id="theme-icon" aria-hidden="true">🌙</span>
       </button>
-    </div>
+    </nav>
 
     <!-- Contenu centré verticalement -->
     <div class="flex-1 flex items-center justify-center px-4 md:px-6 lobby-container" style="position: relative; z-index: 1;">
@@ -366,10 +366,10 @@ export const StartScreen = () => `
       </div>
     </div>
 
-    <div class="lobby-version-top">v0.13</div>
+    <small class="lobby-version-top">v0.13</small>
 
     <!-- Footer collé en bas -->
-    <div class="lobby-footer" style="position: relative; z-index: 1;">
+    <footer class="lobby-footer" style="position: relative; z-index: 1;">
       <div class="lobby-footer-content">
         <div class="text-center md:text-left text-tertiary text-sm">
           <a href="/about.html" class="text-secondary hover:underline no-underline transition-colors">
@@ -385,7 +385,7 @@ export const StartScreen = () => `
           ${t('share')}
         </button>
       </div>
-    </div>
+    </footer>
   </div>
 `;
 
@@ -485,7 +485,7 @@ const LeaderboardRow = (rank, pseudo, score, time, isHighlighted = false) => {
   const escapedPseudo = escapeHtml(pseudo);
 
   return `
-    <div role="listitem" class="flex items-center justify-between py-3 px-4 ${isHighlighted ? 'rounded-xl' : ''}" style="${isHighlighted ? 'background: rgba(250, 204, 21, 0.1); border: 1px solid rgba(250, 204, 21, 0.3);' : 'border-bottom: 1px solid var(--border-color);'}">
+    <li class="flex items-center justify-between py-3 px-4 ${isHighlighted ? 'rounded-xl' : ''}" style="${isHighlighted ? 'background: rgba(250, 204, 21, 0.1); border: 1px solid rgba(250, 204, 21, 0.3);' : 'border-bottom: 1px solid var(--border-color);'}">
       <div class="flex items-center gap-3">
         <span class="w-8 text-center font-bold ${rank <= 3 ? 'text-yellow-400' : ''}" style="${rank > 3 ? 'color: var(--text-tertiary);' : ''}">${rankDisplay}</span>
         <span class="font-mono font-bold ${isHighlighted ? 'text-yellow-400' : ''}" style="${!isHighlighted ? 'color: var(--text-primary);' : ''}">${escapedPseudo}</span>
@@ -494,7 +494,7 @@ const LeaderboardRow = (rank, pseudo, score, time, isHighlighted = false) => {
         <span class="font-bold ${isHighlighted ? 'text-yellow-400' : ''}" style="${!isHighlighted ? 'color: var(--text-primary);' : ''}">${formatScore(score)} pts</span>
         <span class="text-sm ml-2" style="color: var(--text-tertiary);">${(time / 1000).toFixed(1)}s</span>
       </div>
-    </div>
+    </li>
   `;
 };
 
@@ -518,7 +518,7 @@ const LeaderboardSkeletonRow = () => `
  * @param {boolean} [loading=false]
  */
 export const Leaderboard = (scores, highlightPseudo = null, loading = false, error = null) => `
-  <div id="leaderboard-content" class="leaderboard-panel rounded-xl max-h-[400px]" role="list" aria-label="${t('leaderboardTitle')}" style="background: var(--bg-tertiary);">
+  <ol id="leaderboard-content" class="leaderboard-panel rounded-xl max-h-[400px]" aria-label="${t('leaderboardTitle')}" style="background: var(--bg-tertiary); list-style: none; padding: 0; margin: 0;">
     ${
       loading
         ? // Skeleton loading
@@ -553,7 +553,7 @@ export const Leaderboard = (scores, highlightPseudo = null, loading = false, err
                 )
                 .join('')
     }
-  </div>
+  </ol>
 `;
 
 /**
@@ -674,9 +674,9 @@ export const PseudoLockedDialog = (pseudo) => {
     <div id="pseudo-locked-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-modal);" role="dialog" aria-modal="true">
       <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
         <div class="text-center mb-6">
-          <div class="text-5xl font-black text-primary mb-4">${t('pseudoLocked.title')}</div>
-          <div class="text-secondary text-lg mb-2">${t('pseudoLocked.message', { pseudo: escapedPseudo })}</div>
-          <div class="text-tertiary text-sm">${t('pseudoLocked.rule')}</div>
+          <h2 class="text-5xl font-black text-primary mb-4">${t('pseudoLocked.title')}</h2>
+          <p class="text-secondary text-lg mb-2">${t('pseudoLocked.message', { pseudo: escapedPseudo })}</p>
+          <p class="text-tertiary text-sm">${t('pseudoLocked.rule')}</p>
         </div>
         ${Button('btn-pseudo-locked-ok', t('ok'), 'primary')}
       </div>
@@ -691,8 +691,8 @@ export const ResumePrompt = () => `
   <div id="resume-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-modal);" role="dialog" aria-modal="true">
     <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content">
       <div class="text-center mb-6">
-        <div class="text-3xl font-black text-primary mb-3">${t('resumePromptTitle')}</div>
-        <div class="text-secondary text-base">${t('resumePromptMessage')}</div>
+        <h2 class="text-3xl font-black text-primary mb-3">${t('resumePromptTitle')}</h2>
+        <p class="text-secondary text-base">${t('resumePromptMessage')}</p>
       </div>
       <div class="flex gap-3">
         ${Button('btn-resume-continue', t('resumePromptResume'), 'primary')}
@@ -709,8 +709,8 @@ export const ResumePrompt = () => `
 export const MapErrorModal = (message) => `
   <div id="map-error-modal" class="fixed inset-0 modal-bg flex items-center justify-center p-4" style="z-index: var(--z-modal);" role="dialog" aria-modal="true">
     <div class="modal-card rounded-2xl max-w-md w-full p-8 modal-content text-center">
-      <div class="text-3xl font-black text-primary mb-4">${t('error.title')}</div>
-      <div class="text-secondary text-base mb-8">${escapeHtml(message)}</div>
+      <h2 class="text-3xl font-black text-primary mb-4">${t('error.title')}</h2>
+      <p class="text-secondary text-base mb-8">${escapeHtml(message)}</p>
       ${Button('btn-map-error-ok', t('ok'), 'primary')}
     </div>
   </div>
@@ -794,37 +794,37 @@ export const MyStatsModal = (stats) => {
           ${t('myStats')}
         </h2>
 
-        <div class="space-y-4 mb-6">
+        <dl class="space-y-4 mb-6" style="margin: 0;">
           <div class="flex justify-between items-center py-3" style="border-bottom: 1px solid var(--border-color);">
-            <span class="text-secondary">${t('stats.gamesPlayed')}</span>
-            <span class="text-2xl font-black text-primary">${stats.playCount}</span>
+            <dt class="text-secondary">${t('stats.gamesPlayed')}</dt>
+            <dd class="text-2xl font-black text-primary" style="margin: 0;">${stats.playCount}</dd>
           </div>
 
           <div class="flex justify-between items-center py-3" style="border-bottom: 1px solid var(--border-color);">
-            <span class="text-secondary">${t('stats.bestClassic')}</span>
-            <span class="text-2xl font-black text-yellow-400">${formatDistance(stats.bestClassic)}</span>
+            <dt class="text-secondary">${t('stats.bestClassic')}</dt>
+            <dd class="text-2xl font-black text-yellow-400" style="margin: 0;">${formatDistance(stats.bestClassic)}</dd>
           </div>
 
           <div class="flex justify-between items-center py-3" style="border-bottom: 1px solid var(--border-color);">
-            <span class="text-secondary">${t('stats.bestDaily')}</span>
-            <span class="text-2xl font-black text-yellow-400">${formatDistance(stats.bestDaily)}</span>
+            <dt class="text-secondary">${t('stats.bestDaily')}</dt>
+            <dd class="text-2xl font-black text-yellow-400" style="margin: 0;">${formatDistance(stats.bestDaily)}</dd>
           </div>
 
           <div class="flex justify-between items-center py-3" style="border-bottom: 1px solid var(--border-color);">
-            <span class="text-secondary">${t('stats.avgDistance')}</span>
-            <span class="text-2xl font-black text-primary">${formatDistance(stats.averageDistance)}</span>
+            <dt class="text-secondary">${t('stats.avgDistance')}</dt>
+            <dd class="text-2xl font-black text-primary" style="margin: 0;">${formatDistance(stats.averageDistance)}</dd>
           </div>
 
           <div class="flex justify-between items-center py-3" style="border-bottom: 1px solid var(--border-color);">
-            <span class="text-secondary">${t('stats.perfectRounds')}</span>
-            <span class="text-2xl font-black text-primary">${stats.perfectCount}</span>
+            <dt class="text-secondary">${t('stats.perfectRounds')}</dt>
+            <dd class="text-2xl font-black text-primary" style="margin: 0;">${stats.perfectCount}</dd>
           </div>
 
           <div class="flex justify-between items-center py-3">
-            <span class="text-secondary">${t('stats.dailyStreak')}</span>
-            <span class="text-2xl font-black text-yellow-400">${stats.streakDaily} <span aria-hidden="true">🔥</span></span>
+            <dt class="text-secondary">${t('stats.dailyStreak')}</dt>
+            <dd class="text-2xl font-black text-yellow-400" style="margin: 0;">${stats.streakDaily} <span aria-hidden="true">🔥</span></dd>
           </div>
-        </div>
+        </dl>
 
         ${Button('btn-close-stats', t('close'), 'secondary')}
       </div>
