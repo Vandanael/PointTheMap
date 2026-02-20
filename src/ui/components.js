@@ -254,8 +254,8 @@ export const StartScreen = () => `
       <div class="w-full lobby-content">
         <!-- Titre Hero - MUST stay on 2 lines -->
         <h1 class="lobby-title">
-          <div class="lobby-title-line">POINT</div>
-          <div class="lobby-title-line">THE MAP</div>
+          <span class="lobby-title-line">POINT</span>
+          <span class="lobby-title-line">THE MAP</span>
         </h1>
 
         <!-- Desktop: Side-by-side | Mobile: Vertical stack -->
