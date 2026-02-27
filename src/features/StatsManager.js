@@ -118,8 +118,12 @@ export const updateStats = (rounds, gameType) => {
     // Calculate game metrics
     const avgDistance = rounds.reduce((sum, r) => sum + (r.distance || 0), 0) / rounds.length;
     const totalScore = rounds.reduce((sum, r) => sum + (r.score || 0), 0);
-    const perfectRounds = rounds.filter((r) => r.distance < 1).length;
-    const under20kmRounds = rounds.filter((r) => r.distance < 20).length;
+    const perfectRounds = rounds.filter(
+      (r) => r.distance !== null && r.distance !== undefined && r.distance < 1
+    ).length;
+    const under20kmRounds = rounds.filter(
+      (r) => r.distance !== null && r.distance !== undefined && r.distance < 20
+    ).length;
 
     // Update play count
     stats.playCount += 1;

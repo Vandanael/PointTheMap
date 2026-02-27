@@ -11,7 +11,12 @@ import {
   selectCivilizations,
   selectStadiums,
 } from '../../lib/capital-selection/index.js';
-import { getGameMode } from '../../lib/config/game-modes.js';
+import {
+  getGameMode,
+  isCountryCategory,
+  isCivilizationCategory,
+  isStadiumCategory,
+} from '../../lib/config/game-modes.js';
 import { API } from '../../lib/config/index.js';
 import { StartBodySchema } from '../../lib/schemas/start.js';
 import { getDatabase } from './db.js';
@@ -110,9 +115,9 @@ export default async function startHandler(req, context) {
     }
 
     const mode = getGameMode(gameType);
-    const isCountryMode = gameType === 'country' || gameType === 'country_daily';
-    const isCivilizationMode = gameType === 'civilization' || gameType === 'civilization_daily';
-    const isStadiumMode = gameType === 'stadium' || gameType === 'stadium_daily';
+    const isCountryMode = isCountryCategory(gameType);
+    const isCivilizationMode = isCivilizationCategory(gameType);
+    const isStadiumMode = isStadiumCategory(gameType);
 
     let selectedTargets;
     let clientData;

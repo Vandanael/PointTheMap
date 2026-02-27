@@ -151,7 +151,7 @@ export const validateStartSessionPayload = (payload, gameType) => {
  * @returns {Promise<StartSessionResponse>}
  */
 const mockStart = async (gameType = MODE_IDS.CLASSIC) => {
-  if (gameType === MODE_IDS.COUNTRY) {
+  if (isCountryCategory(gameType)) {
     // Load capitals and extract unique countries with valid countryId
     const capitals = await loadCapitals();
     const { RandomSelector } = await import('@lib/capital-selection/index.js');
@@ -187,7 +187,7 @@ const mockStart = async (gameType = MODE_IDS.CLASSIC) => {
     };
   }
 
-  if (gameType === MODE_IDS.STADIUM) {
+  if (isStadiumCategory(gameType)) {
     const [stadiums, selectBalancedStadiums] = await Promise.all([
       loadStadiums(),
       loadSelectBalancedStadiums(),
@@ -209,7 +209,7 @@ const mockStart = async (gameType = MODE_IDS.CLASSIC) => {
     };
   }
 
-  if (gameType === MODE_IDS.CIVILIZATION) {
+  if (isCivilizationCategory(gameType)) {
     const { civilizations } = await import('../data/civilizations.js');
     const { selectCivilizations } = await import('@lib/capital-selection/index.js');
     const mode = getGameMode(MODE_IDS.CIVILIZATION);

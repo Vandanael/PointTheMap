@@ -6,7 +6,12 @@ import {
 } from '../../lib/geo-utils/index.js';
 import { getCountryFeature, getCivilizationFeature } from './_geo-data.js';
 import { GAME, API } from '../../lib/config/index.js';
-import { getTimeBonusConfig } from '../../lib/config/game-modes.js';
+import {
+  getTimeBonusConfig,
+  isCountryCategory,
+  isCivilizationCategory,
+  isStadiumCategory,
+} from '../../lib/config/game-modes.js';
 import { calculateTimeBonus } from '../../lib/scoring/index.js';
 import { createLogger } from './_utils.js';
 
@@ -41,9 +46,8 @@ function applyTimeBonus(baseScore, timeElapsed, gameType) {
  * @returns {any} Validated round with server-computed score
  */
 export function scoreRound(round, i, session) {
-  const isCountryMode = session.gameType === 'country' || session.gameType === 'country_daily';
-  const isCivilizationMode =
-    session.gameType === 'civilization' || session.gameType === 'civilization_daily';
+  const isCountryMode = isCountryCategory(session.gameType);
+  const isCivilizationMode = isCivilizationCategory(session.gameType);
   const serverTarget = /** @type {any} */ (session.targets[i]);
   const modeKey = session.gameType ?? 'classic';
 
@@ -164,7 +168,7 @@ export function scoreRound(round, i, session) {
   }
 
   // Stadium mode: server-side validation (has lat/lng like capitals)
-  if (session.gameType === 'stadium' || session.gameType === 'stadium_daily') {
+  if (isStadiumCategory(session.gameType)) {
     const stadiumCoords = /** @type {[number, number]} */ ([
       serverTarget.lat ?? 0,
       serverTarget.lng ?? 0,

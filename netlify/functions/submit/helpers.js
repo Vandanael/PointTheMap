@@ -1,3 +1,5 @@
+import { isDailyVariant } from '../../../lib/config/game-modes.js';
+
 /**
  * @param {typeof import('../_utils.js').errorEnvelope} errorEnvelope
  * @returns {(code: string, message: string, status?: number, details?: unknown, headers?: Record<string, string>) => Response}
@@ -15,7 +17,7 @@ export function createErrorJson(errorEnvelope) {
  */
 export const getReplayResult = async (sql, token) => {
   const rows = await sql`
-    SELECT score, time, rounds, game_type
+    SELECT score, time, rounds, game_type, timestamp
     FROM scores
     WHERE session_token = ${token}
     ORDER BY id DESC
@@ -25,7 +27,7 @@ export const getReplayResult = async (sql, token) => {
     return null;
   }
 
-  const row = /** @type {{ score?: number, time?: number, rounds?: any[], game_type?: string }} */ (
+  const row = /** @type {{ score?: number, time?: number, rounds?: any[], game_type?: string, timestamp?: number }} */ (
     rows[0]
   );
   const score = Number.isFinite(row.score) ? row.score : 0;
@@ -34,12 +36,27 @@ export const getReplayResult = async (sql, token) => {
 
   let rank = 0;
   try {
-    const rankResult = await sql`
-      SELECT COUNT(*) + 1 as rank
-      FROM scores
-      WHERE game_type = ${gameType}
-        AND (score > ${score} OR (score = ${score} AND time < ${time}))
-    `;
+    let rankResult;
+    if (isDailyVariant(gameType)) {
+      const ts = Number(row.timestamp);
+      const d = new Date(ts);
+      const dayStart = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+      const dayEnd = dayStart + 86400000;
+      rankResult = await sql`
+        SELECT COUNT(*) + 1 as rank
+        FROM scores
+        WHERE game_type = ${gameType}
+          AND timestamp >= ${dayStart} AND timestamp < ${dayEnd}
+          AND (score > ${score} OR (score = ${score} AND time < ${time}))
+      `;
+    } else {
+      rankResult = await sql`
+        SELECT COUNT(*) + 1 as rank
+        FROM scores
+        WHERE game_type = ${gameType}
+          AND (score > ${score} OR (score = ${score} AND time < ${time}))
+      `;
+    }
     rank = parseInt(rankResult[0]?.rank ?? '0', 10);
   } catch {
     rank = 0;

@@ -43,8 +43,12 @@ export const getDailyNumber = (dailyDate) => {
 export const formatShareText = (dailyNumber, avgDistance, rounds) => {
   try {
     // Calculate badges
-    const perfectRounds = rounds.filter((r) => r.distance < 1).length;
-    const under20kmRounds = rounds.filter((r) => r.distance < 20).length;
+    const perfectRounds = rounds.filter(
+      (r) => r.distance !== null && r.distance !== undefined && r.distance < 1
+    ).length;
+    const under20kmRounds = rounds.filter(
+      (r) => r.distance !== null && r.distance !== undefined && r.distance < 20
+    ).length;
 
     // Build share text
     const lines = [];
