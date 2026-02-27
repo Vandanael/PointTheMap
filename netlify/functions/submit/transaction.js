@@ -1,3 +1,5 @@
+import { isDailyVariant } from '../../../lib/config/game-modes.js';
+
 /**
  * Execute submit transaction, rank lookup, and idempotent replay fallback.
  *
@@ -126,12 +128,29 @@ export async function persistSubmitAndBuildResponse(deps) {
   let isTopFifty = false;
   try {
     logger.info('[submit] Calculating rank');
-    const rankResult = await sql`
-      SELECT COUNT(*) + 1 as rank
-      FROM scores
-      WHERE game_type = ${gameType}
-        AND (score > ${totalScore} OR (score = ${totalScore} AND time < ${gameDuration}))
-    `;
+    let rankResult;
+    if (isDailyVariant(gameType)) {
+      const todayTs = Date.UTC(
+        new Date(now).getUTCFullYear(),
+        new Date(now).getUTCMonth(),
+        new Date(now).getUTCDate()
+      );
+      const tomorrowTs = todayTs + 86400000;
+      rankResult = await sql`
+        SELECT COUNT(*) + 1 as rank
+        FROM scores
+        WHERE game_type = ${gameType}
+          AND timestamp >= ${todayTs} AND timestamp < ${tomorrowTs}
+          AND (score > ${totalScore} OR (score = ${totalScore} AND time < ${gameDuration}))
+      `;
+    } else {
+      rankResult = await sql`
+        SELECT COUNT(*) + 1 as rank
+        FROM scores
+        WHERE game_type = ${gameType}
+          AND (score > ${totalScore} OR (score = ${totalScore} AND time < ${gameDuration}))
+      `;
+    }
     rank = parseInt(rankResult[0]?.rank ?? '1', 10);
     isTopFifty = rank <= 50;
     logger.info('[submit] Rank calculated:', rank);

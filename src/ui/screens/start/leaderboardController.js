@@ -25,6 +25,7 @@ export const createLeaderboardController = (deps) => {
   /** @type {"capitals"|"countries"|"stadiums"|"civilizations"} */
   let leaderboardCategory = 'capitals';
   let leaderboardRequestId = 0;
+  let hasShownContent = false;
 
   /**
    * @param {"classic"|"daily"} variant
@@ -83,7 +84,9 @@ export const createLeaderboardController = (deps) => {
     if (!contentEl) return;
 
     const requestId = ++leaderboardRequestId;
-    contentEl.style.opacity = '0';
+    if (hasShownContent) {
+      contentEl.style.opacity = '0';
+    }
 
     try {
       const scores = await loadLeaderboard(type);
@@ -141,6 +144,7 @@ export const createLeaderboardController = (deps) => {
       });
     }
 
+    hasShownContent = true;
     contentEl.style.opacity = '1';
 
     const btns = [
@@ -196,6 +200,7 @@ export const createLeaderboardController = (deps) => {
     const selection = selectionFromLeaderboardType(type);
     leaderboardVariant = selection.variant;
     leaderboardCategory = selection.category;
+    hasShownContent = false;
 
     remove('leaderboard-modal');
     const closeLeaderboard = () => {

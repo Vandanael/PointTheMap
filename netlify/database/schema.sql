@@ -11,6 +11,7 @@
 --   007_add_session_token_to_scores.sql — add session_token on scores
 --   008_add_ip_pseudo_locks.sql — add atomic pseudo lock table
 --   009_submit_idempotency_and_constraints.sql — enforce score/session idempotency and checks
+--   010_add_leaderboard_performance_indexes.sql — indexes for leaderboard CTE and daily queries
 --
 -- Tables: players, scores, sessions, rate_limits, ip_pseudo_locks
 
@@ -65,6 +66,10 @@ CREATE INDEX IF NOT EXISTS idx_scores_session_token ON scores(session_token);
 
 -- Composite index for rank calculation (critical optimization)
 CREATE INDEX IF NOT EXISTS idx_scores_rank ON scores(game_type, score DESC, time ASC);
+
+-- Indexes for leaderboard query performance (migration 010)
+CREATE INDEX IF NOT EXISTS idx_scores_leaderboard ON scores(game_type, pseudo, score DESC, time ASC);
+CREATE INDEX IF NOT EXISTS idx_scores_daily_lookup ON scores(game_type, timestamp);
 
 -- Index for IP checks (pseudo lock)
 CREATE INDEX IF NOT EXISTS idx_scores_ip ON scores(ip);
