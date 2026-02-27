@@ -15,7 +15,7 @@ import { isDailyVariant } from '../../../lib/config/game-modes.js';
  *   clientIp: string,
  *   playerId: string | null,
  *   markStage: (stage: string, startedAt: number) => void,
- *   logger: { info: (...args: any[]) => void, error: (...args: any[]) => void },
+ *   logger: { info: (...args: any[]) => void, warn: (...args: any[]) => void, error: (...args: any[]) => void },
  *   isDatabaseConnectionError: (error: unknown) => boolean,
  *   getReplayResult: (sql: any, token: string) => Promise<null | { score: number, rank: number, isTopFifty: boolean, rounds: any[] }>,
  *   successEnvelope: (data: unknown, meta?: Record<string, unknown>, options?: Record<string, unknown>) => Response,
@@ -48,24 +48,41 @@ export async function persistSubmitAndBuildResponse(deps) {
   const transactionStart = Date.now();
   try {
     logger.info('[submit] Starting database transaction');
-    const txnQueries = [
-      sql`UPDATE sessions SET used = true WHERE token = ${token} AND used = false`,
-      sql`
+    if (typeof sql.transaction === 'function') {
+      const txnQueries = [
+        sql`UPDATE sessions SET used = true WHERE token = ${token} AND used = false`,
+        sql`
+          INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, session_token, ip, player_id)
+          VALUES (${trimmedPseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}::jsonb, ${now}, ${gameType}, ${token}, ${clientIp}, ${playerId})
+        `,
+        ...(playerId
+          ? [
+              sql`
+              UPDATE players
+              SET total_games = total_games + 1,
+                  total_score = total_score + ${totalScore}
+              WHERE player_id = ${playerId}
+            `,
+            ]
+          : []),
+      ];
+      await sql.transaction(txnQueries);
+    } else {
+      logger.warn('[submit] sql.transaction unavailable, using sequential fallback writes');
+      await sql`
         INSERT INTO scores (pseudo, score, time, rounds, timestamp, game_type, session_token, ip, player_id)
         VALUES (${trimmedPseudo}, ${totalScore}, ${gameDuration}, ${JSON.stringify(validatedRounds)}::jsonb, ${now}, ${gameType}, ${token}, ${clientIp}, ${playerId})
-      `,
-      ...(playerId
-        ? [
-            sql`
-            UPDATE players
-            SET total_games = total_games + 1,
-                total_score = total_score + ${totalScore}
-            WHERE player_id = ${playerId}
-          `,
-          ]
-        : []),
-    ];
-    await sql.transaction(txnQueries);
+      `;
+      if (playerId) {
+        await sql`
+          UPDATE players
+          SET total_games = total_games + 1,
+              total_score = total_score + ${totalScore}
+          WHERE player_id = ${playerId}
+        `;
+      }
+      await sql`UPDATE sessions SET used = true WHERE token = ${token} AND used = false`;
+    }
     logger.info('[submit] Transaction committed');
     markStage('transactionMs', transactionStart);
   } catch (dbError) {

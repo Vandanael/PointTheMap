@@ -163,7 +163,8 @@ const buildCivilizationSession = ({
 /**
  * @param {{
  *   sessions?: SessionRow[],
- *   failOnInsertScore?: boolean
+ *   failOnInsertScore?: boolean,
+ *   withTransaction?: boolean
  * }} [options]
  */
 const createFakeSql = (options = {}) => {
@@ -324,31 +325,33 @@ const createFakeSql = (options = {}) => {
     };
   };
 
-  sql.transaction = async (queries) => {
-    const snapshot = structuredClone({
-      sessions: Array.from(state.sessions.entries()),
-      scores: state.scores,
-      players: Array.from(state.players.entries()),
-      rateLimits: Array.from(state.rateLimits.entries()),
-      ipPseudoLocks: Array.from(state.ipPseudoLocks.entries()),
-    });
-    try {
-      for (const q of queries) {
-        if (q && typeof q.run === 'function') {
-          await q.run();
-        } else {
-          await q;
+  if (options.withTransaction !== false) {
+    sql.transaction = async (queries) => {
+      const snapshot = structuredClone({
+        sessions: Array.from(state.sessions.entries()),
+        scores: state.scores,
+        players: Array.from(state.players.entries()),
+        rateLimits: Array.from(state.rateLimits.entries()),
+        ipPseudoLocks: Array.from(state.ipPseudoLocks.entries()),
+      });
+      try {
+        for (const q of queries) {
+          if (q && typeof q.run === 'function') {
+            await q.run();
+          } else {
+            await q;
+          }
         }
+      } catch (error) {
+        state.sessions = new Map(snapshot.sessions);
+        state.scores = snapshot.scores;
+        state.players = new Map(snapshot.players);
+        state.rateLimits = new Map(snapshot.rateLimits);
+        state.ipPseudoLocks = new Map(snapshot.ipPseudoLocks);
+        throw error;
       }
-    } catch (error) {
-      state.sessions = new Map(snapshot.sessions);
-      state.scores = snapshot.scores;
-      state.players = new Map(snapshot.players);
-      state.rateLimits = new Map(snapshot.rateLimits);
-      state.ipPseudoLocks = new Map(snapshot.ipPseudoLocks);
-      throw error;
-    }
-  };
+    };
+  }
 
   return { sql, state };
 };
@@ -494,6 +497,30 @@ describe('submit integration', () => {
     expect(body.ok).toBe(true);
     expect(body.meta?.idempotentReplay).toBe(true);
     expect(fake.state.scores).toHaveLength(1);
+  });
+
+  it('submits successfully when sql.transaction is unavailable', async () => {
+    const fake = createFakeSql({
+      sessions: [buildSession({ token: 'token-no-transaction' })],
+      withTransaction: false,
+    });
+
+    vi.resetModules();
+    vi.doMock('../../netlify/functions/db.js', () => ({
+      getDatabase: vi.fn(() => fake.sql),
+    }));
+    const { default: handler } = await import('../../netlify/functions/submit.js');
+
+    const response = await handler(
+      makeRequest({ body: buildSubmitBody({ token: 'token-no-transaction', pseudo: 'ALFA' }) }),
+      { ip: '198.51.100.88' }
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.ok).toBe(true);
+    expect(fake.state.scores).toHaveLength(1);
+    expect(fake.state.sessions.get('token-no-transaction')?.used).toBe(true);
   });
 
   it('rejects replay when csrf token does not match', async () => {
