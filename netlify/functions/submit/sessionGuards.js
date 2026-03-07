@@ -37,7 +37,7 @@ export async function enforceSessionGuards(deps) {
     finish,
   } = deps;
 
-  if (session.csrfToken !== csrfToken) {
+  if (!session.csrfToken || !csrfToken || session.csrfToken !== csrfToken) {
     logger.info('[submit] CSRF token mismatch, returning 403');
     return {
       ok: false,
