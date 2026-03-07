@@ -22,6 +22,50 @@ import { logger } from '../../utils/logger.js';
 /** @typedef {{ geometry: any, properties: any }} GeoFeature */
 /** @typedef {{ features: GeoFeature[] }} GeoFeatureCollection */
 /** @typedef {{ coordinates: [number, number], type?: 'Point' }} GeoJSONPoint */
+/** @typedef {{ minLat: number, maxLat: number, minLng: number, maxLng: number }} BBox */
+/** @typedef {{ bbox: BBox, feature: GeoFeature }} BBoxEntry */
+
+/**
+ * Compute per-ring bounding boxes for a feature geometry.
+ * Handles Polygon and MultiPolygon. Splits anti-meridian-crossing rings into two boxes.
+ * @param {GeoFeature} feature
+ * @returns {BBoxEntry[]}
+ */
+function computeFeatureBBoxes(feature) {
+  const rings = [];
+  const { geometry } = feature;
+  if (geometry.type === 'Polygon') {
+    rings.push(geometry.coordinates[0]);
+  } else if (geometry.type === 'MultiPolygon') {
+    for (const poly of geometry.coordinates) {
+      rings.push(poly[0]);
+    }
+  }
+
+  /** @type {BBoxEntry[]} */
+  const entries = [];
+  for (const ring of rings) {
+    let minLat = Infinity,
+      maxLat = -Infinity,
+      minLng = Infinity,
+      maxLng = -Infinity;
+    for (const [lng, lat] of ring) {
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+    }
+    // Anti-meridian crossing: lng span > 180°
+    if (maxLng - minLng > 180) {
+      // Split into two boxes: [minLng, 180] and [-180, maxLng]
+      entries.push({ bbox: { minLat, maxLat, minLng, maxLng: 180 }, feature });
+      entries.push({ bbox: { minLat, maxLat, minLng: -180, maxLng }, feature });
+    } else {
+      entries.push({ bbox: { minLat, maxLat, minLng, maxLng }, feature });
+    }
+  }
+  return entries;
+}
 
 export class GeoJSONManager {
   /** @type {typeof import('leaflet')} */
@@ -36,6 +80,10 @@ export class GeoJSONManager {
   #countriesFullLoadPromise = null;
   /** @type {any[]} */
   #countryHighlights = [];
+  /** @type {Map<string, GeoFeature>} */
+  #countryIdIndex = new Map();
+  /** @type {BBoxEntry[]} */
+  #countryBBoxIndex = [];
   /** @type {GeoFeatureCollection | null} */
   #civilizationsGeoJSON = null;
   /** @type {GeoFeatureCollection | null} */
@@ -44,6 +92,10 @@ export class GeoJSONManager {
   #civilizationsFullLoadPromise = null;
   /** @type {any[]} */
   #civilizationHighlights = [];
+  /** @type {Map<string, GeoFeature>} */
+  #civilizationIdIndex = new Map();
+  /** @type {BBoxEntry[]} */
+  #civilizationBBoxIndex = [];
 
   /**
    * @param {{ L: typeof import('leaflet'), getMap: () => any }} deps
@@ -80,6 +132,12 @@ export class GeoJSONManager {
 
       logger.info('Countries GeoJSON (low-res) loaded successfully');
       eventBus.emit(EVENTS.MAP_COUNTRIES_LOADED, undefined);
+
+      // Eagerly kick off full-res in background so it's ready before first click
+      this.ensureCountriesGeoJSONFull().catch(() => {
+        // Will retry on first click — ignore error here
+      });
+
       return true;
     } catch (error) {
       const err = /** @type {Error} */ (error);
@@ -100,6 +158,19 @@ export class GeoJSONManager {
     this.#countriesFullLoadPromise = (async () => {
       try {
         this.#countriesGeoJSON = await getCountriesGeoJSON();
+
+        // Build O(1) ID index
+        this.#countryIdIndex.clear();
+        for (const f of this.#countriesGeoJSON.features) {
+          if (f.properties.ISO_A3) this.#countryIdIndex.set(f.properties.ISO_A3, f);
+          if (f.properties.ADM0_A3) this.#countryIdIndex.set(f.properties.ADM0_A3, f);
+        }
+
+        // Build bbox index for pre-filtering point-in-polygon candidates
+        this.#countryBBoxIndex = this.#countriesGeoJSON.features.flatMap((f) =>
+          computeFeatureBBoxes(f)
+        );
+
         logger.info('Countries GeoJSON (full-res) loaded successfully');
         eventBus.emit(EVENTS.MAP_COUNTRIES_FULL_LOADED, undefined);
         return true;
@@ -143,6 +214,23 @@ export class GeoJSONManager {
       coordinates: [Number(lng), Number(lat)],
     });
 
+    // Use bbox index for fast candidate pre-filtering (only when full-res + index are ready)
+    if (source === this.#countriesGeoJSON && this.#countryBBoxIndex.length > 0) {
+      const candidates = new Set();
+      for (const { bbox, feature } of this.#countryBBoxIndex) {
+        if (lat >= bbox.minLat && lat <= bbox.maxLat && lng >= bbox.minLng && lng <= bbox.maxLng) {
+          candidates.add(feature);
+        }
+      }
+      for (const feature of candidates) {
+        if (pointInPolygon(point, feature.geometry)) {
+          return feature.properties.ISO_A3 || feature.properties.ADM0_A3;
+        }
+      }
+      return null;
+    }
+
+    // Fallback: linear scan (low-res or index not yet built)
     for (const feature of source.features) {
       if (pointInPolygon(point, feature.geometry)) {
         return feature.properties.ISO_A3 || feature.properties.ADM0_A3;
@@ -159,12 +247,7 @@ export class GeoJSONManager {
    */
   getCountryFeatureById(countryId) {
     if (!this.#countriesGeoJSON) return null;
-
-    return (
-      this.#countriesGeoJSON.features.find(
-        (f) => f.properties.ISO_A3 === countryId || f.properties.ADM0_A3 === countryId
-      ) ?? null
-    );
+    return this.#countryIdIndex.get(countryId) ?? null;
   }
 
   /**
@@ -280,6 +363,12 @@ export class GeoJSONManager {
 
       logger.info('Civilizations GeoJSON (low-res) loaded successfully');
       eventBus.emit(EVENTS.MAP_CIVILIZATIONS_LOADED, undefined);
+
+      // Eagerly kick off full-res in background so it's ready before first click
+      this.ensureCivilizationsGeoJSONFull().catch(() => {
+        // Will retry on first click — ignore error here
+      });
+
       return true;
     } catch (error) {
       const err = /** @type {Error} */ (error);
@@ -300,6 +389,19 @@ export class GeoJSONManager {
     this.#civilizationsFullLoadPromise = (async () => {
       try {
         this.#civilizationsGeoJSON = await getCivilizationsGeoJSON();
+
+        // Build O(1) ID index
+        this.#civilizationIdIndex.clear();
+        for (const f of this.#civilizationsGeoJSON.features) {
+          if (f.properties.id) this.#civilizationIdIndex.set(f.properties.id, f);
+          if (f.properties.name) this.#civilizationIdIndex.set(f.properties.name, f);
+        }
+
+        // Build bbox index for pre-filtering point-in-polygon candidates
+        this.#civilizationBBoxIndex = this.#civilizationsGeoJSON.features.flatMap((f) =>
+          computeFeatureBBoxes(f)
+        );
+
         logger.info('Civilizations GeoJSON (full-res) loaded successfully');
         eventBus.emit(EVENTS.MAP_CIVILIZATIONS_FULL_LOADED, undefined);
         return true;
@@ -343,6 +445,23 @@ export class GeoJSONManager {
       coordinates: [Number(lng), Number(lat)],
     });
 
+    // Use bbox index for fast candidate pre-filtering (only when full-res + index are ready)
+    if (source === this.#civilizationsGeoJSON && this.#civilizationBBoxIndex.length > 0) {
+      const candidates = new Set();
+      for (const { bbox, feature } of this.#civilizationBBoxIndex) {
+        if (lat >= bbox.minLat && lat <= bbox.maxLat && lng >= bbox.minLng && lng <= bbox.maxLng) {
+          candidates.add(feature);
+        }
+      }
+      for (const feature of candidates) {
+        if (pointInPolygon(point, feature.geometry)) {
+          return feature.properties.id ?? feature.properties.name;
+        }
+      }
+      return null;
+    }
+
+    // Fallback: linear scan (low-res or index not yet built)
     for (const feature of source.features) {
       if (pointInPolygon(point, feature.geometry)) {
         return feature.properties.id ?? feature.properties.name;
@@ -359,10 +478,7 @@ export class GeoJSONManager {
    */
   getCivilizationFeatureById(civilizationId) {
     if (!this.#civilizationsGeoJSON) return null;
-
-    return (
-      this.#civilizationsGeoJSON.features.find((f) => f.properties.id === civilizationId) ?? null
-    );
+    return this.#civilizationIdIndex.get(civilizationId) ?? null;
   }
 
   /**
@@ -445,9 +561,13 @@ export class GeoJSONManager {
     // No base layer to remove (we create only highlight layers).
     this.#countriesGeoJSON = null;
     this.#countriesGeoJSONLow = null;
+    this.#countryIdIndex.clear();
+    this.#countryBBoxIndex = [];
 
     // No base layer to remove (we create only highlight layers).
     this.#civilizationsGeoJSON = null;
     this.#civilizationsGeoJSONLow = null;
+    this.#civilizationIdIndex.clear();
+    this.#civilizationBBoxIndex = [];
   }
 }
