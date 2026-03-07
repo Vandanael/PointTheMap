@@ -15,7 +15,7 @@ test('daily mode: can start daily challenge', async ({ page }) => {
       token: 'daily-token',
       startTime: Date.now(),
       csrfToken: 'csrf-token',
-      capitals: mockCapitals,
+      targets: mockCapitals,
     };
     await route.fulfill({
       status: 200,
