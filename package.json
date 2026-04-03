@@ -70,7 +70,7 @@
     "@vitest/ui": "^4.0.18",
     "dependency-cruiser": "^17.3.7",
     "fake-indexeddb": "^6.2.5",
-    "happy-dom": "^20.3.9",
+    "happy-dom": "^20.8.9",
     "knip": "^5.83.1",
     "oxlint": "^1.48.0",
     "playwright": "^1.58.2",
@@ -86,7 +86,13 @@
   "overrides": {
     "tar": "^7.5.6",
     "lodash": "^4.17.23",
-    "lodash-es": "^4.17.23"
+    "lodash-es": "^4.17.23",
+    "flatted": "^3.4.2",
+    "smol-toml": "^1.6.1",
+    "picomatch": "^4.0.4",
+    "micromatch": {
+      "picomatch": "^2.3.2"
+    }
   },
   "knip": {
     "entry": [
