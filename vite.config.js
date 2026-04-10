@@ -311,7 +311,7 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       // Enable minification and compression
-      minify: 'esbuild',
+      minify: 'oxc',
       cssMinify: true,
       // Optimize chunk splitting
       rollupOptions: {
@@ -393,7 +393,8 @@ export default defineConfig(({ mode }) => {
           },
           // Optimize asset file names for better caching
           assetFileNames: (assetInfo) => {
-            const info = assetInfo.name.split('.');
+            const name = assetInfo.name ?? assetInfo.names?.[0] ?? '';
+            const info = name.split('.');
             const ext = info[info.length - 1];
             if (/png|jpe?g|svg|gif|tiff|bmp|ico/i.test(ext)) {
               return `assets/images/[name]-[hash][extname]`;
@@ -421,7 +422,7 @@ export default defineConfig(({ mode }) => {
       // Increase chunk size warning limit (for better code splitting)
       chunkSizeWarningLimit: 1000,
     },
-    esbuild: isProd ? { pure: ['console.log', 'console.warn'] } : undefined,
+    oxc: isProd ? { pure: ['console.log', 'console.warn'] } : undefined,
     plugins: [
       criticalCssPreload({
         enabled: true,
