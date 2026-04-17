@@ -10,17 +10,18 @@
  * Leaflet is loaded lazily on first init() to reduce initial JS and defer until the map is required.
  */
 
+import 'leaflet/dist/leaflet.css';
+
 /** @type {typeof import('leaflet') | null} */
 let L = null;
 
 /**
- * Load Leaflet and its CSS when the map is first initialized (deferred to avoid unused JS on initial load).
+ * Load Leaflet when the map is first initialized (deferred to avoid unused JS on initial load).
  * @returns {Promise<typeof import('leaflet')>}
  */
 async function loadLeaflet() {
   if (L) return L;
-  await import('leaflet/dist/leaflet.css');
-  const leaflet = await import('leaflet');
+  const leaflet = await import('leaflet/dist/leaflet-src.esm.js');
   // Support both default export (real Leaflet) and namespace (e.g. Vitest mock)
   L = leaflet.default ?? leaflet;
   return L;

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MapSystem, getMapSystem, mapSystem } from './MapSystem.js';
 import { eventBus } from '../core/EventBus.js';
 import { logger } from '../utils/logger.js';
-import * as leaflet from 'leaflet';
+import * as leaflet from 'leaflet/dist/leaflet-src.esm.js';
 
 // Mock utils module (isIOS detection)
 vi.mock('../utils/device.js', async (importOriginal) => {
@@ -55,7 +55,7 @@ const mockLeafletMap = {
   })),
 };
 
-vi.mock('leaflet', () => {
+vi.mock('leaflet/dist/leaflet-src.esm.js', () => {
   const mockMarker = vi.fn((coords, options) => ({
     addTo: vi.fn().mockReturnThis(),
   }));
