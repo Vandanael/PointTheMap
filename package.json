@@ -66,6 +66,7 @@
     "@tailwindcss/postcss": "^4.1.18",
     "@turf/simplify": "^7.3.3",
     "@turf/union": "^7.3.3",
+    "@types/node": "^22.19.17",
     "@vitest/coverage-v8": "^4.0.18",
     "@vitest/ui": "^4.0.18",
     "fake-indexeddb": "^6.2.5",
