@@ -200,10 +200,12 @@ export const createStartGameController = (deps) => {
     if (needsAsyncWork) {
       const ready = await waitForQuestionModal();
       if (!ready) {
-        logger.warn('UI: question modal did not appear in time');
+        // Game start is slower than the wait window (e.g. slow network). Do NOT
+        // re-show the start screen: handleStart owns the start->game lifecycle and
+        // will render the round on success or restore the start screen on failure.
+        // Re-showing it here races a late-arriving game start and overlaps both.
+        logger.warn('UI: question modal did not appear in time; deferring to game lifecycle');
         stopLoaderProgress();
-        hideLoader();
-        showStart();
         resetStartBtn();
         startingGame = false;
         return;

@@ -172,6 +172,10 @@ export function createGameFlowController(deps) {
       return;
     }
 
+    // Game is confirmed running: ensure no start screen lingers (e.g. re-shown by a
+    // slow-start recovery path) before the round UI renders on top of it.
+    ui.hideStart();
+
     // Track game start
     analytics.track('game_started', {
       gameType,
