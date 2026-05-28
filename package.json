@@ -89,6 +89,7 @@
     "lodash-es": "^4.17.23",
     "flatted": "^3.4.2",
     "smol-toml": "^1.6.1",
+    "ws": "^8.20.1",
     "picomatch": "^4.0.4",
     "micromatch": {
       "picomatch": "^2.3.2"
