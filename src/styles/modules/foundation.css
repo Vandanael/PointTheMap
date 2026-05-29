@@ -98,8 +98,8 @@ body:not(.light-theme):not(.start-screen-visible) #map {
 }
 
 body.light-theme:not(.start-screen-visible) #map {
-  filter: brightness(1.08) contrast(1.25) saturate(1.15);
-  /* Vivid map on pure white background */
+  filter: brightness(0.96) contrast(1.05) saturate(1.1);
+  /* Light tiles are near-white; avoid brightening them into the white background */
 }
 
 /* Map lock visual feedback: darken map + lock badge while clicks are disabled */
