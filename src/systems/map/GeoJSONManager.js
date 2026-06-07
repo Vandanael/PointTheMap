@@ -18,6 +18,7 @@ import { normalizeCoords } from '@lib/game-math/index.js';
 import { eventBus } from '../../core/EventBus.js';
 import { EVENTS } from '../../core/eventTypes.js';
 import { logger } from '../../utils/logger.js';
+import { getTheme } from '../../services/storage.js';
 
 /** @typedef {{ geometry: any, properties: any }} GeoFeature */
 /** @typedef {{ features: GeoFeature[] }} GeoFeatureCollection */
@@ -96,6 +97,10 @@ export class GeoJSONManager {
   #civilizationIdIndex = new Map();
   /** @type {BBoxEntry[]} */
   #civilizationBBoxIndex = [];
+  /** @type {any} */
+  #countriesOutlineLayer = null;
+  /** @type {(() => void) | null} */
+  #unsubTheme = null;
 
   /**
    * @param {{ L: typeof import('leaflet'), getMap: () => any }} deps
@@ -103,6 +108,46 @@ export class GeoJSONManager {
   constructor({ L, getMap }) {
     this.#L = L;
     this.#getMap = getMap;
+  }
+
+  /**
+   * Return the stroke style for the persistent country outline based on the current theme.
+   * @returns {{ color: string, opacity: number, weight: number, fill: boolean, interactive: boolean }}
+   */
+  #outlineStyle() {
+    const theme = getTheme();
+    if (theme === 'light') {
+      return { color: '#000000', opacity: 0.25, weight: 0.8, fill: false, interactive: false };
+    }
+    return { color: '#ffffff', opacity: 0.28, weight: 0.8, fill: false, interactive: false };
+  }
+
+  /**
+   * Create or replace the persistent country outline layer using currently cached GeoJSON data.
+   * Safe to call multiple times - removes the previous layer before adding the new one.
+   */
+  #applyCountriesOutline() {
+    const source = this.#countriesGeoJSONLow ?? this.#countriesGeoJSON;
+    if (!source) return;
+
+    const map = this.#getMap();
+    if (!map) return;
+
+    if (!map.getPane('countriesOutline')) {
+      const outlinePane = map.createPane('countriesOutline');
+      outlinePane.style.zIndex = 450;
+      outlinePane.style.pointerEvents = 'none';
+    }
+
+    if (this.#countriesOutlineLayer) {
+      map.removeLayer(this.#countriesOutlineLayer);
+      this.#countriesOutlineLayer = null;
+    }
+
+    const style = this.#outlineStyle();
+    this.#countriesOutlineLayer = this.#L
+      .geoJSON(source, { style: () => style, pane: 'countriesOutline', interactive: false })
+      .addTo(map);
   }
 
   /**
@@ -129,6 +174,14 @@ export class GeoJSONManager {
       }
       // Load low-res first for faster highlight rendering (optional)
       this.#countriesGeoJSONLow = await getCountriesGeoJSONLow();
+
+      this.#applyCountriesOutline();
+
+      if (!this.#unsubTheme) {
+        this.#unsubTheme = eventBus.subscribe(EVENTS.THEME_CHANGED, () => {
+          this.#applyCountriesOutline();
+        });
+      }
 
       logger.info('Countries GeoJSON (low-res) loaded successfully');
       eventBus.emit(EVENTS.MAP_COUNTRIES_LOADED, undefined);
@@ -558,13 +611,20 @@ export class GeoJSONManager {
     this.clearCountryHighlights();
     this.clearCivilizationHighlights();
 
-    // No base layer to remove (we create only highlight layers).
+    this.#unsubTheme?.();
+    this.#unsubTheme = null;
+
+    const map = this.#getMap();
+    if (this.#countriesOutlineLayer && map) {
+      map.removeLayer(this.#countriesOutlineLayer);
+    }
+    this.#countriesOutlineLayer = null;
+
     this.#countriesGeoJSON = null;
     this.#countriesGeoJSONLow = null;
     this.#countryIdIndex.clear();
     this.#countryBBoxIndex = [];
 
-    // No base layer to remove (we create only highlight layers).
     this.#civilizationsGeoJSON = null;
     this.#civilizationsGeoJSONLow = null;
     this.#civilizationIdIndex.clear();
