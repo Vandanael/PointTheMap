@@ -8,6 +8,7 @@ import { writeFileSync, mkdirSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import sharp from 'sharp';
+import { CARTO_TILE_TEMPLATES, appendCartoKey } from '../lib/config/map.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,14 +18,31 @@ const AURAY_CENTER = [47.6706, -2.9833]; // [lat, lng]
 const AURAY_ZOOM = 14;
 const TILE_SIZE = 256;
 
+// CARTO raster tiles require a key, otherwise the fetched PNGs are watermarked
+// "API KEY REQUIRED" and the watermark gets baked into the generated images.
+const CARTO_API_KEY = (process.env.VITE_CARTO_API_KEY ?? '').trim();
+if (!CARTO_API_KEY) {
+  console.warn(
+    '[start-screen] VITE_CARTO_API_KEY is not set — CARTO tiles will be watermarked. ' +
+      'Get a free key at https://carto.com/basemaps/apikey'
+  );
+}
+
+/**
+ * Resolve a Carto tile template for direct fetching (no Leaflet {s} subdomain).
+ * @param {string} template
+ * @returns {string}
+ */
+const tileUrl = (template) => appendCartoKey(template.replace('{s}', 'a'), CARTO_API_KEY);
+
 // Dark and light Carto tile URLs (match config.js)
 const THEMES = {
   dark: {
-    url: 'https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png',
+    url: tileUrl(CARTO_TILE_TEMPLATES.dark),
     bg: { r: 2, g: 6, b: 23 },
   },
   light: {
-    url: 'https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png',
+    url: tileUrl(CARTO_TILE_TEMPLATES.light),
     bg: { r: 245, g: 243, b: 240 },
   },
 };
