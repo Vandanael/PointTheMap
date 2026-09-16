@@ -38,10 +38,23 @@ Key points:
 
 ```bash
 npm install
+cp .env.example .env   # then fill in VITE_CARTO_API_KEY (see below)
 npm run dev
 ```
 
 Ouvrir `http://localhost:5173`.
+
+### Basemap API key (required)
+
+Map tiles come from CARTO, whose raster basemaps now require an API key. Without one the
+CDN still returns `200 OK` but watermarks every tile with **"API KEY REQUIRED"** — which is
+why no tile error is raised and the OSM fallback never triggers.
+
+1. Request a free key (no account needed, 5M tiles/month): <https://carto.com/basemaps/apikey>
+2. Set `VITE_CARTO_API_KEY=<your-key>` in `.env` (local) and in the Netlify environment
+   variables (production/preview), then rebuild.
+3. Keep the map attribution visible — it is part of the free-tier terms.
+   The static start-screen images (`npm run generate:start-screen`) read the same variable.
 
 ## Scripts
 

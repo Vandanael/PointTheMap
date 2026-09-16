@@ -861,9 +861,36 @@ body.light-theme .result-line-distance {
   color: var(--text-secondary);
 }
 
-/* Masquer attribution Leaflet */
-.leaflet-control-attribution {
-  display: none !important;
+/* Attribution de la carte – obligatoire pour rester dans les conditions
+   d'utilisation gratuite de CARTO/OSM. Scopé sur #map pour primer sur la
+   feuille de style Leaflet injectée à la demande. */
+#map .leaflet-control-attribution {
+  padding: 0.1rem 0.45rem;
+  border-radius: 0.5rem 0 0 0;
+  background: rgba(2, 6, 23, 0.85);
+  color: var(--text-secondary);
+  font-size: 0.625rem;
+  line-height: 1.5;
+}
+
+#map .leaflet-control-attribution a {
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+#map .leaflet-control-attribution a:hover,
+#map .leaflet-control-attribution a:focus-visible {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+body.light-theme #map .leaflet-control-attribution {
+  background: rgba(245, 243, 240, 0.8);
+  color: var(--text-tertiary);
+}
+
+body.light-theme #map .leaflet-control-attribution a {
+  color: var(--text-tertiary);
 }
 
 /* Input pseudo */

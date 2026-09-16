@@ -21,6 +21,7 @@ import {
   getLineColor,
 } from '@lib/config/visual-constants.js';
 import { waitForMapSettled, normalizeSegmentEnd, animateResultLine } from './lineAnimation.js';
+import { getCartoTileUrl, HAS_CARTO_API_KEY } from './tileUrls.js';
 
 export class MapRenderer {
   /** @type {typeof import('leaflet')} */
@@ -79,6 +80,13 @@ export class MapRenderer {
     this.#setupTileLayer();
     this.#setupEventListeners();
     this.#initialized = true;
+
+    if (!HAS_CARTO_API_KEY) {
+      logger.warn(
+        `No CARTO basemap API key (VITE_CARTO_API_KEY): tiles will show an "API KEY REQUIRED" watermark. ` +
+          `Get a free key at ${MAP.CARTO_API_KEY_URL} and rebuild.`
+      );
+    }
   }
 
   /**
@@ -105,7 +113,8 @@ export class MapRenderer {
       minZoom: MAP.MIN_ZOOM,
       maxZoom: MAP.MAX_ZOOM,
       zoomControl: false,
-      attributionControl: false,
+      // Basemap attribution is required by the CARTO free-tier terms
+      attributionControl: true,
       keepBuffer: lowEnd ? 2 : 4,
       zoomAnimation: !lowEnd,
       fadeAnimation: !lowEnd,
@@ -195,7 +204,7 @@ export class MapRenderer {
       this.#usingFallbackTiles = true;
     } else {
       const theme = getTheme();
-      tileUrl = theme === 'light' ? MAP.TILE_URL_LIGHT : MAP.TILE_URL_DARK;
+      tileUrl = getCartoTileUrl(theme);
       attribution = MAP.ATTRIBUTION;
     }
 
