@@ -5,7 +5,7 @@
   "description": "Point The Map - Geography game",
   "packageManager": "npm@10.0.0",
   "engines": {
-    "node": "20.x",
+    "node": "24.x",
     "npm": ">=10 <12"
   },
   "scripts": {
@@ -70,7 +70,7 @@
     "@vitest/coverage-v8": "^4.1.11",
     "@vitest/ui": "^4.1.11",
     "fake-indexeddb": "^6.2.5",
-    "happy-dom": "^20.8.9",
+    "happy-dom": "^21.0.4",
     "knip": "^6.3.1",
     "oxlint": "^1.48.0",
     "playwright": "^1.58.2",

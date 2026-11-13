@@ -26,7 +26,7 @@ test('submit flow (mocked): play full game and submit score', async ({ page }) =
         token: 'test-token',
         startTime: Date.now(),
         csrfToken: 'csrf-token',
-        capitals: mockCapitals,
+        targets: mockCapitals,
       };
       await route.fulfill({
         status: 200,
