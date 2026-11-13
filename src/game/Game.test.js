@@ -674,11 +674,7 @@ describe('Game.js', () => {
         targets: capitals, // Domain model
         capitals,
         currentRoundIndex: 0,
-        rounds: [
-          {
-            /* completed round */
-          },
-        ],
+        rounds: [{/* completed round */}],
       };
 
       const newState = nextRound(state);
@@ -694,9 +690,7 @@ describe('Game.js', () => {
         ...createGameState(),
         status: GameStatus.ROUND_RESULT,
         currentRoundIndex: 9, // last round (0-indexed, total 10 rounds)
-        rounds: Array(10).fill({
-          /* completed rounds */
-        }),
+        rounds: Array(10).fill({/* completed rounds */}),
       };
 
       const newState = nextRound(state);
